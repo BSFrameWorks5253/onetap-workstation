@@ -1,0 +1,2275 @@
+<!DOCTYPE html>
+<html class="dark-theme">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>One Tap — Premiere Pro Assistant</title>
+    <script>
+        (function() {
+            var saved = localStorage.getItem('ot_ext_theme') || localStorage.getItem('ot_parent_ext_theme');
+            if (saved === 'light') {
+                document.documentElement.classList.remove('dark-theme');
+            } else {
+                document.documentElement.classList.add('dark-theme');
+            }
+        })();
+    </script>
+    <script src="./lib/CSInterface.js"></script>
+    <script src="./js/updater.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        /* ============================================================
+           ONE TAP — PREMIERE PRO ULTRA-GLASS 3.0
+           Compact, Zero-Scroll, Fixed-Height Ergonomics
+           ============================================================ */
+        :root {
+            /* Light Theme (Clean Studio Light) */
+            --bg: #EEF0F5;
+            --surface: #FFFFFF;
+            --surface-card: #F4F6FA;
+            --surface-hover: #E9ECF3;
+            --border: rgba(15, 23, 42, 0.10);
+            --border-highlight: rgba(79, 70, 229, 0.35);
+            --text-primary: #0F172A;
+            --text-secondary: #334155;
+            --text-muted: #64748B;
+
+            --accent: #4F46E5;
+            --accent-hv: #4338CA;
+            --accent-soft: rgba(79, 70, 229, 0.10);
+            --accent-markers: #7C3AED;
+            --accent-markers-soft: rgba(124, 58, 237, 0.10);
+
+            --success: #059669;
+            --success-soft: rgba(5, 150, 105, 0.12);
+            --warning: #D97706;
+            --warning-soft: rgba(217, 119, 6, 0.12);
+            --danger: #DC2626;
+
+            --chrome-grad: linear-gradient(90deg, #6366F1, #8B5CF6, #EC4899, #10B981, #6366F1);
+            --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.05);
+            --shadow-btn: 0 4px 14px rgba(79, 70, 229, 0.25);
+        }
+
+        html.dark-theme, body.dark-theme {
+            /* Ultra-Glass Dark Theme (Adobe Dark Aesthetic) */
+            --bg: #090A0F;
+            --surface: rgba(16, 18, 28, 0.95);
+            --surface-card: rgba(26, 30, 46, 0.88);
+            --surface-hover: rgba(38, 43, 66, 0.95);
+            --border: rgba(255, 255, 255, 0.09);
+            --border-highlight: rgba(99, 102, 241, 0.45);
+            --text-primary: #F8FAFC;
+            --text-secondary: #94A3B8;
+            --text-muted: #64748B;
+
+            --accent: #6366F1;
+            --accent-hv: #4F46E5;
+            --accent-soft: rgba(99, 102, 241, 0.16);
+            --accent-markers: #A855F7;
+            --accent-markers-soft: rgba(168, 85, 247, 0.16);
+
+            --success: #10B981;
+            --success-soft: rgba(16, 185, 129, 0.16);
+            --warning: #F59E0B;
+            --warning-soft: rgba(245, 158, 11, 0.16);
+            --danger: #EF4444;
+
+            --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.65);
+            --shadow-btn: 0 4px 18px rgba(99, 102, 241, 0.4);
+        }
+
+        /* ── ZERO SCROLL RESET ─────────────────────────── */
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden !important;
+            background: var(--bg);
+            color: var(--text-primary);
+            font-family: 'Outfit', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-size: 12px;
+            line-height: 1.25;
+            transition: background 0.25s ease, color 0.25s ease;
+        }
+
+        /* Outer centering wrapper for wide displays */
+        .panel-outer-wrap {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: stretch;
+            justify-content: center;
+            padding: 5px;
+            box-sizing: border-box;
+        }
+
+        /* Core Panel Container */
+        .panel-container {
+            width: 100%;
+            max-width: 360px; /* Keeps cards neat on large monitors */
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 10px;
+            box-shadow: var(--shadow-card);
+            position: relative;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+
+        /* Ambient Top Rainbow Bar */
+        .panel-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2.5px;
+            background: var(--chrome-grad);
+            background-size: 300% 100%;
+            animation: chromeBarMove 4s linear infinite;
+            z-index: 10;
+        }
+
+        @keyframes chromeBarMove {
+            0% { background-position: 0% 0%; }
+            100% { background-position: 300% 0%; }
+        }
+
+        /* ── HEADER ─────────────────────────────────────── */
+        .ecosystem-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-bottom: 6px;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .brand-block {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+        }
+
+        .brand-badge {
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #3788FF 0%, #6366F1 50%, #8B5CF6 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #FFFFFF;
+            font-weight: 900;
+            font-size: 13px;
+            box-shadow: 0 2px 10px rgba(55, 136, 255, 0.4);
+            flex-shrink: 0;
+        }
+
+        .brand-titles {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        .title {
+            font-size: 12.5px;
+            font-weight: 800;
+            letter-spacing: -0.01em;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .version-tag {
+            font-size: 8.5px;
+            font-weight: 750;
+            padding: 1px 5px;
+            border-radius: 99px;
+            background: var(--accent-soft);
+            color: var(--accent);
+            border: 1px solid rgba(99, 102, 241, 0.25);
+            flex-shrink: 0;
+        }
+
+        .subtitle {
+            font-size: 9.5px;
+            font-weight: 600;
+            color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            flex-shrink: 0;
+        }
+
+        .locate-xml-btn {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.16) 0%, rgba(139, 92, 246, 0.16) 100%);
+            border: 1px solid rgba(99, 102, 241, 0.45);
+            border-radius: 99px;
+            padding: 3px 8px;
+            font-size: 10px;
+            font-weight: 750;
+            cursor: pointer;
+            color: var(--accent);
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.15);
+        }
+        .locate-xml-btn:hover {
+            background: linear-gradient(135deg, #4F46E5 0%, #6366F1 100%);
+            border-color: #6366F1;
+            color: #FFFFFF;
+            transform: translateY(-1px) scale(1.03);
+            box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+        }
+        .locate-xml-btn:active {
+            transform: translateY(0) scale(0.98);
+        }
+
+        .theme-toggle-btn {
+            background: var(--surface-card);
+            border: 1px solid var(--border);
+            border-radius: 99px;
+            padding: 3px 8px;
+            font-size: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            color: var(--text-primary);
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            transition: all 0.2s ease;
+        }
+        .theme-toggle-btn:hover {
+            border-color: var(--accent);
+            transform: scale(1.04);
+        }
+
+        /* ── LIVE SYNC STATUS BAR ───────────────────────── */
+        .sync-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 5px 9px;
+            border-radius: 8px;
+            background: var(--success-soft);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: var(--success);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+        .sync-badge.offline {
+            background: var(--warning-soft);
+            border-color: rgba(245, 158, 11, 0.35);
+            color: var(--warning);
+        }
+        .sync-dot-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .sync-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+            box-shadow: 0 0 6px currentColor;
+        }
+        .sync-ripple {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 1px solid currentColor;
+            opacity: 0.7;
+            animation: rippleRing 2s ease-out infinite;
+        }
+        @keyframes rippleRing {
+            0% { transform: scale(0.4); opacity: 0.8; }
+            100% { transform: scale(1.4); opacity: 0; }
+        }
+        .sync-text {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* ── 001 SEQUENCE PREFIX TOGGLE SWITCH ──────────── */
+        .settings-bar {
+            background: var(--surface-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 5px 9px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: border-color 0.2s ease;
+            flex-shrink: 0;
+        }
+        .settings-bar:hover {
+            border-color: var(--border-highlight);
+        }
+        .toggle-switch-label {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            cursor: pointer;
+            gap: 6px;
+        }
+        .toggle-switch-text {
+            font-size: 10.5px;
+            font-weight: 750;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .toggle-switch {
+            position: relative;
+            width: 30px;
+            height: 16px;
+            flex-shrink: 0;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+            position: absolute;
+        }
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            inset: 0;
+            background: rgba(148, 163, 184, 0.35);
+            border-radius: 99px;
+            transition: all 0.2s ease;
+            border: 1px solid var(--border);
+        }
+        .toggle-slider::before {
+            content: "";
+            position: absolute;
+            height: 10px;
+            width: 10px;
+            left: 2px;
+            bottom: 2px;
+            background-color: #FFFFFF;
+            border-radius: 50%;
+            transition: transform 0.2s ease;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+        }
+        .toggle-switch input:checked + .toggle-slider {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+        .toggle-switch input:checked + .toggle-slider::before {
+            transform: translateX(14px);
+        }
+
+        /* ── SEGMENTED TAB BAR ──────────────────────────── */
+        .tab-bar {
+            display: flex;
+            background: var(--surface-card);
+            padding: 3px;
+            border-radius: 9px;
+            border: 1px solid var(--border);
+            gap: 3px;
+            flex-shrink: 0;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 6px 4px;
+            font-family: inherit;
+            font-size: 11px;
+            font-weight: 750;
+            color: var(--text-muted);
+            border: none;
+            background: transparent;
+            border-radius: 7px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .tab-btn:hover {
+            color: var(--text-primary);
+            background: var(--surface-hover);
+        }
+        .tab-btn.active {
+            background: var(--surface);
+            color: var(--accent);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+            border: 1px solid var(--border);
+        }
+
+        /* ── TAB PAGES & BUTTONS ────────────────────────── */
+        .tab-page {
+            display: none;
+            flex-direction: column;
+            gap: 7px;
+            width: 100%;
+            flex-shrink: 0;
+        }
+        .tab-page.active {
+            display: flex;
+            animation: tabFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes tabFadeIn {
+            from { opacity: 0; transform: translateY(2px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Action Buttons Wrapper with Animated Boundary Ring */
+        .chrome-btn-wrap {
+            position: relative;
+            border-radius: 11px;
+            width: 100%;
+            flex-shrink: 0;
+        }
+        .chrome-btn-wrap::before {
+            content: '';
+            position: absolute;
+            inset: -1.5px;
+            border-radius: 12.5px;
+            padding: 1.5px;
+            background: var(--chrome-grad);
+            background-size: 300% 100%;
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            opacity: 0;
+            transition: opacity 0.25s ease;
+            animation: chromeBarMove 3s linear infinite;
+            pointer-events: none;
+        }
+        .chrome-btn-wrap:hover::before {
+            opacity: 1;
+        }
+
+        /* Ergonomic Fixed-Height Button Card */
+        .btn-card {
+            width: 100%;
+            height: 48px; /* Fixed ergonomic button height */
+            min-height: 48px;
+            max-height: 48px;
+            border: 1px solid var(--border);
+            background: var(--surface-card);
+            padding: 0 12px;
+            border-radius: 11px;
+            font-family: inherit;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 10px;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            outline: none;
+            position: relative;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+        .btn-card:hover {
+            border-color: var(--border-highlight);
+            background: var(--surface-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+        }
+        .btn-card:active {
+            transform: scale(0.98) translateY(1px);
+        }
+
+        .btn-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: transform 0.2s ease;
+        }
+        .btn-card:hover .btn-icon {
+            transform: scale(1.08);
+        }
+
+        .btn-text-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            text-align: left;
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+        }
+        .btn-label {
+            font-weight: 750;
+            font-size: 12px;
+            line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: 100%;
+            color: var(--text-primary);
+        }
+        .btn-sub {
+            font-size: 9.5px;
+            color: var(--text-muted);
+            margin-top: 1.5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: 100%;
+        }
+
+        /* Primary Button (Export All / Selected) */
+        .btn-primary {
+            background: linear-gradient(135deg, #4F46E5 0%, #6366F1 50%, #4338CA 100%);
+            border-color: transparent;
+            color: #FFFFFF;
+            box-shadow: var(--shadow-btn);
+        }
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #4338CA 0%, #4F46E5 50%, #6366F1 100%);
+            border-color: transparent;
+        }
+        .btn-primary .btn-label {
+            color: #FFFFFF;
+        }
+        .btn-primary .btn-sub {
+            color: rgba(255, 255, 255, 0.85);
+        }
+        .btn-primary .btn-icon {
+            background: rgba(255, 255, 255, 0.22);
+            color: #FFFFFF;
+        }
+
+        /* Secondary Button (Auto Markers) */
+        .btn-secondary {
+            background: var(--surface-card);
+            border-color: var(--border);
+        }
+        .btn-secondary .btn-icon {
+            background: var(--accent-markers-soft);
+            color: var(--accent-markers);
+        }
+
+        /* High-Tier Auto In/Out Button */
+        .btn-inout {
+            background: var(--surface-card);
+            border: 1px solid rgba(168, 85, 247, 0.35);
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .btn-inout:hover {
+            border-color: #A855F7;
+            background: linear-gradient(135deg, rgba(168, 85, 247, 0.14) 0%, rgba(99, 102, 241, 0.14) 100%);
+            box-shadow: 0 6px 20px rgba(168, 85, 247, 0.28);
+            transform: translateY(-1.5px);
+        }
+        .btn-inout .btn-icon {
+            background: rgba(168, 85, 247, 0.16);
+            color: #A855F7;
+            box-shadow: 0 2px 8px rgba(168, 85, 247, 0.2);
+            transition: all 0.2s ease;
+        }
+        .btn-inout:hover .btn-icon {
+            background: #A855F7;
+            color: #FFFFFF;
+            transform: scale(1.1);
+        }
+
+        /* Nikah Group Photo Button (Royal Gold / Amber Theme) */
+        .btn-nikah {
+            background: var(--surface-card);
+            border: 1px solid rgba(245, 158, 11, 0.38);
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .btn-nikah:hover {
+            border-color: #F59E0B;
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(217, 119, 6, 0.15) 100%);
+            box-shadow: 0 6px 20px rgba(245, 158, 11, 0.28);
+            transform: translateY(-1.5px);
+        }
+        .btn-nikah .btn-icon {
+            background: rgba(245, 158, 11, 0.18);
+            color: #F59E0B;
+            box-shadow: 0 2px 8px rgba(245, 158, 11, 0.22);
+            transition: all 0.2s ease;
+        }
+        .btn-nikah:hover .btn-icon {
+            background: #F59E0B;
+            color: #FFFFFF;
+            transform: scale(1.1);
+        }
+
+        /* ── GROUP PHOTO INSERTER MODULE ────────────────── */
+        .gpi-section-label {
+            font-size: 9px;
+            font-weight: 800;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            margin-bottom: 4px;
+        }
+        .gpi-source-row {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+            margin-bottom: 5px;
+        }
+        .gpi-source-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 10px;
+            font-weight: 750;
+            padding: 3px 8px;
+            border-radius: 99px;
+            background: rgba(245, 158, 11, 0.14);
+            border: 1px solid rgba(245, 158, 11, 0.38);
+            color: #F59E0B;
+        }
+        .gpi-source-pill.no-clip {
+            background: rgba(239, 68, 68, 0.10);
+            border-color: rgba(239, 68, 68, 0.35);
+            color: var(--danger);
+        }
+        .gpi-stat-bar {
+            display: flex;
+            gap: 6px;
+            justify-content: center;
+            margin-bottom: 5px;
+        }
+        .gpi-stat {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1px;
+            background: var(--surface-card);
+            border: 1px solid var(--border);
+            border-radius: 7px;
+            padding: 4px 8px;
+            flex: 1;
+        }
+        .gpi-stat-num {
+            font-size: 15px;
+            font-weight: 900;
+            color: var(--accent);
+        }
+        .gpi-stat-lbl {
+            font-size: 8.5px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+        .gpi-assignment-list {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            max-height: 140px;
+            overflow-y: auto;
+            margin-bottom: 5px;
+        }
+        .gpi-assignment-list::-webkit-scrollbar { width: 3px; }
+        .gpi-assignment-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+        .gpi-assignment-row {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background: var(--surface-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 5px 7px;
+            transition: border-color 0.2s ease;
+        }
+        .gpi-assignment-row:hover { border-color: var(--border-highlight); }
+        .gpi-select, .gpi-num-input {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 3px 5px;
+            outline: none;
+        }
+        .gpi-select { flex: 1.4; }
+        .gpi-num-input { width: 36px; text-align: center; }
+        .gpi-select:focus, .gpi-num-input:focus { border-color: var(--accent); }
+        .gpi-row-label {
+            font-size: 9px;
+            font-weight: 750;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+        .gpi-rm-btn {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(239, 68, 68, 0.12);
+            color: var(--danger);
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 900;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: background 0.15s ease;
+        }
+        .gpi-rm-btn:hover { background: rgba(239, 68, 68, 0.28); }
+        .gpi-add-btn {
+            width: 100%;
+            height: 28px;
+            border-radius: 7px;
+            border: 1px dashed var(--border-highlight);
+            background: transparent;
+            color: var(--accent);
+            font-family: inherit;
+            font-size: 10px;
+            font-weight: 750;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-bottom: 4px;
+        }
+        .gpi-add-btn:hover {
+            background: var(--accent-soft);
+            border-style: solid;
+        }
+        .gpi-action-row {
+            display: flex;
+            gap: 5px;
+        }
+        .gpi-action-btn {
+            flex: 1;
+            height: 34px;
+            border-radius: 8px;
+            border: none;
+            font-family: inherit;
+            font-size: 10.5px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .gpi-action-btn.preview {
+            background: var(--surface-card);
+            border: 1px solid var(--border-highlight);
+            color: var(--accent);
+        }
+        .gpi-action-btn.preview:hover {
+            background: var(--accent-soft);
+        }
+        .gpi-action-btn.execute {
+            background: linear-gradient(135deg, #D97706 0%, #F59E0B 100%);
+            color: #FFFFFF;
+            box-shadow: 0 3px 12px rgba(245, 158, 11, 0.35);
+        }
+        .gpi-action-btn.execute:hover {
+            background: linear-gradient(135deg, #B45309 0%, #D97706 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 5px 18px rgba(245, 158, 11, 0.45);
+        }
+        .gpi-action-btn:active { transform: scale(0.97); }
+        .gpi-warn-box {
+            background: var(--warning-soft);
+            border: 1px solid rgba(245, 158, 11, 0.35);
+            border-radius: 7px;
+            padding: 6px 9px;
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--warning);
+            margin-bottom: 4px;
+        }
+        .gpi-empty-box {
+            text-align: center;
+            font-size: 10px;
+            color: var(--text-muted);
+            font-weight: 600;
+            padding: 10px 0;
+        }
+        /* GP Preview Modal specific */
+        .gp-preview-list {
+            flex: 1 1 auto;
+            min-height: 100px;
+            max-height: none;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 8px 10px;
+            background: var(--surface-card);
+            font-size: 10.5px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-family: 'Outfit', monospace;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .gp-preview-list::-webkit-scrollbar { width: 3px; }
+        .gp-preview-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+        .gp-stats-row {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 6px;
+        }
+        .gp-stat-pill {
+            flex: 1;
+            text-align: center;
+            font-size: 10px;
+            font-weight: 800;
+            padding: 4px 6px;
+            border-radius: 7px;
+            background: var(--surface-card);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+        }
+        .gp-stat-pill.green { background: var(--success-soft); border-color: rgba(16, 185, 129, 0.3); color: var(--success); }
+        .gp-stat-pill.amber { background: var(--warning-soft); border-color: rgba(245, 158, 11, 0.3); color: var(--warning); }
+        .gp-stat-pill.red { background: rgba(239,68,68,0.10); border-color: rgba(239,68,68,0.3); color: var(--danger); }
+
+        /* ── STATUS MESSAGE TOAST ───────────────────────── */
+        #statusMessage {
+            position: absolute;
+            bottom: 8px;
+            left: 10px;
+            right: 10px;
+            font-size: 10.5px;
+            font-weight: 750;
+            padding: 6px 10px;
+            border-radius: 8px;
+            text-align: center;
+            background: var(--surface-card);
+            border: 1px solid var(--border-highlight);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+            opacity: 0;
+            transform: translateY(10px);
+            pointer-events: none;
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 50;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        #statusMessage.visible {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+
+        /* ── MINIMALIST FOOTER ──────────────────────────── */
+        .footer-info {
+            margin-top: auto;
+            font-size: 9px;
+            color: var(--text-muted);
+            font-weight: 600;
+            text-align: center;
+            padding: 3px 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            flex-shrink: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* ============================================================
+           INTELLIGENT DOCK ADAPTATIONS (Zero-Scroll in any dock)
+           ============================================================ */
+
+        /* HORIZONTAL DOCK MODE (Wide and Shallow above Timeline) */
+        body.is-horizontal .panel-outer-wrap {
+            padding: 4px;
+        }
+        body.is-horizontal .panel-container {
+            max-width: none;
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 6px 12px;
+        }
+        body.is-horizontal .ecosystem-header {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+        body.is-horizontal .sync-badge {
+            display: none;
+        }
+        body.is-horizontal .settings-bar {
+            padding: 3px 6px;
+        }
+        body.is-horizontal .tab-page.active {
+            flex-direction: row;
+            gap: 8px;
+            align-items: center;
+        }
+        body.is-horizontal .chrome-btn-wrap {
+            width: auto;
+            flex: 1;
+        }
+        body.is-horizontal .btn-card {
+            height: 40px;
+            min-height: 40px;
+            max-height: 40px;
+        }
+        body.is-horizontal .footer-info {
+            display: none;
+        }
+
+        /* COMPACT HEIGHT (< 340px) */
+        body.is-compact-h .panel-container {
+            gap: 5px;
+            padding: 7px;
+        }
+        body.is-compact-h .btn-card {
+            height: 42px;
+            min-height: 42px;
+            max-height: 42px;
+        }
+        body.is-compact-h .btn-icon {
+            width: 28px;
+            height: 28px;
+        }
+        body.is-compact-h .btn-sub {
+            display: none;
+        }
+        body.is-compact-h .subtitle {
+            display: none;
+        }
+
+        /* TINY HEIGHT (< 260px) */
+        body.is-tiny-h .sync-badge {
+            display: none;
+        }
+        body.is-tiny-h .footer-info {
+            display: none;
+        }
+        body.is-tiny-h .btn-card {
+            height: 36px;
+            min-height: 36px;
+            max-height: 36px;
+        }
+        body.is-tiny-h .btn-icon {
+            width: 24px;
+            height: 24px;
+        }
+
+        /* ── FULL-SCREEN RESPONSIVE MODALS (EDGE-TO-EDGE) ── */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: center;
+            align-items: stretch;
+            z-index: 9999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            padding: 0;
+            box-sizing: border-box;
+        }
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .modal-content {
+            background: var(--surface);
+            border: none;
+            border-radius: 0;
+            padding: 12px 14px;
+            width: 100%;
+            max-width: 100%;
+            height: 100%;
+            max-height: 100%;
+            display: flex;
+            flex-direction: column;
+            box-shadow: none;
+            transform: scale(0.98);
+            transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+        .modal-overlay.active .modal-content {
+            transform: scale(1);
+        }
+        .modal-header-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            flex-shrink: 0;
+        }
+        .modal-header-title {
+            font-size: 13px;
+            font-weight: 800;
+            color: var(--text-primary);
+            letter-spacing: -0.2px;
+        }
+        .modal-badge {
+            font-size: 10px;
+            font-weight: 800;
+            padding: 3px 8px;
+            border-radius: 99px;
+            background: var(--accent-soft);
+            color: var(--accent);
+        }
+        .modal-search {
+            width: 100%;
+            padding: 7px 10px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--surface-card);
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 11px;
+            outline: none;
+            margin-bottom: 8px;
+            flex-shrink: 0;
+            box-sizing: border-box;
+        }
+        .modal-search:focus {
+            border-color: var(--accent);
+        }
+        .modal-list {
+            flex: 1 1 auto;
+            min-height: 80px;
+            max-height: none !important;
+            height: 100%;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 5px;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            background: var(--surface-card);
+            box-sizing: border-box;
+        }
+        .modal-list::-webkit-scrollbar {
+            width: 5px;
+        }
+        .modal-list::-webkit-scrollbar-thumb {
+            background: var(--border-highlight);
+            border-radius: 4px;
+        }
+        .modal-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 5px 8px;
+            background: var(--surface);
+            border-radius: 6px;
+            cursor: pointer;
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            flex-shrink: 0;
+            transition: background 0.15s ease, border-color 0.15s ease;
+        }
+        .modal-item:hover {
+            border-color: var(--accent);
+            background: var(--surface-hover);
+        }
+        .modal-item input[type="checkbox"] {
+            width: 14px;
+            height: 14px;
+            accent-color: var(--accent);
+            cursor: pointer;
+            margin: 0;
+        }
+        .modal-footer {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+            flex-shrink: 0;
+        }
+        .modal-footer button {
+            flex: 1;
+            height: 36px;
+            min-height: 36px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--surface-card);
+            color: var(--text-primary);
+            font-size: 11.5px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: filter 0.15s ease, transform 0.1s ease;
+        }
+        .modal-footer button:hover {
+            filter: brightness(1.1);
+        }
+        .modal-footer button:active {
+            transform: scale(0.98);
+        }
+        .modal-footer button.primary {
+            background: var(--accent);
+            color: #FFFFFF;
+            border: none;
+            box-shadow: var(--shadow-btn);
+        }
+    </style>
+    <script>
+        var cs = new CSInterface();
+
+        function loadJSX() {
+            try {
+                var p = cs.getSystemPath(SystemPath.EXTENSION) + "/jsx/extendScript.jsx";
+                cs.evalScript('$.evalFile("' + p + '")');
+            } catch (e) {
+                console.warn("Could not eval JSX file:", e);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            loadJSX();
+            initTheme();
+            initSeqPrefixSetting();
+            initResponsiveEngine();
+            checkAppConnection();
+            setInterval(checkAppConnection, 8000);
+        });
+
+        // Responsive dock engine
+        function initResponsiveEngine() {
+            function updateResponsiveClasses() {
+                var w = window.innerWidth;
+                var h = window.innerHeight;
+                var b = document.body;
+
+                var isHorizontal = (w >= 440 && h <= 300) || (w / h >= 1.6 && h <= 360);
+                b.classList.toggle('is-horizontal', isHorizontal);
+                b.classList.toggle('is-compact-h', h < 380);
+                b.classList.toggle('is-tiny-h', h < 260);
+            }
+
+            window.addEventListener('resize', updateResponsiveClasses);
+            updateResponsiveClasses();
+        }
+
+        function initSeqPrefixSetting() {
+            var saved = localStorage.getItem('ot_ext_add_seq_prefix');
+            var cb = document.getElementById('addSeqPrefixCheckbox');
+            if (cb) {
+                cb.checked = (saved === 'true');
+            }
+        }
+
+        function toggleSeqPrefixSetting(checked) {
+            localStorage.setItem('ot_ext_add_seq_prefix', checked ? 'true' : 'false');
+        }
+
+        function initTheme() {
+            var saved = localStorage.getItem('ot_ext_theme') || localStorage.getItem('ot_parent_ext_theme');
+            if (saved === 'light') {
+                document.documentElement.classList.remove('dark-theme');
+                document.body.classList.remove('dark-theme');
+            } else {
+                document.documentElement.classList.add('dark-theme');
+                document.body.classList.add('dark-theme');
+            }
+            updateThemeBtnText();
+
+            try {
+                cs.addEventListener("com.adobe.csxs.events.ThemeColorChanged", function() {
+                    if (!localStorage.getItem('ot_ext_theme') && !localStorage.getItem('ot_parent_ext_theme')) {
+                        syncWithHostTheme();
+                    }
+                });
+            } catch(e) {}
+        }
+
+        function syncWithHostTheme() {
+            try {
+                var hostEnv = cs.getHostEnvironment();
+                if (hostEnv && hostEnv.appSkinInfo && hostEnv.appSkinInfo.panelBackgroundColor) {
+                    var bg = hostEnv.appSkinInfo.panelBackgroundColor.color;
+                    var luminance = (0.299 * bg.red + 0.587 * bg.green + 0.114 * bg.blue) / 255;
+                    if (luminance < 0.5) {
+                        document.documentElement.classList.add('dark-theme');
+                        document.body.classList.add('dark-theme');
+                    } else {
+                        document.documentElement.classList.remove('dark-theme');
+                        document.body.classList.remove('dark-theme');
+                    }
+                    updateThemeBtnText();
+                }
+            } catch(e) {}
+        }
+
+        function toggleTheme() {
+            var isDark = document.body.classList.contains('dark-theme') || document.documentElement.classList.contains('dark-theme');
+            if (isDark) {
+                document.documentElement.classList.remove('dark-theme');
+                document.body.classList.remove('dark-theme');
+                localStorage.setItem('ot_ext_theme', 'light');
+                localStorage.setItem('ot_parent_ext_theme', 'light');
+            } else {
+                document.documentElement.classList.add('dark-theme');
+                document.body.classList.add('dark-theme');
+                localStorage.setItem('ot_ext_theme', 'dark');
+                localStorage.setItem('ot_parent_ext_theme', 'dark');
+            }
+            updateThemeBtnText();
+        }
+
+        function updateThemeBtnText() {
+            var btn = document.getElementById('themeBtn');
+            if (btn) {
+                var isDark = document.body.classList.contains('dark-theme') || document.documentElement.classList.contains('dark-theme');
+                btn.innerHTML = isDark ? '<span>☀️</span> Light' : '<span>🌙</span> Dark';
+            }
+        }
+
+        function switchTab(tabId) {
+            var tabs = document.querySelectorAll('.tab-btn');
+            var pages = document.querySelectorAll('.tab-page');
+            for (var i = 0; i < tabs.length; i++) {
+                tabs[i].classList.remove('active');
+            }
+            for (var j = 0; j < pages.length; j++) {
+                pages[j].classList.remove('active');
+            }
+            var activeTab = document.getElementById('tab-' + tabId);
+            var activePage = document.getElementById('page-' + tabId);
+            if (activeTab) activeTab.classList.add('active');
+            if (activePage) activePage.classList.add('active');
+        }
+
+        // ── GROUP PHOTO INSERTER — JS Logic ──────────────────────────────────────
+        var gpiState = {
+            gpSources: [],   // [{gpNum, clipName, hasClip, dur}]
+            nikaahCount: 0,
+            assignmentCount: 0
+        };
+
+        function gpiScan() {
+            showStatus('⏳ Scanning sequence for Group Photo markers...', 'var(--warning)');
+            cs.evalScript('$.runScript.groupPhotoInserterScan()', function(r) {
+                if (!r) { showStatus('❌ No response from Premiere Pro.', 'var(--danger)'); return; }
+                if (r.indexOf('ERROR|||') === 0) {
+                    showStatus('❌ ' + r.replace('ERROR|||', ''), 'var(--danger)');
+                    gpiRenderScanError(r.replace('ERROR|||', ''));
+                    return;
+                }
+                // Parse: SUCCESS|||gpCount|||gpNum|name|hasClip|dur|||...|||NIKAAH_COUNT|||total
+                var parts = r.split('|||');
+                // parts[0]=SUCCESS, parts[1]=gpCount, parts[2..gpCount+1]=gp data, then NIKAAH_COUNT, then total
+                var gpCount = parseInt(parts[1], 10) || 0;
+                var gps = [];
+                for (var i = 0; i < gpCount; i++) {
+                    var gpData = (parts[2 + i] || '').split('|');
+                    gps.push({
+                        gpNum: parseInt(gpData[0], 10) || (i + 1),
+                        clipName: gpData[1] || ('Group Photo ' + (i + 1)),
+                        hasClip: (gpData[2] === '1'),
+                        dur: parseFloat(gpData[3]) || 0
+                    });
+                }
+                var nikaahCount = 0;
+                var ncIdx = parts.indexOf('NIKAAH_COUNT');
+                if (ncIdx !== -1 && parts[ncIdx + 1]) nikaahCount = parseInt(parts[ncIdx + 1], 10) || 0;
+
+                gpiState.gpSources = gps;
+                gpiState.nikaahCount = nikaahCount;
+
+                gpiRenderScanResults(gps, nikaahCount);
+                showStatus('✅ Found ' + gpCount + ' Group Photo source(s) + ' + nikaahCount + ' Nikaah markers', 'var(--success)');
+            });
+        }
+
+        function gpiRenderScanError(msg) {
+            var box = document.getElementById('gpiScanResults');
+            if (!box) return;
+            box.innerHTML = '<div class="gpi-warn-box">⚠ ' + msg + '</div>';
+        }
+
+        function gpiRenderScanResults(gps, nikaahCount) {
+            var box = document.getElementById('gpiScanResults');
+            if (!box) return;
+
+            var html = '<div class="gpi-stat-bar">' +
+                '<div class="gpi-stat"><div class="gpi-stat-num">' + gps.length + '</div><div class="gpi-stat-lbl">GP Sources</div></div>' +
+                '<div class="gpi-stat"><div class="gpi-stat-num">' + nikaahCount + '</div><div class="gpi-stat-lbl">Nikaah Clips</div></div>' +
+                '</div>';
+
+            if (gps.length === 0) {
+                html += '<div class="gpi-warn-box">⚠ No GROUP_PHOTO_N markers found.<br>Add sequence markers named <b>GROUP_PHOTO_1</b>, <b>GROUP_PHOTO_2</b>... at the start of each source clip.</div>';
+            } else {
+                html += '<div class="gpi-section-label">Detected Sources</div><div class="gpi-source-row">';
+                for (var i = 0; i < gps.length; i++) {
+                    var gp = gps[i];
+                    var cls = gp.hasClip ? '' : ' no-clip';
+                    var icon = gp.hasClip ? '🎞' : '⚠';
+                    html += '<div class="gpi-source-pill' + cls + '">' + icon + ' GP' + gp.gpNum + ': ' + gpiShortName(gp.clipName) + ' (' + gp.dur + 's)</div>';
+                }
+                html += '</div>';
+            }
+
+            if (nikaahCount === 0) {
+                html += '<div class="gpi-warn-box">⚠ No Nikaah (N) markers or timeline clips found.<br>Ensure your timeline clips or sequence markers contain <b>N</b> (e.g. 01N, N1, -N-) or run Auto In/Out Markers.</div>';
+            }
+
+            box.innerHTML = html;
+
+            // Refresh GP selects in existing assignment rows
+            gpiRefreshAllSelects();
+        }
+
+        function gpiShortName(name) {
+            if (!name) return '—';
+            return name.length > 16 ? name.substring(0, 14) + '…' : name;
+        }
+
+        function gpiRefreshAllSelects() {
+            var selects = document.querySelectorAll('.gpi-gp-select');
+            for (var i = 0; i < selects.length; i++) {
+                var sel = selects[i];
+                var curVal = sel.value;
+                gpiPopulateSelect(sel);
+                sel.value = curVal;
+            }
+        }
+
+        function gpiPopulateSelect(sel) {
+            var gps = gpiState.gpSources;
+            sel.innerHTML = '';
+            if (gps.length === 0) {
+                var opt = document.createElement('option');
+                opt.value = '';
+                opt.textContent = '— Scan first —';
+                sel.appendChild(opt);
+                return;
+            }
+            for (var i = 0; i < gps.length; i++) {
+                var gp = gps[i];
+                var opt = document.createElement('option');
+                opt.value = String(gp.gpNum);
+                opt.textContent = 'GP' + gp.gpNum + ': ' + gpiShortName(gp.clipName);
+                sel.appendChild(opt);
+            }
+        }
+
+        function gpiAddAssignment() {
+            gpiState.assignmentCount++;
+            var id = gpiState.assignmentCount;
+            var container = document.getElementById('gpiAssignmentList');
+            if (!container) return;
+
+            var row = document.createElement('div');
+            row.className = 'gpi-assignment-row';
+            row.id = 'gpi-row-' + id;
+
+            var sel = document.createElement('select');
+            sel.className = 'gpi-select gpi-gp-select';
+            sel.id = 'gpi-gp-' + id;
+            gpiPopulateSelect(sel);
+
+            var arrow = document.createElement('span');
+            arrow.className = 'gpi-row-label';
+            arrow.textContent = '→ N';
+
+            var fromIn = document.createElement('input');
+            fromIn.type = 'number';
+            fromIn.className = 'gpi-num-input';
+            fromIn.id = 'gpi-from-' + id;
+            fromIn.min = '1';
+            fromIn.value = '1';
+            fromIn.title = 'From Nikaah #';
+
+            var toLabel = document.createElement('span');
+            toLabel.className = 'gpi-row-label';
+            toLabel.textContent = '–';
+
+            var toIn = document.createElement('input');
+            toIn.type = 'number';
+            toIn.className = 'gpi-num-input';
+            toIn.id = 'gpi-to-' + id;
+            toIn.min = '1';
+            toIn.value = String(Math.max(1, gpiState.nikaahCount));
+            toIn.title = 'To Nikaah #';
+
+            var rm = document.createElement('button');
+            rm.className = 'gpi-rm-btn';
+            rm.title = 'Remove';
+            rm.textContent = '×';
+            rm.onclick = function() {
+                var r = document.getElementById('gpi-row-' + id);
+                if (r) r.parentNode.removeChild(r);
+            };
+
+            row.appendChild(sel);
+            row.appendChild(arrow);
+            row.appendChild(fromIn);
+            row.appendChild(toLabel);
+            row.appendChild(toIn);
+            row.appendChild(rm);
+            container.appendChild(row);
+        }
+
+        function gpiBuildAssignmentsStr() {
+            var rows = document.querySelectorAll('.gpi-assignment-row');
+            var parts = [];
+            for (var i = 0; i < rows.length; i++) {
+                var row = rows[i];
+                var gpSel = row.querySelector('.gpi-gp-select');
+                var fromIn = row.querySelector('input[id^="gpi-from-"]');
+                var toIn = row.querySelector('input[id^="gpi-to-"]');
+                if (!gpSel || !fromIn || !toIn) continue;
+                var gpNum = parseInt(gpSel.value, 10);
+                var fromN = parseInt(fromIn.value, 10);
+                var toN = parseInt(toIn.value, 10);
+                if (isNaN(gpNum) || isNaN(fromN) || isNaN(toN)) continue;
+                parts.push(gpNum + ',' + fromN + ',' + toN);
+            }
+            return parts.join(';');
+        }
+
+        function gpiPreview() {
+            var assignmentsStr = gpiBuildAssignmentsStr();
+            if (!assignmentsStr) {
+                showStatus('⚠ Add at least one assignment row first.', 'var(--warning)');
+                return;
+            }
+            showStatus('⏳ Building preview...', 'var(--accent)');
+            var escaped = assignmentsStr.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            cs.evalScript("$.runScript.groupPhotoInserterPreview('" + escaped + "')", function(r) {
+                if (!r) { showStatus('❌ No response.', 'var(--danger)'); return; }
+                if (r.indexOf('ERROR|||') === 0) {
+                    showStatus('❌ ' + r.replace('ERROR|||', ''), 'var(--danger)'); return;
+                }
+                // Parse: SUCCESS|||previewText|||STATS|||stats|||WARNINGS|||warns
+                var parts = r.split('|||');
+                var previewText = parts[1] || '';
+                var statsStr = '';
+                var warnsStr = '';
+                var statsIdx = parts.indexOf('STATS');
+                var warnIdx = parts.indexOf('WARNINGS');
+                if (statsIdx !== -1) statsStr = parts[statsIdx + 1] || '';
+                if (warnIdx !== -1) warnsStr = parts[warnIdx + 1] || '';
+
+                // Parse stats
+                var statsMap = {};
+                (statsStr || '').split('|').forEach(function(p) {
+                    var kv = p.split('=');
+                    if (kv.length === 2) statsMap[kv[0]] = parseInt(kv[1], 10) || 0;
+                });
+
+                // Render in modal
+                var listEl = document.getElementById('gpPreviewList');
+                if (listEl) listEl.textContent = previewText || '(no items)';
+
+                var statsEl = document.getElementById('gpPreviewStats');
+                if (statsEl) {
+                    statsEl.innerHTML =
+                        '<div class="gp-stat-pill green">✓ ' + (statsMap['inserted'] || 0) + ' Planned</div>' +
+                        '<div class="gp-stat-pill amber">↷ ' + (statsMap['skipped'] || 0) + ' Skipped</div>' +
+                        ((statsMap['warnings'] || 0) > 0 ? '<div class="gp-stat-pill red">⚠ ' + statsMap['warnings'] + ' Warn</div>' : '');
+                }
+
+                var warnEl = document.getElementById('gpPreviewWarnings');
+                if (warnEl) {
+                    if (warnsStr && warnsStr.replace(/^\s+|\s+$/g, '') !== '') {
+                        warnEl.style.display = 'block';
+                        warnEl.textContent = warnsStr;
+                    } else {
+                        warnEl.style.display = 'none';
+                        warnEl.textContent = '';
+                    }
+                }
+
+                // Store assignments string for the execute button inside the modal
+                window._gpiPendingAssignments = assignmentsStr;
+
+                var modal = document.getElementById('gpPreviewModal');
+                if (modal) modal.classList.add('active');
+                showStatus('✅ Preview ready — ' + (statsMap['inserted'] || 0) + ' planned insertions', 'var(--success)');
+            });
+        }
+
+        function gpiExecuteFromModal() {
+            var modal = document.getElementById('gpPreviewModal');
+            if (modal) modal.classList.remove('active');
+            gpiExecute(window._gpiPendingAssignments || gpiBuildAssignmentsStr());
+        }
+
+        function gpiExecute(assignmentsStr) {
+            if (!assignmentsStr) {
+                assignmentsStr = gpiBuildAssignmentsStr();
+            }
+            if (!assignmentsStr) {
+                showStatus('⚠ No assignments configured.', 'var(--warning)');
+                return;
+            }
+            showStatus('⏳ Inserting Group Photos — rippling timeline...', 'var(--warning)');
+            var escaped = assignmentsStr.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            cs.evalScript("$.runScript.groupPhotoInserterExecute('" + escaped + "')", function(r) {
+                if (!r) { showStatus('❌ No response from Premiere Pro.', 'var(--danger)'); return; }
+                if (r.indexOf('ERROR|||') === 0) {
+                    showStatus('❌ ' + r.replace('ERROR|||', '').substring(0, 80), 'var(--danger)');
+                    return;
+                }
+                // Parse: SUCCESS|||inserted=N|skipped=N|failed=N|||report
+                var parts = r.split('|||');
+                var statsStr = parts[1] || '';
+                var statsMap = {};
+                statsStr.split('|').forEach(function(p) {
+                    var kv = p.split('=');
+                    if (kv.length === 2) statsMap[kv[0]] = parseInt(kv[1], 10) || 0;
+                });
+                var inserted = statsMap['inserted'] || 0;
+                var skipped = statsMap['skipped'] || 0;
+                var failed = statsMap['failed'] || 0;
+                var msg = '✅ Inserted: ' + inserted + ' | Skipped: ' + skipped;
+                if (failed > 0) msg += ' | ⚠ Failed: ' + failed;
+                showStatus(msg, inserted > 0 ? 'var(--success)' : 'var(--warning)');
+            });
+        }
+
+        function checkAppConnection() {
+            var badge = document.getElementById('syncBadge');
+            var text = document.getElementById('syncText');
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", "http://127.0.0.1:49152/get-settings", true);
+            xhr.timeout = 2500;
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200) {
+                        if (badge) badge.classList.remove('offline');
+                        if (text) text.innerText = "Synced with Workstation";
+                    } else {
+                        if (badge) badge.classList.add('offline');
+                        if (text) text.innerText = "Workstation Offline (Click to retry)";
+                    }
+                }
+            };
+            xhr.ontimeout = function () {
+                if (badge) badge.classList.add('offline');
+                if (text) text.innerText = "Workstation Offline (Click to retry)";
+            };
+            try { xhr.send(); } catch (e) {
+                if (badge) badge.classList.add('offline');
+                if (text) text.innerText = "Workstation Offline (Click to retry)";
+            }
+        }
+
+        function showStatus(text, color) {
+            var statusEl = document.getElementById('statusMessage');
+            if (!statusEl) return;
+            statusEl.innerText = text;
+            statusEl.style.color = color || 'var(--text-primary)';
+            statusEl.classList.add('visible');
+            setTimeout(function () {
+                statusEl.classList.remove('visible');
+            }, 3500);
+        }
+
+        function copyToClipboard(text) {
+            try {
+                var textArea = document.createElement("textarea");
+                textArea.value = text;
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                return true;
+            } catch (err) {
+                return false;
+            }
+        }
+
+        window.muteExceptions = [];
+
+        function stripDvdFolderFromPath(folderPath) {
+            if (!folderPath) return '';
+            var str = String(folderPath).trim().replace(/^["']|["']$/g, '');
+            return str;
+        }
+
+        function sendToApp(path, msg, copied, expectedVideos) {
+            var cleanedPath = stripDvdFolderFromPath(path);
+            var payload = JSON.stringify({
+                path: cleanedPath,
+                muteExceptions: window.muteExceptions || [],
+                muteOriginal: true,
+                expectedVideos: expectedVideos || []
+            });
+
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", "http://127.0.0.1:49152/set-batch-source", true);
+            xhr.setRequestHeader("Content-Type", "application/json");
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200) {
+                        showStatus("✅ " + msg + " (Synced with Workstation)", "var(--success)");
+                    } else {
+                        var statusMsg = "Queued to Media Encoder.";
+                        if (copied) statusMsg += " (Path copied to clipboard)";
+                        showStatus("✅ " + msg + " " + statusMsg, "var(--warning)");
+                    }
+                }
+            };
+            xhr.send(payload);
+        }
+
+        function runAutoBatch() {
+            showStatus("⏳ Exporting all markers...", "var(--accent)");
+            cs.evalScript("$.runScript.autoMEIO()", function (r) {
+                if (r.indexOf("SUCCESS|||") === 0) {
+                    var parts = r.split("|||");
+                    var path = parts[1];
+                    var msg = parts[2];
+                    var expectedVideos = (parts[3] || "").split(";;;").filter(Boolean);
+                    var copied = copyToClipboard(path);
+                    sendToApp(path, msg, copied, expectedVideos);
+                } else {
+                    showStatus("❌ " + r.replace("ERROR|||", ""), "var(--danger)");
+                }
+            });
+        }
+
+        function runAutoCustom(selectedMarkersStr) {
+            showStatus("⏳ Exporting selected markers...", "var(--accent)");
+            var escapedStr = (selectedMarkersStr || "").replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            cs.evalScript("$.runScript.autoMEIO('" + escapedStr + "')", function (r) {
+                if (r.indexOf("SUCCESS|||") === 0) {
+                    var parts = r.split("|||");
+                    var path = parts[1];
+                    var msg = parts[2];
+                    var expectedVideos = (parts[3] || "").split(";;;").filter(Boolean);
+                    var copied = copyToClipboard(path);
+                    sendToApp(path, msg, copied, expectedVideos);
+                } else {
+                    showStatus("❌ " + r.replace("ERROR|||", ""), "var(--danger)");
+                }
+            });
+        }
+
+        function runImportMediaXml() {
+            showStatus("⏳ Scanning directory for matching sequence XML...", "var(--accent)");
+            cs.evalScript("$.runScript.importMediaXml()", function (r) {
+                if (!r) {
+                    showStatus("❌ No response received from Premiere Pro.", "var(--danger)");
+                    return;
+                }
+                if (r.indexOf("SUCCESS|||") === 0) {
+                    var msg = r.replace("SUCCESS|||", "");
+                    showStatus("✅ " + msg, "var(--success)");
+                } else if (r.indexOf("ERROR|||") === 0) {
+                    var errMsg = r.replace("ERROR|||", "");
+                    showStatus("❌ " + errMsg, "var(--danger)");
+                } else {
+                    showStatus(r, "var(--accent)");
+                }
+            });
+        }
+
+        function runNikahGroupPhoto() {
+            showStatus("⏳ Ripple-inserting Nikah group photo video...", "var(--warning)");
+            cs.evalScript("$.runScript.distributeNikahGroupPhoto()", function (r) {
+                if (!r) {
+                    showStatus("❌ No response received from Premiere Pro.", "var(--danger)");
+                    return;
+                }
+                if (r.indexOf("SUCCESS|||") === 0) {
+                    var parts = r.split("|||");
+                    var count = parts[1] || "0";
+                    var clipName = parts[2] || "Group Photo Video";
+                    var totalShift = parts[3] || "";
+                    var shiftTxt = totalShift ? (" (+" + totalShift + "s rippled)") : "";
+                    showStatus("✅ Inserted '" + clipName + "' across " + count + " Nikah sections" + shiftTxt + "!", "var(--success)");
+                } else if (r.indexOf("ERROR|||") === 0) {
+                    var err = r.replace("ERROR|||", "");
+                    showStatus("⚠️ " + err, "var(--warning)");
+                } else {
+                    showStatus(r, "var(--accent)");
+                }
+            });
+        }
+
+        function runAutoMarkers(userChoice) {
+            showStatus("⏳ Creating sequence markers...", "var(--accent-markers)");
+            var addSeq = document.getElementById('addSeqPrefixCheckbox') ? document.getElementById('addSeqPrefixCheckbox').checked : false;
+            var scriptCmd = "$.runScript.autoInOutMarkers(" + (userChoice ? ("'" + userChoice + "'") : "''") + ", " + addSeq + ")";
+            cs.evalScript(scriptCmd, function (r) {
+                if (r.indexOf("NEEDS_CONFIRMATION|||") === 0) {
+                    var msg = r.replace("NEEDS_CONFIRMATION|||", "");
+                    openConfirmModal(msg);
+                } else if (r.indexOf("SUCCESS|||") === 0) {
+                    var parts = r.split("|||");
+                    var total = parts[1] || "0";
+                    var breakdownStr = parts[2] || "";
+                    var warnings = parts[3] || "";
+
+                    showStatus("✅ Auto In/Out Complete! " + total + " markers created.", "var(--success)");
+                    openSummaryModal(total, breakdownStr, warnings);
+                } else if (r.indexOf("ERROR") !== -1) {
+                    showStatus("❌ " + r.replace("ERROR|||", ""), "var(--danger)");
+                } else {
+                    showStatus("✅ " + r, "var(--success)");
+                }
+            });
+        }
+
+        function openConfirmModal(msg) {
+            var msgEl = document.getElementById("confirmModalMessage");
+            if (msgEl && msg) msgEl.innerText = msg;
+            var modal = document.getElementById("confirmModal");
+            if (modal) modal.classList.add("active");
+        }
+
+        function handleConfirmChoice(choice) {
+            var modal = document.getElementById("confirmModal");
+            if (modal) modal.classList.remove("active");
+            runAutoMarkers(choice);
+        }
+
+        function openSummaryModal(total, breakdownStr, warnings) {
+            var badge = document.getElementById("summaryTotalBadge");
+            if (badge) badge.innerText = total + " Videos Total";
+
+            var countEl = document.getElementById("summaryTotalCount");
+            if (countEl) countEl.innerText = total;
+
+            var warnBox = document.getElementById("summaryWarningBox");
+            var warnText = document.getElementById("summaryWarningText");
+            var cleanWarn = (warnings || "").replace(/^\s+|\s+$/g, "");
+            if (warnBox && warnText) {
+                if (cleanWarn !== "") {
+                    warnText.innerText = cleanWarn;
+                    warnBox.style.display = "block";
+                } else {
+                    warnBox.style.display = "none";
+                    warnText.innerText = "";
+                }
+            }
+
+            var listEl = document.getElementById("summaryPrefixList");
+            if (listEl) {
+                listEl.innerHTML = "";
+                var cleanBreakdown = (breakdownStr || "").replace(/^\s+|\s+$/g, "");
+                if (cleanBreakdown !== "") {
+                    var lines = cleanBreakdown.split(/[\r\n]+/);
+                    for (var i = 0; i < lines.length; i++) {
+                        var line = lines[i].replace(/^\s+|\s+$/g, "");
+                        if (!line) continue;
+                        var pair = line.split("=");
+                        var pfx = pair[0] || "Other";
+                        var cnt = pair[1] || "0";
+
+                        var html = "<div style='display:flex; align-items:center; justify-content:space-between; padding:5px 9px; background:var(--surface); border:1px solid var(--border); border-radius:6px; font-size:11px; font-weight:700; color:var(--text-primary); margin-bottom:3px; flex-shrink:0;'>" +
+                            "<div style='display:flex; align-items:center; gap:6px;'>" +
+                            "<span style='color:var(--accent); font-weight:900;'>🏷️</span>" +
+                            "<span>" + pfx + "</span>" +
+                            "</div>" +
+                            "<span style='background:var(--accent-soft); color:var(--accent); font-weight:800; font-size:10px; padding:2px 7px; border-radius:10px;'>" + cnt + " Video" + (parseInt(cnt, 10) === 1 ? "" : "s") + "</span>" +
+                            "</div>";
+                        listEl.insertAdjacentHTML('beforeend', html);
+                    }
+                } else {
+                    listEl.innerHTML = "<div style='text-align:center;font-size:11px;padding:12px;color:var(--text-muted);'>No prefix breakdown available</div>";
+                }
+            }
+
+            var modal = document.getElementById("summaryModal");
+            if (modal) modal.classList.add("active");
+        }
+
+        function closeSummaryModal() {
+            var modal = document.getElementById("summaryModal");
+            if (modal) modal.classList.remove("active");
+        }
+
+        function openMuteExceptions() {
+            cs.evalScript("$.runScript.getMarkerNames()", function (r) {
+                if (r.indexOf("SUCCESS|||") === 0) {
+                    var names = r.split("|||");
+                    names.shift();
+
+                    var listEl = document.getElementById("muteList");
+                    listEl.innerHTML = "";
+
+                    if (names.length === 0 || (names.length === 1 && names[0] === "")) {
+                        listEl.innerHTML = "<div style='text-align:center;font-size:11px;padding:12px;color:var(--text-muted)'>No title markers found</div>";
+                    } else {
+                        for (var i = 0; i < names.length; i++) {
+                            var n = names[i];
+                            if (!n) continue;
+                            var isExcluded = window.muteExceptions.indexOf(n) !== -1;
+                            var checkedAttr = isExcluded ? "checked" : "";
+
+                            var html = "<label class='modal-item'>" +
+                                "<input type='checkbox' value='" + n + "' " + checkedAttr + " onchange='updateMuteBadge()'>" +
+                                "<span style='white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1'>" + n + "</span>" +
+                                "</label>";
+                            listEl.insertAdjacentHTML('beforeend', html);
+                        }
+                    }
+
+                    updateMuteBadge();
+                    document.getElementById("muteModal").classList.add("active");
+                } else {
+                    showStatus("❌ " + r.replace("ERROR|||", ""), "var(--danger)");
+                }
+            });
+        }
+
+        function filterMuteList() {
+            var q = (document.getElementById("muteSearch").value || "").toLowerCase().trim();
+            var items = document.querySelectorAll("#muteList .modal-item");
+            for (var i = 0; i < items.length; i++) {
+                var txt = items[i].innerText.toLowerCase();
+                items[i].style.display = txt.indexOf(q) !== -1 ? "flex" : "none";
+            }
+        }
+
+        function updateMuteBadge() {
+            var checkboxes = document.querySelectorAll("#muteList input[type='checkbox']:checked");
+            var badge = document.getElementById("muteBadge");
+            if (badge) badge.innerText = checkboxes.length + " Active";
+        }
+
+        function closeMuteModal() {
+            var checkboxes = document.querySelectorAll("#muteList input[type='checkbox']");
+            var selected = [];
+            for (var i = 0; i < checkboxes.length; i++) {
+                if (checkboxes[i].checked) {
+                    selected.push(checkboxes[i].value);
+                }
+            }
+            window.muteExceptions = selected;
+            document.getElementById("muteModal").classList.remove("active");
+            if (selected.length > 0) {
+                showStatus("🔊 " + selected.length + " Audio Exceptions Saved", "var(--warning)");
+            } else {
+                showStatus("Exceptions cleared", "var(--text-secondary)");
+            }
+        }
+
+        function openExportSelection() {
+            showStatus("⏳ Loading sequence markers...", "var(--accent)");
+            cs.evalScript("$.runScript.getMarkerNames()", function (r) {
+                if (r.indexOf("SUCCESS|||") === 0) {
+                    var names = r.split("|||");
+                    names.shift();
+
+                    var listEl = document.getElementById("exportList");
+                    listEl.innerHTML = "";
+
+                    if (names.length === 0 || (names.length === 1 && names[0] === "")) {
+                        showStatus("⚠️ No markers found in sequence. Create markers first.", "var(--warning)");
+                    } else {
+                        for (var i = 0; i < names.length; i++) {
+                            var n = names[i];
+                            if (!n) continue;
+                            var html = "<label class='modal-item'>" +
+                                "<input type='checkbox' class='export-checkbox' value='" + n + "' onchange='updateExportBadge()'>" +
+                                "<span style='font-size:9.5px; opacity:0.55; font-weight:700; min-width:20px;'>#" + (i + 1) + "</span>" +
+                                "<span style='white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;font-weight:650;'>" + n + "</span>" +
+                                "</label>";
+                            listEl.insertAdjacentHTML('beforeend', html);
+                        }
+                        updateExportBadge();
+                        document.getElementById("exportModal").classList.add("active");
+                        showStatus("Select markers to export", "var(--text-primary)");
+                    }
+                } else {
+                    showStatus("❌ " + r.replace("ERROR|||", ""), "var(--danger)");
+                }
+            });
+        }
+
+        function filterExportList() {
+            var q = (document.getElementById("exportSearch").value || "").toLowerCase().trim();
+            var items = document.querySelectorAll("#exportList .modal-item");
+            for (var i = 0; i < items.length; i++) {
+                var txt = items[i].innerText.toLowerCase();
+                items[i].style.display = txt.indexOf(q) !== -1 ? "flex" : "none";
+            }
+        }
+
+        function updateExportBadge() {
+            var checkboxes = document.querySelectorAll("#exportList input[type='checkbox']:checked");
+            var badge = document.getElementById("exportBadge");
+            if (badge) badge.innerText = checkboxes.length + " Selected";
+        }
+
+        function toggleAllExport(checked) {
+            var checkboxes = document.querySelectorAll("#exportList input[type='checkbox']");
+            for (var i = 0; i < checkboxes.length; i++) {
+                checkboxes[i].checked = checked;
+            }
+            updateExportBadge();
+        }
+
+        function confirmExport() {
+            var checkboxes = document.querySelectorAll("#exportList input[type='checkbox']");
+            var selected = [];
+            for (var i = 0; i < checkboxes.length; i++) {
+                if (checkboxes[i].checked) {
+                    selected.push(checkboxes[i].value);
+                }
+            }
+
+            if (selected.length === 0) {
+                showStatus("⚠️ Please select at least one marker to export.", "var(--warning)");
+                return;
+            }
+
+            document.getElementById("exportModal").classList.remove("active");
+            runAutoCustom(selected.join("|||"));
+        }
+    </script>
+</head>
+
+<body>
+    <div class="panel-outer-wrap">
+        <div class="panel-container">
+            <!-- Header Bar -->
+            <div class="ecosystem-header">
+                <div class="brand-block">
+                    <div class="brand-badge">O</div>
+                    <div class="brand-titles">
+                        <div class="title">
+                            One Tap
+                            <span id="versionBadge" class="version-tag">v26.7.15</span>
+                        </div>
+                        <span class="subtitle">Premiere Pro Assistant</span>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <button id="locateXmlBtn" class="locate-xml-btn" onclick="runImportMediaXml()" title="Scan project directory or locate XML sequence file to open in Timeline">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        Locate XML
+                    </button>
+                    <button id="themeBtn" class="theme-toggle-btn" onclick="toggleTheme()" title="Toggle Dark/Light Mode">
+                        <span>☀️</span> Light
+                    </button>
+                </div>
+            </div>
+
+            <!-- Live Sync Status Bar -->
+            <div id="syncBadge" class="sync-badge" onclick="checkAppConnection()" title="Click to check workstation connection">
+                <div class="sync-dot-wrap">
+                    <span class="sync-dot"></span>
+                    <span class="sync-ripple"></span>
+                </div>
+                <span id="syncText" class="sync-text">Checking Workstation Connection…</span>
+            </div>
+
+            <!-- Sequence Prefix Setting Switch -->
+            <div class="settings-bar">
+                <label class="toggle-switch-label">
+                    <span class="toggle-switch-text" title="Prefix markers with 001, 002 Sequence Names">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+                            <path d="M4 9h16"/>
+                            <path d="M4 15h16"/>
+                            <path d="M10 3v18"/>
+                        </svg>
+                        Add 001 Sequence Name to Markers
+                    </span>
+                    <div class="toggle-switch">
+                        <input type="checkbox" id="addSeqPrefixCheckbox" onchange="toggleSeqPrefixSetting(this.checked)" />
+                        <span class="toggle-slider"></span>
+                    </div>
+                </label>
+            </div>
+
+            <!-- Segmented Tab Switcher -->
+            <div class="tab-bar">
+                <button id="tab-batch" class="tab-btn active" onclick="switchTab('batch')">⚡ Batch</button>
+                <button id="tab-custom" class="tab-btn" onclick="switchTab('custom')">🎯 Custom</button>
+                <button id="tab-gpi" class="tab-btn" onclick="switchTab('gpi')">💍 GP Insert</button>
+            </div>
+
+            <!-- TAB 1: BATCH INGEST -->
+            <div id="page-batch" class="tab-page active">
+                <div class="chrome-btn-wrap">
+                    <button class="btn-card btn-inout" onclick="runAutoMarkers()" title="Automatically generate and renumber sequence duration markers">
+                        <div class="btn-icon">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+                                <path d="M12 4V20"/>
+                                <path d="M8 8L12 4L16 8"/>
+                                <path d="M8 16L12 20L16 16"/>
+                            </svg>
+                        </div>
+                        <div class="btn-text-wrap">
+                            <span class="btn-label">Auto In/Out Markers</span>
+                            <span class="btn-sub">Mark sequence sections automatically</span>
+                        </div>
+                    </button>
+                </div>
+
+
+                <div class="chrome-btn-wrap">
+                    <button class="btn-card btn-primary" onclick="runAutoBatch()">
+                        <div class="btn-icon">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="7 10 12 15 17 10"/>
+                                <line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
+                        </div>
+                        <div class="btn-text-wrap">
+                            <span class="btn-label">Export All to Encoder</span>
+                            <span class="btn-sub">Send full sequence to One Tap</span>
+                        </div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- TAB 2: CUSTOM SELECTION -->
+            <div id="page-custom" class="tab-page">
+                <div class="chrome-btn-wrap">
+                    <button class="btn-card btn-inout" onclick="runAutoMarkers()" title="Automatically generate and renumber sequence duration markers">
+                        <div class="btn-icon">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+                                <path d="M12 4V20"/>
+                                <path d="M8 8L12 4L16 8"/>
+                                <path d="M8 16L12 20L16 16"/>
+                            </svg>
+                        </div>
+                        <div class="btn-text-wrap">
+                            <span class="btn-label">Auto In/Out Markers</span>
+                            <span class="btn-sub">Mark sequence sections</span>
+                        </div>
+                    </button>
+                </div>
+
+
+                <div class="chrome-btn-wrap">
+                    <button class="btn-card btn-primary" onclick="openExportSelection()">
+                        <div class="btn-icon">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                            </svg>
+                        </div>
+                        <div class="btn-text-wrap">
+                            <span class="btn-label">Select Titles to Export</span>
+                            <span class="btn-sub">Choose specific sequence markers</span>
+                        </div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- TAB 3: GROUP PHOTO INSERTER -->
+            <div id="page-gpi" class="tab-page">
+
+                <!-- Scan Row -->
+                <div style="display:flex; align-items:center; gap:5px; flex-shrink:0;">
+                    <div style="flex:1; font-size:10px; font-weight:750; color:var(--text-secondary);">💍 Group Photo Inserter</div>
+                    <button class="locate-xml-btn" onclick="gpiScan()" title="Scan active sequence for GROUP_PHOTO_N markers">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        Scan Sequence
+                    </button>
+                </div>
+
+                <!-- Scan Results -->
+                <div id="gpiScanResults" style="flex-shrink:0;">
+                    <div class="gpi-empty-box">Click "Scan Sequence" to detect Group Photo sources and Nikaah markers.<br><br><span style="font-size:9px;opacity:0.7;">Add sequence markers named <b>GROUP_PHOTO_1</b>, <b>GROUP_PHOTO_2</b>... at the start of each source clip in the timeline.</span></div>
+                </div>
+
+                <!-- Assignment Builder -->
+                <div style="flex-shrink:0;">
+                    <div class="gpi-section-label">Assignments — GP Source → Nikaah Range</div>
+                    <div id="gpiAssignmentList" class="gpi-assignment-list"></div>
+                    <button class="gpi-add-btn" onclick="gpiAddAssignment()">＋ Add Assignment</button>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="gpi-action-row" style="flex-shrink:0;">
+                    <button class="gpi-action-btn preview" onclick="gpiPreview()">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" style="vertical-align:middle;margin-right:3px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        Preview
+                    </button>
+                    <button class="gpi-action-btn execute" onclick="gpiPreview()">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" style="vertical-align:middle;margin-right:3px;"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                        Preview &amp; Execute
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- Floating Status Toast Banner -->
+            <div id="statusMessage"></div>
+
+            <!-- Sleek Micro Footer -->
+            <div class="footer-info">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="16" x2="12" y2="12"/>
+                    <line x1="12" y1="8" x2="12.01" y2="8"/>
+                </svg>
+                One Tap Workstation Ecosystem
+            </div>
+        </div>
+    </div>
+
+    <!-- Mute Exceptions Modal -->
+    <div id="muteModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header-row">
+                <span class="modal-header-title">🔊 Keep Original Audio</span>
+                <span id="muteBadge" class="modal-badge">0 Active</span>
+            </div>
+            <input type="text" id="muteSearch" class="modal-search" placeholder="🔍 Search title markers…" onkeyup="filterMuteList()" />
+            <div id="muteList" class="modal-list"></div>
+            <div class="modal-footer">
+                <button onclick="document.getElementById('muteModal').classList.remove('active')">Cancel</button>
+                <button class="primary" onclick="closeMuteModal()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Marker Selection Modal -->
+    <div id="exportModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header-row">
+                <span class="modal-header-title">🎯 Select Markers to Export</span>
+                <span id="exportBadge" class="modal-badge">0 Selected</span>
+            </div>
+            <div style="display:flex; gap:6px; margin-bottom:6px; flex-shrink:0;">
+                <input type="text" id="exportSearch" class="modal-search" style="margin-bottom:0; flex:1;" placeholder="🔍 Search titles or prefixes…" onkeyup="filterExportList()" />
+                <button type="button" onclick="toggleAllExport(true)" style="padding:4px 8px; font-size:10px; font-weight:700; border-radius:6px; border:1px solid var(--border); background:var(--surface-card); color:var(--accent); cursor:pointer;">All</button>
+                <button type="button" onclick="toggleAllExport(false)" style="padding:4px 8px; font-size:10px; font-weight:700; border-radius:6px; border:1px solid var(--border); background:var(--surface-card); color:var(--text-muted); cursor:pointer;">None</button>
+            </div>
+            <div id="exportList" class="modal-list" style="flex:1 1 auto; max-height:none;"></div>
+            <div class="modal-footer">
+                <button type="button" onclick="document.getElementById('exportModal').classList.remove('active')">Cancel</button>
+                <button type="button" class="primary" onclick="confirmExport()">Export Selected</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auto In/Out Summary Modal Popup -->
+    <div id="summaryModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header-row">
+                <span class="modal-header-title">🎬 Sequence In/Out Breakdown</span>
+                <span id="summaryTotalBadge" class="modal-badge" style="background:var(--success-soft); color:var(--success);">0 Videos Total</span>
+            </div>
+
+            <!-- Sleek Compact Stats Strip -->
+            <div style="display:flex; align-items:center; justify-content:space-between; background:var(--surface-card); border:1px solid var(--border); border-radius:8px; padding:6px 10px; margin-bottom:6px; flex-shrink:0;">
+                <div style="display:flex; align-items:baseline; gap:5px;">
+                    <span style="font-size:9.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">Markers:</span>
+                    <span id="summaryTotalCount" style="font-size:16px; font-weight:900; color:var(--accent);">0</span>
+                </div>
+                <div style="font-size:10px; font-weight:600; color:var(--text-secondary);">Numbered sequence markers</div>
+            </div>
+
+            <div id="summaryWarningBox" style="display:none; background:var(--warning-soft); border:1px solid rgba(245, 158, 11, 0.35); border-radius:8px; padding:6px 9px; margin-bottom:6px; font-size:10px; color:var(--warning); font-weight:600; line-height:1.35; flex-shrink:0;">
+                <div style="font-weight:800; margin-bottom:2px;">⚡ Sequence Correction Applied</div>
+                <div id="summaryWarningText"></div>
+            </div>
+
+            <div style="font-size:9.5px; font-weight:700; color:var(--text-muted); margin-bottom:4px; text-transform:uppercase; letter-spacing:0.5px; flex-shrink:0;">Videos Per Prefix</div>
+            <div id="summaryPrefixList" class="modal-list" style="flex:1 1 auto; max-height:none;"></div>
+
+            <div class="modal-footer" style="margin-top:8px;">
+                <button type="button" class="primary" onclick="closeSummaryModal()">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sequence Correction Confirmation Modal -->
+    <div id="confirmModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header-row">
+                <span class="modal-header-title">⚠️ Sequence Renumbering Prompt</span>
+                <span class="modal-badge" style="background:var(--warning-soft); color:var(--warning);">Action Required</span>
+            </div>
+
+            <div style="background:var(--warning-soft); border:1px solid rgba(245, 158, 11, 0.3); border-radius:8px; padding:10px; margin-bottom:10px; font-size:11px; color:var(--text-primary); line-height:1.4;">
+                <div style="font-weight:800; color:var(--warning); margin-bottom:3px;">Duplicate / Unnumbered Markers Found</div>
+                <div id="confirmModalMessage">Duplicate or unnumbered sequence markers were detected. Would you like to renumber them sequentially (e.g. Z01, Z02...)?</div>
+            </div>
+
+            <div class="modal-footer">
+                <button onclick="handleConfirmChoice('KEEP')">Keep Original</button>
+                <button class="primary" onclick="handleConfirmChoice('FIX')">Fix & Renumber</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Group Photo Inserter Preview Modal -->
+    <div id="gpPreviewModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header-row">
+                <span class="modal-header-title">💍 Insertion Preview</span>
+                <span class="modal-badge" style="background:var(--warning-soft);color:var(--warning);">Dry Run</span>
+            </div>
+
+            <!-- Stats Row -->
+            <div id="gpPreviewStats" class="gp-stats-row"></div>
+
+            <!-- Warnings -->
+            <div id="gpPreviewWarnings" style="display:none;background:var(--warning-soft);border:1px solid rgba(245,158,11,0.3);border-radius:7px;padding:6px 9px;font-size:10px;font-weight:700;color:var(--warning);margin-bottom:6px;white-space:pre-wrap;"></div>
+
+            <!-- Preview List -->
+            <div class="gpi-section-label" style="margin-bottom:4px;">Planned Insertions</div>
+            <div id="gpPreviewList" class="gp-preview-list">(loading...)</div>
+
+            <div class="modal-footer" style="margin-top:8px;">
+                <button onclick="document.getElementById('gpPreviewModal').classList.remove('active')">Cancel</button>
+                <button class="primary" onclick="gpiExecuteFromModal()" style="background:linear-gradient(135deg,#D97706,#F59E0B);border:none;">🚀 Execute Now</button>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>

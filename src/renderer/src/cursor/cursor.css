@@ -1,0 +1,229 @@
+/* ==========================================================================
+   CUSTOM CURSOR SYSTEM STYLES — ONE TAP V20.6.5 (COMPACT 18PX SYSTEM)
+   ========================================================================== */
+
+:root {
+  --cursor-default: url('@/assets/cursors/cursor-default.svg') 1 1, default;
+  --cursor-hover: url('@/assets/cursors/cursor-hover.svg') 4 1, pointer;
+  --cursor-click: url('@/assets/cursors/cursor-click.svg') 4 2, pointer;
+  --cursor-busy: url('@/assets/cursors/cursor-busy.svg') 7 7, progress;
+  --cursor-add: url('@/assets/cursors/cursor-add.svg') 1 1, copy;
+  --cursor-subtract: url('@/assets/cursors/cursor-subtract.svg') 1 1, not-allowed;
+  --cursor-not-allowed: url('@/assets/cursors/cursor-not-allowed.svg') 7 7, not-allowed;
+  --cursor-text: url('@/assets/cursors/cursor-text.svg') 6 7, text;
+  --cursor-hand: url('@/assets/cursors/cursor-hand.svg') 7 7, grab;
+  --cursor-resize-diagonal: url('@/assets/cursors/cursor-resize-diagonal.svg') 7 7, nwse-resize;
+  --cursor-resize-horizontal: url('@/assets/cursors/cursor-resize-horizontal.svg') 7 7, ew-resize;
+  --cursor-resize-vertical: url('@/assets/cursors/cursor-resize-vertical.svg') 7 7, ns-resize;
+  --cursor-help: url('@/assets/cursors/cursor-help.svg') 1 1, help;
+  --cursor-wait: url('@/assets/cursors/cursor-wait.svg') 7 7, wait;
+  --cursor-move: url('@/assets/cursors/cursor-move.svg') 7 7, move;
+  --cursor-precision: url('@/assets/cursors/cursor-precision.svg') 7 7, crosshair;
+  --cursor-link: url('@/assets/cursors/cursor-link.svg') 4 1, pointer;
+  --cursor-drag: url('@/assets/cursors/cursor-drag.svg') 7 7, grabbing;
+}
+
+/* ==========================================================================
+   GLOBAL BASE CURSOR: Every element in html and body defaults to custom arrow
+   ========================================================================== */
+
+html.custom-cursor-enabled,
+html.custom-cursor-enabled body,
+body.custom-cursor-enabled,
+body.custom-cursor-enabled * {
+  cursor: var(--cursor-default);
+}
+
+/* ==========================================================================
+   INTERACTIVE ELEMENTS: Hover Pointer
+   ========================================================================== */
+
+body.custom-cursor-enabled a,
+body.custom-cursor-enabled button,
+body.custom-cursor-enabled label,
+body.custom-cursor-enabled select,
+body.custom-cursor-enabled summary,
+body.custom-cursor-enabled [role="button"],
+body.custom-cursor-enabled [role="tab"],
+body.custom-cursor-enabled [role="link"],
+body.custom-cursor-enabled [role="menuitem"],
+body.custom-cursor-enabled [role="switch"],
+body.custom-cursor-enabled [role="checkbox"],
+body.custom-cursor-enabled [role="radio"],
+body.custom-cursor-enabled [role="option"],
+body.custom-cursor-enabled [role="treeitem"],
+body.custom-cursor-enabled [onclick],
+body.custom-cursor-enabled input[type="button"],
+body.custom-cursor-enabled input[type="submit"],
+body.custom-cursor-enabled input[type="reset"],
+body.custom-cursor-enabled input[type="checkbox"],
+body.custom-cursor-enabled input[type="radio"],
+body.custom-cursor-enabled .clickable,
+body.custom-cursor-enabled .nav-item,
+body.custom-cursor-enabled .btn,
+body.custom-cursor-enabled .tab-btn,
+body.custom-cursor-enabled [class*="clickable"],
+body.custom-cursor-enabled [class*="button"],
+body.custom-cursor-enabled [class*="nav-item"],
+body.custom-cursor-enabled [style*="cursor: pointer"],
+body.custom-cursor-enabled [style*="cursor:pointer"],
+body.custom-cursor-enabled [style*="cursor: grab"],
+body.custom-cursor-enabled [style*="cursor:grab"],
+body.custom-cursor-enabled [style*="cursor:hand"],
+body.custom-cursor-enabled [style*="cursor: hand"] {
+  cursor: var(--cursor-hover) !important;
+}
+
+/* ==========================================================================
+   TEXT EDITING ELEMENTS: Custom I-Beam
+   ========================================================================== */
+
+body.custom-cursor-enabled input[type="text"],
+body.custom-cursor-enabled input[type="search"],
+body.custom-cursor-enabled input[type="email"],
+body.custom-cursor-enabled input[type="password"],
+body.custom-cursor-enabled input[type="number"],
+body.custom-cursor-enabled input[type="tel"],
+body.custom-cursor-enabled input[type="url"],
+body.custom-cursor-enabled input:not([type]),
+body.custom-cursor-enabled textarea,
+body.custom-cursor-enabled [contenteditable="true"],
+body.custom-cursor-enabled [style*="cursor: text"],
+body.custom-cursor-enabled [style*="cursor:text"] {
+  cursor: var(--cursor-text) !important;
+}
+
+/* ==========================================================================
+   ACTIVE / CLICKING STATE
+   ========================================================================== */
+
+body.custom-cursor-enabled a:active,
+body.custom-cursor-enabled button:active,
+body.custom-cursor-enabled [role="button"]:active,
+body.custom-cursor-enabled [role="tab"]:active,
+body.custom-cursor-enabled input[type="button"]:active,
+body.custom-cursor-enabled input[type="submit"]:active,
+body.custom-cursor-enabled [style*="cursor: pointer"]:active,
+body.custom-cursor-enabled [style*="cursor:pointer"]:active,
+body.custom-cursor-enabled.cursor-active-pressing,
+body.custom-cursor-enabled.cursor-active-pressing * {
+  cursor: var(--cursor-click) !important;
+}
+
+/* ==========================================================================
+   DISABLED STATE
+   ========================================================================== */
+
+body.custom-cursor-enabled [disabled],
+body.custom-cursor-enabled :disabled,
+body.custom-cursor-enabled .disabled,
+body.custom-cursor-enabled [aria-disabled="true"],
+body.custom-cursor-enabled [style*="cursor: not-allowed"],
+body.custom-cursor-enabled [style*="cursor:not-allowed"] {
+  cursor: var(--cursor-not-allowed) !important;
+}
+
+/* ==========================================================================
+   RESIZING HANDLES
+   ========================================================================== */
+
+body.custom-cursor-enabled [style*="cursor: col-resize"],
+body.custom-cursor-enabled [style*="cursor:col-resize"],
+body.custom-cursor-enabled [style*="cursor: ew-resize"],
+body.custom-cursor-enabled [style*="cursor:ew-resize"],
+body.custom-cursor-enabled [class*="col-resize"],
+body.custom-cursor-enabled [class*="resize-col"] {
+  cursor: var(--cursor-resize-horizontal) !important;
+}
+
+body.custom-cursor-enabled [style*="cursor: row-resize"],
+body.custom-cursor-enabled [style*="cursor:row-resize"],
+body.custom-cursor-enabled [style*="cursor: ns-resize"],
+body.custom-cursor-enabled [style*="cursor:ns-resize"] {
+  cursor: var(--cursor-resize-vertical) !important;
+}
+
+body.custom-cursor-enabled [style*="cursor: nwse-resize"],
+body.custom-cursor-enabled [style*="cursor:nwse-resize"],
+body.custom-cursor-enabled [style*="cursor: nesw-resize"],
+body.custom-cursor-enabled [style*="cursor:nesw-resize"] {
+  cursor: var(--cursor-resize-diagonal) !important;
+}
+
+/* ==========================================================================
+   SELECTIVE ATTRIBUTE OVERRIDES
+   ========================================================================== */
+
+[data-cursor="default"] {
+  cursor: var(--cursor-default) !important;
+}
+[data-cursor="hover"] {
+  cursor: var(--cursor-hover) !important;
+}
+[data-cursor="click"] {
+  cursor: var(--cursor-click) !important;
+}
+[data-cursor="busy"] {
+  cursor: var(--cursor-busy) !important;
+}
+[data-cursor="add"] {
+  cursor: var(--cursor-add) !important;
+}
+[data-cursor="subtract"] {
+  cursor: var(--cursor-subtract) !important;
+}
+[data-cursor="not-allowed"] {
+  cursor: var(--cursor-not-allowed) !important;
+}
+[data-cursor="text"] {
+  cursor: var(--cursor-text) !important;
+}
+[data-cursor="hand"] {
+  cursor: var(--cursor-hand) !important;
+}
+[data-cursor="resize-diagonal"] {
+  cursor: var(--cursor-resize-diagonal) !important;
+}
+[data-cursor="resize-horizontal"] {
+  cursor: var(--cursor-resize-horizontal) !important;
+}
+[data-cursor="resize-vertical"] {
+  cursor: var(--cursor-resize-vertical) !important;
+}
+[data-cursor="help"] {
+  cursor: var(--cursor-help) !important;
+}
+[data-cursor="wait"] {
+  cursor: var(--cursor-wait) !important;
+}
+[data-cursor="move"] {
+  cursor: var(--cursor-move) !important;
+}
+[data-cursor="precision"] {
+  cursor: var(--cursor-precision) !important;
+}
+[data-cursor="link"] {
+  cursor: var(--cursor-link) !important;
+}
+[data-cursor="drag"] {
+  cursor: var(--cursor-drag) !important;
+}
+
+/* ==========================================================================
+   TEMPORARY BODY-LEVEL CURSOR OVERRIDES
+   ========================================================================== */
+
+body.cursor-override-busy,
+body.cursor-override-busy * {
+  cursor: var(--cursor-busy) !important;
+}
+
+body.cursor-override-wait,
+body.cursor-override-wait * {
+  cursor: var(--cursor-wait) !important;
+}
+
+body.cursor-override-not-allowed,
+body.cursor-override-not-allowed * {
+  cursor: var(--cursor-not-allowed) !important;
+}

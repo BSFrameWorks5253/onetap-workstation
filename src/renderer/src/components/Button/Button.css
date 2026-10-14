@@ -1,0 +1,247 @@
+/* Button.css — Mind-Blowing Holographic Light Buttons */
+
+/* ── Base button ────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-btn);
+  font-family: var(--font-main);
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  position: relative;
+  overflow: hidden;
+  backface-visibility: hidden;
+  will-change: transform, box-shadow;
+  letter-spacing: -0.01em;
+  transition:
+    background 0.25s ease,
+    border-color 0.25s ease,
+    color 0.2s ease,
+    box-shadow 0.26s cubic-bezier(0.34, 1.56, 0.64, 1),
+    transform 0.26s cubic-bezier(0.34, 1.56, 0.64, 1);
+  user-select: none;
+  -webkit-app-region: no-drag;
+}
+
+/* Specular Micro Glow on Hover */
+.btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    115deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.15) 35%,
+    rgba(255, 255, 255, 0.4) 50%,
+    transparent 65%
+  );
+  transform: translateX(-160%);
+  pointer-events: none;
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+/* Inner icon micro-interaction on button hover */
+.btn-icon,
+.btn svg,
+.btn i,
+.btn span[class*="icon"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.btn:hover:not(:disabled) .btn-icon,
+.btn:hover:not(:disabled) svg,
+.btn:hover:not(:disabled) i,
+.btn:hover:not(:disabled) span[class*="icon"] {
+  transform: scale(1.08) translateY(-1px);
+}
+
+/* Press state — real physical tactile snap */
+.btn:active:not(:disabled) { 
+  transform: scale(0.97) translateY(1px) !important; 
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12) !important;
+  filter: brightness(0.96);
+}
+
+.btn:disabled { 
+  opacity: 0.45; 
+  cursor: not-allowed; 
+  transform: none !important; 
+  filter: saturate(0.5); 
+}
+
+/* ── Sizes ──────────────────────────────────── */
+.btn--sm { height: 28px; padding: 0 10px; font-size: var(--text-xs); border-radius: 6px; font-weight: 700; }
+.btn--md { height: var(--btn-h);    padding: 0 14px; font-size: 12.5px; font-weight: 700; }
+.btn--lg { height: var(--btn-h-lg); padding: 0 18px; font-size: var(--text-sm); font-weight: 750; }
+.btn--xl { height: var(--btn-h-xl); padding: 0 22px; font-size: var(--text-sm); letter-spacing: 0.01em; font-weight: 800; }
+
+/* ── Primary (Premium Accent Gradient + Crisp Glow) ───────── */
+.btn--primary {
+  background: linear-gradient(
+    135deg, 
+    var(--btn-accent, var(--theme-accent)) 0%, 
+    var(--btn-accent-hv, var(--theme-accent-hv)) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #FFFFFF;
+  box-shadow: 
+    0 4px 14px -2px color-mix(in srgb, var(--btn-accent, var(--theme-accent)) 40%, transparent),
+    0 1px 3px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.btn--primary:hover:not(:disabled) {
+  box-shadow: 
+    0 8px 24px -2px color-mix(in srgb, var(--btn-accent, var(--theme-accent)) 50%, transparent),
+    0 2px 8px color-mix(in srgb, var(--btn-accent, var(--theme-accent)) 25%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  transform: translateY(-2px);
+  filter: brightness(1.05);
+}
+
+.btn--primary:hover:not(:disabled)::after {
+  opacity: 1;
+  animation: specularPrismSweep 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ── Ghost (Frosted Pearl Glass + Neon Border Glow) ─────────────── */
+.btn--ghost {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  box-shadow: 
+    0 1px 4px rgba(65, 50, 30, 0.04), 
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.btn--ghost:hover:not(:disabled) {
+  background: var(--surface-hover, #F8FAFC);
+  border-color: var(--theme-accent);
+  color: var(--theme-accent);
+  box-shadow: 
+    0 6px 18px -2px color-mix(in srgb, var(--theme-accent) 20%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 1);
+  transform: translateY(-2px);
+}
+
+.btn--ghost:hover:not(:disabled)::after {
+  opacity: 0.5;
+  animation: specularPrismSweep 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ── Secondary (Subtle Surface Pill) ────────── */
+.btn--secondary {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm), inset 0 1px 0 var(--specular-highlight);
+}
+
+.btn--secondary:hover:not(:disabled) {
+  background: var(--surface-hover);
+  border-color: color-mix(in srgb, var(--theme-accent) 45%, var(--border));
+  color: var(--theme-accent);
+  box-shadow: 
+    0 6px 18px -2px color-mix(in srgb, var(--theme-accent) 20%, transparent),
+    inset 0 1px 0 var(--specular-highlight);
+  transform: translateY(-2px);
+}
+
+/* ── Danger (Crimson Ruby) ───────────────────── */
+.btn--danger {
+  background: linear-gradient(135deg, #F43F5E 0%, #E11D48 100%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #FFFFFF;
+  box-shadow: 
+    0 4px 14px -2px rgba(244, 63, 94, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.btn--danger:hover:not(:disabled) {
+  box-shadow: 
+    0 8px 24px -2px rgba(244, 63, 94, 0.55),
+    0 2px 8px rgba(244, 63, 94, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  transform: translateY(-2px);
+  filter: brightness(1.05);
+}
+
+.btn--danger:hover:not(:disabled)::after {
+  opacity: 1;
+  animation: specularPrismSweep 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ── Success (Hyper Emerald) ─────────────────── */
+.btn--success {
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #FFFFFF;
+  box-shadow: 
+    0 4px 14px -2px rgba(16, 185, 129, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.btn--success:hover:not(:disabled) {
+  box-shadow: 
+    0 8px 24px -2px rgba(16, 185, 129, 0.55),
+    0 2px 8px rgba(16, 185, 129, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  transform: translateY(-2px);
+  filter: brightness(1.05);
+}
+
+.btn--success:hover:not(:disabled)::after {
+  opacity: 1;
+  animation: specularPrismSweep 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ── Warning (Amber Flame) ───────────────────── */
+.btn--warning {
+  background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #FFFFFF;
+  box-shadow: 
+    0 4px 14px -2px rgba(245, 158, 11, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.btn--warning:hover:not(:disabled) {
+  box-shadow: 
+    0 8px 24px -2px rgba(245, 158, 11, 0.55),
+    0 2px 8px rgba(245, 158, 11, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  transform: translateY(-2px);
+  filter: brightness(1.05);
+}
+
+.btn--warning:hover:not(:disabled)::after {
+  opacity: 1;
+  animation: specularPrismSweep 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ── Spinner / Loading ─────────────────────────── */
+.btn-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2.5px solid rgba(255,255,255,0.35);
+  border-top-color: #FFFFFF;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+.btn--ghost .btn-spinner {
+  border-color: var(--border-strong);
+  border-top-color: var(--theme-accent);
+}
+
+.btn--loading { cursor: wait; }

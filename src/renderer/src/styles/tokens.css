@@ -1,0 +1,740 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,700&family=Montserrat:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,700&family=Outfit:wght@500;600;700;800;900&family=Fira+Code:wght@400;500;600;700&display=swap');
+
+/* ============================================================
+   DESIGN TOKENS  -  Uni Desk Light Design System
+   Curated, premium light themes:
+   1. Luxury Beige & Gold Linen (Default)
+   2. Holographic Aurora Light
+   3. Emerald Mint Light
+   ============================================================ */
+
+:root {
+  /* -- Typography --------------------------------------  */
+  --font-main:    'Inter', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-sans:    'Inter', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Outfit', 'Montserrat', 'Plus Jakarta Sans', sans-serif;
+  --font-mono:    'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+
+  --text-2xl: 32px;
+  --text-xl:  22px;
+  --text-lg:  16px;
+  --text-md:  14px;
+  --text-sm:  12px;
+  --text-xs:  11px;
+
+  /* -- Spacing -------------------------------------------- */
+  --pad-h:     18px;
+  --pad-v:     14px;
+  --pad-inner: 12px;
+  --pad-card:  16px;
+
+  /* -- Border radius --------------------------------------  */
+  --radius-card:  14px;
+  --radius-btn:   9px;
+  --radius-input: 9px;
+  --radius-chip:  16px;
+  --radius-sm:    6px;
+  --radius-md:    10px;
+  --radius-lg:    14px;
+  --radius-xl:    18px;
+
+  /* -- Button heights -------------------------------------- */
+  --btn-h:    34px;
+  --btn-h-lg: 38px;
+  --btn-h-xl: 42px;
+
+  /* -- Sidebar ---------------------------------------------- */
+  --sidebar-width: 204px;
+
+  /* -- Z-index layers --------------------------------------  */
+  --z-splash:     1000;
+  --z-overlay:    800;
+  --z-modal:      600;
+  --z-tooltip:    400;
+  --z-loader:     200;
+
+  /* -- Multilayer Modern Elevation System -------------------- */
+  --shadow-sm:   0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+  --shadow-md:   0 4px 14px -2px rgba(0, 0, 0, 0.06), 0 2px 4px rgba(0, 0, 0, 0.02);
+  --shadow-lg:   0 12px 28px -4px rgba(0, 0, 0, 0.09), 0 4px 10px rgba(0, 0, 0, 0.03);
+  --shadow-xl:   0 20px 42px -6px rgba(0, 0, 0, 0.12), 0 8px 16px rgba(0, 0, 0, 0.04);
+  --shadow-2xl:  0 30px 60px -10px rgba(0, 0, 0, 0.16);
+
+  --shadow-card:       0 3px 12px -2px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.02);
+  --shadow-card-hover: 0 12px 28px -4px color-mix(in srgb, var(--theme-accent, #6366F1) 20%, rgba(0, 0, 0, 0.08)), 0 3px 8px rgba(0, 0, 0, 0.03);
+
+  --shadow-glow: rgba(184, 134, 11, 0.30);
+  --shadow-glow-cyan: rgba(6, 182, 212, 0.35);
+  --shadow-glow-pink: rgba(244, 63, 94, 0.35);
+  --shadow-glow-purple: rgba(168, 85, 247, 0.35);
+  --shadow-glow-amber: rgba(245, 158, 11, 0.35);
+  --shadow-glow-emerald: rgba(16, 185, 129, 0.35);
+
+  /* -- Glassmorphism & Specular Highlights -----------  */
+  --glass-blur: blur(24px) saturate(180%);
+  --glass-blur-heavy: blur(40px) saturate(200%);
+  --glass-bg: rgba(250, 246, 238, 0.92);
+  --glass-bg-heavy: rgba(250, 246, 238, 0.98);
+  --glass-border: rgba(221, 209, 188, 0.85);
+  --glass-border-subtle: rgba(221, 209, 188, 0.5);
+  --glass-shadow: 0 10px 30px -4px rgba(65, 50, 30, 0.08), 0 2px 8px rgba(0, 0, 0, 0.03);
+  --specular-highlight: rgba(255, 255, 255, 0.85);
+
+  /* -- Skeleton shimmer tokens ------------------------------- */
+  --skeleton-base: rgba(0, 0, 0, 0.06);
+  --skeleton-highlight: rgba(255, 255, 255, 0.55);
+
+  /* -- Transition presets ----------------------------------  */
+  --ease-spring:      cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-spring-soft: cubic-bezier(0.25, 1.15, 0.45, 1);
+  --ease-out:         cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out:      cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast:         140ms;
+  --dur-normal:       240ms;
+  --dur-slow:         380ms;
+  --dur-xslow:        600ms;
+}
+
+/* ============================================================
+   THEME 1 (DEFAULT): Luxury Beige & Gold Linen
+   ============================================================ */
+:root,
+[data-theme="beige"] {
+  color-scheme: light;
+
+  /* Soft Architectural Ivory & Sand Linen Palette (Anti-eye-strain) */
+  --bg:           #F5F4EE;
+  --surface:      #FAF9F4;
+  --surface-2:    #EFECE3;
+  --surface-3:    #E4DFD3;
+  --surface-hover:#EAE6DB;
+  --border:       #D8D2C3;
+  --border-strong:#BFB7A3;
+
+  /* High contrast warm espresso text (WCAG AA Compliant >= 4.5:1) */
+  --text-primary:   #1C1917;
+  --text-secondary: #44403C;
+  --text-muted:     #78716C;
+  --text-on-accent: #FFFFFF;
+  --text-code:      #8F5F0B;
+
+  --skeleton-base: rgba(140, 110, 70, 0.08);
+  --skeleton-highlight: rgba(255, 255, 255, 0.7);
+
+  --sidebar-bg:          rgba(246, 244, 238, 0.96);
+  --sidebar-border:      #D8D2C3;
+  --sidebar-text:        #584E44;
+  --sidebar-text-active: #1C1917;
+  --sidebar-hover:       #EFECE3;
+  --sidebar-active-bg:   #E4DFD3;
+  --sidebar-section-lbl: #9E7418;
+
+  --chrome-ring-grad: linear-gradient(135deg, #B8860B, #D4AF37, #C89637, #8B5A2B);
+  --chrome-ring-glow: linear-gradient(135deg, #B8860B 0%, #D4AF37 50%, #C89637 100%);
+  --chrome-selection-bg: rgba(184, 134, 11, 0.14);
+
+  --log-bg:     #F7F2E8;
+  --log-text:   #231F1B;
+  --log-border: #DDD1BC;
+
+  --success:      #10B981;
+  --success-soft: rgba(16, 185, 129, 0.12);
+  --danger:       #F43F5E;
+  --danger-hover: #E11D48;
+  --danger-soft:  rgba(244, 63, 94, 0.12);
+  --warning:      #F59E0B;
+  --warning-soft: rgba(245, 158, 11, 0.12);
+  --info:         #0284C7;
+  --info-soft:    rgba(2, 132, 199, 0.12);
+
+  /* Page Accents */
+  --accent-dashboard:     #B8860B;
+  --accent-dashboard-hv:  #9A6A12;
+  --accent-dashboard-soft:rgba(184, 134, 11, 0.12);
+
+  --accent-adder:     #C89637;
+  --accent-adder-hv:  #B48A28;
+  --accent-adder-soft:rgba(200, 150, 55, 0.12);
+
+  --accent-converter:     #8B5A2B;
+  --accent-converter-hv:  #6E421B;
+  --accent-converter-soft:rgba(139, 90, 43, 0.12);
+
+  --accent-drivesync:     #B8860B;
+  --accent-drivesync-hv:  #9A6A12;
+  --accent-drivesync-soft:rgba(184, 134, 11, 0.12);
+
+  --accent-folder:     #6B0D14;
+  --accent-folder-hv:  #500A0F;
+  --accent-folder-soft:rgba(107, 13, 20, 0.12);
+
+  --accent-notes:     #9E7418;
+  --accent-notes-hv:  #835F12;
+  --accent-notes-soft:rgba(158, 116, 24, 0.12);
+
+  --accent-settings:     #B8860B;
+  --accent-settings-hv:  #9A6A12;
+  --accent-settings-soft:rgba(184, 134, 11, 0.12);
+
+  --accent-cloud:        #8B5A2B;
+  --accent-cloud-hv:     #6E421B;
+  --accent-cloud-soft:   rgba(139, 90, 43, 0.12);
+
+  --accent-stats:        #9A6A12;
+  --accent-stats-hv:     #7D540C;
+  --accent-stats-soft:   rgba(154, 106, 18, 0.12);
+
+  --accent-cameratransfer:     #6B0D14;
+  --accent-cameratransfer-hv:  #500A0F;
+  --accent-cameratransfer-soft:rgba(107, 13, 20, 0.12);
+
+  --accent-videotransfer:      #B8860B;
+  --accent-videotransfer-hv:   #9A6A12;
+  --accent-videotransfer-soft: rgba(184, 134, 11, 0.12);
+
+  --accent-prproj:             #8B5A2B;
+  --accent-prproj-hv:          #6E421B;
+  --accent-prproj-soft:        rgba(139, 90, 43, 0.12);
+
+  --accent-cleaner:            #6B0D14;
+  --accent-cleaner-hv:         #500A0F;
+  --accent-cleaner-soft:       rgba(107, 13, 20, 0.12);
+
+  --accent-pvseparator:        #B8860B;
+  --accent-pvseparator-hv:     #9A6A12;
+  --accent-pvseparator-soft:   rgba(184, 134, 11, 0.12);
+
+  --accent-reedit:             #C89637;
+  --accent-reedit-hv:          #B48A28;
+  --accent-reedit-soft:        rgba(200, 150, 55, 0.12);
+
+  --splash-bg:   #FAF6EE;
+  --splash-card: #FAF6EE;
+  --splash-bar:  #B8860B;
+
+  --shadow-glow: rgba(184, 134, 11, 0.28);
+  --shadow-glow-success: rgba(16, 185, 129, 0.28);
+  --shadow-glow-danger:  rgba(244, 63, 94, 0.28);
+  --shadow-glow-warning: rgba(184, 134, 11, 0.28);
+}
+
+/* ============================================================
+   THEME 2: Holographic Cyber Aurora Light
+   ============================================================ */
+[data-theme="light"] {
+  color-scheme: light;
+
+  --bg:           #F6F8FC;
+  --surface:      #FFFFFF;
+  --surface-2:    #F1F4FA;
+  --surface-3:    #E7ECF6;
+  --surface-hover:#DDE5F2;
+  --border:       #D8E0EE;
+  --border-strong:#C0CCDE;
+
+  /* High contrast slate text (WCAG AA Compliant >= 4.5:1) */
+  --text-primary:   #0A0F1D;
+  --text-secondary: #243348;
+  --text-muted:     #4E607A;
+  --text-on-accent: #FFFFFF;
+  --text-code:      #4338CA;
+
+  --skeleton-base: rgba(15, 23, 42, 0.06);
+  --skeleton-highlight: rgba(255, 255, 255, 0.85);
+
+  --sidebar-bg:          rgba(255, 255, 255, 0.94);
+  --sidebar-border:      #D8E0EE;
+  --sidebar-text:        #334155;
+  --sidebar-text-active: #0A0F1D;
+  --sidebar-hover:       #F1F5F9;
+  --sidebar-active-bg:   #E2E8F0;
+  --sidebar-section-lbl: #4F46E5;
+
+  --chrome-ring-grad: linear-gradient(135deg, #6366F1, #A855F7, #EC4899);
+  --chrome-ring-glow: linear-gradient(135deg, #6366F1 0%, #A855F7 50%, #EC4899 100%);
+  --chrome-selection-bg: rgba(99, 102, 241, 0.12);
+
+  --log-bg:     #F8FAFC;
+  --log-text:   #0A0F1D;
+  --log-border: #D8E0EE;
+
+  --success:      #059669;
+  --success-soft: rgba(5, 150, 105, 0.12);
+  --danger:       #E11D48;
+  --danger-hover: #BE123C;
+  --danger-soft:  rgba(225, 29, 72, 0.12);
+  --warning:      #D97706;
+  --warning-soft: rgba(217, 119, 6, 0.12);
+  --info:         #0284C7;
+  --info-soft:    rgba(2, 132, 199, 0.12);
+
+  --accent-dashboard:     #4F46E5;
+  --accent-dashboard-hv:  #4338CA;
+  --accent-dashboard-soft:rgba(79, 70, 229, 0.10);
+
+  --accent-adder:     #F43F5E;
+  --accent-adder-hv:  #E11D48;
+  --accent-adder-soft:rgba(244, 63, 94, 0.10);
+
+  --accent-converter:     #0D9488;
+  --accent-converter-hv:  #0F766E;
+  --accent-converter-soft:rgba(13, 148, 136, 0.10);
+
+  --accent-drivesync:     #EA580C;
+  --accent-drivesync-hv:  #C2410C;
+  --accent-drivesync-soft:rgba(234, 88, 12, 0.10);
+
+  --accent-folder:     #7C3AED;
+  --accent-folder-hv:  #6D28D9;
+  --accent-folder-soft:rgba(124, 58, 237, 0.10);
+
+  --accent-notes:     #D946EF;
+  --accent-notes-hv:  #C026D3;
+  --accent-notes-soft:rgba(217, 70, 239, 0.10);
+
+  --accent-settings:     #6366F1;
+  --accent-settings-hv:  #4F46E5;
+  --accent-settings-soft:rgba(99, 102, 241, 0.10);
+
+  --accent-cloud:        #2563EB;
+  --accent-cloud-hv:     #1D4ED8;
+  --accent-cloud-soft:   rgba(37, 99, 235, 0.10);
+
+  --accent-stats:         #0284C7;
+  --accent-stats-hv:      #0369A1;
+  --accent-stats-soft:    rgba(2, 132, 199, 0.10);
+
+  --accent-cameratransfer:     #059669;
+  --accent-cameratransfer-hv:  #047857;
+  --accent-cameratransfer-soft:rgba(5, 150, 105, 0.10);
+
+  --accent-videotransfer:      #3B82F6;
+  --accent-videotransfer-hv:   #2563EB;
+  --accent-videotransfer-soft: rgba(59, 130, 246, 0.10);
+
+  --accent-prproj:             #8B5CF6;
+  --accent-prproj-hv:          #7C3AED;
+  --accent-prproj-soft:        rgba(139, 92, 246, 0.10);
+
+  --accent-cleaner:            #EF4444;
+  --accent-cleaner-hv:         #DC2626;
+  --accent-cleaner-soft:       rgba(239, 68, 68, 0.10);
+
+  --accent-pvseparator:        #10B981;
+  --accent-pvseparator-hv:     #059669;
+  --accent-pvseparator-soft:   rgba(16, 185, 129, 0.10);
+
+  --accent-reedit:             #A855F7;
+  --accent-reedit-hv:          #9333EA;
+  --accent-reedit-soft:        rgba(168, 85, 247, 0.10);
+
+  --splash-bg:   #FAF6EE;
+  --splash-card: #FDFAF5;
+  --splash-bar:  #6366F1;
+
+  --shadow-glow: rgba(79, 70, 229, 0.28);
+  --shadow-glow-success: rgba(16, 185, 129, 0.28);
+  --shadow-glow-danger:  rgba(244, 63, 94, 0.28);
+  --shadow-glow-warning: rgba(245, 158, 11, 0.28);
+
+  --specular-highlight: rgba(255, 255, 255, 0.95);
+  --shadow-card:       0 3px 12px -2px rgba(15, 23, 42, 0.05), 0 1px 3px rgba(0, 0, 0, 0.02);
+  --shadow-card-hover: 0 12px 28px -4px color-mix(in srgb, var(--theme-accent, #4F46E5) 20%, rgba(15, 23, 42, 0.08)), 0 3px 8px rgba(0, 0, 0, 0.03);
+}
+
+/* ============================================================
+   THEME 3: Emerald Mint Blossom Light
+   ============================================================ */
+[data-theme="forest"] {
+  color-scheme: light;
+
+  --bg:           #F2FAF5;
+  --surface:      #FFFFFF;
+  --surface-2:    #F6FCF8;
+  --surface-3:    #E7F7ED;
+  --surface-hover:#DBF1E3;
+  --border:       #C8EAD2;
+  --border-strong:#9ED5AE;
+
+  /* High contrast forest text (WCAG AA Compliant >= 4.5:1) */
+  --text-primary:   #021B0B;
+  --text-secondary: #134421;
+  --text-muted:     #366D48;
+  --text-on-accent: #FFFFFF;
+  --text-code:      #047857;
+
+  --skeleton-base: rgba(6, 35, 16, 0.07);
+  --skeleton-highlight: rgba(255, 255, 255, 0.85);
+
+  --sidebar-bg:          rgba(255, 255, 255, 0.94);
+  --sidebar-border:      #C8EAD2;
+  --sidebar-text:        #1B542D;
+  --sidebar-text-active: #021B0B;
+  --sidebar-hover:       #E7F7ED;
+  --sidebar-active-bg:   #D5F0DE;
+  --sidebar-section-lbl: #059669;
+
+  --chrome-ring-grad: linear-gradient(135deg, #059669, #10B981, #34D399);
+  --chrome-ring-glow: linear-gradient(135deg, #059669 0%, #10B981 50%, #34D399 100%);
+  --chrome-selection-bg: rgba(5, 150, 105, 0.12);
+
+  --log-bg:     #F8FCFA;
+  --log-text:   #021B0B;
+  --log-border: #C8EAD2;
+
+  --success:      #059669;
+  --success-soft: rgba(5, 150, 105, 0.12);
+  --danger:       #E11D48;
+  --danger-hover: #BE123C;
+  --danger-soft:  rgba(225, 29, 72, 0.12);
+  --warning:      #D97706;
+  --warning-soft: rgba(217, 119, 6, 0.12);
+  --info:         #0284C7;
+  --info-soft:    rgba(2, 132, 199, 0.12);
+
+  --accent-dashboard:     #059669;
+  --accent-dashboard-hv:  #047857;
+  --accent-dashboard-soft:rgba(5, 150, 105, 0.12);
+
+  --accent-adder:      #E11D48;
+  --accent-adder-hv:   #BE123C;
+  --accent-adder-soft: rgba(225, 29, 72, 0.12);
+
+  --accent-converter:      #059669;
+  --accent-converter-hv:   #047857;
+  --accent-converter-soft: rgba(5, 150, 105, 0.12);
+
+  --accent-drivesync:      #D97706;
+  --accent-drivesync-hv:   #B45309;
+  --accent-drivesync-soft: rgba(217, 119, 6, 0.12);
+
+  --accent-folder:      #059669;
+  --accent-folder-hv:   #047857;
+  --accent-folder-soft: rgba(5, 150, 105, 0.12);
+
+  --accent-notes:      #0D9488;
+  --accent-notes-hv:   #0F766E;
+  --accent-notes-soft: rgba(13, 148, 136, 0.12);
+
+  --accent-settings:      #059669;
+  --accent-settings-hv:   #047857;
+  --accent-settings-soft: rgba(5, 150, 105, 0.12);
+
+  --accent-cloud:         #0D9488;
+  --accent-cloud-hv:      #0F766E;
+  --accent-cloud-soft:    rgba(13, 148, 136, 0.12);
+
+  --accent-stats:         #059669;
+  --accent-stats-hv:      #047857;
+  --accent-stats-soft:    rgba(5, 150, 105, 0.12);
+
+  --accent-cameratransfer: #059669;
+  --accent-cameratransfer-hv: #047857;
+  --accent-cameratransfer-soft: rgba(5, 150, 105, 0.12);
+
+  --accent-videotransfer:      #10B981;
+  --accent-videotransfer-hv:   #059669;
+  --accent-videotransfer-soft: rgba(16, 185, 129, 0.12);
+
+  --accent-prproj:             #059669;
+  --accent-prproj-hv:          #047857;
+  --accent-prproj-soft:        rgba(5, 150, 105, 0.12);
+
+  --accent-cleaner:            #E11D48;
+  --accent-cleaner-hv:         #BE123C;
+  --accent-cleaner-soft:       rgba(225, 29, 72, 0.12);
+
+  --accent-pvseparator:        #10B981;
+  --accent-pvseparator-hv:     #059669;
+  --accent-pvseparator-soft:   rgba(16, 185, 129, 0.12);
+
+  --accent-reedit:             #059669;
+  --accent-reedit-hv:          #047857;
+  --accent-reedit-soft:        rgba(5, 150, 105, 0.12);
+
+  --splash-bg:   #FFFFFF;
+  --splash-card: #FFFFFF;
+  --splash-bar:  #059669;
+
+  --shadow-glow: rgba(5, 150, 105, 0.30);
+  --shadow-glow-success: rgba(5, 150, 105, 0.30);
+  --shadow-glow-danger:  rgba(225, 29, 72, 0.30);
+  --shadow-glow-warning: rgba(217, 119, 6, 0.30);
+
+  --specular-highlight: rgba(255, 255, 255, 0.90);
+  --shadow-card:       0 3px 12px -2px rgba(6, 35, 16, 0.05), 0 1px 3px rgba(0, 0, 0, 0.02);
+  --shadow-card-hover: 0 12px 28px -4px color-mix(in srgb, var(--theme-accent, #059669) 20%, rgba(6, 35, 16, 0.08)), 0 3px 8px rgba(0, 0, 0, 0.03);
+}
+
+/* ============================================================
+   THEME 4: Cyber Obsidian Dark Glass
+   ============================================================ */
+[data-theme="dark"],
+html.dark-theme,
+body.dark-theme {
+  color-scheme: dark;
+
+  /* Elevated Modern Graphite & Obsidian Palette (Enhanced Contrast & Soft Luminous Glow) */
+  --bg:           #181A24;
+  --surface:      #202433;
+  --surface-2:    #282D40;
+  --surface-3:    #32384F;
+  --surface-hover:#3D4460;
+  --border:       rgba(255, 255, 255, 0.14);
+  --border-strong:rgba(255, 255, 255, 0.26);
+
+  /* High contrast dark mode typography (WCAG AA Compliant) */
+  --text-primary:   #FFFFFF;
+  --text-secondary: #E2E8F0;
+  --text-muted:     #94A3B8;
+  --text-on-accent: #FFFFFF;
+  --text-code:      #A5B4FC;
+
+  --glass-bg:       rgba(32, 36, 51, 0.90);
+  --glass-bg-heavy: rgba(28, 32, 45, 0.98);
+  --glass-border:   rgba(255, 255, 255, 0.16);
+  --glass-border-subtle: rgba(255, 255, 255, 0.09);
+  --glass-shadow:   0 16px 40px rgba(0, 0, 0, 0.40), 0 0 20px rgba(99, 102, 241, 0.18), inset 0 1px 0 0 rgba(255, 255, 255, 0.20);
+
+  --skeleton-base: rgba(255, 255, 255, 0.08);
+  --skeleton-highlight: rgba(255, 255, 255, 0.22);
+
+  --sidebar-bg:          rgba(24, 28, 40, 0.96);
+  --sidebar-border:      rgba(255, 255, 255, 0.12);
+  --sidebar-text:        #94A3B8;
+  --sidebar-text-active: #FFFFFF;
+  --sidebar-hover:       rgba(255, 255, 255, 0.08);
+  --sidebar-active-bg:   rgba(99, 102, 241, 0.22);
+  --sidebar-section-lbl: #818CF8;
+
+  --chrome-ring-grad: linear-gradient(135deg, #6366F1, #A855F7, #EC4899);
+  --chrome-ring-glow: linear-gradient(135deg, #6366F1 0%, #A855F7 50%, #EC4899 100%);
+  --chrome-selection-bg: rgba(99, 102, 241, 0.25);
+
+  --log-bg:     #141722;
+  --log-text:   #F8FAFC;
+  --log-border: rgba(255, 255, 255, 0.14);
+
+  --success:      #10B981;
+  --success-soft: rgba(16, 185, 129, 0.18);
+  --danger:       #F43F5E;
+  --danger-hover: #E11D48;
+  --danger-soft:  rgba(244, 63, 94, 0.18);
+  --warning:      #F59E0B;
+  --warning-soft: rgba(245, 158, 11, 0.18);
+  --info:         #38BDF8;
+  --info-soft:    rgba(56, 189, 248, 0.18);
+
+  --accent-dashboard:     #6366F1;
+  --accent-dashboard-hv:  #4F46E5;
+  --accent-dashboard-soft:rgba(99, 102, 241, 0.18);
+
+  --accent-adder:     #FB7185;
+  --accent-adder-hv:  #F43F5E;
+  --accent-adder-soft:rgba(251, 113, 133, 0.18);
+
+  --accent-converter:     #2DD4BF;
+  --accent-converter-hv:  #14B8A6;
+  --accent-converter-soft:rgba(45, 212, 191, 0.18);
+
+  --accent-drivesync:     #FB923C;
+  --accent-drivesync-hv:  #F97316;
+  --accent-drivesync-soft:rgba(251, 146, 60, 0.18);
+
+  --accent-folder:     #A78BFA;
+  --accent-folder-hv:  #8B5CF6;
+  --accent-folder-soft:rgba(167, 139, 250, 0.18);
+
+  --accent-notes:     #F472B6;
+  --accent-notes-hv:  #EC4899;
+  --accent-notes-soft:rgba(244, 114, 182, 0.18);
+
+  --accent-settings:     #818CF8;
+  --accent-settings-hv:  #6366F1;
+  --accent-settings-soft:rgba(129, 140, 248, 0.18);
+
+  --accent-cloud:        #60A5FA;
+  --accent-cloud-hv:     #3B82F6;
+  --accent-cloud-soft:   rgba(96, 165, 250, 0.18);
+
+  --accent-stats:         #38BDF8;
+  --accent-stats-hv:      #0284C7;
+  --accent-stats-soft:    rgba(56, 189, 248, 0.18);
+
+  --accent-cameratransfer:     #34D399;
+  --accent-cameratransfer-hv:  #10B981;
+  --accent-cameratransfer-soft:rgba(52, 211, 153, 0.18);
+
+  --accent-videotransfer:      #60A5FA;
+  --accent-videotransfer-hv:   #3B82F6;
+  --accent-videotransfer-soft: rgba(96, 165, 250, 0.18);
+
+  --accent-prproj:             #A78BFA;
+  --accent-prproj-hv:          #8B5CF6;
+  --accent-prproj-soft:        rgba(167, 139, 250, 0.18);
+
+  --accent-cleaner:            #F87171;
+  --accent-cleaner-hv:         #EF4444;
+  --accent-cleaner-soft:       rgba(248, 113, 113, 0.18);
+
+  --accent-pvseparator:        #34D399;
+  --accent-pvseparator-hv:     #10B981;
+  --accent-pvseparator-soft:   rgba(52, 211, 153, 0.18);
+
+  --accent-reedit:             #C084FC;
+  --accent-reedit-hv:          #A855F7;
+  --accent-reedit-soft:        rgba(192, 132, 252, 0.18);
+
+  --splash-bg:   #0D0E15;
+  --splash-card: #141622;
+  --splash-bar:  #6366F1;
+
+  --shadow-glow: rgba(99, 102, 241, 0.40);
+  --shadow-glow-success: rgba(16, 185, 129, 0.40);
+  --shadow-glow-danger:  rgba(244, 63, 94, 0.40);
+  --shadow-glow-warning: rgba(245, 158, 11, 0.40);
+
+  --specular-highlight: rgba(255, 255, 255, 0.12);
+  --shadow-card:       0 8px 24px -4px rgba(0, 0, 0, 0.50), 0 2px 8px rgba(0, 0, 0, 0.30);
+  --shadow-card-hover: 0 16px 36px -6px rgba(0, 0, 0, 0.65), 0 0 20px color-mix(in srgb, var(--theme-accent, #6366F1) 25%, transparent);
+}
+
+/* ============================================================
+   THEME 4 (FLAGSHIP): Liquid Glass (VisionOS Dark / Liquid Caustics)
+   Ultra-luxurious frosted obsidian glass, fluid chromatic refractions
+   and specular liquid highlights.
+   ============================================================ */
+[data-theme="glass"] {
+  color-scheme: dark;
+
+  /* Deep Liquid Obsidian Space */
+  --bg:           #07090E;
+  --surface:      rgba(255, 255, 255, 0.05);
+  --surface-2:    rgba(255, 255, 255, 0.08);
+  --surface-3:    rgba(255, 255, 255, 0.12);
+  --surface-hover:rgba(255, 255, 255, 0.15);
+  --border:       rgba(255, 255, 255, 0.13);
+  --border-strong:rgba(255, 255, 255, 0.28);
+
+  /* High contrast luminous typography */
+  --text-primary:   #FFFFFF;
+  --text-secondary: #E2E8F0;
+  --text-muted:     #94A3B8;
+  --text-on-accent: #FFFFFF;
+  --text-code:      #818CF8;
+
+  --skeleton-base: rgba(255, 255, 255, 0.06);
+  --skeleton-highlight: rgba(255, 255, 255, 0.18);
+
+  --sidebar-bg:          rgba(13, 17, 27, 0.65);
+  --sidebar-border:      rgba(255, 255, 255, 0.14);
+  --sidebar-text:        #94A3B8;
+  --sidebar-text-active: #FFFFFF;
+  --sidebar-hover:       rgba(255, 255, 255, 0.08);
+  --sidebar-active-bg:   linear-gradient(135deg, rgba(99, 102, 241, 0.32) 0%, rgba(168, 85, 247, 0.24) 100%);
+  --sidebar-section-lbl: #818CF8;
+
+  --chrome-ring-grad: linear-gradient(135deg, #6366F1, #38BDF8, #EC4899, #F59E0B);
+  --chrome-ring-glow: linear-gradient(135deg, rgba(99, 102, 241, 0.8) 0%, rgba(56, 189, 248, 0.8) 50%, rgba(236, 72, 153, 0.8) 100%);
+  --chrome-selection-bg: rgba(99, 102, 241, 0.24);
+
+  --log-bg:     rgba(10, 14, 24, 0.85);
+  --log-text:   #E2E8F0;
+  --log-border: rgba(255, 255, 255, 0.12);
+
+  --success:      #10B981;
+  --success-soft: rgba(16, 185, 129, 0.18);
+  --danger:       #F43F5E;
+  --danger-hover: #E11D48;
+  --danger-soft:  rgba(244, 63, 94, 0.18);
+  --warning:      #F59E0B;
+  --warning-soft: rgba(245, 158, 11, 0.18);
+  --info:         #38BDF8;
+  --info-soft:    rgba(56, 189, 248, 0.18);
+
+  /* Liquid Glass Core Specular Tokens */
+  --glass-blur: blur(28px) saturate(210%);
+  --glass-blur-heavy: blur(44px) saturate(230%);
+  --glass-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.02) 100%);
+  --glass-bg-heavy: rgba(10, 14, 24, 0.82);
+  --glass-border: rgba(255, 255, 255, 0.16);
+  --glass-border-subtle: rgba(255, 255, 255, 0.08);
+  --glass-shadow: 
+    0 24px 60px -12px rgba(0, 0, 0, 0.65),
+    0 6px 20px rgba(0, 0, 0, 0.35),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.4);
+
+  /* Page Accents (Luminous Liquid Neon) */
+  --accent-dashboard:     #818CF8;
+  --accent-dashboard-hv:  #6366F1;
+  --accent-dashboard-soft:rgba(129, 140, 248, 0.18);
+
+  --accent-adder:     #F472B6;
+  --accent-adder-hv:  #EC4899;
+  --accent-adder-soft:rgba(244, 114, 182, 0.18);
+
+  --accent-converter:     #34D399;
+  --accent-converter-hv:  #10B981;
+  --accent-converter-soft:rgba(52, 211, 153, 0.18);
+
+  --accent-drivesync:     #FB923C;
+  --accent-drivesync-hv:  #F97316;
+  --accent-drivesync-soft:rgba(251, 146, 60, 0.18);
+
+  --accent-folder:     #A78BFA;
+  --accent-folder-hv:  #8B5CF6;
+  --accent-folder-soft:rgba(167, 139, 250, 0.18);
+
+  --accent-notes:     #F472B6;
+  --accent-notes-hv:  #EC4899;
+  --accent-notes-soft:rgba(244, 114, 182, 0.18);
+
+  --accent-settings:     #818CF8;
+  --accent-settings-hv:  #6366F1;
+  --accent-settings-soft:rgba(129, 140, 248, 0.18);
+
+  --accent-cloud:        #60A5FA;
+  --accent-cloud-hv:     #3B82F6;
+  --accent-cloud-soft:   rgba(96, 165, 250, 0.18);
+
+  --accent-stats:         #38BDF8;
+  --accent-stats-hv:      #0284C7;
+  --accent-stats-soft:    rgba(56, 189, 248, 0.18);
+
+  --accent-cameratransfer:     #34D399;
+  --accent-cameratransfer-hv:  #10B981;
+  --accent-cameratransfer-soft:rgba(52, 211, 153, 0.18);
+
+  --accent-videotransfer:      #60A5FA;
+  --accent-videotransfer-hv:   #3B82F6;
+  --accent-videotransfer-soft: rgba(96, 165, 250, 0.18);
+
+  --accent-prproj:             #A78BFA;
+  --accent-prproj-hv:          #8B5CF6;
+  --accent-prproj-soft:        rgba(167, 139, 250, 0.18);
+
+  --accent-cleaner:            #F87171;
+  --accent-cleaner-hv:         #EF4444;
+  --accent-cleaner-soft:       rgba(248, 113, 113, 0.18);
+
+  --accent-pvseparator:        #34D399;
+  --accent-pvseparator-hv:     #10B981;
+  --accent-pvseparator-soft:   rgba(52, 211, 153, 0.18);
+
+  --accent-reedit:             #C084FC;
+  --accent-reedit-hv:          #A855F7;
+  --accent-reedit-soft:        rgba(192, 132, 252, 0.18);
+
+  --splash-bg:   #07090E;
+  --splash-card: rgba(22, 27, 46, 0.7);
+  --splash-bar:  #818CF8;
+
+  --shadow-glow: rgba(99, 102, 241, 0.45);
+  --shadow-glow-success: rgba(16, 185, 129, 0.45);
+  --shadow-glow-danger:  rgba(244, 63, 94, 0.45);
+  --shadow-glow-warning: rgba(245, 158, 11, 0.45);
+
+  --specular-highlight: rgba(255, 255, 255, 0.22);
+  --shadow-card:       0 12px 30px -6px rgba(0, 0, 0, 0.60), 0 4px 12px rgba(0, 0, 0, 0.35);
+  --shadow-card-hover: 0 20px 45px -8px rgba(0, 0, 0, 0.75), 0 0 25px color-mix(in srgb, var(--theme-accent, #818CF8) 32%, transparent);
+}

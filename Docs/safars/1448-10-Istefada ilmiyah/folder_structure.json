@@ -1,0 +1,705 @@
+{
+  "schemaVersion": "2.0.0",
+  "generatedBy": "One Tap Workstation",
+  "safar": "1448-10-Istefada ilmiyah",
+  "safarName": "Istefada ilmiyah",
+  "safarYear": 1448,
+  "safarSerial": "10",
+  "city": "Surat",
+  "subLocations": [
+    "Dumas",
+    "Surat"
+  ],
+  "hijriYear": 1448,
+  "hijriMonth": 4,
+  "hijriMonthName": "Rabi al-Akhar",
+  "startDate": "1448-04-05",
+  "endDate": "1448-04-20",
+  "totalSessions": 29,
+  "totalItems": 724,
+  "totalFinalMp4s": 439,
+  "eventCodeTallies": {
+    "MF": 142,
+    "N": 136,
+    "ZO": 129,
+    "H": 91,
+    "MZ": 49,
+    "Q": 38,
+    "AQ": 21,
+    "Z": 20,
+    "M": 8,
+    "BZ": 2,
+    "BM": 1
+  },
+  "eventCodeDefinitions": {
+    "MF": "Mafsuhiyat",
+    "N": "Nikaah",
+    "ZO": "Zafaf Olda / Zafaf",
+    "H": "Hadiyah",
+    "MZ": "Majmui Ziyafat",
+    "Q": "Qadam",
+    "AQ": "Aqueeqah",
+    "Z": "Ziyafat / Ziyarat",
+    "M": "Majlis",
+    "BZ": "Bethak Ziyafat",
+    "BM": "Bethak Majlis"
+  },
+  "categories": [
+    "01-Dummas-Bethak",
+    "01-Surat-Bethak",
+    "01-Surat-Namaz",
+    "01-Surat-QMZ",
+    "02-Surat-Namaz",
+    "02-Surat-QMZ",
+    "02-Surat-Ziyarat",
+    "03-Surat-Bethak",
+    "03-Surat-Namaz",
+    "03-Surat-QMZ",
+    "03-Surat-Ziyarat",
+    "04-Surat-QMZ",
+    "04-Surat-Ziyarat",
+    "05-Surat-Namaz"
+  ],
+  "paths": {
+    "root": "E:\\In Process\\1448-10-Istefada ilmiyah",
+    "inProcess": "E:\\In Process\\1448-10-Istefada ilmiyah",
+    "final": "E:\\In Process\\1448-10-Istefada ilmiyah\\Final"
+  },
+  "sessions": [
+    {
+      "sessionFolder": "1448-04-05 _02E",
+      "date": "1448-04-05",
+      "sessionNumber": "02",
+      "sessionPeriod": "E",
+      "periodName": "Evening",
+      "categories": [
+        {
+          "name": "01-Dummas-Bethak",
+          "itemCount": 83
+        }
+      ],
+      "itemCount": 83,
+      "finalMp4Count": 68,
+      "prproj": "1448-04-05 _02E.prproj",
+      "xml": "1448-04-05 _02E.xml",
+      "prin": "1448-04-05 _02E.prin",
+      "sequenceReport": "Sequence_Summary_Report_1448-04-05__02E_2026-09-19T02-51-24.xlsx"
+    },
+    {
+      "sessionFolder": "1448-04-06 _01M",
+      "date": "1448-04-06",
+      "sessionNumber": "01",
+      "sessionPeriod": "M",
+      "periodName": "Morning",
+      "categories": [
+        {
+          "name": "01-Dummas-Bethak",
+          "itemCount": 2
+        }
+      ],
+      "itemCount": 2,
+      "finalMp4Count": 2,
+      "prproj": "1448-04-06 _01M.prproj",
+      "xml": "1448-04-06 _01M.xml",
+      "prin": "1448-04-06 _01M.prin",
+      "sequenceReport": "Sequence_Summary_Report_1448-04-06__01M_2026-09-19T02-51-55.xlsx"
+    },
+    {
+      "sessionFolder": "1448-04-06 _02E",
+      "date": "1448-04-06",
+      "sessionNumber": "02",
+      "sessionPeriod": "E",
+      "periodName": "Evening",
+      "categories": [
+        {
+          "name": "01-Dummas-Bethak",
+          "itemCount": 16
+        }
+      ],
+      "itemCount": 16,
+      "finalMp4Count": 14,
+      "prproj": "1448-04-06 _02E.prproj",
+      "xml": "1448-04-06 _02E.xml",
+      "prin": "1448-04-06 _02E.prin",
+      "sequenceReport": "Sequence_Summary_Report_1448-04-06__02E_2026-09-19T02-52-13.xlsx"
+    },
+    {
+      "sessionFolder": "1448-04-07 _01M",
+      "date": "1448-04-07",
+      "sessionNumber": "01",
+      "sessionPeriod": "M",
+      "periodName": "Morning",
+      "categories": [
+        {
+          "name": "01-Surat-Bethak",
+          "itemCount": 3
+        },
+        {
+          "name": "02-Surat-Ziyarat",
+          "itemCount": 1
+        },
+        {
+          "name": "03-Surat-Namaz",
+          "itemCount": 1
+        },
+        {
+          "name": "04-Surat-QMZ",
+          "itemCount": 2
+        }
+      ],
+      "itemCount": 7,
+      "finalMp4Count": 5,
+      "prproj": "1448-04-07 _01M.prproj",
+      "xml": "1448-04-07 _01M.xml",
+      "prin": "1448-04-07 _01M.prin",
+      "sequenceReport": null
+    },
+    {
+      "sessionFolder": "1448-04-07 _02E",
+      "date": "1448-04-07",
+      "sessionNumber": "02",
+      "sessionPeriod": "E",
+      "periodName": "Evening",
+      "categories": [
+        {
+          "name": "01-Dummas-Bethak",
+          "itemCount": 16
+        }
+      ],
+      "itemCount": 16,
+      "finalMp4Count": 15,
+      "prproj": "1448-04-07 _02E.prproj",
+      "xml": "1448-04-07 _02E.xml",
+      "prin": "1448-04-07 _02E.prin",
+      "sequenceReport": "Sequence_Summary_Report_1448-04-07__02E_2026-09-19T02-53-12.xlsx"
+    },
+    {
+      "sessionFolder": "1448-04-08 _02E",
+      "date": "1448-04-08",
+      "sessionNumber": "02",
+      "sessionPeriod": "E",
+      "periodName": "Evening",
+      "categories": [
+        {
+          "name": "01-Dummas-Bethak",
+          "itemCount": 114
+        }
+      ],
+      "itemCount": 114,
+      "finalMp4Count": 14,
+      "prproj": "1448-04-08 _02E.prproj",
+      "xml": "1448-04-08 _02E.xml",
+      "prin": "1448-04-08 _02E.prin",
+      "sequenceReport": "Sequence_Summary_Report_1448-04-08__02E_2026-09-19T17-11-04.xlsx"
+    },
+    {
+      "sessionFolder": "1448-04-09 _01M",
+      "date": "1448-04-09",
+      "sessionNumber": "01",
+      "sessionPeriod": "M",
+      "periodName": "Morning",
+      "categories": [
+        {
+          "name": "01-Dummas-Bethak",
+          "itemCount": 3
+        }
+      ],
+      "itemCount": 3,
+      "finalMp4Count": 3,
+      "prproj": "1448-04-09 _01M.prproj",
+      "xml": "1448-04-09 _01M.xml",
+      "prin": "1448-04-09 _01M.prin",
+      "sequenceReport": "Sequence_Summary_Report_1448-04-09__01M_2026-09-21T03-15-06.xlsx"
+    },
+    {
+      "sessionFolder": "1448-04-09 _02E",
+      "date": "1448-04-09",
+      "sessionNumber": "02",
+      "sessionPeriod": "E",
+      "periodName": "Evening",
+      "categories": [
+        {
+          "name": "01-Dummas-Bethak",
+          "itemCount": 13
+        }
+      ],
+      "itemCount": 13,
+      "finalMp4Count": 10,
+      "prproj": "1448-04-09 _02E.prproj",
+      "xml": "1448-04-09 _02E.xml",
+      "prin": "1448-04-09 _02E.prin",
+      "sequenceReport": "Sequence_Summary_Report_1448-04-09__02E_2026-09-21T04-04-14.xlsx"
+    },
+    {
+      "sessionFolder": "1448-04-10 _01M",
+      "date": "1448-04-10",
+      "sessionNumber": "01",
+      "sessionPeriod": "M",
+      "periodName": "Morning",
+      "categories": [
+        {
+          "name": "01-Dummas-Bethak",
+          "itemCount": 3
+        }
+      ],
+      "itemCount": 3,
+      "finalMp4Count": 3,
+      "prproj": "1448-04-10 _01M.prproj",
+      "xml": "1448-04-10 _01M.xml",
+      "prin": "1448-04-10 _01M.prin",
+      "sequenceReport": "Sequence_Summary_Report_1448-04-10__01M_2026-09-22T01-37-24.xlsx"
+    },
+    {
+      "sessionFolder": "1448-04-10 _02E",
+      "date": "1448-04-10",
+      "sessionNumber": "02",
+      "sessionPeriod": "E",
+      "periodName": "Evening",
+      "categories": [
+        {
+          "name": "01-Dummas-Bethak",
+          "itemCount": 24
+        }
+      ],
+      "itemCount": 24,
+      "finalMp4Count": 21,
+      "prproj": "1448-04-10 _02E.prproj",
+      "xml": "1448-04-10 _02E.xml",
+      "prin": "1448-04-10 _02E.prin",
+      "sequenceReport": "Sequence_Summary_Report_1448-04-10__02E_2026-09-22T01-37-59.xlsx"
+    },
+    {
+      "sessionFolder": "1448-04-11 _01M",
+      "date": "1448-04-11",
+      "sessionNumber": "01",
+      "sessionPeriod": "M",
+      "periodName": "Morning",
+      "categories": [
+        {
+          "name": "01-Dummas-Bethak",
+          "itemCount": 3
+        }
+      ],
+      "itemCount": 3,
+      "finalMp4Count": 3,
+      "prproj": "1448-04-11 _01M.prproj",
+      "xml": "1448-04-11 _01M.xml",
+      "prin": "1448-04-11 _01M.prin",
+      "sequenceReport": "Sequence_Summary_Report_1448-04-11__01M_2026-09-22T16-56-25.xlsx"
+    },
+    {
+      "sessionFolder": "1448-04-11 _02E",
+      "date": "1448-04-11",
+      "sessionNumber": "02",
+      "sessionPeriod": "E",
+      "periodName": "Evening",
+      "categories": [
+        {
+          "name": "01-Dummas-Bethak",
+          "itemCount": 23
+        }
+      ],
+      "itemCount": 23,
+      "finalMp4Count": 21,
+      "prproj": "1448-04-11 _02E.prproj",
+      "xml": "1448-04-11 _02E.xml",
+      "prin": "1448-04-11 _02E.prin",
+      "sequenceReport": "Sequence_Summary_Report_1448-04-11__02E_2026-09-22T16-56-41.xlsx"
+    },
+    {
+      "sessionFolder": "1448-04-12 _01M",
+      "date": "1448-04-12",
+      "sessionNumber": "01",
+      "sessionPeriod": "M",
+      "periodName": "Morning",
+      "categories": [
+        {
+          "name": "01-Dummas-Bethak",
+          "itemCount": 4
+        }
+      ],
+      "itemCount": 4,
+      "finalMp4Count": 4,
+      "prproj": "1448-04-12 _01M.prproj",
+      "xml": "1448-04-12 _01M.xml",
+      "prin": "1448-04-12 _01M.prin",
+      "sequenceReport": "Sequence_Summary_Report_1448-04-12__01M_2026-09-23T09-10-07.xlsx"
+    },
+    {
+      "sessionFolder": "1448-04-12 _02E",
+      "date": "1448-04-12",
+      "sessionNumber": "02",
+      "sessionPeriod": "E",
+      "periodName": "Evening",
+      "categories": [
+        {
+          "name": "01-Dummas-Bethak",
+          "itemCount": 132
+        }
+      ],
+      "itemCount": 132,
+      "finalMp4Count": 70,
+      "prproj": "1448-04-12 _02E.prproj",
+      "xml": "1448-04-12 _02E.xml",
+      "prin": "1448-04-12 _02E.prin",
+      "sequenceReport": "Sequence_Summary_Report_1448-04-12__02E_2026-09-24T01-52-41.xlsx"
+    },
+    {
+      "sessionFolder": "1448-04-13 _01M",
+      "date": "1448-04-13",
+      "sessionNumber": "01",
+      "sessionPeriod": "M",
+      "periodName": "Morning",
+      "categories": [
+        {
+          "name": "01-Dummas-Bethak",
+          "itemCount": 6
+        }
+      ],
+      "itemCount": 6,
+      "finalMp4Count": 6,
+      "prproj": "1448-04-13 _01M.prproj",
+      "xml": "1448-04-13 _01M.xml",
+      "prin": "1448-04-13 _01M.prin",
+      "sequenceReport": "Sequence_Summary_Report_1448-04-13__01M_2026-09-24T16-31-43.xlsx"
+    },
+    {
+      "sessionFolder": "1448-04-13 _02E",
+      "date": "1448-04-13",
+      "sessionNumber": "02",
+      "sessionPeriod": "E",
+      "periodName": "Evening",
+      "categories": [
+        {
+          "name": "01-Dummas-Bethak",
+          "itemCount": 26
+        }
+      ],
+      "itemCount": 26,
+      "finalMp4Count": 21,
+      "prproj": "1448-04-13 _02E.prproj",
+      "xml": "1448-04-13 _02E.xml",
+      "prin": "1448-04-13 _02E.prin",
+      "sequenceReport": "Sequence_Summary_Report_1448-04-13__02E_2026-09-24T17-20-26.xlsx"
+    },
+    {
+      "sessionFolder": "1448-04-14 _01M",
+      "date": "1448-04-14",
+      "sessionNumber": "01",
+      "sessionPeriod": "M",
+      "periodName": "Morning",
+      "categories": [
+        {
+          "name": "01-Surat-Bethak",
+          "itemCount": 6
+        },
+        {
+          "name": "02-Surat-QMZ",
+          "itemCount": 5
+        },
+        {
+          "name": "03-Surat-Ziyarat",
+          "itemCount": 1
+        },
+        {
+          "name": "04-Surat-QMZ",
+          "itemCount": 3
+        },
+        {
+          "name": "05-Surat-Namaz",
+          "itemCount": 1
+        }
+      ],
+      "itemCount": 16,
+      "finalMp4Count": 9,
+      "prproj": "1448-04-14 _01M.prproj",
+      "xml": "1448-04-14 _01M.xml",
+      "prin": "1448-04-14 _01M.prin",
+      "sequenceReport": null
+    },
+    {
+      "sessionFolder": "1448-04-14 _02E",
+      "date": "1448-04-14",
+      "sessionNumber": "02",
+      "sessionPeriod": "E",
+      "periodName": "Evening",
+      "categories": [
+        {
+          "name": "01-Surat-Bethak",
+          "itemCount": 13
+        }
+      ],
+      "itemCount": 13,
+      "finalMp4Count": 11,
+      "prproj": "1448-04-14 _02E.prproj",
+      "xml": "1448-04-14 _02E.xml",
+      "prin": "1448-04-14 _02E.prin",
+      "sequenceReport": "Sequence_Summary_Report_1448-04-14__02E_2026-09-25T16-49-03.xlsx"
+    },
+    {
+      "sessionFolder": "1448-04-15 _01M",
+      "date": "1448-04-15",
+      "sessionNumber": "01",
+      "sessionPeriod": "M",
+      "periodName": "Morning",
+      "categories": [
+        {
+          "name": "01-Surat-Bethak",
+          "itemCount": 4
+        },
+        {
+          "name": "02-Surat-QMZ",
+          "itemCount": 14
+        }
+      ],
+      "itemCount": 18,
+      "finalMp4Count": 18,
+      "prproj": "1448-04-15 _01M.prproj",
+      "xml": "1448-04-15 _01M.xml",
+      "prin": "1448-04-15 _01M.prin",
+      "sequenceReport": null
+    },
+    {
+      "sessionFolder": "1448-04-15 _02E",
+      "date": "1448-04-15",
+      "sessionNumber": "02",
+      "sessionPeriod": "E",
+      "periodName": "Evening",
+      "categories": [
+        {
+          "name": "01-Surat-Bethak",
+          "itemCount": 13
+        }
+      ],
+      "itemCount": 13,
+      "finalMp4Count": 12,
+      "prproj": "1448-04-15 _02E.prproj",
+      "xml": "1448-04-15 _02E.xml",
+      "prin": "1448-04-15 _02E.prin",
+      "sequenceReport": "Sequence_Summary_Report_1448-04-15__02E_2026-09-26T16-43-12.xlsx"
+    },
+    {
+      "sessionFolder": "1448-04-16 _01M",
+      "date": "1448-04-16",
+      "sessionNumber": "01",
+      "sessionPeriod": "M",
+      "periodName": "Morning",
+      "categories": [
+        {
+          "name": "01-Surat-Namaz",
+          "itemCount": 1
+        },
+        {
+          "name": "02-Surat-Ziyarat",
+          "itemCount": 1
+        },
+        {
+          "name": "03-Surat-Bethak",
+          "itemCount": 3
+        },
+        {
+          "name": "04-Surat-QMZ",
+          "itemCount": 11
+        }
+      ],
+      "itemCount": 16,
+      "finalMp4Count": 12,
+      "prproj": "1448-04-16 _01M.prproj",
+      "xml": "1448-04-16 _01M.xml",
+      "prin": "1448-04-16 _01M.prin",
+      "sequenceReport": null
+    },
+    {
+      "sessionFolder": "1448-04-16 _02E",
+      "date": "1448-04-16",
+      "sessionNumber": "02",
+      "sessionPeriod": "E",
+      "periodName": "Evening",
+      "categories": [
+        {
+          "name": "01-Surat-Bethak",
+          "itemCount": 13
+        }
+      ],
+      "itemCount": 13,
+      "finalMp4Count": 11,
+      "prproj": "1448-04-16 _02E.prproj",
+      "xml": "1448-04-16 _02E.xml",
+      "prin": "1448-04-16 _02E.prin",
+      "sequenceReport": "Sequence_Summary_Report_1448-04-16__02E_2026-09-27T17-31-57.xlsx"
+    },
+    {
+      "sessionFolder": "1448-04-17 _01M",
+      "date": "1448-04-17",
+      "sessionNumber": "01",
+      "sessionPeriod": "M",
+      "periodName": "Morning",
+      "categories": [
+        {
+          "name": "01-Surat-Namaz",
+          "itemCount": 1
+        },
+        {
+          "name": "02-Surat-Ziyarat",
+          "itemCount": 1
+        },
+        {
+          "name": "03-Surat-Bethak",
+          "itemCount": 1
+        },
+        {
+          "name": "04-Surat-QMZ",
+          "itemCount": 16
+        }
+      ],
+      "itemCount": 19,
+      "finalMp4Count": 16,
+      "prproj": "1448-04-17 _01M.prproj",
+      "xml": "1448-04-17 _01M.xml",
+      "prin": "1448-04-17 _01M.prin",
+      "sequenceReport": null
+    },
+    {
+      "sessionFolder": "1448-04-17 _02E",
+      "date": "1448-04-17",
+      "sessionNumber": "02",
+      "sessionPeriod": "E",
+      "periodName": "Evening",
+      "categories": [
+        {
+          "name": "01-Surat-Bethak",
+          "itemCount": 15
+        }
+      ],
+      "itemCount": 15,
+      "finalMp4Count": 11,
+      "prproj": "1448-04-17 _02E.prproj",
+      "xml": "1448-04-17 _02E.xml",
+      "prin": "1448-04-17 _02E.prin",
+      "sequenceReport": "Sequence_Summary_Report_1448-04-17__02E_2026-09-28T17-02-47.xlsx"
+    },
+    {
+      "sessionFolder": "1448-04-18 _01M",
+      "date": "1448-04-18",
+      "sessionNumber": "01",
+      "sessionPeriod": "M",
+      "periodName": "Morning",
+      "categories": [
+        {
+          "name": "01-Surat-QMZ",
+          "itemCount": 21
+        }
+      ],
+      "itemCount": 21,
+      "finalMp4Count": 21,
+      "prproj": "1448-04-18 _01M.prproj",
+      "xml": "1448-04-18 _01M.xml",
+      "prin": "1448-04-18 _01M.prin",
+      "sequenceReport": null
+    },
+    {
+      "sessionFolder": "1448-04-18 _02E",
+      "date": "1448-04-18",
+      "sessionNumber": "02",
+      "sessionPeriod": "E",
+      "periodName": "Evening",
+      "categories": [
+        {
+          "name": "01-Surat-Bethak",
+          "itemCount": 8
+        },
+        {
+          "name": "02-Surat-QMZ",
+          "itemCount": 3
+        }
+      ],
+      "itemCount": 11,
+      "finalMp4Count": 10,
+      "prproj": "1448-04-18 _02E.prproj",
+      "xml": "1448-04-18 _02E.xml",
+      "prin": "1448-04-18 _02E.prin",
+      "sequenceReport": null
+    },
+    {
+      "sessionFolder": "1448-04-19 _01M",
+      "date": "1448-04-19",
+      "sessionNumber": "01",
+      "sessionPeriod": "M",
+      "periodName": "Morning",
+      "categories": [
+        {
+          "name": "01-Surat-Namaz",
+          "itemCount": 1
+        },
+        {
+          "name": "02-Surat-Ziyarat",
+          "itemCount": 1
+        },
+        {
+          "name": "03-Surat-Bethak",
+          "itemCount": 86
+        }
+      ],
+      "itemCount": 88,
+      "finalMp4Count": 26,
+      "prproj": "1448-04-19 _01M.prproj",
+      "xml": "1448-04-19 _01M.xml",
+      "prin": "1448-04-19 _01M.prin",
+      "sequenceReport": "Sequence_Summary_Report_1448-04-19__01M_2026-10-02T09-56-13.xlsx"
+    },
+    {
+      "sessionFolder": "1448-04-19 _02E",
+      "date": "1448-04-19",
+      "sessionNumber": "02",
+      "sessionPeriod": "E",
+      "periodName": "Evening",
+      "categories": [
+        {
+          "name": "01-Surat-Bethak",
+          "itemCount": 1
+        },
+        {
+          "name": "02-Surat-Namaz",
+          "itemCount": 1
+        },
+        {
+          "name": "03-Surat-Ziyarat",
+          "itemCount": 1
+        }
+      ],
+      "itemCount": 3,
+      "finalMp4Count": 1,
+      "prproj": "1448-04-19 _02E.prproj",
+      "xml": "1448-04-19 _02E.xml",
+      "prin": "1448-04-19 _02E.prin",
+      "sequenceReport": "Sequence_Summary_Report_1448-04-19__02E_2026-10-02T11-25-31.xlsx"
+    },
+    {
+      "sessionFolder": "1448-04-20 _02E",
+      "date": "1448-04-20",
+      "sessionNumber": "02",
+      "sessionPeriod": "E",
+      "periodName": "Evening",
+      "categories": [
+        {
+          "name": "02-Surat-Namaz",
+          "itemCount": 1
+        },
+        {
+          "name": "03-Surat-QMZ",
+          "itemCount": 1
+        },
+        {
+          "name": "04-Surat-Ziyarat",
+          "itemCount": 1
+        }
+      ],
+      "itemCount": 3,
+      "finalMp4Count": 1,
+      "prproj": "1448-04-20 _02E.prproj",
+      "xml": "1448-04-20 _02E.xml",
+      "prin": "1448-04-20 _02E.prin",
+      "sequenceReport": null
+    }
+  ]
+}

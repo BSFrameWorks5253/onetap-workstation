@@ -1,0 +1,186 @@
+<svg viewBox="0 0 920 280" width="100%" height="280" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Background Gradients -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b0f19" />
+      <stop offset="50%" stop-color="#111827" />
+      <stop offset="100%" stop-color="#07090e" />
+    </linearGradient>
+
+    <radialGradient id="radialCyan" cx="15%" cy="20%" r="55%">
+      <stop offset="0%" stop-color="#6366f1" stop-opacity="0.32" />
+      <stop offset="100%" stop-color="#6366f1" stop-opacity="0" />
+    </radialGradient>
+
+    <radialGradient id="radialRose" cx="85%" cy="80%" r="55%">
+      <stop offset="0%" stop-color="#f43f5e" stop-opacity="0.25" />
+      <stop offset="100%" stop-color="#f43f5e" stop-opacity="0" />
+    </radialGradient>
+
+    <radialGradient id="radialGold" cx="50%" cy="30%" r="45%">
+      <stop offset="0%" stop-color="#d97706" stop-opacity="0.22" />
+      <stop offset="100%" stop-color="#d97706" stop-opacity="0" />
+    </radialGradient>
+
+    <!-- Metallic Brand Title Gradient -->
+    <linearGradient id="textGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="35%" stop-color="#e0e7ff" />
+      <stop offset="70%" stop-color="#c7d2fe" />
+      <stop offset="100%" stop-color="#818cf8" />
+    </linearGradient>
+
+    <linearGradient id="arabicGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#fbbf24" />
+      <stop offset="50%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#d97706" />
+    </linearGradient>
+
+    <!-- Laser Sweep Border Gradient -->
+    <linearGradient id="laserGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#818cf8" stop-opacity="0" />
+      <stop offset="30%" stop-color="#818cf8" stop-opacity="0.9" />
+      <stop offset="50%" stop-color="#f43f5e" stop-opacity="1" />
+      <stop offset="70%" stop-color="#fbbf24" stop-opacity="0.9" />
+      <stop offset="100%" stop-color="#fbbf24" stop-opacity="0" />
+    </linearGradient>
+
+    <!-- Subtle Drop Shadow Filter for Typography -->
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+
+    <filter id="softGlow" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+
+    <style>
+      .laser-border {
+        stroke-dasharray: 220 700;
+        animation: laserRun 6s linear infinite;
+      }
+      @keyframes laserRun {
+        0% { stroke-dashoffset: 920; }
+        100% { stroke-dashoffset: -920; }
+      }
+
+      .pulse-ambient {
+        animation: ambientGlow 4s ease-in-out infinite alternate;
+      }
+      @keyframes ambientGlow {
+        0% { opacity: 0.55; }
+        100% { opacity: 0.95; }
+      }
+
+      .brand-title-anim {
+        animation: titleShimmer 5s ease-in-out infinite alternate;
+      }
+      @keyframes titleShimmer {
+        0% { filter: drop-shadow(0 0 12px rgba(99,102,241,0.35)); }
+        100% { filter: drop-shadow(0 0 24px rgba(244,63,94,0.55)); }
+      }
+
+      .arabic-onto-anim {
+        animation: ontoArabicWave 3.5s ease-in-out infinite alternate;
+      }
+      @keyframes ontoArabicWave {
+        0% { transform: translateY(0px); filter: drop-shadow(0 2px 8px rgba(217,119,6,0.3)); }
+        100% { transform: translateY(-3px); filter: drop-shadow(0 6px 18px rgba(245,158,11,0.6)); }
+      }
+
+      .badge-hover {
+        transition: transform 0.2s ease;
+      }
+      .badge-hover:hover {
+        transform: translateY(-2px);
+      }
+    </style>
+  </defs>
+
+  <!-- Container Box -->
+  <rect x="2" y="2" width="916" height="276" rx="20" fill="url(#bgGrad)" stroke="#1e293b" stroke-width="1.5" />
+
+  <!-- Ambient Glowing Radial Spheres -->
+  <rect x="2" y="2" width="916" height="276" rx="20" fill="url(#radialCyan)" class="pulse-ambient" />
+  <rect x="2" y="2" width="916" height="276" rx="20" fill="url(#radialRose)" class="pulse-ambient" />
+  <rect x="2" y="2" width="916" height="276" rx="20" fill="url(#radialGold)" class="pulse-ambient" />
+
+  <!-- Animated Laser Sweep Top Border -->
+  <rect x="2" y="2" width="916" height="276" rx="20" fill="none" stroke="url(#laserGrad)" stroke-width="2.5" class="laser-border" />
+
+  <!-- Arabic Calligraphy Greeting Banner -->
+  <g class="arabic-onto-anim">
+    <text x="460" y="58" font-family="'Amiri', 'Traditional Arabic', 'Scheherazade New', 'Segoe UI', serif" font-size="28" font-weight="700" fill="url(#arabicGrad)" text-anchor="middle" letter-spacing="1">
+      أَهْلًا وَسَهْلًا
+    </text>
+  </g>
+
+  <!-- Center Brand Title -->
+  <g class="brand-title-anim">
+    <text x="460" y="118" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="48" font-weight="900" fill="url(#textGrad)" text-anchor="middle" letter-spacing="-1.5">
+      UNIDESK STUDIO
+    </text>
+  </g>
+
+  <!-- Version Release Badge -->
+  <g transform="translate(670, 86)">
+    <rect x="0" y="0" width="84" height="22" rx="11" fill="rgba(99, 102, 241, 0.22)" stroke="rgba(129, 140, 248, 0.5)" stroke-width="1" />
+    <text x="42" y="15" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" font-weight="800" fill="#c7d2fe" text-anchor="middle" letter-spacing="0.8">
+      v26.10.10
+    </text>
+  </g>
+
+  <!-- High-Tech Subtitle -->
+  <text x="460" y="156" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="13.5" font-weight="600" fill="#94a3b8" text-anchor="middle" letter-spacing="2.5">
+    ENTERPRISE BATCH VIDEO WORKSTATION &amp; TOKEN CACHE ENGINE
+  </text>
+
+  <!-- Dynamic Feature Badges Row -->
+  <g transform="translate(460, 206)">
+    <!-- Pill 1: GPU Hardware Pipeline -->
+    <g transform="translate(-390, 0)" class="badge-hover">
+      <rect x="0" y="0" width="144" height="30" rx="8" fill="rgba(15, 23, 42, 0.75)" stroke="rgba(99, 102, 241, 0.35)" stroke-width="1" />
+      <text x="72" y="19" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="11" font-weight="700" fill="#a5b4fc" text-anchor="middle">
+        ⚡ GPU PIPELINES
+      </text>
+    </g>
+
+    <!-- Pill 2: N-Batch Queue -->
+    <g transform="translate(-234, 0)" class="badge-hover">
+      <rect x="0" y="0" width="148" height="30" rx="8" fill="rgba(15, 23, 42, 0.75)" stroke="rgba(244, 63, 94, 0.35)" stroke-width="1" />
+      <text x="74" y="19" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="11" font-weight="700" fill="#fca5a5" text-anchor="middle">
+        🎬 N-BATCH QUEUE
+      </text>
+    </g>
+
+    <!-- Pill 3: Token Cache Engine -->
+    <g transform="translate(-74, 0)" class="badge-hover">
+      <rect x="0" y="0" width="168" height="30" rx="8" fill="rgba(15, 23, 42, 0.75)" stroke="rgba(16, 185, 129, 0.35)" stroke-width="1" />
+      <text x="84" y="19" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="11" font-weight="700" fill="#6ee7b7" text-anchor="middle">
+        🧠 SHA-256 TOKEN CACHE
+      </text>
+    </g>
+
+    <!-- Pill 4: Hijri Renamer -->
+    <g transform="translate(106, 0)" class="badge-hover">
+      <rect x="0" y="0" width="148" height="30" rx="8" fill="rgba(15, 23, 42, 0.75)" stroke="rgba(245, 158, 11, 0.35)" stroke-width="1" />
+      <text x="74" y="19" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="11" font-weight="700" fill="#fcd34d" text-anchor="middle">
+        🏷️ HIJRI RENAMER
+      </text>
+    </g>
+
+    <!-- Pill 5: Liquid Glass UI -->
+    <g transform="translate(266, 0)" class="badge-hover">
+      <rect x="0" y="0" width="144" height="30" rx="8" fill="rgba(15, 23, 42, 0.75)" stroke="rgba(168, 85, 247, 0.35)" stroke-width="1" />
+      <text x="72" y="19" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="11" font-weight="700" fill="#d8b4fe" text-anchor="middle">
+        💎 ARCHITECTURAL UI
+      </text>
+    </g>
+  </g>
+
+  <!-- Bottom Specular Edge Line -->
+  <line x1="30" y1="262" x2="890" y2="262" stroke="rgba(255, 255, 255, 0.08)" stroke-width="1" />
+  <circle cx="460" cy="262" r="2.5" fill="#818cf8" opacity="0.8" />
+</svg>

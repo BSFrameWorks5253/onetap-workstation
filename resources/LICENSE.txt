@@ -1,0 +1,27 @@
+ONE TAP — PROFESSIONAL EDITOR TOOLKIT
+END USER LICENSE AGREEMENT (EULA)
+
+Copyright (c) 2024-2026 BS Framework. All rights reserved.
+
+1. GRANT OF LICENSE
+BS Framework grants you a non-exclusive, non-transferable license to use the "One Tap" software (the "Software") on a single computer or device.
+
+2. RESTRICTIONS
+You shall not:
+- Modify, translate, reverse engineer, decompile, or disassemble the Software.
+- Rent, lease, or lend the Software to any third party.
+- Use the Software for any illegal or unauthorized purpose.
+
+3. OWNERSHIP
+The Software is licensed, not sold. All rights, title, and interest in and to the Software, including all copyrights and other intellectual property rights, are owned by BS Framework.
+
+4. DISCLAIMER OF WARRANTY
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND. BS FRAMEWORK DISCLAIMS ALL WARRANTIES, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+
+5. LIMITATION OF LIABILITY
+IN NO EVENT SHALL BS FRAMEWORK BE LIABLE FOR ANY DAMAGES ARISING OUT OF THE USE OR INABILITY TO USE THE SOFTWARE.
+
+6. TERMINATION
+This license is effective until terminated. You may terminate it at any time by destroying the Software. It will also terminate immediately if you fail to comply with any term of this EULA.
+
+By installing this Software, you agree to be bound by the terms of this Agreement.

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ExtensionManifest Version="6.0" ExtensionBundleId="com.unidesk.commandpalette" ExtensionBundleVersion="1.0.0" ExtensionBundleName="Uni_Desk Command Palette" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<ExtensionList>
+		<Extension Id="com.unidesk.panel" Version="1.0.0" />
+	</ExtensionList>
+	<ExecutionEnvironment>
+		<HostList>
+			<Host Name="PPRO" Version="[14.0,99.9]" />
+		</HostList>
+		<LocaleList>
+			<Locale Code="All" />
+		</LocaleList>
+		<RequiredRuntimeList>
+			<RequiredRuntime Name="CSXS" Version="11.0" />
+		</RequiredRuntimeList>
+	</ExecutionEnvironment>
+
+	<DispatchInfoList>
+		<Extension Id="com.unidesk.panel">
+			<DispatchInfo>
+				<Resources>
+					<MainPath>./dist/index.html</MainPath>
+					<ScriptPath>./jsx/index.jsx</ScriptPath>
+					<CEFCommandLine>
+						<Parameter>--allow-file-access</Parameter>
+						<Parameter>--allow-file-access-from-files</Parameter>
+						<Parameter>--disable-web-security</Parameter>
+					</CEFCommandLine>
+				</Resources>
+				<Lifecycle>
+					<AutoVisible>true</AutoVisible>
+				</Lifecycle>
+				<UI>
+					<Type>Panel</Type>
+					<Menu>Uni_Desk Command Palette</Menu>
+					<Geometry>
+						<Size>
+							<Height>650</Height>
+							<Width>720</Width>
+						</Size>
+						<MinSize>
+							<Height>250</Height>
+							<Width>240</Width>
+						</MinSize>
+						<MaxSize>
+							<Height>2500</Height>
+							<Width>2500</Width>
+						</MaxSize>
+					</Geometry>
+					<Icons>
+						<Icon Type="Normal">./public/icons/icon-normal.png</Icon>
+						<Icon Type="DarkNormal">./public/icons/icon-normal.png</Icon>
+					</Icons>
+				</UI>
+			</DispatchInfo>
+		</Extension>
+	</DispatchInfoList>
+</ExtensionManifest>

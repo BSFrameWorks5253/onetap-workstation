@@ -1,0 +1,245 @@
+/* LogBox.css — Crazy Holographic Light Terminal */
+
+.logbox {
+  display: flex;
+  flex-direction: column;
+  background: #FFFFFF;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  height: 100%;
+  box-shadow: 
+    0 8px 24px -4px rgba(99, 102, 241, 0.08),
+    0 2px 6px rgba(0, 0, 0, 0.02);
+}
+
+/* Traffic-light status dots in header */
+.logbox-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--surface-2);
+  border-bottom: 1.5px solid var(--border);
+}
+
+.logbox-dots {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+}
+
+.logbox-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+  opacity: 0.5;
+  transform: scale(0.95);
+}
+
+.dot-red {
+  background: #FF5F57;
+  box-shadow: 0 0 6px rgba(255, 95, 87, 0.5);
+}
+
+.dot-yellow {
+  background: #FEBC2E;
+  box-shadow: 0 0 6px rgba(254, 188, 46, 0.5);
+}
+
+.dot-green {
+  background: #28C840;
+  box-shadow: 0 0 6px rgba(40, 200, 64, 0.5);
+}
+
+.logbox-dot.dot--active {
+  opacity: 1;
+  transform: scale(1.2);
+}
+
+.dot-red.dot--active {
+  box-shadow: 0 0 12px #FF5F57;
+  animation: pulse-dot-red 1.2s infinite ease-in-out;
+}
+
+.dot-yellow.dot--active {
+  box-shadow: 0 0 12px #FEBC2E;
+  animation: pulse-dot-yellow 1.2s infinite ease-in-out;
+}
+
+.dot-green.dot--active {
+  box-shadow: 0 0 12px #28C840;
+}
+
+@keyframes pulse-dot-red {
+  0%, 100% { transform: scale(1.2); box-shadow: 0 0 8px #FF5F57; }
+  50% { transform: scale(1.4); box-shadow: 0 0 16px #FF5F57; }
+}
+
+@keyframes pulse-dot-yellow {
+  0%, 100% { transform: scale(1.2); box-shadow: 0 0 8px #FEBC2E; }
+  50% { transform: scale(1.4); box-shadow: 0 0 16px #FEBC2E; }
+}
+
+.logbox-title {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  flex: 1;
+}
+
+/* Animated status badge */
+.logbox-live {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: var(--radius-chip);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid transparent;
+  transition: all 0.3s ease;
+}
+
+.logbox-live::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.logbox-live--running {
+  color: #D97706;
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+.logbox-live--running::before {
+  background: #F59E0B;
+  box-shadow: 0 0 8px #F59E0B;
+  animation: pulse 1s ease-in-out infinite;
+}
+
+.logbox-live--error {
+  color: #E11D48;
+  background: rgba(244, 63, 94, 0.12);
+  border-color: rgba(244, 63, 94, 0.3);
+}
+.logbox-live--error::before {
+  background: #F43F5E;
+  box-shadow: 0 0 8px #F43F5E;
+  animation: pulse 0.8s ease-in-out infinite;
+}
+
+.logbox-live--idle {
+  color: #059669;
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+.logbox-live--idle::before {
+  background: #10B981;
+  box-shadow: 0 0 8px #10B981;
+}
+
+.logbox-clear {
+  background: #FFFFFF;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1;
+  transition: all 0.2s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+.logbox-clear:hover {
+  background: var(--surface-3);
+  color: var(--danger);
+  border-color: var(--danger);
+  transform: scale(1.05);
+}
+
+.logbox-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-family: var(--font-mono);
+  background: #F8FAFC;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: default;
+}
+
+.logbox-empty {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 12px;
+  font-weight: 500;
+}
+
+.log-line {
+  display: flex;
+  gap: 12px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: background 0.15s;
+  border-left: 3px solid transparent;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: default;
+}
+
+.log-line:hover {
+  background: #FFFFFF;
+  border-left-color: var(--theme-accent);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+
+.log-ts {
+  color: var(--text-muted);
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 600;
+  padding-top: 1px;
+}
+
+.log-msg {
+  color: var(--text-primary);
+  font-weight: 600;
+  flex: 1;
+  word-break: break-all;
+  white-space: pre-wrap;
+}
+
+/* ── Level variants ── */
+.log-line--success {
+  border-left-color: var(--success);
+  background: rgba(16, 185, 129, 0.06);
+}
+.log-line--success .log-msg { color: #059669; font-weight: 700; }
+
+.log-line--error {
+  border-left-color: var(--danger);
+  background: rgba(244, 63, 94, 0.06);
+}
+.log-line--error .log-msg { color: #E11D48; font-weight: 700; }
+
+.log-line--warn {
+  border-left-color: var(--warning);
+  background: rgba(245, 158, 11, 0.06);
+}
+.log-line--warn .log-msg { color: #D97706; font-weight: 700; }
+
+.log-line--muted .log-msg { color: var(--text-muted); }

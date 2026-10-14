@@ -1,0 +1,80 @@
+/* Modal.css — Crazy Holographic Light Modals */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  background: rgba(15, 23, 42, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  animation: fadeIn var(--dur-fast) ease both;
+}
+
+.modal-card {
+  background: #FFFFFF !important;
+  border: 1.5px solid var(--border) !important;
+  border-radius: var(--radius-card) !important;
+  width: 440px;
+  overflow: hidden;
+  animation: scaleInDeep var(--dur-normal) var(--ease-spring) both;
+  box-shadow:
+    0 32px 80px rgba(99, 102, 241, 0.22),
+    0 8px 24px rgba(0, 0, 0, 0.05),
+    0 0 0 1px rgba(255, 255, 255, 0.9) inset !important;
+  position: relative;
+}
+
+.modal-stripe {
+  height: 5px;
+  position: relative;
+  z-index: 2;
+  background: linear-gradient(90deg, #6366F1, #EC4899, #F59E0B, #06B6D4);
+  background-size: 200% 100%;
+  animation: shimmerSweep 4s linear infinite;
+}
+
+.modal-body {
+  padding: 30px 28px 26px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 14px;
+  position: relative;
+  z-index: 2;
+}
+
+.modal-icon {
+  font-size: 40px;
+  line-height: 1;
+  animation: microBounce 0.5s var(--ease-spring) 0.15s both;
+  display: block;
+}
+
+.modal-title {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+
+.modal-message {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: 1.6;
+  max-width: 360px;
+  white-space: pre-wrap;
+  font-weight: 500;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 10px;
+  justify-content: center;
+  width: 100%;
+}

@@ -1,0 +1,346 @@
+/* AutoUpdateModal.css — Glassmorphic Auto-Update Release Notes & Progress Modal */
+
+.update-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: rgba(10, 15, 26, 0.72);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: updateModalFadeIn 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.update-modal-card {
+  position: relative;
+  width: 100%;
+  max-width: 560px;
+  background: var(--surface, rgba(18, 24, 38, 0.92));
+  color: var(--text-primary, #f8fafc);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+  border-radius: 22px;
+  padding: 28px;
+  overflow: hidden;
+  box-shadow:
+    0 32px 64px -16px rgba(0, 0, 0, 0.55),
+    0 16px 32px -8px rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(255, 255, 255, 0.1) inset,
+    0 1px 0 rgba(255, 255, 255, 0.3) inset;
+  animation: updateModalScaleUp 0.32s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* Ambient Neon Glow Backdrop */
+.update-modal-glow {
+  position: absolute;
+  top: -40%;
+  left: -20%;
+  width: 140%;
+  height: 180%;
+  background: radial-gradient(circle at 30% 20%, rgba(99, 102, 241, 0.22) 0%, transparent 65%);
+  pointer-events: none;
+  opacity: 0.8;
+}
+
+/* Header */
+.update-modal-header {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.update-modal-header-title {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.update-modal-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(139, 92, 246, 0.15));
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  box-shadow: 0 8px 16px rgba(99, 102, 241, 0.2);
+}
+
+.update-modal-heading {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-primary, #ffffff);
+  letter-spacing: -0.3px;
+}
+
+.update-modal-tags {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.update-modal-tag {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 99px;
+  line-height: 1;
+}
+
+.update-modal-tag--version {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #10b981;
+}
+
+.update-modal-tag--date,
+.update-modal-tag--size {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-muted, rgba(248, 250, 252, 0.6));
+}
+
+.update-modal-close {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-muted, rgba(255, 255, 255, 0.6));
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.update-modal-close:hover {
+  background: rgba(244, 63, 94, 0.18);
+  border-color: rgba(244, 63, 94, 0.35);
+  color: #f43f5e;
+  transform: rotate(90deg) scale(1.08);
+}
+
+/* Body & Release Notes */
+.update-modal-body {
+  position: relative;
+  z-index: 2;
+  margin-bottom: 24px;
+}
+
+.update-release-title {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary, #ffffff);
+}
+
+.update-release-notes {
+  max-height: 200px;
+  overflow-y: auto;
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 14px 16px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-secondary, rgba(248, 250, 252, 0.8));
+}
+
+.update-release-notes::-webkit-scrollbar {
+  width: 5px;
+}
+.update-release-notes::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 99px;
+}
+
+.update-notes-line {
+  margin: 0 0 6px;
+}
+.update-notes-line:last-child {
+  margin-bottom: 0;
+}
+
+/* Error Box */
+.update-error-box {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(244, 63, 94, 0.12);
+  border: 1px solid rgba(244, 63, 94, 0.25);
+  color: #fb7185;
+  font-size: 12.5px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Progress Container */
+.update-progress-container {
+  margin-top: 18px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+}
+
+.update-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.update-progress-label {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-primary, #ffffff);
+}
+
+.update-progress-percent {
+  font-size: 13px;
+  font-weight: 800;
+  color: #8b5cf6;
+}
+
+.update-progress-track {
+  height: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 99px;
+  overflow: hidden;
+  position: relative;
+}
+
+.update-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #6366f1, #8b5cf6, #ec4899);
+  border-radius: 99px;
+  transition: width 0.3s ease-out;
+  position: relative;
+}
+
+.update-progress-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.4) 50%, transparent 100%);
+  animation: updateShimmer 1.4s linear infinite;
+}
+
+.update-progress-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11.5px;
+  color: var(--text-muted, rgba(248, 250, 252, 0.6));
+  margin-top: 8px;
+  font-weight: 600;
+}
+
+/* Footer & Buttons */
+.update-modal-footer {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.update-btn {
+  padding: 10px 20px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.22s cubic-bezier(0.21, 1.02, 0.35, 1);
+  outline: none;
+}
+
+.update-btn--secondary {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text-secondary, rgba(248, 250, 252, 0.8));
+}
+.update-btn--secondary:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+}
+
+.update-btn--primary {
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  border: none;
+  color: #ffffff;
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.35);
+}
+.update-btn--primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.45);
+}
+
+.update-btn--success {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border: none;
+  color: #ffffff;
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.35);
+}
+.update-btn--success:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.45);
+}
+
+.update-btn--disabled {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-muted, rgba(248, 250, 252, 0.5));
+  cursor: not-allowed;
+}
+
+.update-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: updateSpin 0.8s linear infinite;
+}
+
+/* Animations */
+@keyframes updateModalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes updateModalScaleUp {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes updateShimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes updateSpin {
+  to { transform: rotate(360deg); }
+}

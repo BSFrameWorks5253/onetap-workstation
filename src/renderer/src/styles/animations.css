@@ -1,0 +1,325 @@
+/* ============================================================
+   ANIMATIONS  —  Crazy Holographic Light Keyframes & Effects
+   ============================================================ */
+
+/* ── Liquid Button Flow (Halo Aura Behind Buttons) ──────── */
+@keyframes liquidButtonFlow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* ── Liquid Button Mesh Gradient Shifting ────────────────── */
+@keyframes liquidButtonMesh {
+  0% {
+    background-position: 0% 0%;
+  }
+  50% {
+    background-position: 100% 100%;
+  }
+  100% {
+    background-position: 0% 0%;
+  }
+}
+
+/* ── Specular Prism Sweep (Light Flare on Button Hover) ─── */
+@keyframes specularPrismSweep {
+  0% {
+    transform: translateX(-160%) skewX(-20deg);
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+  }
+  75% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(320%) skewX(-20deg);
+    opacity: 0;
+  }
+}
+
+/* ── Ambient Aurora Flow ─────────────────────────────────── */
+@keyframes ambientAuroraFlow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* ── Holographic Rainbow Sheen ───────────────────────────── */
+@keyframes holographicRainbowSweep {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+/* ── Dynamic Angle Shifting (for borders and sheen) ──────── */
+@keyframes dynamicBorderSpin {
+  0% {
+    filter: hue-rotate(0deg);
+  }
+  100% {
+    filter: hue-rotate(360deg);
+  }
+}
+
+/* ── Liquid Chromatic Wave ───────────────────────────────── */
+@keyframes liquidWave {
+  0% {
+    background-position: 0% 50%;
+    transform: scaleY(1);
+  }
+  50% {
+    background-position: 100% 50%;
+    transform: scaleY(1.04);
+  }
+  100% {
+    background-position: 0% 50%;
+    transform: scaleY(1);
+  }
+}
+
+/* ── Fade ────────────────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+/* ── Slide + Fade (page transitions) ────────────────────── */
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(36px) scale(0.98); }
+  to   { opacity: 1; transform: translateX(0) scale(1); }
+}
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-36px) scale(0.98); }
+  to   { opacity: 1; transform: translateX(0) scale(1); }
+}
+@keyframes slideOutLeft {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(-36px) scale(0.98); }
+}
+@keyframes slideOutRight {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(36px) scale(0.98); }
+}
+
+/* ── Slide Up Fade (staggered list items) ───────────────── */
+@keyframes slideUpFade {
+  from { opacity: 0; transform: translateY(20px) scale(0.96); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ── Scale entrance (cards) ──────────────────────────────── */
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.96) translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ── 3D flip-scale entrance (modals, drawers) ────────────── */
+@keyframes scaleInDeep {
+  from { opacity: 0; transform: perspective(1000px) scale(0.9) translateY(14px) rotateX(-4deg); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ── Pulse (badges, dots) ────────────────────────────────── */
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(0.92); }
+}
+
+/* ── Glow Pulse (accent elements) ───────────────────────── */
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 10px 0 var(--shadow-glow); }
+  50%       { box-shadow: 0 0 28px 6px var(--shadow-glow); }
+}
+
+/* ── Spinner ─────────────────────────────────────────────── */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Shimmer (loading skeleton) ─────────────────────────── */
+@keyframes skeletonShimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--skeleton-base, rgba(0, 0, 0, 0.06)) 0%,
+    var(--skeleton-highlight, rgba(255, 255, 255, 0.6)) 50%,
+    var(--skeleton-base, rgba(0, 0, 0, 0.06)) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.6s ease-in-out infinite;
+  border-radius: var(--radius-sm, 10px);
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton-text {
+  height: 14px;
+  margin-bottom: 8px;
+  border-radius: 4px;
+}
+
+.skeleton-circle {
+  border-radius: 50% !important;
+}
+
+/* ── Shimmer Sweep (button hover shine) ─────────────────── */
+@keyframes shimmerSweep {
+  0%   { transform: translateX(-140%) skewX(-18deg); opacity: 0; }
+  20%  { opacity: 1; }
+  80%  { opacity: 1; }
+  100% { transform: translateX(300%) skewX(-18deg); opacity: 0; }
+}
+
+/* ── Progress bar glow ───────────────────────────────────── */
+@keyframes progressGlow {
+  0%, 100% { box-shadow: 0 0 10px 0px var(--theme-accent); }
+  50%       { box-shadow: 0 0 24px 6px var(--theme-accent); }
+}
+
+/* ── Border Glow (focused inputs) ───────────────────────── */
+@keyframes borderGlow {
+  0%, 100% { 
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--theme-accent) 20%, transparent); 
+    border-color: var(--theme-accent);
+  }
+  50% { 
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--theme-accent) 35%, transparent), 0 0 20px color-mix(in srgb, var(--theme-accent) 25%, transparent); 
+    border-color: var(--theme-accent-hv);
+  }
+}
+
+/* ── Nav indicator slide ─────────────────────────────────── */
+@keyframes navSlideIn {
+  from { transform: scaleX(0); opacity: 0; }
+  to   { transform: scaleX(1); opacity: 1; }
+}
+
+/* ── Micro-bounce ────────────────────────────────────────── */
+@keyframes microBounce {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.14); }
+  70%  { transform: scale(0.96); }
+  100% { transform: scale(1); }
+}
+
+/* ── Spring Pop (button clicks) ──────────────────────────── */
+@keyframes springPop {
+  0%   { transform: scale(0.95); }
+  60%  { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+/* ── Float (empty state icons) ──────────────────────────── */
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50%       { transform: translateY(-10px) rotate(2deg); }
+}
+
+/* ── Conic spin (color pickers, logo borders) ───────────── */
+@keyframes conicSpin {
+  to { --conic-angle: 360deg; }
+}
+
+/* ── Equalizer bars (audio strips) ─────────────────────── */
+@keyframes eqBar1 {
+  0%, 100% { height: 4px; }
+  50%       { height: 16px; }
+}
+@keyframes eqBar2 {
+  0%, 100% { height: 12px; }
+  33%       { height: 4px; }
+  66%       { height: 18px; }
+}
+@keyframes eqBar3 {
+  0%, 100% { height: 8px; }
+  50%       { height: 4px; }
+}
+
+/* ── Orb float (setup wizard hero & ambient blobs) ─────── */
+@keyframes orbFloat {
+  0%   { transform: translate(0, 0) scale(1) rotate(0deg); }
+  33%  { transform: translate(6%, 8%) scale(1.08) rotate(40deg); }
+  66%  { transform: translate(-6%, 5%) scale(0.94) rotate(80deg); }
+  100% { transform: translate(0, 0) scale(1) rotate(120deg); }
+}
+
+/* ── Entrance Utilities (Used across TaskTracker, Stats, TitleAdder) ── */
+.anim-scale-in,
+.animate-scale-in {
+  animation: scaleIn 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  transform-origin: center center;
+}
+
+.anim-fade-in,
+.animate-fade-in {
+  animation: fadeIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: opacity;
+  backface-visibility: hidden;
+}
+
+/* ── Hardware Accelerated Smooth Motion ── */
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html, body {
+  scroll-behavior: smooth;
+  text-rendering: optimizeLegibility;
+}
+
+.app-shell,
+.page-container,
+.main-content,
+.modal-overlay,
+.welcome-overlay {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* GPU compositing for fast responsive hover feedback */
+button,
+.btn-primary,
+.btn-secondary,
+.btn-primary-action,
+.btn-secondary-action,
+.tracker-drive-tab,
+.action-card,
+.stat-card {
+  will-change: transform, box-shadow;
+  transform: translateZ(0);
+}
+

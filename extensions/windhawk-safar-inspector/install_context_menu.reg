@@ -1,0 +1,17 @@
+Windows Registry Editor Version 5.00
+
+; Register Safar Inspector in Windows Explorer Context Menu for Folders & Background
+
+[HKEY_CURRENT_USER\Software\Classes\Directory\shell\SafarInspector]
+@="🏕️ Safar & Media Stats Inspector"
+"Icon"="imageres.dll,-1002"
+
+[HKEY_CURRENT_USER\Software\Classes\Directory\shell\SafarInspector\command]
+@="pythonw.exe \"D:\\ON_GOING PROJECT\\One Tap_V20.6.5\\extensions\\windhawk-safar-inspector\\gui_inspector.py\" \"%1\""
+
+[HKEY_CURRENT_USER\Software\Classes\Directory\Background\shell\SafarInspector]
+@="🏕️ Safar & Media Stats Inspector"
+"Icon"="imageres.dll,-1002"
+
+[HKEY_CURRENT_USER\Software\Classes\Directory\Background\shell\SafarInspector\command]
+@="pythonw.exe \"D:\\ON_GOING PROJECT\\One Tap_V20.6.5\\extensions\\windhawk-safar-inspector\\gui_inspector.py\" \"%V\""

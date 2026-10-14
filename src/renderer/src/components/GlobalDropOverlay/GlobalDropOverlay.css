@@ -1,0 +1,181 @@
+/* GlobalDropOverlay.css — Sleek Glassmorphic Drag & Drop Feedback */
+
+.g-drop-overlay,
+.g-drop-overlay * {
+  pointer-events: none !important;
+}
+
+.g-drop-overlay {
+  position: fixed;
+  inset: 12px;
+  border-radius: var(--radius-xl, 28px);
+  background: color-mix(in srgb, var(--bg, #FAF6EE) 80%, transparent);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border: 2.5px dashed var(--theme-accent, #6366F1);
+  box-shadow: 
+    0 0 50px 10px color-mix(in srgb, var(--theme-accent, #6366F1) 25%, transparent),
+    inset 0 0 40px 5px color-mix(in srgb, var(--theme-accent, #6366F1) 15%, transparent);
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: dropOverlayFadeIn 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes dropOverlayFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.g-drop-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 36px 48px;
+  background: var(--surface, #FFFFFF);
+  border: 1.5px solid var(--border-strong, rgba(99, 102, 241, 0.3));
+  border-radius: var(--radius-lg, 20px);
+  box-shadow: 
+    0 24px 60px -10px rgba(0, 0, 0, 0.18),
+    0 0 0 1px rgba(255, 255, 255, 0.9) inset;
+  max-width: 580px;
+  width: 90%;
+  animation: dropCardFloat 3s ease-in-out infinite alternate;
+}
+
+@keyframes dropCardFloat {
+  0% { transform: translateY(0px); }
+  100% { transform: translateY(-6px); }
+}
+
+.g-drop-icon-wrap {
+  width: 72px;
+  height: 72px;
+  border-radius: 22px;
+  background: linear-gradient(135deg, var(--theme-accent, #6366F1), var(--theme-accent-hv, #4F46E5));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+  color: #FFFFFF;
+  margin-bottom: 18px;
+  box-shadow: 0 12px 28px -4px color-mix(in srgb, var(--theme-accent, #6366F1) 45%, transparent);
+  animation: iconPulse 1.8s infinite cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes iconPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+
+.g-drop-title {
+  font-family: var(--font-display, sans-serif);
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text-primary, #0F172A);
+  letter-spacing: -0.02em;
+  margin-bottom: 6px;
+}
+
+.g-drop-subtitle {
+  font-size: 13.5px;
+  color: var(--text-secondary, #475569);
+  font-weight: 500;
+  margin-bottom: 20px;
+}
+
+/* Format Pills Breakdown */
+.g-drop-pills-container {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 18px;
+  width: 100%;
+}
+
+.g-drop-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 30px;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid var(--border);
+  background: var(--surface-2, #F1F4FA);
+  color: var(--text-primary);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  animation: pillPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes pillPop {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.g-drop-pill--raw {
+  background: rgba(244, 63, 94, 0.12);
+  border-color: rgba(244, 63, 94, 0.3);
+  color: #E11D48;
+}
+
+.g-drop-pill--video {
+  background: rgba(99, 102, 241, 0.12);
+  border-color: rgba(99, 102, 241, 0.3);
+  color: #4F46E5;
+}
+
+.g-drop-pill--audio {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #059669;
+}
+
+.g-drop-pill--photo {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.3);
+  color: #D97706;
+}
+
+.g-drop-pill--project {
+  background: rgba(168, 85, 247, 0.12);
+  border-color: rgba(168, 85, 247, 0.3);
+  color: #9333EA;
+}
+
+.g-drop-pill--data {
+  background: rgba(2, 132, 199, 0.12);
+  border-color: rgba(2, 132, 199, 0.3);
+  color: #0284C7;
+}
+
+.g-drop-pill--folder {
+  background: rgba(100, 116, 139, 0.12);
+  border-color: rgba(100, 116, 139, 0.3);
+  color: var(--text-primary);
+}
+
+.g-drop-hint {
+  font-size: 11.5px;
+  color: var(--text-muted, #64748B);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}

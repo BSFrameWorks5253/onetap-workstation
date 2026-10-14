@@ -1,0 +1,8 @@
+{
+  "version": "1.0.1",
+  "repoOwner": "BSFrameWorks5253",
+  "repoName": "onetap-adobe-extenstion",
+  "releaseNotes": "Added Light Theme & Auto-Update Engine\n\nBugs Fixed:\nFixed custom marker timeline export sync\n\nImprovements:\nFaster panel launch & high contrast buttons\n\nOfficial update release for One Tap Parent Extension inside Adobe Premiere Pro.",
+  "downloadUrl": "https://github.com/BSFrameWorks5253/onetap-adobe-extenstion/releases/download/v1.0.1/one-tap-parent-extension.zip",
+  "updatedAt": "2026-07-30T11:32:50Z"
+}

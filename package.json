@@ -1,0 +1,281 @@
+{
+  "name": "UniDesk_App",
+  "version": "26.10.10",
+  "description": "Uni Desk \u2014 Professional Workstation & Media Automation Toolkit",
+  "author": "BS.Framework <support@bsframework.com>",
+  "homepage": "https://bsframework.com/onetap",
+  "main": "out/main/index.js",
+  "scripts": {
+    "dev": "node scripts/run-dev.js dev",
+    "build": "electron-vite build",
+    "preview": "node scripts/run-dev.js preview",
+    "build:linux": "npm run build && electron-builder --linux",
+    "build:linux:deb": "npm run build && electron-builder --linux deb",
+    "build:linux:appimage": "npm run build && electron-builder --linux AppImage",
+    "build:linux:dir": "npm run build && electron-builder --linux --dir",
+    "build:win": "npm run build && node scripts/build-win.js",
+    "build:win:portable": "npm run build && node scripts/build-win.js portable",
+    "build:win:nsis": "npm run build && node scripts/build-win.js nsis",
+    "build:win:msi": "node scripts/build-win.js msi",
+    "build:win:zip": "npm run build && node scripts/build-win.js zip",
+    "build:win:dir": "npm run build && node scripts/build-win.js dir",
+    "build:all": "npm run build && electron-builder --linux && node scripts/build-win.js",
+    "make-exe": "python3 scripts/make_exe_cross.py",
+    "make-exe:gui": "python3 scripts/make_exe_cross.py",
+    "make-exe:full": "python3 scripts/make_exe_cross.py",
+    "make-exe:cross": "python3 scripts/make_exe_cross.py",
+    "fm:install": "npm --prefix packages/file-manager install",
+    "fm:dev": "npm --prefix packages/file-manager run dev",
+    "fm:build": "npm --prefix packages/file-manager run build",
+    "test:fade": "node scripts/test_fade_logic.js",
+    "analyze:cache": "python scripts/codebase_analyzer.py",
+    "analyze:force": "python scripts/codebase_analyzer.py --force"
+  },
+  "dependencies": {
+    "@electron-toolkit/utils": "^3.0.0",
+    "@types/canvas-confetti": "^1.9.0",
+    "@types/fluent-ffmpeg": "^2.1.28",
+    "@types/marked": "^5.0.2",
+    "canvas-confetti": "^1.9.4",
+    "fluent-ffmpeg": "^2.1.3",
+    "mammoth": "^1.12.0",
+    "marked": "^18.0.5",
+    "pdf-lib": "^1.17.1",
+    "sharp": "^0.35.3",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@electron-toolkit/tsconfig": "^1.0.1",
+    "@types/node": "^20.14.0",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3",
+    "electron-vite": "^2.3.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "typescript": "^5.5.2",
+    "vite": "^5.3.1"
+  },
+  "build": {
+    "appId": "com.bsframework.unidesk",
+    "productName": "Uni Desk",
+    "executableName": "Uni Desk",
+    "copyright": "Copyright \u00a9 2026 BS.Framework",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "out/**/*",
+      "src/main/python/**/*",
+      "tools/**/*",
+      "resources/**/*",
+      "!**/*.map"
+    ],
+    "extraResources": [
+      {
+        "from": "src/main/python",
+        "to": "python"
+      },
+      {
+        "from": "tools",
+        "to": "tools"
+      },
+      {
+        "from": "resources/Event List.xlsx",
+        "to": "Event List.xlsx"
+      }
+    ],
+    "publish": {
+      "provider": "github",
+      "owner": "BSFrameWorks5253",
+      "repo": "onetap-workstation"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "msi",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "publisherName": "BS.Framework",
+      "requestedExecutionLevel": "asInvoker",
+      "icon": "resources/icon.ico",
+      "legalTrademarks": "Uni Desk is a trademark of BS.Framework",
+      "fileAssociations": [
+        {
+          "ext": [
+            "jpg",
+            "jpeg",
+            "png",
+            "gif",
+            "webp",
+            "bmp",
+            "tiff",
+            "tif",
+            "heic",
+            "avif",
+            "cr2",
+            "cr3",
+            "nef",
+            "nrw",
+            "arw",
+            "dng",
+            "orf",
+            "rw2",
+            "pef",
+            "raf",
+            "raw"
+          ],
+          "name": "Image",
+          "description": "Image file",
+          "role": "Viewer"
+        },
+        {
+          "ext": [
+            "mp4",
+            "mkv",
+            "avi",
+            "mov",
+            "webm",
+            "wmv",
+            "flv",
+            "m4v",
+            "ts",
+            "m2ts"
+          ],
+          "name": "Video",
+          "description": "Video file",
+          "role": "Viewer"
+        },
+        {
+          "ext": [
+            "pdf"
+          ],
+          "name": "PDF Document",
+          "description": "PDF file",
+          "role": "Viewer"
+        },
+        {
+          "ext": [
+            "docx",
+            "doc"
+          ],
+          "name": "Word Document",
+          "description": "Microsoft Word document",
+          "role": "Viewer"
+        },
+        {
+          "ext": [
+            "xlsx",
+            "xls"
+          ],
+          "name": "Excel Spreadsheet",
+          "description": "Microsoft Excel spreadsheet",
+          "role": "Viewer"
+        },
+        {
+          "ext": [
+            "md",
+            "markdown"
+          ],
+          "name": "Markdown",
+          "description": "Markdown document",
+          "role": "Viewer"
+        }
+      ]
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "tar.gz",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "category": "Utility",
+      "icon": "resources/icon.png",
+      "synopsis": "Uni Desk - Professional Workstation & Media Automation Toolkit",
+      "description": "Uni Desk \u2014 Professional Workstation & Media Automation Toolkit",
+      "maintainer": "BS Framework <support@bsframework.com>",
+      "desktop": {
+        "StartupWMClass": "Uni Desk"
+      }
+    },
+    "deb": {
+      "priority": "optional",
+      "packageCategory": "utils"
+    },
+    "appImage": {
+      "artifactName": "${productName}_Linux_V${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "${productName}_V${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": "always",
+      "createStartMenuShortcut": true,
+      "menuCategory": "Uni Desk",
+      "shortcutName": "Uni Desk",
+      "artifactName": "${productName}_Setup_V${version}.${ext}",
+      "uninstallDisplayName": "Uni Desk",
+      "deleteAppDataOnUninstall": false,
+      "installerIcon": "resources/icon.ico",
+      "uninstallerIcon": "resources/icon.ico",
+      "installerHeaderIcon": "resources/icon.ico",
+      "installerSidebar": "resources/installer_banner.bmp",
+      "installerHeader": "resources/installer_small.bmp",
+      "uninstallerSidebar": "resources/installer_banner.bmp",
+      "license": "resources/LICENSE.txt",
+      "runAfterFinish": true,
+      "unicode": true
+    },
+    "msi": {
+      "oneClick": false,
+      "perMachine": false,
+      "runAfterFinish": false,
+      "createDesktopShortcut": "always",
+      "createStartMenuShortcut": true,
+      "shortcutName": "Uni Desk",
+      "artifactName": "${productName}_Setup_V${version}.${ext}"
+    }
+  }
+}

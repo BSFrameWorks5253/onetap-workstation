@@ -1,0 +1,172 @@
+/* TrayDock.css — Premium Upgrade */
+
+.tray-dock {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 320px;
+  pointer-events: none;
+}
+
+.tray-card {
+  pointer-events: auto;
+  background: rgba(18, 18, 24, 0.78);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.45),
+    0 2px 8px rgba(0, 0, 0, 0.3),
+    0 0 1px rgba(255, 255, 255, 0.08) inset;
+  cursor: pointer;
+  transition:
+    transform var(--dur-normal) var(--ease-spring),
+    box-shadow var(--dur-normal) var(--ease-out),
+    border-color var(--dur-normal) var(--ease-out);
+  animation: trayEnter 0.4s var(--ease-spring) both;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Glass noise overlay for depth */
+.tray-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, transparent 50%, rgba(0,0,0,0.04) 100%);
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+.tray-card:hover {
+  transform: translateY(-5px) scale(1.025);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+/* Color themed glow states */
+.tray-card--adder {
+  border-left: 4px solid var(--accent-adder, #4f7cff);
+}
+.tray-card--adder:hover {
+  box-shadow:
+    0 16px 48px rgba(79, 124, 255, 0.25),
+    0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.tray-card--sync {
+  border-left: 4px solid var(--accent-drivesync, #10b981);
+}
+.tray-card--sync:hover {
+  box-shadow:
+    0 16px 48px rgba(16, 185, 129, 0.25),
+    0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+/* Header */
+.tray-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.tray-icon { font-size: 16px; }
+
+.tray-title {
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  color: #ffffff;
+  flex: 1;
+}
+
+/* Pulsing dot indicator */
+.tray-pulse {
+  width: 8px;
+  height: 8px;
+  background-color: var(--success);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--success);
+  animation: trayPulse 1.8s infinite ease-in-out;
+  position: relative;
+}
+.tray-card--adder .tray-pulse {
+  background-color: var(--accent-adder, #4f7cff);
+  box-shadow: 0 0 8px var(--accent-adder, #4f7cff);
+}
+.tray-card--sync .tray-pulse {
+  background-color: var(--accent-drivesync, #10b981);
+  box-shadow: 0 0 8px var(--accent-drivesync, #10b981);
+}
+
+@keyframes trayPulse {
+  0%  { transform: scale(0.9); opacity: 0.6; }
+  50% { transform: scale(1.25); opacity: 1; box-shadow: 0 0 14px currentColor; }
+  100%{ transform: scale(0.9); opacity: 0.6; }
+}
+
+/* Progress bar */
+.tray-progress-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.tray-progress-bar {
+  flex: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.2);
+}
+
+.tray-progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Animated shimmer on progress fill */
+.tray-progress-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%);
+  animation: shimmerSweep 1.2s linear infinite;
+}
+
+.tray-card--adder .tray-progress-fill {
+  background: linear-gradient(90deg, #4f7cff, #82a3ff);
+}
+.tray-card--sync .tray-progress-fill {
+  background: linear-gradient(90deg, #10b981, #34d399);
+}
+
+.tray-percent {
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.9);
+  min-width: 28px;
+  text-align: right;
+  font-family: var(--font-mono);
+}
+
+/* Metadata */
+.tray-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 500;
+}

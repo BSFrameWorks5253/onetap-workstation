@@ -1,0 +1,191 @@
+/* =======================================================
+   NavItem.css — "Frosted Lens" Station Design
+   
+   Items bloom from invisible to frosted glass card.
+   Circular icons. Right-side glowing neon indicator lens.
+======================================================= */
+
+/* -- Base Nav Item ------------------------------------- */
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 40px;
+  padding: 0 10px;
+  border-radius: var(--radius-md, 10px);
+  cursor: pointer;
+  user-select: none;
+  border: 1px solid transparent;
+  background: transparent;
+  position: relative;
+  z-index: 1;
+  transition:
+    background 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease,
+    transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.nav-item:active {
+  transform: scale(0.97);
+}
+
+/* -- Hover: Frosted glass blooms smoothly ----- */
+.nav-item:hover:not(.nav-item--active) {
+  background: var(--sidebar-hover) !important;
+  border-color: color-mix(in srgb, var(--item-accent) 28%, var(--border)) !important;
+  box-shadow:
+    var(--shadow-sm),
+    inset 0 1px 0 var(--specular-highlight) !important;
+  transform: translateX(3px) !important;
+}
+
+/* -- Active: Full bloom — frosted card + right neon lens bar --- */
+.nav-item--active {
+  background: var(--sidebar-active-bg) !important;
+  border: 1px solid color-mix(in srgb, var(--item-accent) 40%, var(--border)) !important;
+  box-shadow:
+    0 8px 24px -4px color-mix(in srgb, var(--item-accent) 24%, transparent),
+    inset 0 1px 0 var(--specular-highlight) !important;
+  transform: none !important;
+}
+
+/* Right-side glowing neon lens bar */
+.nav-item--active::after {
+  content: '';
+  position: absolute;
+  right: 6px;
+  top: 18%;
+  bottom: 18%;
+  width: 3px;
+  border-radius: 99px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--item-accent) 80%, white) 0%,
+    var(--item-accent) 50%,
+    color-mix(in srgb, var(--item-accent) 80%, #A855F7) 100%
+  );
+  box-shadow:
+    0 0 12px color-mix(in srgb, var(--item-accent) 85%, transparent),
+    0 0 4px color-mix(in srgb, var(--item-accent) 50%, transparent);
+  animation: fadeIn 0.25s ease;
+  z-index: 3;
+}
+
+/* In collapsed mode: hide the bar, show tooltip on hover */
+.sidebar--collapsed .nav-item--active::after {
+  display: none;
+}
+
+/* -- Circular Icon Badge ------------------------------- */
+.nav-item-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 13.5px;
+  background: color-mix(in srgb, var(--item-accent) 14%, var(--surface-2));
+  border: 1px solid color-mix(in srgb, var(--item-accent) 26%, var(--border));
+  color: color-mix(in srgb, var(--item-accent) 85%, var(--sidebar-text));
+  box-shadow:
+    0 2px 6px color-mix(in srgb, var(--item-accent) 12%, transparent),
+    inset 0 1px 0 var(--specular-highlight);
+  transition:
+    background 0.25s ease,
+    border-color 0.25s ease,
+    transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.25s ease,
+    color 0.22s ease;
+}
+
+/* Hover: circle pops with vivid color */
+.nav-item:hover:not(.nav-item--active) .nav-item-icon {
+  background: color-mix(in srgb, var(--item-accent) 24%, var(--surface)) !important;
+  border-color: color-mix(in srgb, var(--item-accent) 50%, transparent) !important;
+  transform: scale(1.12) rotate(2deg) !important;
+  color: var(--item-accent) !important;
+  box-shadow:
+    0 4px 16px color-mix(in srgb, var(--item-accent) 30%, transparent),
+    inset 0 1px 0 var(--specular-highlight) !important;
+}
+
+/* Active: circle is richer and illuminated */
+.nav-item--active .nav-item-icon {
+  background: color-mix(in srgb, var(--item-accent) 32%, var(--surface)) !important;
+  border: 1.5px solid color-mix(in srgb, var(--item-accent) 60%, transparent) !important;
+  box-shadow:
+    0 6px 18px color-mix(in srgb, var(--item-accent) 36%, transparent),
+    inset 0 1px 0 var(--specular-highlight) !important;
+  color: var(--item-accent) !important;
+  transform: scale(1.08) !important;
+}
+
+/* -- Label --------------------------------------------- */
+.nav-item-label {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--sidebar-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.01em;
+  transition: color 0.22s ease, font-weight 0.15s ease;
+}
+
+.nav-item:hover:not(.nav-item--active) .nav-item-label {
+  color: var(--sidebar-text-active, var(--text-primary));
+  font-weight: 700;
+}
+
+.nav-item--active .nav-item-label {
+  color: var(--sidebar-text-active, var(--text-primary));
+  font-weight: 800;
+}
+
+/* -- Arrow: appears on hover with smooth slide ----- */
+.nav-item-arrow {
+  font-size: 13px;
+  font-weight: 700;
+  color: transparent;
+  transition:
+    color 0.22s ease,
+    transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.nav-item:hover:not(.nav-item--active) .nav-item-arrow {
+  color: var(--text-muted);
+  transform: translateX(2px);
+}
+
+.nav-item--active .nav-item-arrow {
+  display: none;
+}
+
+/* -- Badge --------------------------------------------- */
+.nav-item-badge {
+  font-size: 9px;
+  font-weight: 850;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(244, 63, 94, 0.25));
+  color: var(--theme-accent);
+  padding: 2px 7px;
+  border-radius: 99px;
+  letter-spacing: 0.05em;
+  animation: pulse 1.8s ease infinite;
+  border: 1px solid color-mix(in srgb, var(--theme-accent) 45%, transparent);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--theme-accent) 25%, transparent);
+  flex-shrink: 0;
+}
+
+/* -- Progress Circle ----------------------------------- */
+.nav-item-progress-circle {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

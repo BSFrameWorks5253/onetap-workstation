@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PremiereData Version="3">
+	<Project ObjectRef="1"/>
+	<Project id="1" ClassID="9fd8536f-e3c3-4d76-8809-e855734e5a9c" Version="38">
+		<Node Version="1">
+			<Properties Version="1">
+				<ProjectName>Template</ProjectName>
+				<ProjectID>00000000-0000-0000-0000-000000000001</ProjectID>
+			</Properties>
+		</Node>
+		<RootProjectItem ObjectRef="2"/>
+	</Project>
+	<RootProjectGroup id="2" ClassID="0132ec5b-e407-4e00-9a0d-3e6f98efeb6d" Version="1">
+		<Node Version="1">
+			<Properties Version="1">
+				<Name>Root</Name>
+			</Properties>
+		</Node>
+		<Items Version="1">
+			<Item Index="0" ObjectRef="3"/>
+		</Items>
+	</RootProjectGroup>
+	<Sequence id="3" ClassID="18d84411-9a74-4b53-b39f-16a75f10b50e" Version="7">
+		<Node Version="1">
+			<Properties Version="1">
+				<Name>Template Sequence</Name>
+			</Properties>
+		</Node>
+		<Media ObjectRef="4"/>
+	</Sequence>
+	<Media id="4" ClassID="587dfa4e-d007-4ef8-a400-bdfeb00d8bc3" Version="27">
+		<VideoTrackGroup ObjectRef="5"/>
+		<AudioTrackGroup ObjectRef="6"/>
+	</Media>
+	<VideoTrackGroup id="5" ClassID="0ba20fe6-5ef1-4043-9828-ea0808bfa0d2" Version="4">
+		<Tracks Version="1">
+			<Track Index="0" ObjectRef="7"/>
+		</Tracks>
+	</VideoTrackGroup>
+	<VideoTrack id="7" ClassID="a437ae5d-ad4c-41b2-bf89-53fcb749d05e" Version="4">
+		<ClipItems Version="1"/>
+	</VideoTrack>
+	<AudioTrackGroup id="6" ClassID="47e7d9eb-fffa-42f5-93ae-c98f0e53a290" Version="4">
+		<Tracks Version="1">
+			<Track Index="0" ObjectRef="8"/>
+		</Tracks>
+	</AudioTrackGroup>
+	<AudioTrack id="8" ClassID="1eb6ff82-bf72-4632-a50d-c014798695d6" Version="4">
+		<ClipItems Version="1"/>
+	</AudioTrack>
+</PremiereData>

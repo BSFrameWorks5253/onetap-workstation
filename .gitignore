@@ -41,7 +41,9 @@ tsc-out.js
 
 # Output directories
 dist/
+release/
 out/
+build/
 .electron-vite/
 
 # Environment variables (DO NOT COMMIT!)
@@ -62,3 +64,32 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
+
+# TypeScript & Build Caches
+*.tsbuildinfo
+electron.vite.config.*.mjs
+
+# Local SQLite databases in root
+*.db
+
+# AI Rules Push Code 
+resources\ai\Push Git Code.txt
+
+# Executables & Binaries
+*.exe
+*.zip
+*.7z
+*.rar
+*.tar.gz
+*.dmg
+*.pkg
+
+# AI Agent Configs, Cache & Scratch
+.gemini/
+.agents/
+.agent/
+.aider-desk/
+.gsd/
+scratch/
+__pycache__/
+*.pyc

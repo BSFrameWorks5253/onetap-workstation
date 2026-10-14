@@ -1,0 +1,46 @@
+{
+  "id": "safar-folder-inspector",
+  "name": "🏕️ Safar & Media Stats Inspector",
+  "description": "Windows File Explorer Shell Extension for Safar folders: displays Total Days, Event breakdown (Q, N, Z, MZ, AQ, ZO, etc.), Premiere Pro timeline duration, and 1-click WhatsApp executive reports.",
+  "version": "2.0.0",
+  "author": "UniDesk / BS.Framework",
+  "include": [
+    "explorer.exe"
+  ],
+  "architecture": "x86-64",
+  "compilerOptions": [
+    "-lcomctl32",
+    "-lpropsys",
+    "-lole32",
+    "-loleaut32",
+    "-lshlwapi",
+    "-lshell32",
+    "-luuid"
+  ],
+  "settings": [
+    {
+      "name": "showFullNamesByDefault",
+      "type": "boolean",
+      "default": false,
+      "description": "When enabled, full names like 'Nikah' and 'Majmui Ziyafat' are shown instead of abbreviations ('N', 'MZ')."
+    },
+    {
+      "name": "enableContextMenu",
+      "type": "boolean",
+      "default": true,
+      "description": "Add 'Inspect Safar & Media Stats' to Explorer folder right-click context menu."
+    },
+    {
+      "name": "enableHotkey",
+      "type": "boolean",
+      "default": true,
+      "description": "Press Ctrl+Shift+S in Explorer to inspect the currently selected folder."
+    },
+    {
+      "name": "pythonGuiPath",
+      "type": "string",
+      "default": "D:\\ON_GOING PROJECT\\One Tap_V20.6.5\\extensions\\windhawk-safar-inspector\\gui_inspector.py",
+      "description": "Absolute path to the python workstation dashboard script."
+    }
+  ]
+}

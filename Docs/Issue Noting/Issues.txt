@@ -1,0 +1,165 @@
+When we add a exception in the video muting and keeping the original audio in a particular video then this problem is coming  that when there is a audio in the video and a silent part in the video the audio is running behind at the same time  when the video original audio is also on so there is a overlapping situation the audio 
+this is not happening when we use a the Special audio instead of the original audio 
+Also the video audio is to be muted by default unless the user is selecting that video as a exception
+Also in the single/ custom title adder mode no folder will be created the folders will only be created in the batch processing mode of the app 
+
+also the when the user is clicking the rename and move button in the png to jpg converter the app is not giving a success sound which is there in the title adder after the completion of the rendering 
+
+
+
+The internet is getting slow when the app is open in the background  or it is open check as i have checked the firewall there is no problem from the client side 
+
+No original audio should be kept unless WAAZ / ID or any other exception given by the user
+if there is a original audio playing in the section of the video the title adder wont add any audio to that section it will only be kept in the section which is mutted in the video 
+
+
+In the stats page me it like the app is making the the couts and all proper in the app 
+make it like the app is counting the the videos properlty according to the file name the event is too be analiesed and according to the folder name the date and also according to the main folder the Safar name and the year and the place will be provided Year-serial-safar name it will be in the this format soo in replacement of city it will show the Safar name
+inside this main folder there will be the date folder 
+inside that there will be one more folder noting the it is a bethak or QMZ and inside this folder there will be N MZ Q M Z AQ ID WAAZ folders all those recogonising logics u can take form the title adder
+this is the eg of the data structure "D:\TEST-UID-Stats\1448-08 Mumbai - Urs Mubarak Syedna Mohammed Burhanuddin RA"
+from this u can understand how to get the category 
+the counts of the event Q M Z ID Waaz AQ MZ N BQ BM BZ OD and all is to bee taken from the title adder as per the thumnails which are used in the videos and how many are used in that batch 
+the path of the source file of the title adder will have the the main folder and form that we can get proper category and the old data will go to the unassigned (not by default )
+
+make it like in the category by city is changed to safar and also the safar can be searched by the serial number which is in the main folder (main folder may be be or may not be having the year or serial or both there can be a name also the the main folder can be inside the In Process folder may bee or may not bee )also it can be searched with the safar name 
+also if we can use proper database for this SQl or something but it should be free of cost
+
+also in the safar wise data creation that  blockes which are there can be deleted and that deleted box stats should goo in the unassigned block also this deleting of block option should appear when we right click on the block and there should be a error pop upp 
+
+
+
+here there should be another colpoum named status where the videos will be shown uploaded or no submited and all 
+also in the drive screacher there should be a option that only the final videos canb also be searched when the final video have been searched only in the filter there will be a option and remove the event wise filer option for now 
+so when we sleect the final video filter all the videos will be searched in the final with the same  name and when this type of filter is used the there will be one more coloum named status will apper  only when the filter is Final videos then only this coloim will apper 
+also in the data seacher there should be a option to resise a table row and all just like in excle 
+also when a file name is searched in the data seacher it should also show that if present in which final video it is used it can be determined by the the folder names and all if the C001 is in the 1448-02 Raipur Atraaf and inside it there are sub folderes and sub folders and this is inside 01-Q folder inside cameramans name so the app shoould say that this vides is used in 01-Q video of this date 
+for this there should be a coloum and this is to be written very complactly thaat means there should be a colum in the app where it will show the video in which it has been used 
+
+**************************************************************************************
+--------------------------------------------------------------------------------------
+**************************************************************************************
+
+Make a system in the app that after that the user can skip using file manager for navigation of files and drag dropping of files in the project file creator .
+
+It should have all the features size, date modified, recommendation on the name of the folder is created u can create a mod with the wondhak for the file manager 
+
+In this the system should be fast and smooth we can also make a seperate app in this but the app should be collective installed during the installation of the New UID 
+
+For this we have to change the make_exe.py that if we want to just push a update for thai file manager wala thing we can do that to if we want to just push a update for the UID we can do that to and if we want to push a update for both we can do that too 
+
+Also redesign the entire ui of the extension 
+Add the locate XML file on the top beside the One tap / UID name 
+Make the buttons properly the in and out button should have better ui on hover and when executed the pop up should be on the entire screen of the Adobe not only in the extension pannel 
+Also the export to encoder button should have same css of the In and out button 
+Also if we can add a feature in the extension tp make this easy 
+In the some of the timeline there is one clip which is too be added to all clips from the start marker to the end marker(video),from that to this all the clips containing N which is nikaah should have that clip in it the recognisation of the the event code is Nikaah which is N is there in a particular marker name this logic can be taken from the title adder 
+Give me a example of how this procees work and how will I give the extension a recognise that a clip is to be given to other videos also u suggestion is that i can colour that clip a particular colour and then that clip will be denoted as group photo (clip which is to be given to other videos 
+
+Make a feature like the when the encoder gives the app a signal that the videos which were listed in the are rendered the app will start its title adder for that dvd folder which the path was sending but UID extension
+
+In that there should be 1 main thing added frist when the path of the dvd is given by the UID extension there should be a system in which if there is anything like a video which has to be excluded from muting and a title for a video is to be changed this should be done 
+How can we do this and the changes should be implemented on the videos properly when the title adder will start rendering this feature will be called title automode
+
+Also if there are any event whose thumbnail isn't present in the final title folder the app should automatically take ID thumbnail only of the event abbreviation present in the name is ID or any other whose image isn't present like say KGS named thumbnail isnt present so that video will have the ID thumbnail 
+
+Also there should be one more feature in the this title automode there should be one more thing after all the videos completed the next feature will be started which is the jpg rename and move that page will have all the paths already so that app should just click one botton no logic is to be changed 
+
+Also in the stats this data ka stats aren't being taken by the app properly check only 2 days ka it is being taken 
+I am selecting everything properly then to this error is coming I don't faced this errors while adding this la stats 
+Also this folder ka stats aren't being taken properly 
+
+I have 2 drives one is the main working one and the second is the 4TB backup drive 
+So make the tracker like if I connect both the drive there should be a popup in the windows notification it will show which are the Safar if full main folder containing the dates aren't there and which dates of a particular safar isn't there in the backup drive also make a folder structure to store the safar data properly folder structure in the sense main folders not inside the safar folder or the inside the date folder i don't want that folder structure i was the drive ka folder structure 
+
+If a safar or dates aren't backuped the notification will say go to the app and when we click that it
+***********************************************************************
+***`````````````````````````````````````````````````````````````````***
+***********************************************************************
+make it like after the starting thumnail in the video there will be a 1 sec black frame or video on which there will be added a fade effect so that themain video content is not deleted or cut due to the effect make that 1 sec frame like a good effect if u want i can add a black image or a black video of one sec or something (if video i am adding it wont be exactly one 1  sec soo use it for one sec only and tell me the name i use to save it )
+also recommned something on this 
+also the tracker can scan 2 drives it is only scaining one drive data second drive it is not scaning also when one dive is only added it dowsnt show anything only one drive it is scaning everything is same in  the second drive the structure everything then to it is not scaning properly
+also make the animations proper still the stats isnt working properly make it running properrly best 
+also what else u recomend in the app suggest then we will descuss and add this 
+
+also when downloaded via microsoft whyy the publisher is showing uknown it should show BS.Framework fix 
+ also this tears alignment isnt proper fix this as well also the app logo isnt looking good desgn a best logo simple 
+also make the app ui like 100 times much more better too much ui glitches are still therealso there this black image transition will be best without glicthes best for the app 
+the transition of cross dissolve should be proper 
+nothing else should be added in that no extra music on top of the music added by ffempeg by the app from the final title folder 
+also can we make msi instead of exe 
+if yess tell me the steps 
+also make the website look proper 
+also make the app look more proffestional during installation 
+also make the apps error look proffestional and better / best use 
+**********************************************************************
+***````````````````````````````````````````````````````````````````***
+**********************************************************************
+msi file is getting hangged 
+make the msi file customised according to the apps ui and the icon 
+alsoo in the fade logic the starting one is not proper the effect given to end thumnail should be replicated to the start as well the start thumbnail disolve is not proper make it proper test it and show me the results 
+also the msi file when installing the staus bar and all is not showing anyhting this is tooo unproffestionall
+also in the app make it like if update avilabe the user can download from github as well as the microsoft store 
+also make it like when the title adder is running there is a dynamic island type type thing on the top of the screen like in mac we get in that the title adder is wroking can be shown or else it can be like a wiget on the home screen on the home screen only where which video is rendering can be seen and also ho many videos  is left to render 
+also make it like the users which have downloaded the app from the microsoft store will get update from the githghub only for faster update also if the user have deeted the app and the installed from the microsoft the data shouldnt go 
+also the user wont gett the update from the microsoft store it should be given through github only
+Pill-shaped Dynamic Island at Top-Center of Screen:
+Always-on-top, frameless, semi-transparent frosted acrylic/mica pill (WS_EX_TOOLWINDOW, WS_EX_TOPMOST without stealing focus).
+Compact Idle State: A sleek mini capsule showing an animated soundwave/pulsing rendering icon + percentage: [ ⚡ Title Adder: 42% | 2/5 left ].
+Expanded Hover/Click State: Drops down into a detailed card showing:
+Thumbnail preview of the current video being processed.
+Current task: "Rendering subtitle typography for Video_02.mp4".
+ETA timer and FPS/Speed metric (1.8x speed, 01:24 remaining).
+Quick actions: Pause, Cancel, or Open Output Folder.
+Windows Native Mini-Widget / Tray Flyout:
+If the user doesn't want an overlay over games/full-screen apps, let it dock neatly as an interactive flyout from the System Tray or Taskbar thumbnail toolbar.
+Mini-PIP (Picture-in-Picture) Rendering Monitor:
+Allow dragging the island/widget anywhere on multi-monitor setups with position persistence across app restarts.
+Sound Effects & Haptic-style Audio Feedback:
+Subtle, satisfying audio cues on queue completion (e.g., Apple-style chime) or Windows Action Center Toast Notification with action buttons ([Play], [Show in Explorer]).
+also 
+
+**********************************************************************
+***````````````````````````````````````````````````````````````````***
+**********************************************************************
+
+make a system in the code base that if a file is analiysed once it shouldnt be anaylyes once again maake it like it is written in a document the aanalyse data is to me kept so only the ai has to refre that for any updates rather that refering  and analysing the full code base and wasting token have can we make it and how effictently will it work and how good it is and what features should i add in this 
+
+https://github.com/rmyndharis/antigravity-skills
+install this skill and make a rule in the this workspace evey promt will be saved with its reply properly in a proper formate and proper structure also it should be saved as chat wise 
+also each change should be reflected in a md file which will have bug fixed improvements and all ype of this also this thing should be saved in v1 v2 and so on also it should be saved in a proper folder structure througout the workspace also in evry commit add this how many bug fixed what is done and what is added and what imporvemtnts we have added properly formated 
+
+https://mobbin.com/explore/screens/2847f828-cdc4-4907-bdb6-435960e63189
+https://www.awwwards.com/inspiration/loading-animation-spasoje-perovic
+https://www.awwwards.com/inspiration/preloader-animation-astral-frontier
+https://www.awwwards.com/inspiration/intro-loading-animation-walbi
+https://www.awwwards.com/inspiration/onto-loading-onto   (make this with our app name UNIDesk (make the app name proper formated ))
+https://mobbin.com/explore/screens/3573c390-df9c-4ca5-a6b1-2c02e9ae6e46
+make the loading screen proper add this bellow that welcome wala loading screen make it properly appropirate to the apps ui and the curent loading screen too merge ut properly below it in use your creativity  as well 
+or make all  this in a template form in a seperatrte folder make it accurate to my apps light mode i will select one and u make it 
+also some moblie loading screens make it for my deskttop app 
+Also the ui is too off white descrese the whiteness add litte off whiteness in the ui make it soft to the eyes but Dont make it too white add some more whiteness in the dark mode 
+make the ui more premium and modern looking add some animations and transitions in the ui make it look premium and minimilstic 
+also i want a dark mode for the app is a bit too dark make it little light mode add proper contrast in the dark mode and make it litlte brighter and proepr looking
+
+https://www.color-hex.com/color-names.php  take some cool colors from here
+
+https://github.com/Spyou/Zangetsualso i want a github readme like this fully animated for this apps github readme 
+
+**********************************************************************
+***````````````````````````````````````````````````````````````````***
+**********************************************************************
+
+also the code base analyser should create a proper formated with proper folder structure and documented proeprly 
+each and everything minute detail it shouldnt miss 
+also make a thing like in the app if i hover over the page 
+like in the task bar of windows when u hover on a app it gives a preview of what is in that and what is going on make it like it should come like that in my app asa well 
+ also make the it proper the loader the arbic should come in big in the center and the loader should come in the bottom 
+also remove the app name from that 
+https://www.awwwards.com/inspiration/onto-loading-onto add this type of animation in the arabic text 
+also in the email add this type of ui ux text animation when u great in the email in arabic same text should be there
+also all the features and all should be properly noted in the commit and during the exe making realese all the 
+also it should be liek the last release notes should not go with the current relese 
+also make the ui of the tile adder also very proper 
+also the tracker page is hanging the software and the sotcware getting hanged and force quited fix this 
+also make this section of the settings  properly working  also remove things like Preview Welcome Screen

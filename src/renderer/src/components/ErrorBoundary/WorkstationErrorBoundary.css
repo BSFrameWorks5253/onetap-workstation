@@ -1,0 +1,337 @@
+/* ==========================================================================
+   WorkstationErrorBoundary.css — Enterprise Error Isolation UI
+   ========================================================================== */
+
+.ws-error-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-height: 440px;
+  padding: 32px 24px;
+  box-sizing: border-box;
+  animation: wsErrorFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes wsErrorFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.ws-error-card {
+  width: 100%;
+  max-width: 680px;
+  background: var(--bg-card, rgba(15, 23, 42, 0.85));
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+  border-radius: 20px;
+  box-shadow: 
+    0 24px 64px -12px rgba(0, 0, 0, 0.32),
+    0 8px 24px -4px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+  padding: 28px 32px;
+  color: var(--text-primary, #F8FAFC);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Light Theme Overrides */
+[data-theme='light'] .ws-error-card,
+html.light-theme .ws-error-card,
+body.light-theme .ws-error-card {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(203, 213, 225, 0.85);
+  box-shadow: 
+    0 24px 64px -12px rgba(15, 23, 42, 0.12),
+    0 6px 18px -4px rgba(15, 23, 42, 0.06),
+    inset 0 1px 0 0 rgba(255, 255, 255, 1);
+  color: #0F172A;
+}
+
+/* Header Badge & Chip */
+.ws-error-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  padding-bottom: 16px;
+}
+
+[data-theme='light'] .ws-error-header {
+  border-bottom-color: rgba(226, 232, 240, 0.8);
+}
+
+.ws-error-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(239, 68, 68, 0.12);
+  color: #EF4444;
+  border: 1px solid rgba(239, 68, 68, 0.28);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.ws-error-badge-pulse {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #EF4444;
+  box-shadow: 0 0 8px #EF4444;
+  animation: wsBadgePulse 2s ease-in-out infinite;
+}
+
+@keyframes wsBadgePulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+.ws-error-chip {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted, #94A3B8);
+  background: var(--bg-surface, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  border-radius: 6px;
+  padding: 3px 8px;
+}
+
+[data-theme='light'] .ws-error-chip {
+  background: #F1F5F9;
+  border-color: #E2E8F0;
+  color: #475569;
+}
+
+/* Hero Section */
+.ws-error-hero {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+}
+
+.ws-error-icon-box {
+  width: 52px;
+  height: 52px;
+  min-width: 52px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.16), rgba(220, 38, 38, 0.05));
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #EF4444;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 20px -4px rgba(239, 68, 68, 0.2);
+}
+
+.ws-error-title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ws-error-title {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--text-primary, #F8FAFC);
+  letter-spacing: -0.01em;
+}
+
+[data-theme='light'] .ws-error-title {
+  color: #0F172A;
+}
+
+.ws-error-subtitle {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-secondary, #94A3B8);
+}
+
+[data-theme='light'] .ws-error-subtitle {
+  color: #475569;
+}
+
+/* Error Message Box */
+.ws-error-msg-box {
+  background: rgba(239, 68, 68, 0.06);
+  border: 1px solid rgba(239, 68, 68, 0.18);
+  border-left: 3px solid #EF4444;
+  border-radius: 10px;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ws-error-msg-label {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #EF4444;
+  opacity: 0.85;
+}
+
+.ws-error-msg-text {
+  font-family: var(--font-mono, 'JetBrains Mono', 'Fira Code', Consolas, monospace);
+  font-size: 12px;
+  color: var(--text-primary, #F8FAFC);
+  word-break: break-word;
+  line-height: 1.45;
+}
+
+[data-theme='light'] .ws-error-msg-text {
+  color: #991B1B;
+}
+
+/* Stack Trace */
+.ws-error-stack-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 12px;
+  max-height: 180px;
+}
+
+[data-theme='light'] .ws-error-stack-wrap {
+  background: #F8FAFC;
+  border-color: #E2E8F0;
+}
+
+.ws-error-stack-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted, #94A3B8);
+}
+
+.ws-error-copy-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text-primary, #F8FAFC);
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.ws-error-copy-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+[data-theme='light'] .ws-error-copy-btn {
+  background: #E2E8F0;
+  border-color: #CBD5E1;
+  color: #334155;
+}
+
+.ws-error-stack-code {
+  margin: 0;
+  font-family: var(--font-mono, 'JetBrains Mono', Consolas, monospace);
+  font-size: 11px;
+  color: #F87171;
+  overflow: auto;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+[data-theme='light'] .ws-error-stack-code {
+  color: #B91C1C;
+}
+
+/* Actions */
+.ws-error-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-top: 6px;
+}
+
+.ws-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  border: none;
+  user-select: none;
+}
+
+.ws-btn:active {
+  transform: scale(0.98);
+}
+
+.ws-btn-primary {
+  background: linear-gradient(135deg, #3B82F6, #2563EB);
+  color: #FFFFFF;
+  box-shadow: 0 4px 14px -2px rgba(37, 99, 235, 0.35);
+}
+
+.ws-btn-primary:hover {
+  background: linear-gradient(135deg, #60A5FA, #3B82F6);
+  box-shadow: 0 6px 20px -2px rgba(37, 99, 235, 0.5);
+}
+
+.ws-btn-secondary {
+  background: var(--bg-surface, rgba(255, 255, 255, 0.08));
+  color: var(--text-primary, #F8FAFC);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.15));
+}
+
+.ws-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+[data-theme='light'] .ws-btn-secondary {
+  background: #F1F5F9;
+  border-color: #CBD5E1;
+  color: #334155;
+}
+
+[data-theme='light'] .ws-btn-secondary:hover {
+  background: #E2E8F0;
+}
+
+.ws-btn-ghost {
+  background: transparent;
+  color: var(--text-muted, #94A3B8);
+  padding: 9px 12px;
+}
+
+.ws-btn-ghost:hover {
+  color: var(--text-primary, #F8FAFC);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme='light'] .ws-btn-ghost:hover {
+  color: #0F172A;
+  background: #F1F5F9;
+}

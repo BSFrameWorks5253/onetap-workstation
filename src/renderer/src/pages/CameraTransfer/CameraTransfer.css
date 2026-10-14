@@ -1,0 +1,753 @@
+/* ============================================================
+   Camera Transfer - Premium Page Styles  v2
+   ============================================================ */
+
+/* ── Page Layout ────────────────────────────────────────────── */
+.ct-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: var(--pad-v) var(--pad-h);
+  width: 100%;
+  min-height: 100%;
+  box-sizing: border-box;
+  position: relative;
+  overflow-y: auto;
+}
+
+.ct-layout {
+  width: 100%;
+  max-width: 820px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Styled Select Dropdown ─────────────────────────────────── */
+.ct-select-dropdown {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 26px 8px 10px;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-main);
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 8px center;
+  background-repeat: no-repeat;
+  background-size: 14px;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+}
+.ct-select-dropdown:focus {
+  border-color: var(--theme-accent, var(--accent-cameratransfer, #0D9488));
+}
+
+
+
+/* ── Config card body ───────────────────────────────────────── */
+.ct-config-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* ── Section dividers ──────────────────────────────────────── */
+.ct-section-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 0 10px;
+}
+
+.ct-section-divider::before,
+.ct-section-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.ct-section-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  padding: 0 4px;
+}
+
+/* ── Gregorian month wrapper block ─────────────────────────── */
+.ct-folder-wrapper-block {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--surface);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ct-folder-wrapper-block.ct-folder-wrapper-active {
+  border-color: var(--accent-camtransfer, #0D9488);
+  box-shadow: 0 0 0 3px var(--accent-camtransfer-soft, rgba(13,148,136,0.08));
+}
+
+.ct-folder-wrapper-header {
+  padding: 12px 16px;
+}
+
+/* ── Toggle switch ─────────────────────────────────────────── */
+.ct-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.ct-toggle {
+  width: 40px;
+  height: 22px;
+  border-radius: 11px;
+  background: var(--border-strong, #4b5563);
+  position: relative;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  flex-shrink: 0;
+  border: 1.5px solid transparent;
+}
+
+.ct-toggle.ct-toggle-on {
+  background: var(--accent-camtransfer, #0D9488);
+}
+
+.ct-toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+}
+
+.ct-toggle.ct-toggle-on .ct-toggle-thumb {
+  transform: translateX(18px);
+}
+
+.ct-toggle-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.ct-toggle-sub {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+/* ── Gregorian folder fields ───────────────────────────────── */
+.ct-folder-wrapper-fields {
+  padding: 0 16px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+
+.ct-gf-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.ct-gf-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ct-field-hint {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.ct-optional-badge {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 0px 6px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+/* ── Gregorian folder preview pill ────────────────────────── */
+.ct-gf-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  background: var(--accent-camtransfer-soft, rgba(13,148,136,0.06));
+  border: 1px solid var(--accent-camtransfer, #0D9488);
+  border-radius: 10px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.ct-gf-preview-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.ct-gf-preview-text {
+  font-family: var(--font-mono);
+}
+
+.ct-gf-preview-text strong {
+  color: var(--accent-camtransfer, #0D9488);
+}
+
+/* ── Folder config row ─────────────────────────────────────── */
+.ct-config-card .ct-config-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.ct-config-card .ct-config-row > div {
+  flex: 1;
+}
+
+/* ── Full path preview ─────────────────────────────────────── */
+.ct-config-preview {
+  margin-top: 12px;
+  padding: 11px 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  word-break: break-all;
+  line-height: 1.6;
+}
+
+.ct-config-preview .ct-preview-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.ct-preview-path-wrap {
+  flex: 1;
+}
+
+.ct-preview-wrapper {
+  color: #60a5fa;
+  font-weight: 700;
+}
+
+.ct-config-preview .ct-preview-path {
+  color: var(--accent-camtransfer, #0D9488);
+  font-weight: 700;
+}
+
+/* ── Presets row ───────────────────────────────────────────── */
+.ct-presets-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.ct-preset-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-secondary);
+  transition: all 0.15s ease;
+}
+
+.ct-preset-chip:hover {
+  border-color: var(--accent-camtransfer, #0D9488);
+  color: var(--accent-camtransfer, #0D9488);
+  background: var(--accent-camtransfer-soft, rgba(13, 148, 136, 0.06));
+}
+
+.ct-preset-chip .ct-preset-delete {
+  margin-left: 2px;
+  opacity: 0.5;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.ct-preset-chip .ct-preset-delete:hover {
+  opacity: 1;
+  color: var(--danger);
+}
+
+/* ── Queue badge ───────────────────────────────────────────── */
+.ct-queue-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 20px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.2px;
+}
+
+/* ── Camera cards ──────────────────────────────────────────── */
+.ct-cameras-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ct-camera-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  animation: ct-card-in 0.25s var(--ease-out, ease) forwards;
+}
+
+.ct-camera-card:hover {
+  border-color: var(--accent-camtransfer, #0D9488);
+  box-shadow: 0 0 0 2px var(--accent-camtransfer-soft, rgba(13,148,136,0.07));
+}
+
+.ct-camera-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+}
+
+.ct-camera-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ct-camera-icon {
+  font-size: 18px;
+}
+
+.ct-camera-name-input {
+  background: transparent;
+  border: none;
+  border-bottom: 1.5px dashed var(--border-strong);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  padding: 2px 4px;
+  width: 160px;
+  outline: none;
+  font-family: var(--font-main);
+  transition: border-color 0.15s ease;
+}
+
+.ct-camera-name-input:focus {
+  border-bottom-color: var(--accent-camtransfer, #0D9488);
+}
+
+.ct-camera-header-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ct-camera-file-count {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 600;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1px 8px;
+}
+
+.ct-camera-remove {
+  background: none;
+  border: none;
+  color: var(--danger);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  opacity: 0.45;
+  transition: opacity 0.15s, background 0.15s;
+}
+
+.ct-camera-remove:hover {
+  opacity: 1;
+  background: var(--danger-soft);
+}
+
+/* ── Drop zone ─────────────────────────────────────────────── */
+.ct-dropzone {
+  min-height: 72px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+}
+
+.ct-dropzone-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 76px;
+  border: 2px dashed var(--border);
+  border-radius: 10px;
+  color: var(--text-muted);
+  font-size: 12px;
+  gap: 3px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  padding: 12px;
+}
+
+.ct-dropzone-empty:hover,
+.ct-dropzone-empty.ct-dropzone-active {
+  border-color: var(--accent-camtransfer, #0D9488);
+  background: var(--accent-camtransfer-soft, rgba(13, 148, 136, 0.06));
+  color: var(--accent-camtransfer, #0D9488);
+  transform: scale(1.005);
+}
+
+.ct-dropzone-empty .ct-drop-icon {
+  font-size: 24px;
+  margin-bottom: 2px;
+}
+
+.ct-drop-sub {
+  font-size: 10px;
+  opacity: 0.6;
+}
+
+/* ── File rows ─────────────────────────────────────────────── */
+.ct-file-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 130px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.ct-file-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border-radius: 7px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: var(--surface-2);
+  transition: background 0.1s;
+}
+
+.ct-file-row:hover {
+  background: var(--surface);
+}
+
+.ct-file-icon {
+  color: var(--accent-camtransfer, #0D9488);
+  font-size: 9px;
+  flex-shrink: 0;
+}
+
+.ct-file-row .ct-file-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono, monospace);
+}
+
+.ct-file-row .ct-file-size {
+  font-size: 10px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+}
+
+.ct-file-row .ct-file-remove {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 10px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  opacity: 0.45;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+}
+
+.ct-file-row .ct-file-remove:hover {
+  opacity: 1;
+  color: var(--danger);
+}
+
+.ct-dropzone-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+/* ── Add camera button ─────────────────────────────────────── */
+.ct-add-camera-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px;
+  border: 2px dashed var(--border);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-main);
+  transition: all 0.18s ease;
+}
+
+.ct-add-camera-btn:hover {
+  border-color: var(--accent-camtransfer, #0D9488);
+  color: var(--accent-camtransfer, #0D9488);
+  background: var(--accent-camtransfer-soft, rgba(13, 148, 136, 0.06));
+  transform: scale(1.005);
+}
+
+/* ── Progress panel ────────────────────────────────────────── */
+.ct-progress-panel {
+  margin-top: 14px;
+  padding: 14px 16px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+  overflow: hidden;
+}
+
+.ct-progress-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, var(--accent-camtransfer-soft, rgba(13,148,136,0.04)), transparent);
+  pointer-events: none;
+}
+
+.ct-progress-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.ct-progress-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.ct-progress-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent-camtransfer, #0D9488);
+  animation: ct-pulse 1.2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+.ct-progress-speed {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.ct-progress-track {
+  height: 7px;
+  background: var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+.ct-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-camtransfer, #0D9488), #34d399);
+  border-radius: 4px;
+  transition: width 0.2s ease;
+  position: relative;
+}
+
+.ct-progress-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: ct-shimmer 1.4s linear infinite;
+}
+
+.ct-progress-glow {
+  position: absolute;
+  top: -2px;
+  width: 20px;
+  height: calc(100% + 4px);
+  background: radial-gradient(ellipse at center, rgba(52, 211, 153, 0.7) 0%, transparent 70%);
+  pointer-events: none;
+  transition: left 0.2s ease, opacity 0.3s ease;
+}
+
+.ct-progress-bottom {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10.5px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+.ct-progress-pct {
+  color: var(--accent-camtransfer, #0D9488);
+  font-weight: 700;
+}
+
+/* ── Action bar ────────────────────────────────────────────── */
+.ct-action-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+/* ── Start button badge ────────────────────────────────────── */
+.ct-btn-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.18);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  margin-left: 2px;
+}
+
+/* ── Select dropdown ───────────────────────────────────────── */
+.ct-select {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 36px 8px 12px;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: var(--font-main);
+  outline: none;
+  cursor: pointer;
+  width: 100%;
+  transition: border-color 0.15s;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 8px center;
+  background-repeat: no-repeat;
+  background-size: 16px;
+}
+
+.ct-select:focus {
+  border-color: var(--accent-camtransfer, #0D9488);
+}
+
+/* ── Labels ────────────────────────────────────────────────── */
+.ct-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+  display: block;
+}
+
+/* ── Scrollbar styling ─────────────────────────────────────── */
+.ct-file-list::-webkit-scrollbar {
+  width: 4px;
+}
+.ct-file-list::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 4px;
+}
+
+/* ── Animations ────────────────────────────────────────────── */
+@keyframes ct-card-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes ct-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(1.3); }
+}
+
+@keyframes ct-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes anim-fade-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.anim-fade-in {
+  animation: anim-fade-in 0.22s ease forwards;
+}

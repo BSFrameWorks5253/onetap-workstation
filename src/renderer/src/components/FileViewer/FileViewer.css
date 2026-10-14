@@ -1,0 +1,788 @@
+/* ============================================================
+   FILE VIEWER OVERLAY — Universal media & document viewer
+   Matches UniDesk design system (tokens.css)
+   ============================================================ */
+
+/* ── Overlay backdrop ───────────────────────────────────── */
+.fv-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  background: rgba(0, 0, 0, 0.92);
+  backdrop-filter: blur(6px);
+  display: flex;
+  flex-direction: column;
+  animation: fv-fade-in 0.18s ease;
+}
+
+@keyframes fv-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Top toolbar ────────────────────────────────────────── */
+.fv-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  flex-shrink: 0;
+  min-height: 52px;
+  user-select: none;
+}
+
+.fv-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.fv-file-icon {
+  font-size: 22px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.fv-file-info {
+  min-width: 0;
+}
+
+.fv-file-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 500px;
+  line-height: 1.2;
+}
+
+.fv-file-meta {
+  font-size: 11px;
+  color: rgba(255,255,255,0.45);
+  margin-top: 2px;
+  white-space: nowrap;
+}
+
+.fv-toolbar-center {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.fv-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/* ── Toolbar buttons ─────────────────────────────────────── */
+.fv-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 32px;
+  padding: 0 10px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: rgba(255,255,255,0.8);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+  font-family: var(--font-sans, sans-serif);
+}
+
+.fv-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.fv-btn:active {
+  background: rgba(255, 255, 255, 0.05);
+  transform: scale(0.96);
+}
+
+.fv-btn.fv-btn-icon {
+  width: 32px;
+  padding: 0;
+}
+
+.fv-btn.fv-btn-close {
+  background: rgba(255, 59, 48, 0.15);
+  border-color: rgba(255, 59, 48, 0.25);
+  color: rgba(255, 120, 110, 0.9);
+}
+
+.fv-btn.fv-btn-close:hover {
+  background: rgba(255, 59, 48, 0.3);
+  color: #fff;
+}
+
+.fv-divider {
+  width: 1px;
+  height: 22px;
+  background: rgba(255,255,255,0.1);
+  flex-shrink: 0;
+}
+
+.fv-zoom-label {
+  font-size: 12px;
+  color: rgba(255,255,255,0.5);
+  min-width: 42px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Content area ────────────────────────────────────────── */
+.fv-content {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Image viewer ───────────────────────────────────────── */
+.fv-img-stage {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+  cursor: grab;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fv-img-stage.dragging {
+  cursor: grabbing;
+}
+
+.fv-img {
+  max-width: none;
+  max-height: none;
+  display: block;
+  transform-origin: center center;
+  pointer-events: none;
+  transition: none;
+  image-rendering: auto;
+  border-radius: 4px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+}
+
+/* ── Video viewer ───────────────────────────────────────── */
+.fv-video-wrap {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+}
+
+.fv-video {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 8px;
+  box-shadow: 0 12px 60px rgba(0,0,0,0.6);
+  outline: none;
+  background: #000;
+}
+
+/* ── PDF viewer ─────────────────────────────────────────── */
+.fv-pdf-frame {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}
+
+/* ── Document/Markdown viewer ───────────────────────────── */
+.fv-doc-scroll {
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 32px 0;
+  display: flex;
+  justify-content: center;
+}
+
+.fv-doc-paper {
+  background: #ffffff;
+  color: #1a1a1a;
+  padding: 48px 60px;
+  border-radius: 10px;
+  max-width: 860px;
+  width: 100%;
+  min-height: 600px;
+  box-shadow: 0 20px 80px rgba(0,0,0,0.6);
+  font-family: 'Segoe UI', 'Inter', Arial, sans-serif;
+  font-size: 14.5px;
+  line-height: 1.7;
+}
+
+/* Markdown-specific styles inside doc paper */
+.fv-doc-paper h1 { font-size: 28px; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px; margin: 0 0 20px; }
+.fv-doc-paper h2 { font-size: 22px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; margin: 28px 0 14px; }
+.fv-doc-paper h3 { font-size: 18px; margin: 22px 0 10px; }
+.fv-doc-paper h4 { font-size: 15px; margin: 16px 0 8px; }
+.fv-doc-paper p  { margin: 0 0 14px; }
+.fv-doc-paper ul, .fv-doc-paper ol { margin: 0 0 14px; padding-left: 24px; }
+.fv-doc-paper li { margin-bottom: 5px; }
+.fv-doc-paper a  { color: #4F46E5; text-decoration: none; }
+.fv-doc-paper a:hover { text-decoration: underline; }
+.fv-doc-paper blockquote {
+  border-left: 4px solid #6366F1;
+  margin: 16px 0;
+  padding: 8px 20px;
+  background: #f3f4f6;
+  border-radius: 0 6px 6px 0;
+  color: #4b5563;
+}
+.fv-doc-paper code {
+  background: #f1f5f9;
+  color: #be185d;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Cascadia Code', 'Consolas', monospace;
+  font-size: 13px;
+}
+.fv-doc-paper pre {
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 20px 24px;
+  border-radius: 10px;
+  overflow-x: auto;
+  margin: 16px 0;
+  font-family: 'Cascadia Code', 'Consolas', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.fv-doc-paper pre code {
+  background: none;
+  color: inherit;
+  padding: 0;
+  border-radius: 0;
+}
+.fv-doc-paper table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 16px 0;
+  font-size: 13.5px;
+}
+.fv-doc-paper th {
+  background: #f3f4f6;
+  font-weight: 700;
+  padding: 10px 14px;
+  border: 1px solid #e5e7eb;
+  text-align: left;
+}
+.fv-doc-paper td {
+  padding: 9px 14px;
+  border: 1px solid #e5e7eb;
+}
+.fv-doc-paper tr:nth-child(even) td { background: #fafafa; }
+.fv-doc-paper img { max-width: 100%; border-radius: 6px; }
+.fv-doc-paper hr { border: none; border-top: 1px solid #e5e7eb; margin: 24px 0; }
+
+/* ── Excel viewer ───────────────────────────────────────── */
+.fv-xlsx-wrap {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background: #fff;
+}
+
+.fv-xlsx-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 8px 12px 0;
+  background: #f3f4f6;
+  border-bottom: 1px solid #e5e7eb;
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+
+.fv-xlsx-tab {
+  padding: 6px 16px;
+  border-radius: 6px 6px 0 0;
+  background: rgba(0,0,0,0.05);
+  border: 1px solid #e5e7eb;
+  border-bottom: none;
+  font-size: 12px;
+  font-weight: 500;
+  color: #4b5563;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+  font-family: var(--font-sans, sans-serif);
+}
+
+.fv-xlsx-tab.active {
+  background: #fff;
+  color: #4F46E5;
+  font-weight: 700;
+}
+
+.fv-xlsx-scroll {
+  flex: 1;
+  overflow: auto;
+}
+
+.fv-xlsx-table {
+  border-collapse: collapse;
+  font-size: 12.5px;
+  color: #111;
+  font-family: 'Segoe UI', Arial, sans-serif;
+}
+
+.fv-xlsx-table th {
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  padding: 5px 12px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 12px;
+  color: #6b7280;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.fv-xlsx-table td {
+  border: 1px solid #e5e7eb;
+  padding: 4px 12px;
+  white-space: nowrap;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fv-xlsx-table tr:nth-child(even) td { background: #fafafa; }
+.fv-xlsx-table tr:hover td { background: #eff6ff; }
+
+.fv-row-num {
+  background: #f3f4f6 !important;
+  color: #9ca3af;
+  text-align: center;
+  font-size: 11px;
+  min-width: 40px;
+  user-select: none;
+}
+
+/* ── Loading / Error states ─────────────────────────────── */
+.fv-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  color: rgba(255,255,255,0.6);
+  font-size: 14px;
+  height: 100%;
+  text-align: center;
+  padding: 40px;
+}
+
+.fv-spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid rgba(255,255,255,0.08);
+  border-top-color: rgba(255,255,255,0.7);
+  border-radius: 50%;
+  animation: fv-spin 0.7s linear infinite;
+}
+
+@keyframes fv-spin {
+  to { transform: rotate(360deg); }
+}
+
+.fv-error-icon {
+  font-size: 40px;
+}
+
+.fv-error-msg {
+  color: rgba(255,100,90,0.9);
+  max-width: 400px;
+  word-break: break-word;
+}
+
+/* ── Image EXIF info bar ─────────────────────────────────── */
+.fv-img-info {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.65);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 20px;
+  padding: 5px 16px;
+  font-size: 11px;
+  color: rgba(255,255,255,0.65);
+  pointer-events: none;
+  white-space: nowrap;
+  max-width: 90%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Page navigation (PDF / multi-page) ─────────────────── */
+.fv-page-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: rgba(255,255,255,0.6);
+}
+
+/* ── Edge Navigation Triggers ───────────────────────────── */
+.fv-nav-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: rgba(20, 26, 38, 0.6);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 9500;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  user-select: none;
+}
+
+.fv-nav-btn:hover {
+  background: rgba(20, 26, 38, 0.95);
+  border-color: #0ea5e9;
+  color: #0ea5e9;
+  box-shadow: 0 0 12px rgba(14, 165, 233, 0.4);
+}
+
+.fv-nav-btn:active {
+  transform: translateY(-50%) scale(0.9);
+}
+
+.fv-nav-left {
+  left: 24px;
+}
+
+.fv-nav-right {
+  right: 24px;
+}
+
+/* ── Custom Video Player Controls ───────────────────────── */
+.fv-video-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #000;
+  border-radius: 8px;
+  box-shadow: 0 12px 60px rgba(0,0,0,0.6);
+}
+
+.fv-video-container .fv-video {
+  max-width: 100%;
+  max-height: 100%;
+  display: block;
+  outline: none;
+}
+
+.fv-video-controls {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  width: 90%;
+  max-width: 760px;
+  background: rgba(24, 32, 48, 0.65);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 100;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+}
+
+.fv-video-container:hover .fv-video-controls,
+.fv-video-controls.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+  pointer-events: auto;
+}
+
+/* Seek Slider Slot (Neumorphic) */
+.fv-seek-container {
+  width: 100%;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.fv-seek-track {
+  width: 100%;
+  height: 6px;
+  background: rgba(0, 0, 0, 0.4);
+  box-shadow: inset 1px 1px 3px rgba(0,0,0,0.5), inset -1px -1px 2px rgba(255,255,255,0.05);
+  border-radius: 99px;
+  position: relative;
+}
+
+.fv-seek-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #0ea5e9, #6366f1);
+  border-radius: 99px;
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.fv-seek-handle {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 14px;
+  height: 14px;
+  background: #ffffff;
+  border-radius: 50%;
+  box-shadow: 1px 1px 3px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+
+.fv-seek-container:hover .fv-seek-handle {
+  transform: translate(-50%, -50%) scale(1.2);
+}
+
+.fv-controls-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.fv-controls-left, .fv-controls-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.fv-time-display {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+  font-family: monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Neumorphic Button controls */
+.neumorphic-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: #ffffff;
+  font-size: 13px;
+  cursor: pointer;
+  box-shadow: 2px 2px 5px rgba(0,0,0,0.3), -1px -1px 3px rgba(255,255,255,0.05);
+  transition: all 0.2s ease;
+}
+
+.neumorphic-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #0ea5e9;
+  box-shadow: inset 1px 1px 3px rgba(0,0,0,0.5), inset -1px -1px 3px rgba(255,255,255,0.1);
+}
+
+.neumorphic-btn:active {
+  transform: scale(0.95);
+}
+
+/* Volume Slider */
+.fv-volume-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fv-volume-slider {
+  width: 70px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.4);
+  outline: none;
+  cursor: pointer;
+  accent-color: #0ea5e9;
+}
+
+/* Speed select dropdown */
+.fv-speed-selector {
+  position: relative;
+}
+
+.fv-speed-select {
+  background: rgba(24, 32, 48, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  color: #ffffff;
+  font-size: 11px;
+  padding: 4px 8px;
+  outline: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.fv-speed-select option {
+  background: #182030;
+  color: #ffffff;
+}
+
+/* ── Skeleton Loaders ────────────────────────────────────── */
+@keyframes fv-shimmer {
+  0%   { background-position: -600px 0; }
+  100% { background-position: 600px 0; }
+}
+
+.fv-skeleton-shimmer {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0.04) 25%,
+    rgba(255,255,255,0.10) 50%,
+    rgba(255,255,255,0.04) 75%
+  );
+  background-size: 600px 100%;
+  animation: fv-shimmer 1.4s infinite linear;
+  border-radius: 8px;
+}
+
+/* Image skeleton — shown while image bytes are being decoded */
+.fv-img-skeleton {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+/* Video skeleton — shown before video canplay fires */
+.fv-video-skeleton {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+.fv-video-loading-icon {
+  position: absolute;
+  font-size: 48px;
+  opacity: 0.25;
+  animation: fv-pulse 1.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes fv-pulse {
+  0%, 100% { opacity: 0.15; transform: scale(1); }
+  50%       { opacity: 0.35; transform: scale(1.08); }
+}
+
+/* ── PDF Inline Viewer ───────────────────────────────────── */
+.fv-pdf-wrap {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background: #1a1f2e;
+  overflow: hidden;
+}
+
+.fv-pdf-embed {
+  flex: 1;
+  width: 100%;
+  border: none;
+  background: #fff;
+  min-height: 0;
+}
+
+.fv-pdf-skeleton {
+  width: 80%;
+  max-width: 760px;
+  height: 80%;
+  margin: auto;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.fv-pdf-fallback-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  font-size: 12px;
+  color: rgba(255,255,255,0.5);
+  flex-shrink: 0;
+}
+
+/* ── Video enhanced ──────────────────────────────────────── */
+.fv-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+  transition: opacity 0.35s ease;
+}
+
+/* Ensure video container is positioned */
+.fv-video-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
