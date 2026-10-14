@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/components/WelcomeScreen/WelcomeScreen.tsx`
 > **Role**: Modular UI Component  
-> **Metrics**: 245 lines · 8.2 KB · ~2,090 raw tokens → ~220 cached (89.5% saved)  
-> **Last Analyzed**: 2026-10-15T00:38:41.953959  
+> **Metrics**: 242 lines · 8.0 KB · ~2,055 raw tokens → ~220 cached (89.3% saved)  
+> **Last Analyzed**: 2026-10-15T01:04:20.213549  
 
 ---
 

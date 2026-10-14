@@ -214,17 +214,14 @@ export default function WelcomeScreen({ onDone, version = '26.8.9' }: WelcomeScr
 
       {/* Central Welcome Card - Centered in middle of screen */}
       <div className="welcome-content-card">
-        {/* Arabic Calligraphy: Ahlan Wa Sahlan / Marhaban with RTL Wipe Animation */}
+        {/* Arabic Calligraphy: Ahlan Wa Sahlan / Marhaban with Smooth RTL Wipe Animation */}
         <div className="welcome-greeting-wrapper" key={typingKey} onClick={toggleGreetingMode} title="Click to switch greeting style">
-          <div className="welcome-greeting-wipe-container">
-            <div
-              className={`welcome-greeting-text ${
-                greetingMode === 'marhaban' ? 'mode-marhaban' : ''
-              }`}
-            >
-              {greetingMode === 'ahlan' ? 'أَهْلًا وَسَهْلًا' : 'مَرْحَبًا'}
-            </div>
-            <div className="welcome-wipe-light-bar" />
+          <div
+            className={`welcome-greeting-text ${
+              greetingMode === 'marhaban' ? 'mode-marhaban' : ''
+            }`}
+          >
+            {greetingMode === 'ahlan' ? 'أَهْلًا وَسَهْلًا' : 'مَرْحَبًا'}
           </div>
           <div className="welcome-greeting-accent" />
         </div>

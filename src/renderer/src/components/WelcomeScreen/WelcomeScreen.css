@@ -162,16 +162,7 @@
   user-select: none !important;
 }
 
-/* Wipe Container for Calligraphy with Light Beam */
-.welcome-greeting-wipe-container {
-  position: relative !important;
-  display: inline-block !important;
-  overflow: visible !important;
-  padding: 0 !important;
-  margin: 0 !important;
-}
-
-/* Arabic Calligraphy Text Element — Smooth Right-To-Left Wipe Reveal with Zero Glyph Clipping */
+/* Arabic Calligraphy Text Element — Broadcast-Grade Right-To-Left Mask Wipe */
 .welcome-greeting-text {
   font-family: 'Amiri', 'Traditional Arabic', 'Scheherazade New', serif !important;
   font-size: clamp(64px, 8.8vw, 116px) !important;
@@ -185,80 +176,60 @@
   font-feature-settings: "liga" 1, "calt" 1, "dlig" 1, "rlig" 1, "clig" 1 !important;
   text-rendering: optimizeLegibility !important;
   line-height: 1.8 !important;
-  padding: 24px 38px !important;
+  padding: 24px 44px !important;
   overflow: visible !important;
-  clip-path: inset(-140px 0% -140px 100%);
+
+  /* Smooth RTL Feathered Linear Mask Wipe */
+  -webkit-mask-image: linear-gradient(to left, 
+    #000 0%, 
+    #000 50%, 
+    rgba(0, 0, 0, 0) 62%, 
+    rgba(0, 0, 0, 0) 100%
+  ) !important;
+  -webkit-mask-size: 250% 100% !important;
+  -webkit-mask-position: 0% 0 !important;
+  -webkit-mask-repeat: no-repeat !important;
+
+  mask-image: linear-gradient(to left, 
+    #000 0%, 
+    #000 50%, 
+    rgba(0, 0, 0, 0) 62%, 
+    rgba(0, 0, 0, 0) 100%
+  ) !important;
+  mask-size: 250% 100% !important;
+  mask-position: 0% 0 !important;
+  mask-repeat: no-repeat !important;
+
   animation: 
-    welcomeArabicWipeRTL 1.25s cubic-bezier(0.25, 1, 0.35, 1) 0.15s forwards,
-    welcomeArabicGlowPulse 3.2s ease-in-out 1.4s infinite alternate !important;
+    welcomeSmoothWipeRTL 1.35s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards,
+    welcomeArabicGlowPulse 3.2s ease-in-out 1.5s infinite alternate !important;
 }
 
 .welcome-greeting-text.mode-marhaban {
   font-size: clamp(58px, 8vw, 106px) !important;
   animation: 
-    welcomeArabicWipeRTL 1.05s cubic-bezier(0.25, 1, 0.35, 1) 0.15s forwards,
-    welcomeArabicGlowPulse 3.2s ease-in-out 1.2s infinite alternate !important;
+    welcomeSmoothWipeRTL 1.1s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards,
+    welcomeArabicGlowPulse 3.2s ease-in-out 1.3s infinite alternate !important;
 }
 
-/* Luminous Golden Wipe Light Beam Traveling Synchronously with Wipe Front */
-.welcome-wipe-light-bar {
-  position: absolute !important;
-  top: -24px !important;
-  bottom: -24px !important;
-  width: 14px !important;
-  background: linear-gradient(180deg, 
-    transparent 0%, 
-    rgba(255, 235, 175, 0.85) 15%, 
-    rgba(218, 165, 32, 1) 50%, 
-    rgba(255, 235, 175, 0.85) 85%, 
-    transparent 100%
-  ) !important;
-  box-shadow: 0 0 26px 8px rgba(218, 165, 32, 0.75), 0 0 8px 2px rgba(255, 255, 255, 0.95) !important;
-  border-radius: 8px !important;
-  pointer-events: none !important;
-  opacity: 0;
-  right: 0%;
-  animation: welcomeWipeBeamRTL 1.25s cubic-bezier(0.25, 1, 0.35, 1) 0.15s forwards !important;
-}
-
-.welcome-greeting-text.mode-marhaban ~ .welcome-wipe-light-bar {
-  animation-duration: 1.05s !important;
-}
-
-/* Fluid Right-To-Left Wipe with 140px Vertical Margin to Preserve All Diacritics/Tashkeel */
-@keyframes welcomeArabicWipeRTL {
+/* Fluid Right-To-Left Mask Wipe */
+@keyframes welcomeSmoothWipeRTL {
   0% {
-    clip-path: inset(-140px 0% -140px 100%);
-    opacity: 0.85;
+    -webkit-mask-position: 0% 0;
+    mask-position: 0% 0;
+    opacity: 0.9;
   }
-  30% {
+  99% {
+    -webkit-mask-position: 100% 0;
+    mask-position: 100% 0;
     opacity: 1;
   }
   100% {
-    clip-path: inset(-140px -50px -140px -50px);
+    -webkit-mask-position: 100% 0;
+    mask-position: 100% 0;
     opacity: 1;
-  }
-}
-
-/* Golden Wipe Beam Sweeping RTL */
-@keyframes welcomeWipeBeamRTL {
-  0% {
-    right: 0%;
-    opacity: 0;
-    transform: scaleY(0.45);
-  }
-  12% {
-    opacity: 1;
-    transform: scaleY(1);
-  }
-  85% {
-    opacity: 1;
-    transform: scaleY(1);
-  }
-  100% {
-    right: 100%;
-    opacity: 0;
-    transform: scaleY(0.55);
+    -webkit-mask-image: none !important;
+    mask-image: none !important;
   }
 }
 

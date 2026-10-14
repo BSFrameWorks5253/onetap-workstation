@@ -1,8 +1,8 @@
 # 🧠 UniDesk Studio — Hierarchical Codebase Knowledge Base & Analysis Cache
-> **Last Synced**: 2026-10-15 00:38:42  
+> **Last Synced**: 2026-10-15 01:04:20  
 > **Total Files Indexed**: 227  
-> **Unchanged (Cached)**: 49 | **Re-analyzed**: 178  
-> **Estimated AI Context Tokens Saved**: ~891,818 tokens!
+> **Unchanged (Cached)**: 225 | **Re-analyzed**: 2  
+> **Estimated AI Context Tokens Saved**: ~891,588 tokens!
 
 This document and the mirrored hierarchy under `.code-analysis/` contain pre-analyzed architectural summaries, exports, interfaces, hooks, and IPC channels for every source file.
 **AI Agents**: Consult `.code-analysis/<path>.md` before reading full raw source files to conserve context window!
@@ -226,8 +226,8 @@ This document and the mirrored hierarchy under `.code-analysis/` contain pre-ana
 - **[src/renderer/src/components/TrayDock/TrayDock.css](src/renderer/src/components/TrayDock/TrayDock.css.md)**: Modular UI Component (172 lines)
 - **[src/renderer/src/components/TrayDock/TrayDock.tsx](src/renderer/src/components/TrayDock/TrayDock.tsx.md)**: Modular UI Component (101 lines) — Exports: `TrayDock`
 - **[src/renderer/src/components/TrayDock/index.ts](src/renderer/src/components/TrayDock/index.ts.md)**: Modular UI Component (2 lines)
-- **[src/renderer/src/components/WelcomeScreen/WelcomeScreen.css](src/renderer/src/components/WelcomeScreen/WelcomeScreen.css.md)**: Modular UI Component (322 lines)
-- **[src/renderer/src/components/WelcomeScreen/WelcomeScreen.tsx](src/renderer/src/components/WelcomeScreen/WelcomeScreen.tsx.md)**: Modular UI Component (245 lines) — Exports: `WelcomeScreen` [Hooks: useEffect, useMemo, useRef]
+- **[src/renderer/src/components/WelcomeScreen/WelcomeScreen.css](src/renderer/src/components/WelcomeScreen/WelcomeScreen.css.md)**: Modular UI Component (293 lines)
+- **[src/renderer/src/components/WelcomeScreen/WelcomeScreen.tsx](src/renderer/src/components/WelcomeScreen/WelcomeScreen.tsx.md)**: Modular UI Component (242 lines) — Exports: `WelcomeScreen` [Hooks: useEffect, useMemo, useRef]
 - **[src/renderer/src/components/WelcomeScreen/index.ts](src/renderer/src/components/WelcomeScreen/index.ts.md)**: Modular UI Component (2 lines)
 - **[src/renderer/src/components/index.ts](src/renderer/src/components/index.ts.md)**: Modular UI Component (30 lines)
 - **[src/renderer/src/cursor/CursorArea.tsx](src/renderer/src/cursor/CursorArea.tsx.md)**: Utility / Helper Module (26 lines) — Exports: `CursorArea`

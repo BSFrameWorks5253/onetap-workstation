@@ -10062,8 +10062,8 @@
   "src/renderer/src/components/WelcomeScreen/WelcomeScreen.css": {
     "path": "src/renderer/src/components/WelcomeScreen/WelcomeScreen.css",
     "extension": ".css",
-    "loc": 322,
-    "bytes": 9334,
+    "loc": 293,
+    "bytes": 8552,
     "purpose": "Modular UI Component",
     "imports": [],
     "internal_imports": [],
@@ -10080,7 +10080,6 @@
       ".welcome-fade-out",
       ".welcome-greeting-accent",
       ".welcome-greeting-text",
-      ".welcome-greeting-wipe-container",
       ".welcome-greeting-wrapper",
       ".welcome-loader-bottom-wrapper",
       ".welcome-pattern-bg",
@@ -10089,19 +10088,18 @@
       ".welcome-teardrop-item",
       ".welcome-teardrop-maroon",
       ".welcome-teardrop-svg",
-      ".welcome-teardrops-banner",
-      ".welcome-wipe-light-bar"
+      ".welcome-teardrops-banner"
     ],
-    "raw_tokens": 2333,
+    "raw_tokens": 2138,
     "summary_tokens": 220,
-    "last_analyzed": "2026-10-15T00:38:41.949680",
-    "hash": "a069890319749bba0a92664dc9c83b36a0327ace49664e86f40561e25d239109"
+    "last_analyzed": "2026-10-15T01:04:20.209692",
+    "hash": "fa7a707d2e6c327c55807e5d67d4fc4f06c5944d98e40cbeb34b3066c4cc8f01"
   },
   "src/renderer/src/components/WelcomeScreen/WelcomeScreen.tsx": {
     "path": "src/renderer/src/components/WelcomeScreen/WelcomeScreen.tsx",
     "extension": ".tsx",
-    "loc": 245,
-    "bytes": 8360,
+    "loc": 242,
+    "bytes": 8221,
     "purpose": "Modular UI Component",
     "imports": [
       "{ createPortal } from 'react-dom'",
@@ -10165,10 +10163,10 @@
       }
     ],
     "css_classes": [],
-    "raw_tokens": 2090,
+    "raw_tokens": 2055,
     "summary_tokens": 220,
-    "last_analyzed": "2026-10-15T00:38:41.953959",
-    "hash": "989dad688d7e53c35ecc745d6acfe9e69eeb7f900b8d3f60fdcc0fef79a962d9"
+    "last_analyzed": "2026-10-15T01:04:20.213549",
+    "hash": "78d057bca31dcb64853c35ac63e28443fdf274525c964d416af2aa12a3d70bb9"
   },
   "src/renderer/src/cursor/cursor.css": {
     "path": "src/renderer/src/cursor/cursor.css",
