@@ -1,27 +1,32 @@
-ONE TAP — PROFESSIONAL EDITOR TOOLKIT
-END USER LICENSE AGREEMENT (EULA)
+UNIDESK STUDIO / ONE TAP — PROFESSIONAL WORKSTATION
+SOFTWARE LICENSE AGREEMENT & END USER LICENSE AGREEMENT (EULA)
 
+Version: 26.10 (Production Release)
 Copyright (c) 2024-2026 BS Framework. All rights reserved.
 
 1. GRANT OF LICENSE
-BS Framework grants you a non-exclusive, non-transferable license to use the "One Tap" software (the "Software") on a single computer or device.
+BS Framework grants you a non-exclusive, non-transferable license to install and execute UniDesk Studio on physical or virtual editing workstations for both personal and commercial studio production.
 
-2. RESTRICTIONS
+2. COMMERCIAL OUTPUT DELIVERABLES (100% UNRESTRICTED)
+You retain exclusive, 100% royalty-free ownership and copyright over all videos, sequences, photos, audio tracks, and output files created or processed using UniDesk Studio.
+
+3. PRIVACY & LOCAL PROCESSING GUARANTEE
+UniDesk Studio operates strictly on-premise. No video footage, camera JPEGs, or project media are ever uploaded or transmitted to external servers. All operations remain 100% on your local drives.
+
+4. RESTRICTIONS
 You shall not:
-- Modify, translate, reverse engineer, decompile, or disassemble the Software.
-- Rent, lease, or lend the Software to any third party.
-- Use the Software for any illegal or unauthorized purpose.
+- Reverse engineer, decompile, or disassemble compiled binary packages.
+- Sublicense, rent, lease, or resell the Software as a hosted service without written authorization from BS Framework.
+- Circumvent security protections or modify embedded cryptographic hashes.
 
-3. OWNERSHIP
-The Software is licensed, not sold. All rights, title, and interest in and to the Software, including all copyrights and other intellectual property rights, are owned by BS Framework.
+5. INTELLECTUAL PROPERTY
+The Software, including its proprietary automation pipelines, user interfaces, ExtendScript modules, and brand assets, is the copyrighted property of BS Framework.
 
-4. DISCLAIMER OF WARRANTY
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND. BS FRAMEWORK DISCLAIMS ALL WARRANTIES, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+6. DISCLAIMER OF WARRANTIES & LIMITATION OF LIABILITY
+THE SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND. IN NO EVENT SHALL BS FRAMEWORK BE LIABLE FOR ANY CONSEQUENTIAL, INCIDENTAL, OR SPECIAL DAMAGES ARISING FROM THE USE OR INABILITY TO USE THE SOFTWARE.
 
-5. LIMITATION OF LIABILITY
-IN NO EVENT SHALL BS FRAMEWORK BE LIABLE FOR ANY DAMAGES ARISING OUT OF THE USE OR INABILITY TO USE THE SOFTWARE.
+7. TERMINATION
+This license is effective until terminated. Breach of any terms shall terminate your license immediately.
 
-6. TERMINATION
-This license is effective until terminated. You may terminate it at any time by destroying the Software. It will also terminate immediately if you fail to comply with any term of this EULA.
-
-By installing this Software, you agree to be bound by the terms of this Agreement.
+For enterprise inquiries: bs.framework5253@gmail.com
+Website & Repository: https://github.com/BSFrameWorks5253/onetap-workstation

@@ -239,6 +239,18 @@ onetap-workstation/
 
 ---
 
+## 📜 Licensing & Commercial Terms
+
+**UniDesk Studio** is licensed under the **Commercial Software License Agreement & EULA**.
+
+- **🎨 100% Unrestricted Output Ownership**: You retain full, exclusive, royalty-free commercial ownership and copyright over all videos, sequences, photos, audio tracks, and client projects rendered or processed using the workstation.
+- **🔒 Strictly On-Premise Execution**: Video transcoding, title insertion, photo reorganization, and token cache indexing (`.code-analysis/`) operate 100% locally on your machine. **No footage or private event media is ever transmitted to external servers.**
+- **Enterprise & Multi-Seat Deployments**: For custom studio integrations or volume licensing, contact `bs.framework5253@gmail.com`.
+
+📄 Read the full legal terms: [**LICENSE**](LICENSE) • Detailed Product Architecture: [**PROJECT_DESCRIPTION.md**](Docs/PROJECT_DESCRIPTION.md)
+
+---
+
 <div align="center">
 
 <!-- Bottom Animated Gradient Wave -->
@@ -248,6 +260,6 @@ onetap-workstation/
 
 **UniDesk Studio** • Crafted with precision for high-speed automated video production.
 
-<sub>Copyright © 2026 BSFrameWorks. All rights reserved.</sub>
+<sub>Copyright © 2024–2026 BS Framework. All rights reserved.</sub>
 
 </div>
