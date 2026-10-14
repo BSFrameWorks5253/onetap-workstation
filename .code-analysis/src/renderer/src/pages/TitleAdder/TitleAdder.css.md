@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/pages/TitleAdder/TitleAdder.css`
 > **Role**: Renderer UI Page View  
 > **Metrics**: 3640 lines · 82.4 KB · ~21,104 raw tokens → ~220 cached (99.0% saved)  
-> **Last Analyzed**: 2026-10-15T00:03:24.411974  
+> **Last Analyzed**: 2026-10-15T00:38:42.376442  
 
 ---
 

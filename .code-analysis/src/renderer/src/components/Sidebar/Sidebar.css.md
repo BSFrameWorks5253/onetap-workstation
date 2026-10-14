@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/components/Sidebar/Sidebar.css`
 > **Role**: Modular UI Component  
 > **Metrics**: 278 lines · 6.8 KB · ~1,737 raw tokens → ~220 cached (87.3% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:23.239256  
+> **Last Analyzed**: 2026-10-15T00:38:41.913008  
 
 ---
 

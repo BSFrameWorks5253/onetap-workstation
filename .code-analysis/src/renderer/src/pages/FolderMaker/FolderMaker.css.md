@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/pages/FolderMaker/FolderMaker.css`
 > **Role**: Renderer UI Page View  
 > **Metrics**: 449 lines · 13.6 KB · ~3,494 raw tokens → ~220 cached (93.7% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:23.681138  
+> **Last Analyzed**: 2026-10-15T00:38:42.128544  
 
 ---
 

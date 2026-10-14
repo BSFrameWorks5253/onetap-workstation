@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/components/ErrorBoundary/WorkstationErrorBoundary.tsx`
 > **Role**: Modular UI Component  
 > **Metrics**: 197 lines · 6.5 KB · ~1,665 raw tokens → ~220 cached (86.8% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:22.894888  
+> **Last Analyzed**: 2026-10-15T00:38:41.835564  
 
 ---
 

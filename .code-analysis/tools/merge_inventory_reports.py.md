@@ -1,7 +1,7 @@
 # Detailed Analysis: `tools/merge_inventory_reports.py`
 > **Role**: Utility / Helper Module  
 > **Metrics**: 283 lines · 10.1 KB · ~2,588 raw tokens → ~220 cached (91.5% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:24.606434  
+> **Last Analyzed**: 2026-10-15T00:38:42.655771  
 
 ---
 

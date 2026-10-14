@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/components/FileViewer/FileViewer.tsx`
 > **Role**: Modular UI Component  
 > **Metrics**: 840 lines · 28.4 KB · ~7,266 raw tokens → ~220 cached (97.0% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:22.920886  
+> **Last Analyzed**: 2026-10-15T00:38:41.844929  
 
 ---
 

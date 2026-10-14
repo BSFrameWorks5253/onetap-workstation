@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/pages/DriveSync/DriveSync.css`
 > **Role**: Renderer UI Page View  
 > **Metrics**: 317 lines · 6.9 KB · ~1,776 raw tokens → ~220 cached (87.6% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:23.644686  
+> **Last Analyzed**: 2026-10-15T00:38:42.105585  
 
 ---
 

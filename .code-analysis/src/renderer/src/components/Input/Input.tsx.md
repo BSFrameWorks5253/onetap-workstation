@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/components/Input/Input.tsx`
 > **Role**: Modular UI Component  
 > **Metrics**: 111 lines · 3.1 KB · ~805 raw tokens → ~220 cached (72.7% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:22.995606  
+> **Last Analyzed**: 2026-10-15T00:38:41.855382  
 
 ---
 

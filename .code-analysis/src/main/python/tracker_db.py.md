@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/main/python/tracker_db.py`
 > **Role**: Electron Main Process / Background Engine  
 > **Metrics**: 1095 lines · 44.5 KB · ~11,393 raw tokens → ~220 cached (98.1% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:22.734616  
+> **Last Analyzed**: 2026-10-15T00:38:41.757982  
 
 ---
 

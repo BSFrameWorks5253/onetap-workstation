@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/pages/VideoTransfer/VideoTransfer.css`
 > **Role**: Renderer UI Page View  
 > **Metrics**: 727 lines · 14.4 KB · ~3,693 raw tokens → ~220 cached (94.0% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:24.248029  
+> **Last Analyzed**: 2026-10-15T00:38:42.499670  
 
 ---
 

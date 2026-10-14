@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/components/StatCard/StatCard.tsx`
 > **Role**: Modular UI Component  
 > **Metrics**: 70 lines · 2.4 KB · ~612 raw tokens → ~220 cached (64.1% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:23.296950  
+> **Last Analyzed**: 2026-10-15T00:38:41.931497  
 
 ---
 

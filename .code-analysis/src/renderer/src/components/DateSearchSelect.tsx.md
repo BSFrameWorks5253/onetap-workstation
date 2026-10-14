@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/components/DateSearchSelect.tsx`
 > **Role**: Modular UI Component  
 > **Metrics**: 238 lines · 7.9 KB · ~2,018 raw tokens → ~220 cached (89.1% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:22.768447  
+> **Last Analyzed**: 2026-10-15T00:38:41.787357  
 
 ---
 

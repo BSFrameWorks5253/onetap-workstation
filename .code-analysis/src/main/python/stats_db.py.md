@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/main/python/stats_db.py`
 > **Role**: Electron Main Process / Background Engine  
 > **Metrics**: 303 lines · 11.1 KB · ~2,847 raw tokens → ~220 cached (92.3% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:22.728228  
+> **Last Analyzed**: 2026-10-15T00:38:41.749289  
 
 ---
 

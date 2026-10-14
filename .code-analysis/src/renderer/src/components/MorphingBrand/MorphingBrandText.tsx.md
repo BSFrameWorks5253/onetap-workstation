@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/components/MorphingBrand/MorphingBrandText.tsx`
 > **Role**: Modular UI Component  
 > **Metrics**: 33 lines · 0.7 KB · ~181 raw tokens → ~181 cached (0.0% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:23.108874  
+> **Last Analyzed**: 2026-10-15T00:38:41.886536  
 
 ---
 

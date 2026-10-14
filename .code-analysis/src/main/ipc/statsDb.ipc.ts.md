@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/main/ipc/statsDb.ipc.ts`
 > **Role**: Electron Main Process / Background Engine  
 > **Metrics**: 508 lines · 15.9 KB · ~4,064 raw tokens → ~220 cached (94.6% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:22.615486  
+> **Last Analyzed**: 2026-10-15T00:38:41.653757  
 
 ---
 
@@ -35,7 +35,7 @@ This file operates as part of the **Electron Main Process / Background Engine** 
 | 458 | `runPythonSync(args: string[])` |
 
 ## 8. Dependencies & Module Linkages
-- **External Packages**: `electron`, `child_process`, `fs`, `path`
+- **External Packages**: `child_process`, `path`, `fs`, `electron`
 - **Internal Relatives**: `../core/settingsManager`
 
 ---

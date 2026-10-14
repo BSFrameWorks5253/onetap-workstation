@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/components/SetupWizard/SetupWizard.tsx`
 > **Role**: Modular UI Component  
 > **Metrics**: 142 lines · 4.8 KB · ~1,233 raw tokens → ~220 cached (82.2% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:23.223887  
+> **Last Analyzed**: 2026-10-15T00:38:41.910531  
 
 ---
 

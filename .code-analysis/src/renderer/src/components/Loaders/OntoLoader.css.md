@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/components/Loaders/OntoLoader.css`
 > **Role**: Modular UI Component  
 > **Metrics**: 423 lines · 8.9 KB · ~2,279 raw tokens → ~220 cached (90.3% saved)  
-> **Last Analyzed**: 2026-10-14T23:55:42.866649  
+> **Last Analyzed**: 2026-10-15T00:38:41.869016  
 
 ---
 

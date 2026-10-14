@@ -1,7 +1,7 @@
 # Detailed Analysis: `scripts/generate_safar_structure.py`
 > **Role**: Automation, Build & Packaging Script  
 > **Metrics**: 203 lines · 13.4 KB · ~3,421 raw tokens → ~220 cached (93.6% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:24.525608  
+> **Last Analyzed**: 2026-10-15T00:38:42.602071  
 
 ---
 

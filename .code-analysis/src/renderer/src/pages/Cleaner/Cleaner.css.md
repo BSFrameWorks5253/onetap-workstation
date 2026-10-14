@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/pages/Cleaner/Cleaner.css`
 > **Role**: Renderer UI Page View  
 > **Metrics**: 182 lines · 3.0 KB · ~778 raw tokens → ~220 cached (71.7% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:23.571401  
+> **Last Analyzed**: 2026-10-15T00:38:42.067626  
 
 ---
 

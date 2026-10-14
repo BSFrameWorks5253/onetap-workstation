@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/main/python/create_premiere_projects.py`
 > **Role**: Electron Main Process / Background Engine  
 > **Metrics**: 834 lines · 36.1 KB · ~9,239 raw tokens → ~220 cached (97.6% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:22.719362  
+> **Last Analyzed**: 2026-10-15T00:38:41.744918  
 
 ---
 

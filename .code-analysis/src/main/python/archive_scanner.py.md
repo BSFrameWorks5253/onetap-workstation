@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/main/python/archive_scanner.py`
 > **Role**: Electron Main Process / Background Engine  
 > **Metrics**: 845 lines · 31.8 KB · ~8,153 raw tokens → ~220 cached (97.3% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:22.713716  
+> **Last Analyzed**: 2026-10-15T00:38:41.738912  
 
 ---
 

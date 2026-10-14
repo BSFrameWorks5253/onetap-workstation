@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/pages/GDrivePortal/GDrivePortal.css`
 > **Role**: Renderer UI Page View  
 > **Metrics**: 292 lines · 5.6 KB · ~1,446 raw tokens → ~220 cached (84.8% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:23.700875  
+> **Last Analyzed**: 2026-10-15T00:38:42.144623  
 
 ---
 

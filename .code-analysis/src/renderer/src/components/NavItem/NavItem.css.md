@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/components/NavItem/NavItem.css`
 > **Role**: Modular UI Component  
 > **Metrics**: 191 lines · 5.6 KB · ~1,442 raw tokens → ~220 cached (84.7% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:23.114402  
+> **Last Analyzed**: 2026-10-15T00:38:41.888064  
 
 ---
 

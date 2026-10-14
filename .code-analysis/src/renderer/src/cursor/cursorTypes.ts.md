@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/cursor/cursorTypes.ts`
 > **Role**: Utility / Helper Module  
 > **Metrics**: 44 lines · 0.8 KB · ~202 raw tokens → ~202 cached (0.0% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:23.409214  
+> **Last Analyzed**: 2026-10-15T00:38:41.986068  
 
 ---
 

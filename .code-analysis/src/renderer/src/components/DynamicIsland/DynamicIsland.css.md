@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/components/DynamicIsland/DynamicIsland.css`
 > **Role**: Modular UI Component  
 > **Metrics**: 480 lines · 10.1 KB · ~2,576 raw tokens → ~220 cached (91.5% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:22.836308  
+> **Last Analyzed**: 2026-10-15T00:38:41.812404  
 
 ---
 

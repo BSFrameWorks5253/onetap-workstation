@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/pages/Settings/Settings.css`
 > **Role**: Renderer UI Page View  
 > **Metrics**: 1396 lines · 27.9 KB · ~7,144 raw tokens → ~220 cached (96.9% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:23.796882  
+> **Last Analyzed**: 2026-10-15T00:38:42.210290  
 
 ---
 

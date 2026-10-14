@@ -1,7 +1,7 @@
 # Detailed Analysis: `scripts/run-dev.js`
 > **Role**: Automation, Build & Packaging Script  
 > **Metrics**: 141 lines · 5.0 KB · ~1,270 raw tokens → ~220 cached (82.7% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:24.584095  
+> **Last Analyzed**: 2026-10-15T00:38:42.636406  
 
 ---
 

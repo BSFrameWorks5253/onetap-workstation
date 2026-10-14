@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/vite-env.d.ts`
 > **Role**: Utility / Helper Module  
 > **Metrics**: 1 lines · 0.0 KB · ~9 raw tokens → ~9 cached (0.0% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:22.761043  
+> **Last Analyzed**: 2026-10-15T00:38:41.782934  
 
 ---
 

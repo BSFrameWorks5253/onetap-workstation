@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/components/ProgressBar/ProgressBar.tsx`
 > **Role**: Modular UI Component  
 > **Metrics**: 47 lines · 1.4 KB · ~349 raw tokens → ~220 cached (37.0% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:23.201239  
+> **Last Analyzed**: 2026-10-15T00:38:41.895795  
 
 ---
 

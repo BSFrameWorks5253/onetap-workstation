@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/components/Modal/Modal.css`
 > **Role**: Modular UI Component  
 > **Metrics**: 80 lines · 1.7 KB · ~443 raw tokens → ~220 cached (50.3% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:23.093603  
+> **Last Analyzed**: 2026-10-15T00:38:41.884483  
 
 ---
 

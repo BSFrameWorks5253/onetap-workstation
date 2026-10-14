@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/main/python/sync_old_data.py`
 > **Role**: Electron Main Process / Background Engine  
 > **Metrics**: 812 lines · 31.0 KB · ~7,946 raw tokens → ~220 cached (97.2% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:22.731104  
+> **Last Analyzed**: 2026-10-15T00:38:41.753815  
 
 ---
 

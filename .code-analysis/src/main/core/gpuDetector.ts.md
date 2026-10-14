@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/main/core/gpuDetector.ts`
 > **Role**: Electron Main Process / Background Engine  
 > **Metrics**: 224 lines · 6.7 KB · ~1,724 raw tokens → ~220 cached (87.2% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:22.516942  
+> **Last Analyzed**: 2026-10-15T00:38:41.529070  
 
 ---
 
@@ -28,7 +28,7 @@ This file operates as part of the **Electron Main Process / Background Engine** 
 | 209 | `checkFfmpeg()` |
 
 ## 8. Dependencies & Module Linkages
-- **External Packages**: `os`, `child_process`, `fs`, `path`
+- **External Packages**: `os`, `path`, `fs`, `child_process`
 - **Internal Relatives**: `./settingsManager`
 
 ---

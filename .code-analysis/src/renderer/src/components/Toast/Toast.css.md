@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/components/Toast/Toast.css`
 > **Role**: Modular UI Component  
 > **Metrics**: 532 lines · 15.3 KB · ~3,905 raw tokens → ~220 cached (94.4% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:23.319251  
+> **Last Analyzed**: 2026-10-15T00:38:41.941042  
 
 ---
 

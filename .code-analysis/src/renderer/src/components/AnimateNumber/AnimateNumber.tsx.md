@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/components/AnimateNumber/AnimateNumber.tsx`
 > **Role**: Modular UI Component  
 > **Metrics**: 51 lines · 1.3 KB · ~335 raw tokens → ~220 cached (34.3% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:22.789075  
+> **Last Analyzed**: 2026-10-15T00:38:41.800110  
 
 ---
 

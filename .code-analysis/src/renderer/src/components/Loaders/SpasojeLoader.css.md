@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/components/Loaders/SpasojeLoader.css`
 > **Role**: Modular UI Component  
 > **Metrics**: 82 lines · 1.7 KB · ~439 raw tokens → ~220 cached (49.9% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:23.043621  
+> **Last Analyzed**: 2026-10-15T00:38:41.872515  
 
 ---
 

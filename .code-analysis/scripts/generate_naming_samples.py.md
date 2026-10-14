@@ -1,7 +1,7 @@
 # Detailed Analysis: `scripts/generate_naming_samples.py`
 > **Role**: Automation, Build & Packaging Script  
 > **Metrics**: 152 lines · 8.1 KB · ~2,082 raw tokens → ~220 cached (89.4% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:24.521951  
+> **Last Analyzed**: 2026-10-15T00:38:42.599190  
 
 ---
 

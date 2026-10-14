@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/utils/cityUtils.ts`
 > **Role**: Utility / Helper Module  
 > **Metrics**: 154 lines · 5.6 KB · ~1,438 raw tokens → ~220 cached (84.7% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:24.480477  
+> **Last Analyzed**: 2026-10-15T00:38:42.565213  
 
 ---
 

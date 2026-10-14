@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/main/ipc/archiveCatalog.ipc.ts`
 > **Role**: Electron Main Process / Background Engine  
 > **Metrics**: 797 lines · 27.5 KB · ~7,037 raw tokens → ~220 cached (96.9% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:22.552388  
+> **Last Analyzed**: 2026-10-15T00:38:41.566642  
 
 ---
 
@@ -58,7 +58,7 @@ This file operates as part of the **Electron Main Process / Background Engine** 
 | 733 | `setupArchiveAutoWatcher(pathsToWatch: string[], getWin: WinGetter)` |
 
 ## 8. Dependencies & Module Linkages
-- **External Packages**: `electron`, `child_process`, `path`, `readline`, `fs`
+- **External Packages**: `readline`, `electron`, `path`, `fs`, `child_process`
 - **Internal Relatives**: `../core/safarPdfGenerator`
 
 ---

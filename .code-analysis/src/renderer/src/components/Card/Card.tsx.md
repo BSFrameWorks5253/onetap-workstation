@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/components/Card/Card.tsx`
 > **Role**: Modular UI Component  
 > **Metrics**: 82 lines · 2.3 KB · ~577 raw tokens → ~220 cached (61.9% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:22.817612  
+> **Last Analyzed**: 2026-10-15T00:38:41.808657  
 
 ---
 

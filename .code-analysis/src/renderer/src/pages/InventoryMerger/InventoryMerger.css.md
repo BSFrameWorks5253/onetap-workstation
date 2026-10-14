@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/pages/InventoryMerger/InventoryMerger.css`
 > **Role**: Renderer UI Page View  
 > **Metrics**: 495 lines · 9.2 KB · ~2,366 raw tokens → ~220 cached (90.7% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:23.709991  
+> **Last Analyzed**: 2026-10-15T00:38:42.151285  
 
 ---
 

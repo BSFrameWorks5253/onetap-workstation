@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/components/Loaders/LoaderGalleryModal.css`
 > **Role**: Modular UI Component  
 > **Metrics**: 187 lines · 3.6 KB · ~929 raw tokens → ~220 cached (76.3% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:23.022017  
+> **Last Analyzed**: 2026-10-15T00:38:41.862298  
 
 ---
 

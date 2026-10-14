@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/components/Loaders/AstralPreloader.tsx`
 > **Role**: Modular UI Component  
 > **Metrics**: 71 lines · 2.2 KB · ~552 raw tokens → ~220 cached (60.1% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:23.017378  
+> **Last Analyzed**: 2026-10-15T00:38:41.859000  
 
 ---
 

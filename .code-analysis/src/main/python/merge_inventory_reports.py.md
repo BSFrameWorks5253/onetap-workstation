@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/main/python/merge_inventory_reports.py`
 > **Role**: Electron Main Process / Background Engine  
 > **Metrics**: 283 lines · 10.1 KB · ~2,588 raw tokens → ~220 cached (91.5% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:22.726361  
+> **Last Analyzed**: 2026-10-15T00:38:41.747426  
 
 ---
 

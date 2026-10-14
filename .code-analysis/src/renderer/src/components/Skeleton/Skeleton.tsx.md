@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/components/Skeleton/Skeleton.tsx`
 > **Role**: Modular UI Component  
 > **Metrics**: 272 lines · 7.8 KB · ~1,988 raw tokens → ~220 cached (88.9% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:23.253928  
+> **Last Analyzed**: 2026-10-15T00:38:41.917398  
 
 ---
 

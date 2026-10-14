@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/pages/Settings/FileViewerSettingsCard.tsx`
 > **Role**: Renderer UI Page View  
 > **Metrics**: 414 lines · 17.5 KB · ~4,486 raw tokens → ~220 cached (95.1% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:23.793748  
+> **Last Analyzed**: 2026-10-15T00:38:42.207487  
 
 ---
 

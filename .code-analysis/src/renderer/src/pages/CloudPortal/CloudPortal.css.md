@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/pages/CloudPortal/CloudPortal.css`
 > **Role**: Renderer UI Page View  
 > **Metrics**: 566 lines · 11.6 KB · ~2,973 raw tokens → ~220 cached (92.6% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:23.589593  
+> **Last Analyzed**: 2026-10-15T00:38:42.076287  
 
 ---
 

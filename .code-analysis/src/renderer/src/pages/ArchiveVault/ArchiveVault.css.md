@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/pages/ArchiveVault/ArchiveVault.css`
 > **Role**: Renderer UI Page View  
 > **Metrics**: 3136 lines · 59.9 KB · ~15,326 raw tokens → ~220 cached (98.6% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:23.420964  
+> **Last Analyzed**: 2026-10-15T00:38:41.995330  
 
 ---
 

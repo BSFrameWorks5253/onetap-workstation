@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/components/GlobalDropOverlay/GlobalDropOverlay.css`
 > **Role**: Modular UI Component  
 > **Metrics**: 181 lines · 4.1 KB · ~1,041 raw tokens → ~220 cached (78.9% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:22.965566  
+> **Last Analyzed**: 2026-10-15T00:38:41.846886  
 
 ---
 

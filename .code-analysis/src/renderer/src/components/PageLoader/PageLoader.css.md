@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/components/PageLoader/PageLoader.css`
 > **Role**: Modular UI Component  
 > **Metrics**: 78 lines · 1.4 KB · ~352 raw tokens → ~220 cached (37.5% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:23.141868  
+> **Last Analyzed**: 2026-10-15T00:38:41.889660  
 
 ---
 

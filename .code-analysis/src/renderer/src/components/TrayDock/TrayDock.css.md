@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/components/TrayDock/TrayDock.css`
 > **Role**: Modular UI Component  
 > **Metrics**: 172 lines · 3.8 KB · ~971 raw tokens → ~220 cached (77.3% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:23.341125  
+> **Last Analyzed**: 2026-10-15T00:38:41.946853  
 
 ---
 

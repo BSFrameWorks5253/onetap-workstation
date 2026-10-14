@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/components/TaskbarPreview/PageHoverPreview.css`
 > **Role**: Modular UI Component  
 > **Metrics**: 246 lines · 4.5 KB · ~1,142 raw tokens → ~220 cached (80.7% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:23.299497  
+> **Last Analyzed**: 2026-10-15T00:38:41.933486  
 
 ---
 

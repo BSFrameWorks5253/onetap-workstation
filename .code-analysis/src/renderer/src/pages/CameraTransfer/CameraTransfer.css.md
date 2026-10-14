@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/pages/CameraTransfer/CameraTransfer.css`
 > **Role**: Renderer UI Page View  
 > **Metrics**: 753 lines · 17.9 KB · ~4,585 raw tokens → ~220 cached (95.2% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:23.552540  
+> **Last Analyzed**: 2026-10-15T00:38:42.059214  
 
 ---
 

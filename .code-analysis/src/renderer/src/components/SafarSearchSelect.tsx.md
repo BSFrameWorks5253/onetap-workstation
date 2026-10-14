@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/components/SafarSearchSelect.tsx`
 > **Role**: Modular UI Component  
 > **Metrics**: 206 lines · 7.1 KB · ~1,825 raw tokens → ~220 cached (87.9% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:22.784431  
+> **Last Analyzed**: 2026-10-15T00:38:41.796867  
 
 ---
 

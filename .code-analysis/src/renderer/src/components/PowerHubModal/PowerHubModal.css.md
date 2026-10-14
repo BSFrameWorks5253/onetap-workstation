@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/components/PowerHubModal/PowerHubModal.css`
 > **Role**: Modular UI Component  
 > **Metrics**: 291 lines · 6.0 KB · ~1,547 raw tokens → ~220 cached (85.8% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:23.160069  
+> **Last Analyzed**: 2026-10-15T00:38:41.892175  
 
 ---
 

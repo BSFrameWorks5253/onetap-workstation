@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/pages/Dashboard/Dashboard.css`
 > **Role**: Renderer UI Page View  
 > **Metrics**: 424 lines · 10.5 KB · ~2,692 raw tokens → ~220 cached (91.8% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:23.633141  
+> **Last Analyzed**: 2026-10-15T00:38:42.103191  
 
 ---
 

@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/components/SetupWizard/SetupWizard.css`
 > **Role**: Modular UI Component  
 > **Metrics**: 316 lines · 6.4 KB · ~1,629 raw tokens → ~220 cached (86.5% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:23.217960  
+> **Last Analyzed**: 2026-10-15T00:38:41.906455  
 
 ---
 

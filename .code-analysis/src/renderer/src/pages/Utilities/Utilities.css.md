@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/pages/Utilities/Utilities.css`
 > **Role**: Renderer UI Page View  
 > **Metrics**: 641 lines · 12.8 KB · ~3,266 raw tokens → ~220 cached (93.3% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:24.198754  
+> **Last Analyzed**: 2026-10-15T00:38:42.462303  
 
 ---
 

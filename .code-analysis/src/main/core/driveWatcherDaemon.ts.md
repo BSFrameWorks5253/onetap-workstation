@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/main/core/driveWatcherDaemon.ts`
 > **Role**: Electron Main Process / Background Engine  
 > **Metrics**: 179 lines · 4.7 KB · ~1,205 raw tokens → ~220 cached (81.7% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:22.480300  
+> **Last Analyzed**: 2026-10-15T00:38:41.502515  
 
 ---
 

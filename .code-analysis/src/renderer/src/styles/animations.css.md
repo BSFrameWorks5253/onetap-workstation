@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/styles/animations.css`
 > **Role**: Design Tokens & Stylesheet  
 > **Metrics**: 325 lines · 9.4 KB · ~2,411 raw tokens → ~220 cached (90.9% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:24.309078  
+> **Last Analyzed**: 2026-10-15T00:38:42.538633  
 
 ---
 

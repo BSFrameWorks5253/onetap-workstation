@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/types/index.ts`
 > **Role**: Electron Main Process / Background Engine  
 > **Metrics**: 510 lines · 13.0 KB · ~3,321 raw tokens → ~220 cached (93.4% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:24.399193  
+> **Last Analyzed**: 2026-10-15T00:38:42.560302  
 
 ---
 

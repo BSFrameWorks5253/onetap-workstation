@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/components/LogBox/LogBox.tsx`
 > **Role**: Modular UI Component  
 > **Metrics**: 90 lines · 3.1 KB · ~800 raw tokens → ~220 cached (72.5% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:23.088378  
+> **Last Analyzed**: 2026-10-15T00:38:41.882312  
 
 ---
 

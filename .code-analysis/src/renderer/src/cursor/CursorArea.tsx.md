@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/cursor/CursorArea.tsx`
 > **Role**: Utility / Helper Module  
 > **Metrics**: 26 lines · 0.6 KB · ~153 raw tokens → ~153 cached (0.0% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:23.365601  
+> **Last Analyzed**: 2026-10-15T00:38:41.958581  
 
 ---
 

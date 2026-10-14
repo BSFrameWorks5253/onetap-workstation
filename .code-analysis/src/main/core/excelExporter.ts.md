@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/main/core/excelExporter.ts`
 > **Role**: Electron Main Process / Background Engine  
 > **Metrics**: 469 lines · 16.6 KB · ~4,241 raw tokens → ~220 cached (94.8% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:22.497255  
+> **Last Analyzed**: 2026-10-15T00:38:41.515366  
 
 ---
 
@@ -23,7 +23,7 @@ This file operates as part of the **Electron Main Process / Background Engine** 
 | 362 | `autofitWidths(ws: XLSX.WorkSheet)` |
 
 ## 8. Dependencies & Module Linkages
-- **External Packages**: `fs`, `path`
+- **External Packages**: `path`, `fs`
 - **Internal Relatives**: `./safarHierarchy`
 
 ---

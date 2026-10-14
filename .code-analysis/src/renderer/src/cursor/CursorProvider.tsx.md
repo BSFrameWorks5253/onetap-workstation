@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/cursor/CursorProvider.tsx`
 > **Role**: Utility / Helper Module  
 > **Metrics**: 215 lines · 7.2 KB · ~1,834 raw tokens → ~220 cached (88.0% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:23.377896  
+> **Last Analyzed**: 2026-10-15T00:38:41.969631  
 
 ---
 

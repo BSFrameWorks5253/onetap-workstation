@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/components/HardwareMonitor/HardwareMonitor.css`
 > **Role**: Modular UI Component  
 > **Metrics**: 261 lines · 5.8 KB · ~1,493 raw tokens → ~220 cached (85.3% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:22.980029  
+> **Last Analyzed**: 2026-10-15T00:38:41.849005  
 
 ---
 

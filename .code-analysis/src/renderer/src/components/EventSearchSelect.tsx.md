@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/components/EventSearchSelect.tsx`
 > **Role**: Modular UI Component  
 > **Metrics**: 238 lines · 7.7 KB · ~1,977 raw tokens → ~220 cached (88.9% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:22.775681  
+> **Last Analyzed**: 2026-10-15T00:38:41.791545  
 
 ---
 

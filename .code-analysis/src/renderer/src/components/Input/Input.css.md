@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/components/Input/Input.css`
 > **Role**: Modular UI Component  
 > **Metrics**: 144 lines · 3.4 KB · ~869 raw tokens → ~220 cached (74.7% saved)  
-> **Last Analyzed**: 2026-10-15T00:03:22.969350  
+> **Last Analyzed**: 2026-10-15T00:38:41.852844  
 
 ---
 

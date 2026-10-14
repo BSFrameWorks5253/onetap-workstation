@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/pages/PrprojGenerator/PrprojGenerator.css`
 > **Role**: Renderer UI Page View  
 > **Metrics**: 837 lines · 18.1 KB · ~4,627 raw tokens → ~220 cached (95.2% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:23.721577  
+> **Last Analyzed**: 2026-10-15T00:38:42.164003  
 
 ---
 

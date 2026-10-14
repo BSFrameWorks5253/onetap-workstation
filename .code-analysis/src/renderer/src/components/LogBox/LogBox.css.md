@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/components/LogBox/LogBox.css`
 > **Role**: Modular UI Component  
 > **Metrics**: 245 lines · 4.9 KB · ~1,245 raw tokens → ~220 cached (82.3% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:23.084859  
+> **Last Analyzed**: 2026-10-15T00:38:41.880528  
 
 ---
 

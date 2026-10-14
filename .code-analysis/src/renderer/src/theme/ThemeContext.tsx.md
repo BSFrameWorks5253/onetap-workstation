@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/theme/ThemeContext.tsx`
 > **Role**: Utility / Helper Module  
 > **Metrics**: 307 lines · 11.0 KB · ~2,817 raw tokens → ~220 cached (92.2% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:24.386902  
+> **Last Analyzed**: 2026-10-15T00:38:42.550977  
 
 ---
 

@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/utils/safarUtils.ts`
 > **Role**: Utility / Helper Module  
 > **Metrics**: 666 lines · 24.9 KB · ~6,367 raw tokens → ~220 cached (96.5% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:24.506924  
+> **Last Analyzed**: 2026-10-15T00:38:42.587843  
 
 ---
 

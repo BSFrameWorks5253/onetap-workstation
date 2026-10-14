@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/main/core/audioEngine.ts`
 > **Role**: Electron Main Process / Background Engine  
 > **Metrics**: 304 lines · 10.9 KB · ~2,783 raw tokens → ~220 cached (92.1% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:22.101183  
+> **Last Analyzed**: 2026-10-15T00:38:41.494997  
 
 ---
 
@@ -41,7 +41,7 @@ This file operates as part of the **Electron Main Process / Background Engine** 
 | 277 | `scanDir(dir: string, labelPrefix: string = '')` |
 
 ## 8. Dependencies & Module Linkages
-- **External Packages**: `fs`, `path`
+- **External Packages**: `path`, `fs`
 - **Internal Relatives**: `./settingsManager`
 
 ---

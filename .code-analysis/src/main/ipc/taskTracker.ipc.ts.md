@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/main/ipc/taskTracker.ipc.ts`
 > **Role**: Electron Main Process / Background Engine  
 > **Metrics**: 2009 lines · 67.8 KB · ~17,364 raw tokens → ~220 cached (98.7% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:22.635172  
+> **Last Analyzed**: 2026-10-15T00:38:41.685994  
 
 ---
 
@@ -83,7 +83,7 @@ This file operates as part of the **Electron Main Process / Background Engine** 
 | 1650 | `registerTaskTrackerIPC()` |
 
 ## 8. Dependencies & Module Linkages
-- **External Packages**: `electron`, `child_process`, `fs`, `path`
+- **External Packages**: `child_process`, `path`, `fs`, `electron`
 - **Internal Relatives**: `../core/safarHierarchy`
 
 ---

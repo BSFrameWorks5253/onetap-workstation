@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/cursor/cursor.css`
 > **Role**: Design Tokens & Stylesheet  
 > **Metrics**: 229 lines · 8.8 KB · ~2,241 raw tokens → ~220 cached (90.2% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:23.363277  
+> **Last Analyzed**: 2026-10-15T00:38:41.956475  
 
 ---
 

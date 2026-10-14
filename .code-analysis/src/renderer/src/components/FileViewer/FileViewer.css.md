@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/components/FileViewer/FileViewer.css`
 > **Role**: Modular UI Component  
 > **Metrics**: 788 lines · 17.1 KB · ~4,371 raw tokens → ~220 cached (95.0% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:22.902255  
+> **Last Analyzed**: 2026-10-15T00:38:41.837463  
 
 ---
 

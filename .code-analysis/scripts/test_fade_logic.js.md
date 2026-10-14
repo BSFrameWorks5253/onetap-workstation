@@ -1,7 +1,7 @@
 # Detailed Analysis: `scripts/test_fade_logic.js`
 > **Role**: Automation, Build & Packaging Script  
 > **Metrics**: 148 lines · 7.3 KB · ~1,865 raw tokens → ~220 cached (88.2% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:24.595288  
+> **Last Analyzed**: 2026-10-15T00:38:42.645873  
 
 ---
 

@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/main/ipc/converter.ipc.ts`
 > **Role**: Electron Main Process / Background Engine  
 > **Metrics**: 472 lines · 15.1 KB · ~3,869 raw tokens → ~220 cached (94.3% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:22.568809  
+> **Last Analyzed**: 2026-10-15T00:38:41.585084  
 
 ---
 
@@ -38,7 +38,7 @@ This file operates as part of the **Electron Main Process / Background Engine** 
 | 155 | `registerConverterIPC(getWin: WinGetter)` |
 
 ## 8. Dependencies & Module Linkages
-- **External Packages**: `electron`, `fs`, `path`
+- **External Packages**: `path`, `fs`, `electron`
 - **Internal Relatives**: `../core/gpuDetector`
 
 ---

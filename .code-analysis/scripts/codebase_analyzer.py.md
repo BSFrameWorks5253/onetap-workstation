@@ -1,7 +1,7 @@
 # Detailed Analysis: `scripts/codebase_analyzer.py`
 > **Role**: Automation, Build & Packaging Script  
 > **Metrics**: 361 lines · 15.4 KB · ~3,951 raw tokens → ~220 cached (94.4% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:24.519303  
+> **Last Analyzed**: 2026-10-15T00:38:42.596717  
 
 ---
 

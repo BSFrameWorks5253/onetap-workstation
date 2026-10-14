@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/components/SoundProvider/SoundProvider.tsx`
 > **Role**: Modular UI Component  
 > **Metrics**: 261 lines · 8.3 KB · ~2,128 raw tokens → ~220 cached (89.7% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:23.264504  
+> **Last Analyzed**: 2026-10-15T00:38:41.923170  
 
 ---
 

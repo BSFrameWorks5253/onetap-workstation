@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/main/ipc/titleAutomode.ipc.ts`
 > **Role**: Electron Main Process / Background Engine  
 > **Metrics**: 69 lines · 2.2 KB · ~558 raw tokens → ~220 cached (60.6% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:22.660850  
+> **Last Analyzed**: 2026-10-15T00:38:41.710797  
 
 ---
 
@@ -28,7 +28,7 @@ This file operates as part of the **Electron Main Process / Background Engine** 
 | 26 | `registerTitleAutomodeIPC()` |
 
 ## 8. Dependencies & Module Linkages
-- **External Packages**: `electron`, `fs`, `path`
+- **External Packages**: `path`, `fs`, `electron`
 - **Internal Relatives**: `../core/settingsManager`
 
 ---

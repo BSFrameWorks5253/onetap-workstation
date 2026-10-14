@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/components/Loaders/WalbiIntroLoader.tsx`
 > **Role**: Modular UI Component  
 > **Metrics**: 71 lines · 2.0 KB · ~523 raw tokens → ~220 cached (57.9% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:23.076611  
+> **Last Analyzed**: 2026-10-15T00:38:41.878420  
 
 ---
 

@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/components/Loaders/index.ts`
 > **Role**: Modular UI Component  
 > **Metrics**: 6 lines · 0.4 KB · ~94 raw tokens → ~94 cached (0.0% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:23.020309  
+> **Last Analyzed**: 2026-10-15T00:38:41.860636  
 
 ---
 

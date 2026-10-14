@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/main/core/ffmpegRunner.ts`
 > **Role**: Electron Main Process / Background Engine  
 > **Metrics**: 507 lines · 19.9 KB · ~5,092 raw tokens → ~220 cached (95.7% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:22.503370  
+> **Last Analyzed**: 2026-10-15T00:38:41.520621  
 
 ---
 
@@ -36,7 +36,7 @@ Utilizes: `useNikahLogic`
 | 487 | `resumeJob(jobId: string)` |
 
 ## 8. Dependencies & Module Linkages
-- **External Packages**: `child_process`, `fs`, `path`
+- **External Packages**: `path`, `fs`, `child_process`
 - **Internal Relatives**: `./gpuDetector`
 
 ---

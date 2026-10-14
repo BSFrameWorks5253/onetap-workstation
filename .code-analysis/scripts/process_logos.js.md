@@ -1,7 +1,7 @@
 # Detailed Analysis: `scripts/process_logos.js`
 > **Role**: Automation, Build & Packaging Script  
 > **Metrics**: 57 lines · 2.3 KB · ~588 raw tokens → ~220 cached (62.6% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:24.575920  
+> **Last Analyzed**: 2026-10-15T00:38:42.632249  
 
 ---
 

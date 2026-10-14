@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/components/RenderingMonitorWidget/RenderingMonitorWidget.css`
 > **Role**: Modular UI Component  
 > **Metrics**: 399 lines · 7.5 KB · ~1,915 raw tokens → ~220 cached (88.5% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:23.204281  
+> **Last Analyzed**: 2026-10-15T00:38:41.897502  
 
 ---
 

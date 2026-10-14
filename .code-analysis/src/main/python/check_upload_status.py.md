@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/main/python/check_upload_status.py`
 > **Role**: Electron Main Process / Background Engine  
 > **Metrics**: 432 lines · 15.4 KB · ~3,935 raw tokens → ~220 cached (94.4% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:22.715994  
+> **Last Analyzed**: 2026-10-15T00:38:41.741774  
 
 ---
 

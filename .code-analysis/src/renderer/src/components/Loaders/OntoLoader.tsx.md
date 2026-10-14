@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/components/Loaders/OntoLoader.tsx`
 > **Role**: Modular UI Component  
 > **Metrics**: 159 lines · 6.1 KB · ~1,562 raw tokens → ~220 cached (85.9% saved)  
-> **Last Analyzed**: 2026-10-14T23:55:42.868476  
+> **Last Analyzed**: 2026-10-15T00:38:41.871310  
 
 ---
 

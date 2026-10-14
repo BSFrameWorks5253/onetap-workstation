@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/components/EmailBroadcast/EmailBroadcastModal.css`
 > **Role**: Modular UI Component  
 > **Metrics**: 849 lines · 16.9 KB · ~4,334 raw tokens → ~220 cached (94.9% saved)  
-> **Last Analyzed**: 2026-10-14T23:42:04.026978  
+> **Last Analyzed**: 2026-10-15T00:38:41.818663  
 
 ---
 

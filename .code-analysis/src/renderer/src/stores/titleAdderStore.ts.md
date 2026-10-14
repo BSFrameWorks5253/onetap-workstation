@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/stores/titleAdderStore.ts`
 > **Role**: Global State Store (Zustand / Event Emitter)  
 > **Metrics**: 341 lines · 13.0 KB · ~3,319 raw tokens → ~220 cached (93.4% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:24.295470  
+> **Last Analyzed**: 2026-10-15T00:38:42.536494  
 
 ---
 

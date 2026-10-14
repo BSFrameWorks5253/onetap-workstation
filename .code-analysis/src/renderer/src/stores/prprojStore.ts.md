@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/stores/prprojStore.ts`
 > **Role**: Global State Store (Zustand / Event Emitter)  
 > **Metrics**: 136 lines · 3.3 KB · ~852 raw tokens → ~220 cached (74.2% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:24.285457  
+> **Last Analyzed**: 2026-10-15T00:38:42.528519  
 
 ---
 

@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/components/Loaders/MobilePulseLoader.css`
 > **Role**: Modular UI Component  
 > **Metrics**: 138 lines · 2.9 KB · ~743 raw tokens → ~220 cached (70.4% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:23.031145  
+> **Last Analyzed**: 2026-10-15T00:38:41.865963  
 
 ---
 

@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/styles/tokens.css`
 > **Role**: Design Tokens & Stylesheet  
 > **Metrics**: 740 lines · 25.0 KB · ~6,405 raw tokens → ~220 cached (96.6% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:24.314695  
+> **Last Analyzed**: 2026-10-15T00:38:42.543258  
 
 ---
 

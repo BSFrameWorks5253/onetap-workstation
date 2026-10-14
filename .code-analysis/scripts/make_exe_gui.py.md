@@ -1,7 +1,7 @@
 # Detailed Analysis: `scripts/make_exe_gui.py`
 > **Role**: Automation, Build & Packaging Script  
 > **Metrics**: 1100 lines · 49.3 KB · ~12,612 raw tokens → ~220 cached (98.3% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:24.571392  
+> **Last Analyzed**: 2026-10-15T00:38:42.628983  
 
 ---
 

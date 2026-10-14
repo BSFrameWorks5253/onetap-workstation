@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/components/Toolbar/Toolbar.css`
 > **Role**: Modular UI Component  
 > **Metrics**: 211 lines · 5.8 KB · ~1,494 raw tokens → ~220 cached (85.3% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:23.332572  
+> **Last Analyzed**: 2026-10-15T00:38:41.944186  
 
 ---
 

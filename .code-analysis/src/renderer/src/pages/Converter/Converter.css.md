@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/pages/Converter/Converter.css`
 > **Role**: Renderer UI Page View  
 > **Metrics**: 425 lines · 8.7 KB · ~2,229 raw tokens → ~220 cached (90.1% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:23.601239  
+> **Last Analyzed**: 2026-10-15T00:38:42.084177  
 
 ---
 

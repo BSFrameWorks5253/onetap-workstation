@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/components/CommandPalette/CommandPalette.css`
 > **Role**: Modular UI Component  
 > **Metrics**: 216 lines · 4.5 KB · ~1,159 raw tokens → ~220 cached (81.0% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:22.821625  
+> **Last Analyzed**: 2026-10-15T00:38:41.810320  
 
 ---
 
