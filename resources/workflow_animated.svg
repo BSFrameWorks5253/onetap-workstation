@@ -1,0 +1,124 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 220" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0F172A" />
+      <stop offset="100%" stop-color="#020617" />
+    </linearGradient>
+
+    <linearGradient id="glowLine" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#38BDF8" />
+      <stop offset="50%" stop-color="#818CF8" />
+      <stop offset="100%" stop-color="#C084FC" />
+    </linearGradient>
+
+    <filter id="packetGlow">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <style>
+    .flow-path {
+      stroke-dasharray: 6 6;
+      animation: flowDash 20s linear infinite;
+    }
+    .packet-1 {
+      animation: movePacket1 4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    }
+    .packet-2 {
+      animation: movePacket2 4s cubic-bezier(0.4, 0, 0.2, 1) infinite 1.3s;
+    }
+    .packet-3 {
+      animation: movePacket3 4s cubic-bezier(0.4, 0, 0.2, 1) infinite 2.6s;
+    }
+    .pulse-node {
+      animation: nodePulse 2.4s ease-in-out infinite alternate;
+    }
+
+    @keyframes flowDash {
+      to { stroke-dashoffset: -300; }
+    }
+    @keyframes movePacket1 {
+      0% { cx: 110; cy: 110; opacity: 0; }
+      15% { opacity: 1; }
+      85% { opacity: 1; }
+      100% { cx: 890; cy: 110; opacity: 0; }
+    }
+    @keyframes movePacket2 {
+      0% { cx: 110; cy: 110; opacity: 0; }
+      15% { opacity: 1; }
+      85% { opacity: 1; }
+      100% { cx: 890; cy: 110; opacity: 0; }
+    }
+    @keyframes movePacket3 {
+      0% { cx: 110; cy: 110; opacity: 0; }
+      15% { opacity: 1; }
+      85% { opacity: 1; }
+      100% { cx: 890; cy: 110; opacity: 0; }
+    }
+    @keyframes nodePulse {
+      0% { stroke: #6366F1; stroke-width: 1.5; }
+      100% { stroke: #38BDF8; stroke-width: 2.5; filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.5)); }
+    }
+  </style>
+
+  <!-- Container -->
+  <rect width="1000" height="220" rx="14" fill="url(#bg)" stroke="rgba(99, 102, 241, 0.25)" stroke-width="1.5" />
+
+  <!-- Animated Highway Data Pipeline -->
+  <line x1="110" y1="110" x2="890" y2="110" stroke="rgba(99, 102, 241, 0.3)" stroke-width="3" />
+  <line x1="110" y1="110" x2="890" y2="110" stroke="url(#glowLine)" stroke-width="2" class="flow-path" />
+
+  <!-- Traveling Data Light Packets -->
+  <circle class="packet-1" r="5" fill="#38BDF8" filter="url(#packetGlow)" />
+  <circle class="packet-2" r="5" fill="#A855F7" filter="url(#packetGlow)" />
+  <circle class="packet-3" r="5" fill="#10B981" filter="url(#packetGlow)" />
+
+  <!-- Node 1: Ingestion -->
+  <g transform="translate(110, 110)">
+    <circle r="36" fill="#1E293B" class="pulse-node" />
+    <text text-anchor="middle" y="-6" font-size="20">📁</text>
+    <text text-anchor="middle" y="14" font-family="-apple-system, sans-serif" font-size="10" font-weight="700" fill="#94A3B8">DROP</text>
+    <text text-anchor="middle" y="58" font-family="-apple-system, sans-serif" font-size="12" font-weight="700" fill="#38BDF8">Event Batches</text>
+    <text text-anchor="middle" y="74" font-family="-apple-system, sans-serif" font-size="10" fill="#64748B">Multi-Folder Drag</text>
+  </g>
+
+  <!-- Node 2: Queue Prioritizer -->
+  <g transform="translate(305, 110)">
+    <circle r="36" fill="#1E293B" class="pulse-node" />
+    <text text-anchor="middle" y="-6" font-size="20">⚡</text>
+    <text text-anchor="middle" y="14" font-family="-apple-system, sans-serif" font-size="10" font-weight="700" fill="#94A3B8">QUEUE</text>
+    <text text-anchor="middle" y="58" font-family="-apple-system, sans-serif" font-size="12" font-weight="700" fill="#818CF8">Sequential 1..N</text>
+    <text text-anchor="middle" y="74" font-family="-apple-system, sans-serif" font-size="10" fill="#64748B">Reorder &amp; Sync</text>
+  </g>
+
+  <!-- Node 3: Photo & DVD Discovery -->
+  <g transform="translate(500, 110)">
+    <circle r="36" fill="#1E293B" class="pulse-node" />
+    <text text-anchor="middle" y="-6" font-size="20">🖼️</text>
+    <text text-anchor="middle" y="14" font-family="-apple-system, sans-serif" font-size="10" font-weight="700" fill="#94A3B8">PAIR</text>
+    <text text-anchor="middle" y="58" font-family="-apple-system, sans-serif" font-size="12" font-weight="700" fill="#A855F7">Photo Renamer</text>
+    <text text-anchor="middle" y="74" font-family="-apple-system, sans-serif" font-size="10" fill="#64748B">Auto Path Link</text>
+  </g>
+
+  <!-- Node 4: NVENC Hardware Engine -->
+  <g transform="translate(695, 110)">
+    <circle r="36" fill="#1E293B" class="pulse-node" />
+    <text text-anchor="middle" y="-6" font-size="20">🚀</text>
+    <text text-anchor="middle" y="14" font-family="-apple-system, sans-serif" font-size="10" font-weight="700" fill="#94A3B8">RENDER</text>
+    <text text-anchor="middle" y="58" font-family="-apple-system, sans-serif" font-size="12" font-weight="700" fill="#34D399">NVENC GPU</text>
+    <text text-anchor="middle" y="74" font-family="-apple-system, sans-serif" font-size="10" fill="#64748B">14.8x Acceleration</text>
+  </g>
+
+  <!-- Node 5: Master Export -->
+  <g transform="translate(890, 110)">
+    <circle r="36" fill="#1E293B" class="pulse-node" />
+    <text text-anchor="middle" y="-6" font-size="20">🎬</text>
+    <text text-anchor="middle" y="14" font-family="-apple-system, sans-serif" font-size="10" font-weight="700" fill="#94A3B8">DONE</text>
+    <text text-anchor="middle" y="58" font-family="-apple-system, sans-serif" font-size="12" font-weight="700" fill="#F43F5E">Master Delivery</text>
+    <text text-anchor="middle" y="74" font-family="-apple-system, sans-serif" font-size="10" fill="#64748B">Zero Errors</text>
+  </g>
+</svg>
