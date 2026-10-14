@@ -1,0 +1,70 @@
+name: 🐛 Bug Report
+description: Report an issue or unexpected behavior in UniDesk Studio
+title: "[BUG]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report an issue! Please provide as much context as possible.
+  - type: input
+    id: version
+    attributes:
+      label: UniDesk Studio Version
+      description: What version of UniDesk Studio are you running? (e.g. v26.10.10)
+      placeholder: v26.10.10
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      options:
+        - Windows 11 (64-bit)
+        - Windows 10 (64-bit)
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: acceleration
+    attributes:
+      label: Hardware Video Acceleration
+      options:
+        - NVIDIA NVENC (CUDA)
+        - Intel QuickSync (QSV)
+        - CPU Multi-threaded (libx264)
+        - Unknown / Auto-detect
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is.
+      placeholder: When adding folder batch...
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps To Reproduce
+      description: Exact steps to reproduce the issue.
+      value: |
+        1. Open UniDesk Studio
+        2. Navigate to 'Title Adder'
+        3. Drag and drop 2 event folders
+        4. See error...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Console Logs / Screenshots
+      description: Paste any error stack traces or attach screenshots.

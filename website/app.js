@@ -4,39 +4,39 @@
  */
 
 const CONFIG = {
-  appName: "Uni Desk",
-  defaultVersion: "26.10.2",
-  defaultReleaseDate: "2026-10-05",
+  appName: "Uni Desk Studio",
+  defaultVersion: "26.10.10",
+  defaultReleaseDate: "2026-10-15",
   publisher: "BS.Framework",
   
-  // Download URLs - Relative paths for local serving, with CDN/GitHub mirror fallbacks
+  // Download URLs - Hosted GitHub Releases
   downloads: {
     installer: {
-      fileName: "Uni_Desk_Setup_V26.10.2.exe",
+      fileName: "Uni_Desk_Setup_V26.10.10.exe",
       size: "91.3 MB",
       sha256: "8cb6e4338d4814ce8b52bea4af076c05e385c1fe895e7504f8554e440426fca0",
-      url: "./Uni_Desk_Setup_V26.10.2.exe",
-      fallbackUrl: "https://releases.bsframework.com/onetap/Uni_Desk_Setup_V26.10.2.exe"
+      url: "https://github.com/BSFrameWorks5253/onetap-workstation/releases/latest",
+      fallbackUrl: "https://github.com/BSFrameWorks5253/onetap-workstation/releases"
     },
     portable: {
-      fileName: "Uni Desk_V26.10.0.exe",
+      fileName: "Uni_Desk_V26.10.10.exe",
       size: "90.8 MB",
       sha256: "b9c03de9a32c256247c458cbf855b3eb09cbeff09ba551608688e404b901fc63",
-      url: "../release/Uni Desk_V26.10.0.exe",
-      fallbackUrl: "https://releases.bsframework.com/onetap/Uni%20Desk_V26.10.0.exe"
+      url: "https://github.com/BSFrameWorks5253/onetap-workstation/releases/latest",
+      fallbackUrl: "https://github.com/BSFrameWorks5253/onetap-workstation/releases"
     },
     zip: {
-      fileName: "Uni Desk-26.10.0-win.zip",
+      fileName: "Uni_Desk-26.10.10-win.zip",
       size: "124.5 MB",
       sha256: "e34ba12c7d9a38f3706059d08e5033c4b7264a9712a8069ceb0222feee9a3d46",
-      url: "../release/Uni Desk-26.10.0-win.zip",
-      fallbackUrl: "https://releases.bsframework.com/onetap/Uni%20Desk-26.10.0-win.zip"
+      url: "https://github.com/BSFrameWorks5253/onetap-workstation/releases/latest",
+      fallbackUrl: "https://github.com/BSFrameWorks5253/onetap-workstation/releases"
     },
     linux: {
-      fileName: "UniDesk_Linux_V26.9.22.AppImage",
+      fileName: "UniDesk_Linux_V26.10.10.AppImage",
       size: "125.6 MB",
-      url: "../release/Uni Desk_Linux_V26.9.22.AppImage",
-      fallbackUrl: "https://releases.bsframework.com/onetap/UniDesk_Linux_V26.9.22.AppImage"
+      url: "https://github.com/BSFrameWorks5253/onetap-workstation/releases/latest",
+      fallbackUrl: "https://github.com/BSFrameWorks5253/onetap-workstation/releases"
     }
   },
 
