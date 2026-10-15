@@ -1,7 +1,7 @@
 {
   "name": "UniDesk_App",
-  "version": "26.11.0",
-  "description": "UniDesk Studio \u2014 Next-Generation Automated Video Production Workstation, Sequential Multi-Batch Rendering Engine & Media Asset Management Platform for Windows and Linux.",
+  "version": "26.10.11",
+  "description": "UniDesk Studio \u2014 Next-Generation Automated Video Production Workstation, Sequential Multi-Batch Rendering Engine and Media Asset Management Platform for Windows and Linux.",
   "author": "BS.Framework <bs.framework5253@gmail.com>",
   "license": "SEE LICENSE IN LICENSE",
   "homepage": "https://github.com/BSFrameWorks5253/onetap-workstation",
@@ -235,7 +235,7 @@
       ],
       "category": "Utility",
       "icon": "resources/icon.png",
-      "synopsis": "Uni Desk - Professional Workstation & Media Automation Toolkit",
+      "synopsis": "Uni Desk - Professional Workstation and Media Automation Toolkit",
       "description": "Uni Desk \u2014 Professional Workstation & Media Automation Toolkit",
       "maintainer": "BS Framework <support@bsframework.com>",
       "desktop": {

@@ -1,8 +1,8 @@
 # 🧠 UniDesk Studio — Hierarchical Codebase Knowledge Base & Analysis Cache
-> **Last Synced**: 2026-10-15 11:51:26  
+> **Last Synced**: 2026-10-15 12:10:37  
 > **Total Files Indexed**: 228  
-> **Unchanged (Cached)**: 227 | **Re-analyzed**: 1  
-> **Estimated AI Context Tokens Saved**: ~892,374 tokens!
+> **Unchanged (Cached)**: 224 | **Re-analyzed**: 4  
+> **Estimated AI Context Tokens Saved**: ~892,375 tokens!
 
 This document and the mirrored hierarchy under `.code-analysis/` contain pre-analyzed architectural summaries, exports, interfaces, hooks, and IPC channels for every source file.
 **AI Agents**: Consult `.code-analysis/<path>.md` before reading full raw source files to conserve context window!

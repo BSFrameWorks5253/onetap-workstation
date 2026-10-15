@@ -151,7 +151,7 @@ const ParticleBackground = (): JSX.Element => {
 export default function SplashScreen({ onDone, ready, theme }: SplashScreenProps): JSX.Element {
   const [progress, setProgress] = useState(0)
   const [fadeOut, setFadeOut]   = useState(false)
-  const [version, setVersion]   = useState('26.11.0')
+  const [version, setVersion]   = useState('26.10.11')
   const [skipped, setSkipped]   = useState(false)
   const [displayedLogs, setDisplayedLogs] = useState<string[]>([])
   const [tilt, setTilt] = useState({ rx: 0, ry: 0 })

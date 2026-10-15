@@ -45,7 +45,7 @@ export function getWorkstationVersion(): string {
     }
   } catch {}
   try {
-    return (app.getVersion() || '26.11.0').trim()
+    return (app.getVersion() || '26.10.11').trim()
   } catch {
     return '26.10.5'
   }
