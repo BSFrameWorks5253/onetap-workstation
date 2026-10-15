@@ -10062,8 +10062,8 @@
   "src/renderer/src/components/WelcomeScreen/WelcomeScreen.css": {
     "path": "src/renderer/src/components/WelcomeScreen/WelcomeScreen.css",
     "extension": ".css",
-    "loc": 293,
-    "bytes": 8552,
+    "loc": 259,
+    "bytes": 7744,
     "purpose": "Modular UI Component",
     "imports": [],
     "internal_imports": [],
@@ -10090,10 +10090,10 @@
       ".welcome-teardrop-svg",
       ".welcome-teardrops-banner"
     ],
-    "raw_tokens": 2138,
+    "raw_tokens": 1936,
     "summary_tokens": 220,
-    "last_analyzed": "2026-10-15T01:04:20.209692",
-    "hash": "fa7a707d2e6c327c55807e5d67d4fc4f06c5944d98e40cbeb34b3066c4cc8f01"
+    "last_analyzed": "2026-10-15T10:56:29.325998",
+    "hash": "f7a4cb544bfc88e0a7914ecd6beca364574bb8056a026b6eec3fd019f0322e74"
   },
   "src/renderer/src/components/WelcomeScreen/WelcomeScreen.tsx": {
     "path": "src/renderer/src/components/WelcomeScreen/WelcomeScreen.tsx",

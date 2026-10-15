@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/components/WelcomeScreen/WelcomeScreen.css`
 > **Role**: Modular UI Component  
-> **Metrics**: 293 lines · 8.4 KB · ~2,138 raw tokens → ~220 cached (89.7% saved)  
-> **Last Analyzed**: 2026-10-15T01:04:20.209692  
+> **Metrics**: 259 lines · 7.6 KB · ~1,936 raw tokens → ~220 cached (88.6% saved)  
+> **Last Analyzed**: 2026-10-15T10:56:29.325998  
 
 ---
 

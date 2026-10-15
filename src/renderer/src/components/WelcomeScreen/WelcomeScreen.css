@@ -162,14 +162,14 @@
   user-select: none !important;
 }
 
-/* Arabic Calligraphy Text Element — Broadcast-Grade Right-To-Left Mask Wipe */
+/* Arabic Calligraphy Text Element — Smooth Right-To-Left Wipe Animation */
 .welcome-greeting-text {
   font-family: 'Amiri', 'Traditional Arabic', 'Scheherazade New', serif !important;
   font-size: clamp(64px, 8.8vw, 116px) !important;
   font-weight: 700 !important;
   color: #B8860B !important;
   direction: rtl !important;
-  text-shadow: 0 4px 22px rgba(184, 134, 11, 0.35), 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+  text-shadow: 0 4px 22px rgba(184, 134, 11, 0.38), 0 1px 3px rgba(0, 0, 0, 0.1) !important;
   display: inline-block !important;
   white-space: nowrap !important;
   letter-spacing: 0 !important;
@@ -178,58 +178,24 @@
   line-height: 1.8 !important;
   padding: 24px 44px !important;
   overflow: visible !important;
-
-  /* Smooth RTL Feathered Linear Mask Wipe */
-  -webkit-mask-image: linear-gradient(to left, 
-    #000 0%, 
-    #000 50%, 
-    rgba(0, 0, 0, 0) 62%, 
-    rgba(0, 0, 0, 0) 100%
-  ) !important;
-  -webkit-mask-size: 250% 100% !important;
-  -webkit-mask-position: 0% 0 !important;
-  -webkit-mask-repeat: no-repeat !important;
-
-  mask-image: linear-gradient(to left, 
-    #000 0%, 
-    #000 50%, 
-    rgba(0, 0, 0, 0) 62%, 
-    rgba(0, 0, 0, 0) 100%
-  ) !important;
-  mask-size: 250% 100% !important;
-  mask-position: 0% 0 !important;
-  mask-repeat: no-repeat !important;
-
-  animation: 
-    welcomeSmoothWipeRTL 1.35s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards,
-    welcomeArabicGlowPulse 3.2s ease-in-out 1.5s infinite alternate !important;
+  clip-path: inset(-150px 0% -150px 0%);
+  animation: welcomeArabicWipeRTL 1.25s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both !important;
 }
 
 .welcome-greeting-text.mode-marhaban {
   font-size: clamp(58px, 8vw, 106px) !important;
-  animation: 
-    welcomeSmoothWipeRTL 1.1s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards,
-    welcomeArabicGlowPulse 3.2s ease-in-out 1.3s infinite alternate !important;
+  animation: welcomeArabicWipeRTL 1.05s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both !important;
 }
 
-/* Fluid Right-To-Left Mask Wipe */
-@keyframes welcomeSmoothWipeRTL {
+/* Fluid Right-To-Left Linear Wipe (Reveals from Right to Left: أَهْلًا -> وَ -> سَهْلًا) */
+@keyframes welcomeArabicWipeRTL {
   0% {
-    -webkit-mask-position: 0% 0;
-    mask-position: 0% 0;
-    opacity: 0.9;
-  }
-  99% {
-    -webkit-mask-position: 100% 0;
-    mask-position: 100% 0;
-    opacity: 1;
+    clip-path: inset(-150px 0% -150px 100%);
+    opacity: 0.85;
   }
   100% {
-    -webkit-mask-position: 100% 0;
-    mask-position: 100% 0;
+    clip-path: inset(-150px 0% -150px 0%);
     opacity: 1;
-    -webkit-mask-image: none !important;
-    mask-image: none !important;
   }
 }
 
