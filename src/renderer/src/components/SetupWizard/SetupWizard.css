@@ -69,63 +69,56 @@
   animation: shimmerSweep 3s linear infinite;
 }
 
-/* Hero Banner with luminous pastel gradient */
-.setup-hero {
-  height: 140px;
-  background: linear-gradient(135deg, #FFF8F0 0%, #F8F2E8 50%, #F0E8DA 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+/* Animated Cyber Workstation Hero Banner */
+.setup-hero-banner-wrap {
+  width: 100%;
+  height: 156px;
   position: relative;
   overflow: hidden;
-  border-bottom: 1.5px solid rgba(229, 192, 123, 0.35);
+  border-bottom: 1.5px solid rgba(99, 102, 241, 0.4);
+  background: #0B0F19;
 }
 
-.setup-hero::before {
-  content: '';
+.setup-hero-banner-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.setup-hero-live-pill {
   position: absolute;
-  width: 220px;
-  height: 220px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(245, 158, 11, 0.2) 0%, transparent 70%);
-  top: -60px;
-  right: -40px;
-  animation: orbFloat 10s ease-in-out infinite;
-  pointer-events: none;
-}
-
-.setup-hero::after {
-  content: '';
-  position: absolute;
-  width: 160px;
-  height: 160px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(236, 72, 153, 0.15) 0%, transparent 70%);
-  bottom: -40px;
-  left: 10%;
-  animation: orbFloat 14s ease-in-out 4s infinite;
-  pointer-events: none;
-}
-
-.setup-hero-inner {
-  display: flex;
+  top: 14px;
+  right: 16px;
+  display: inline-flex;
   align-items: center;
-  gap: 20px;
-  position: relative;
-  z-index: 1;
+  gap: 7px;
+  padding: 5px 12px;
+  background: rgba(15, 23, 42, 0.88);
+  border: 1px solid rgba(129, 140, 248, 0.4);
+  border-radius: 20px;
+  font-family: monospace;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #93C5FD;
+  letter-spacing: 1.2px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  z-index: 5;
 }
 
-.setup-hero-logo {
-  width: 56px;
-  height: 56px;
-  background: #FFFFFF;
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  box-shadow: 0 4px 20px rgba(245, 158, 11, 0.25);
-  animation: microBounce 0.6s var(--ease-spring) 0.2s both;
+.setup-pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10B981;
+  box-shadow: 0 0 8px #10B981;
+  animation: pulseGreen 2s infinite;
+}
+
+@keyframes pulseGreen {
+  0%, 100% { fill: #10B981; opacity: 1; filter: drop-shadow(0 0 6px #10B981); }
+  50% { fill: #34D399; opacity: 0.4; filter: drop-shadow(0 0 1px #10B981); }
 }
 
 .setup-hero-logo::before {

@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import './SetupWizard.css'
 import zenLogo from '../../assets/zen_final_nobg.png'
+import heroBannerSvg from '../../assets/hero_animated.svg'
 
 interface SetupWizardProps {
   onDone: () => void
@@ -34,16 +35,12 @@ export default function SetupWizard({ onDone }: SetupWizardProps): JSX.Element {
   return (
     <div className="setup-overlay anim-fade-in">
       <div className="setup-window">
-        {/* Hero Header */}
-        <div className="setup-hero">
-          <div className="setup-hero-inner">
-            <div className="setup-hero-logo" style={{ padding: '6px', background: '#F7F4EE', border: '1.5px solid rgba(229,192,123,0.4)' }}>
-              <img src={zenLogo} alt="Zen Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-            </div>
-            <div className="setup-hero-text">
-              <h1>Welcome to Uni Desk</h1>
-              <p>Quick setup — takes under a minute.</p>
-            </div>
+        {/* Animated Cyber Workstation Hero Banner */}
+        <div className="setup-hero-banner-wrap">
+          <img src={heroBannerSvg} alt="UniDesk Studio" className="setup-hero-banner-img" />
+          <div className="setup-hero-live-pill">
+            <span className="setup-pulse-dot" />
+            <span>INITIAL SETUP // V26.10</span>
           </div>
         </div>
 

@@ -1,8 +1,8 @@
 # 🧠 UniDesk Studio — Hierarchical Codebase Knowledge Base & Analysis Cache
-> **Last Synced**: 2026-10-15 10:56:29  
+> **Last Synced**: 2026-10-15 11:03:14  
 > **Total Files Indexed**: 227  
-> **Unchanged (Cached)**: 226 | **Re-analyzed**: 1  
-> **Estimated AI Context Tokens Saved**: ~891,386 tokens!
+> **Unchanged (Cached)**: 225 | **Re-analyzed**: 2  
+> **Estimated AI Context Tokens Saved**: ~891,296 tokens!
 
 This document and the mirrored hierarchy under `.code-analysis/` contain pre-analyzed architectural summaries, exports, interfaces, hooks, and IPC channels for every source file.
 **AI Agents**: Consult `.code-analysis/<path>.md` before reading full raw source files to conserve context window!
@@ -199,8 +199,8 @@ This document and the mirrored hierarchy under `.code-analysis/` contain pre-ana
 - **[src/renderer/src/components/RenderingMonitorWidget/RenderingMonitorWidget.css](src/renderer/src/components/RenderingMonitorWidget/RenderingMonitorWidget.css.md)**: Modular UI Component (399 lines)
 - **[src/renderer/src/components/RenderingMonitorWidget/RenderingMonitorWidget.tsx](src/renderer/src/components/RenderingMonitorWidget/RenderingMonitorWidget.tsx.md)**: Modular UI Component (304 lines) — Exports: `RenderingMonitorWidget` [Hooks: useEffect, useState]
 - **[src/renderer/src/components/SafarSearchSelect.tsx](src/renderer/src/components/SafarSearchSelect.tsx.md)**: Modular UI Component (206 lines) — Exports: `SafarSearchSelect` [Hooks: useEffect, useMemo, useRef]
-- **[src/renderer/src/components/SetupWizard/SetupWizard.css](src/renderer/src/components/SetupWizard/SetupWizard.css.md)**: Modular UI Component (316 lines)
-- **[src/renderer/src/components/SetupWizard/SetupWizard.tsx](src/renderer/src/components/SetupWizard/SetupWizard.tsx.md)**: Modular UI Component (142 lines) — Exports: `SetupWizard` [Hooks: useState]
+- **[src/renderer/src/components/SetupWizard/SetupWizard.css](src/renderer/src/components/SetupWizard/SetupWizard.css.md)**: Modular UI Component (309 lines)
+- **[src/renderer/src/components/SetupWizard/SetupWizard.tsx](src/renderer/src/components/SetupWizard/SetupWizard.tsx.md)**: Modular UI Component (139 lines) — Exports: `SetupWizard` [Hooks: useState]
 - **[src/renderer/src/components/SetupWizard/index.ts](src/renderer/src/components/SetupWizard/index.ts.md)**: Modular UI Component (2 lines)
 - **[src/renderer/src/components/Sidebar/Sidebar.css](src/renderer/src/components/Sidebar/Sidebar.css.md)**: Modular UI Component (278 lines)
 - **[src/renderer/src/components/Sidebar/Sidebar.tsx](src/renderer/src/components/Sidebar/Sidebar.tsx.md)**: Modular UI Component (204 lines) — Exports: `Sidebar` [Hooks: useEffect, useRef, useState]

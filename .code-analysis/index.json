@@ -8933,8 +8933,8 @@
   "src/renderer/src/components/SetupWizard/SetupWizard.css": {
     "path": "src/renderer/src/components/SetupWizard/SetupWizard.css",
     "extension": ".css",
-    "loc": 316,
-    "bytes": 6518,
+    "loc": 309,
+    "bytes": 6308,
     "purpose": "Modular UI Component",
     "imports": [],
     "internal_imports": [],
@@ -8951,37 +8951,40 @@
       ".setup-description",
       ".setup-divider",
       ".setup-footer-note",
-      ".setup-hero",
-      ".setup-hero-inner",
-      ".setup-hero-logo",
+      ".setup-hero-banner-img",
+      ".setup-hero-banner-wrap",
+      ".setup-hero-live-pill",
       ".setup-overlay",
       ".setup-path-box",
       ".setup-path-box--filled",
       ".setup-path-icon",
       ".setup-path-placeholder",
       ".setup-path-text",
+      ".setup-pulse-dot",
       ".setup-section-title",
       ".setup-start-btn",
       ".setup-step-badge",
       ".setup-window"
     ],
-    "raw_tokens": 1629,
+    "raw_tokens": 1577,
     "summary_tokens": 220,
-    "last_analyzed": "2026-10-15T00:38:41.906455",
-    "hash": "8941b1a2001e85b8e62407188388b26d528a244b5993b8db0f17642aff609073"
+    "last_analyzed": "2026-10-15T11:03:14.667454",
+    "hash": "17e199bec601e6ca52f679222ed47ee45f65e3f792ba46be5ccaa7c9c1bb26ef"
   },
   "src/renderer/src/components/SetupWizard/SetupWizard.tsx": {
     "path": "src/renderer/src/components/SetupWizard/SetupWizard.tsx",
     "extension": ".tsx",
-    "loc": 142,
-    "bytes": 4932,
+    "loc": 139,
+    "bytes": 4783,
     "purpose": "Modular UI Component",
     "imports": [
       "* from './SetupWizard.css'",
-      "zenLogo from '../../assets/zen_final_nobg.png'"
+      "zenLogo from '../../assets/zen_final_nobg.png'",
+      "heroBannerSvg from '../../assets/hero_animated.svg'"
     ],
     "internal_imports": [
       "../../assets/zen_final_nobg.png",
+      "../../assets/hero_animated.svg",
       "./SetupWizard.css"
     ],
     "external_imports": [],
@@ -8989,7 +8992,7 @@
       {
         "kind": "function",
         "name": "SetupWizard",
-        "line": 9
+        "line": 10
       }
     ],
     "interfaces_types": [],
@@ -9001,24 +9004,24 @@
       {
         "name": "SetupWizard",
         "args": "{ onDone }: SetupWizardProps",
-        "line": 9
+        "line": 10
       },
       {
         "name": "browse",
         "args": "",
-        "line": 14
+        "line": 15
       },
       {
         "name": "confirmFolder",
         "args": "",
-        "line": 20
+        "line": 21
       }
     ],
     "css_classes": [],
-    "raw_tokens": 1233,
+    "raw_tokens": 1195,
     "summary_tokens": 220,
-    "last_analyzed": "2026-10-15T00:38:41.910531",
-    "hash": "721d5f8f1009a73421a2487c466b0fc890c85032cb5a07b51f0f1bed22a84b11"
+    "last_analyzed": "2026-10-15T11:03:14.674379",
+    "hash": "e3c218920c56ce0df0595321732eb44206c551e50a00367bcd092bae0cf6df3c"
   },
   "src/renderer/src/components/Sidebar/index.ts": {
     "path": "src/renderer/src/components/Sidebar/index.ts",
