@@ -22,6 +22,7 @@
     "build:win:portable": "npm run build && node scripts/build-win.js portable",
     "build:win:nsis": "npm run build && node scripts/build-win.js nsis",
     "build:win:msi": "node scripts/build-win.js msi",
+    "build:win:msix": "npm run build && node scripts/build-win.js msix",
     "build:win:zip": "npm run build && node scripts/build-win.js zip",
     "build:win:dir": "npm run build && node scripts/build-win.js dir",
     "build:all": "npm run build && electron-builder --linux && node scripts/build-win.js",
@@ -281,6 +282,23 @@
       "createStartMenuShortcut": true,
       "shortcutName": "Uni Desk",
       "artifactName": "${productName}_Setup_V${version}.${ext}"
+    },
+    "msix": {
+      "identityName": "BSFramework.UniDesk",
+      "publisherDisplayName": "BS.Framework",
+      "publisher": "CN=YOUR-MICROSOFT-PUBLISHER-ID",
+      "applicationId": "UniDesk",
+      "displayName": "Uni Desk",
+      "languages": [
+        "en-US"
+      ],
+      "backgroundColor": "#0c1017",
+      "showNameOnTiles": true,
+      "capabilities": [
+        "runFullTrust"
+      ],
+      "artifactName": "${productName}_Store_V${version}.${ext}",
+      "autoUpdate": false
     }
   }
 }

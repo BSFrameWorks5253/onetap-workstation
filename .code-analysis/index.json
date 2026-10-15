@@ -15197,8 +15197,8 @@
   "scripts/build-win.js": {
     "path": "scripts/build-win.js",
     "extension": ".js",
-    "loc": 161,
-    "bytes": 6329,
+    "loc": 170,
+    "bytes": 6584,
     "purpose": "Automation, Build & Packaging Script",
     "imports": [],
     "internal_imports": [],
@@ -15250,10 +15250,10 @@
       }
     ],
     "css_classes": [],
-    "raw_tokens": 1582,
+    "raw_tokens": 1646,
     "summary_tokens": 220,
-    "last_analyzed": "2026-10-15T00:38:42.592908",
-    "hash": "d1bcd27871858a1ac7b95e4249460589544e80e186b42f7533f320e0a8eeccea"
+    "last_analyzed": "2026-10-15T11:13:10.896167",
+    "hash": "828d9dfc64bd84f757adc9819cc163c27cd4cf0e0ea4743e308af6f7efbc7d38"
   },
   "scripts/codebase_analyzer.py": {
     "path": "scripts/codebase_analyzer.py",
@@ -15686,8 +15686,8 @@
   "scripts/make_exe_cross.py": {
     "path": "scripts/make_exe_cross.py",
     "extension": ".py",
-    "loc": 2195,
-    "bytes": 105101,
+    "loc": 2212,
+    "bytes": 105937,
     "purpose": "Automation, Build & Packaging Script",
     "imports": [
       "import json",
@@ -15813,28 +15813,28 @@
       },
       {
         "kind": "def/class",
-        "name": "is_version_match",
+        "name": "build_msix",
         "line": 406
       },
       {
         "kind": "def/class",
+        "name": "is_version_match",
+        "line": 414
+      },
+      {
+        "kind": "def/class",
         "name": "organize_version_release_folder",
-        "line": 420
+        "line": 428
       },
       {
         "kind": "def/class",
         "name": "build_linux",
-        "line": 471
-      },
-      {
-        "kind": "def/class",
-        "name": "compile_installer",
         "line": 479
       },
       {
         "kind": "def/class",
-        "name": "find_all_release_assets",
-        "line": 522
+        "name": "compile_installer",
+        "line": 487
       }
     ],
     "interfaces_types": [],
@@ -15942,61 +15942,61 @@
         "line": 398
       },
       {
+        "name": "build_msix",
+        "args": "(log_fn)",
+        "line": 406
+      },
+      {
         "name": "is_version_match",
         "args": "(filename: str, target_version: str)",
-        "line": 406
+        "line": 414
       },
       {
         "name": "organize_version_release_folder",
         "args": "(version: str, log_fn)",
-        "line": 420
+        "line": 428
       },
       {
         "name": "build_linux",
         "args": "(log_fn)",
-        "line": 471
+        "line": 479
       },
       {
         "name": "compile_installer",
         "args": "(version: str, log_fn)",
-        "line": 479
+        "line": 487
       },
       {
         "name": "find_all_release_assets",
         "args": "(version: str)",
-        "line": 522
+        "line": 530
       },
       {
         "name": "generate_github_markdown",
         "args": "(version, whats_new, bugs_fixed, improvements, release_notes, checksums=None)",
-        "line": 563
+        "line": 571
       },
       {
         "name": "upload_to_github",
         "args": "(version: str, file_paths: list, release_body: str, log_fn)",
-        "line": 583
+        "line": 591
       },
       {
         "name": "fetch_google_clients",
         "args": "(webhook_url=None)",
-        "line": 687
+        "line": 695
       },
       {
         "name": "generate_release_email",
         "args": "(version, whats_new, bugs_fixed, improvements, release_notes, repo=None)",
-        "line": 703
-      },
-      {
-        "name": "fmt_list",
-        "args": "(text: str)",
         "line": 711
       }
     ],
     "css_classes": [],
-    "raw_tokens": 26275,
+    "raw_tokens": 26484,
     "summary_tokens": 220,
-    "last_analyzed": "2026-10-15T00:38:42.618933",
-    "hash": "905d903517e48b030275cd6389212ad7894e08403de14d8e9e67d548347fd8ac"
+    "last_analyzed": "2026-10-15T11:13:10.905235",
+    "hash": "2f89eae819699fb341b5def62fb6d1dea9ada810ca4030221ec4613d79ad4d34"
   },
   "scripts/make_exe_gui.py": {
     "path": "scripts/make_exe_gui.py",
@@ -16652,5 +16652,31 @@
     "summary_tokens": 220,
     "last_analyzed": "2026-10-15T00:38:42.655771",
     "hash": "a39ff5b40d661cddf53c687a24895e9123c2d8ebcecac1aa6b654f3db5c33254"
+  },
+  "scripts/generate_appx_assets.js": {
+    "path": "scripts/generate_appx_assets.js",
+    "extension": ".js",
+    "loc": 81,
+    "bytes": 3153,
+    "purpose": "Automation, Build & Packaging Script",
+    "imports": [],
+    "internal_imports": [],
+    "external_imports": [],
+    "exports": [],
+    "interfaces_types": [],
+    "react_hooks": [],
+    "ipc_channels": [],
+    "functions_methods": [
+      {
+        "name": "generateAppxAssets",
+        "args": "",
+        "line": 9
+      }
+    ],
+    "css_classes": [],
+    "raw_tokens": 788,
+    "summary_tokens": 220,
+    "last_analyzed": "2026-10-15T11:13:10.897751",
+    "hash": "0fe58960ee87e2810bf4efd648978aa470ae079f6bd7a7a7fb8da26a27737d68"
   }
 }

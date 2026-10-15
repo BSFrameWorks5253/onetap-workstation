@@ -1,8 +1,8 @@
 # 🧠 UniDesk Studio — Hierarchical Codebase Knowledge Base & Analysis Cache
-> **Last Synced**: 2026-10-15 11:03:14  
-> **Total Files Indexed**: 227  
-> **Unchanged (Cached)**: 225 | **Re-analyzed**: 2  
-> **Estimated AI Context Tokens Saved**: ~891,296 tokens!
+> **Last Synced**: 2026-10-15 11:13:10  
+> **Total Files Indexed**: 228  
+> **Unchanged (Cached)**: 225 | **Re-analyzed**: 3  
+> **Estimated AI Context Tokens Saved**: ~892,137 tokens!
 
 This document and the mirrored hierarchy under `.code-analysis/` contain pre-analyzed architectural summaries, exports, interfaces, hooks, and IPC channels for every source file.
 **AI Agents**: Consult `.code-analysis/<path>.md` before reading full raw source files to conserve context window!
@@ -18,7 +18,7 @@ This document and the mirrored hierarchy under `.code-analysis/` contain pre-ana
 | `src/renderer/src/pages` | 40 | Core workstation pages (TitleAdder, VideoConverter, TaskTracker, Settings, etc.) |
 | `src/renderer/src/components` | 104 | Modular UI cards, buttons, loaders, modals, taskbar previews |
 | `src/renderer/src/styles` | 3 | CSS design tokens, soft linen light mode & obsidian dark mode |
-| `scripts` | 11 | Automated build, cross-packaging, analysis and packaging scripts |
+| `scripts` | 12 | Automated build, cross-packaging, analysis and packaging scripts |
 
 ---
 
@@ -27,11 +27,15 @@ This document and the mirrored hierarchy under `.code-analysis/` contain pre-ana
 
 ### `scripts/build-win.js`
 
-- **[scripts/build-win.js](scripts/build-win.js.md)**: Automation, Build & Packaging Script (161 lines)
+- **[scripts/build-win.js](scripts/build-win.js.md)**: Automation, Build & Packaging Script (170 lines)
 
 ### `scripts/codebase_analyzer.py`
 
 - **[scripts/codebase_analyzer.py](scripts/codebase_analyzer.py.md)**: Automation, Build & Packaging Script (361 lines) — Exports: `get_file_hash`, `analyze_source_file`, `generate_module_markdown`, `run_analysis`
+
+### `scripts/generate_appx_assets.js`
+
+- **[scripts/generate_appx_assets.js](scripts/generate_appx_assets.js.md)**: Automation, Build & Packaging Script (81 lines)
 
 ### `scripts/generate_naming_samples.py`
 
@@ -47,7 +51,7 @@ This document and the mirrored hierarchy under `.code-analysis/` contain pre-ana
 
 ### `scripts/make_exe_cross.py`
 
-- **[scripts/make_exe_cross.py](scripts/make_exe_cross.py.md)**: Automation, Build & Packaging Script (2195 lines) — Exports: `load_env`, `save_env_key`, `save_github_token`, `_run_check`
+- **[scripts/make_exe_cross.py](scripts/make_exe_cross.py.md)**: Automation, Build & Packaging Script (2212 lines) — Exports: `load_env`, `save_env_key`, `save_github_token`, `_run_check`
 
 ### `scripts/make_exe_gui.py`
 

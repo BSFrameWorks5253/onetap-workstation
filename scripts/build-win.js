@@ -98,7 +98,16 @@ function buildWindows() {
   ensureWinSharp()
   prepareCustomMsiTemplate()
 
-  const requestedTarget = process.argv[2] // e.g. "zip", "nsis", "dir"
+  const requestedTarget = process.argv[2] // e.g. "zip", "nsis", "msi", "msix", "dir"
+
+  if (requestedTarget === 'msix') {
+    try {
+      const { generateAppxAssets } = require('./generate_appx_assets')
+      generateAppxAssets()
+    } catch (e) {
+      logWarn('Could not auto-generate MSIX assets: ' + e.message)
+    }
+  }
 
   if (process.platform === 'win32') {
     const targetFlag = requestedTarget ? requestedTarget : ''

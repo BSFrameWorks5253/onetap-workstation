@@ -3,7 +3,7 @@
 ╔══════════════════════════════════════════════════════════════════════╗
 ║     UNI DESK — CROSS-PLATFORM BUILD & RELEASE STUDIO                ║
 ║     Works identically on Linux and Windows                          ║
-║     Builds: Windows (.exe / .zip) + Linux (.AppImage / .deb)        ║
+║     Builds: Windows (.exe / .zip / .msi / .msix) + Linux (.AppImage)║
 ╚══════════════════════════════════════════════════════════════════════╝
 Run:
   python3 make_exe_cross.py          (Linux)
@@ -403,6 +403,14 @@ def build_msi(log_fn) -> bool:
     log_fn('-'*56 + '\n')
     return _stream_cmd(f'{NPM_CMD} run build:win:msi', log_fn)
 
+def build_msix(log_fn) -> bool:
+    """Build Windows Store MSIX package via electron-builder."""
+    ensure_icon_ico(log_fn)
+    log_fn('\n' + '-'*56)
+    log_fn('  COMPILING WINDOWS STORE PACKAGE (.msix)  (npm run build:win:msix)')
+    log_fn('-'*56 + '\n')
+    return _stream_cmd(f'{NPM_CMD} run build:win:msix', log_fn)
+
 def is_version_match(filename: str, target_version: str) -> bool:
     """Strictly checks if a filename belongs specifically to target_version and NOT an older/different version."""
     clean = target_version.strip().lstrip('vV')
@@ -439,7 +447,7 @@ def organize_version_release_folder(version: str, log_fn) -> tuple:
                 except Exception:
                     pass
 
-    exts = ('.exe', '.msi', '.appimage', '.deb', '.zip', '.tar.gz', '.blockmap')
+    exts = ('.exe', '.msi', '.msix', '.appimage', '.deb', '.zip', '.tar.gz', '.blockmap')
     collected = []
 
     for d in ['release', 'out']:
@@ -520,7 +528,7 @@ def compile_installer(version: str, log_fn):
 
 
 def find_all_release_assets(version: str) -> list:
-    exts = ('.exe', '.msi', '.appimage', '.deb', '.zip', '.tar.gz')
+    exts = ('.exe', '.msi', '.msix', '.appimage', '.deb', '.zip', '.tar.gz')
     clean = version.strip().lstrip('vV')
     found = []
     seen_basenames = set()
@@ -844,6 +852,7 @@ class UniDeskStudio(ctk.CTk):
         self.opt_update_json  = tk.BooleanVar(value=True)
         self.opt_build_win    = tk.BooleanVar(value=True)
         self.opt_build_msi    = tk.BooleanVar(value=True)
+        self.opt_build_msix   = tk.BooleanVar(value=True)
         self.opt_build_linux  = tk.BooleanVar(value=IS_LINUX or not IS_WIN)
         self.opt_installer    = tk.BooleanVar(value=bool(get_makensis_path() or (IS_WIN and get_iscc_path())))
         self.opt_publish_git  = tk.BooleanVar(value=True)
@@ -975,9 +984,9 @@ class UniDeskStudio(ctk.CTk):
                                           font=(FONT_MONO_NAME, 12, 'bold'), text_color=C_PRIMARY)
         self.lbl_ver_badge.pack(padx=10, pady=(0, 3))
 
-        # Build App (EXE + MSI) Header Button
+        # Build App (EXE + MSI + MSIX) Header Button
         ctk.CTkButton(
-            right_box, text='🚀 Build App (EXE + MSI)', command=self._start_pipeline,
+            right_box, text='🚀 Build App (EXE + MSI + MSIX)', command=self._start_pipeline,
             corner_radius=8, height=34, fg_color=C_PRIMARY, hover_color=C_PRIMARY_HOV,
             text_color='#FFFFFF', font=(FONT_NAME, 11, 'bold')
         ).pack(side='left', padx=(0, 8))
@@ -1118,7 +1127,7 @@ class UniDeskStudio(ctk.CTk):
     def _update_stages_summary(self):
         switches = [
             self.opt_update_files, self.opt_update_json, self.opt_build_win,
-            self.opt_build_msi, self.opt_build_linux, self.opt_installer,
+            self.opt_build_msi, self.opt_build_msix, self.opt_build_linux, self.opt_installer,
             self.opt_publish_git, self.opt_send_email
         ]
         active = sum(1 for s in switches if s.get())
@@ -1220,6 +1229,7 @@ class UniDeskStudio(ctk.CTk):
             ('Manifests', self.opt_update_json),
             ('Windows (.exe)', self.opt_build_win),
             ('Windows (.msi)', self.opt_build_msi),
+            ('Windows Store (.msix)', self.opt_build_msix),
             ('Linux (.AppImage)', self.opt_build_linux),
             ('Setup Installer', self.opt_installer),
             ('GitHub Publish', self.opt_publish_git),
@@ -2055,18 +2065,18 @@ class UniDeskStudio(ctk.CTk):
 
         # 1. Update version files
         if self.opt_update_files.get():
-            self._set_status('Step 1/7: Updating version files...', C_AMBER)
+            self._set_status('Step 1/9: Updating version files...', C_AMBER)
             update_version_in_files(current, target, self._log_fn)
             write_version_txt(target, wn, rn, bf, imp, self._log_fn)
 
         # 2. Manifests
         if self.opt_update_json.get():
-            self._set_status('Step 2/7: Updating changelog manifests...', C_AMBER)
+            self._set_status('Step 2/9: Updating changelog manifests...', C_AMBER)
             update_changelog_databases(target, wn, rn, bf, imp, self._log_fn)
 
         # 3. Windows build (.exe)
         if self.opt_build_win.get():
-            self._set_status('Step 3/8: Building Windows binaries (.exe)...', C_AMBER)
+            self._set_status('Step 3/9: Building Windows binaries (.exe)...', C_AMBER)
             ok = build_windows(self._log_fn)
             if not ok:
                 self._log('[ERROR] Windows compilation failed -- pipeline halted.', 'red')
@@ -2076,28 +2086,35 @@ class UniDeskStudio(ctk.CTk):
 
         # 4. Windows MSI build (.msi)
         if self.opt_build_msi.get():
-            self._set_status('Step 4/8: Building Windows MSI package (.msi)...', C_AMBER)
+            self._set_status('Step 4/9: Building Windows MSI package (.msi)...', C_AMBER)
             ok = build_msi(self._log_fn)
             if not ok:
                 self._log('[WARNING] MSI compilation encountered issues -- continuing.', 'yellow')
 
-        # 5. Linux build
+        # 5. Windows Store build (.msix)
+        if self.opt_build_msix.get():
+            self._set_status('Step 5/9: Building Windows Store package (.msix)...', C_AMBER)
+            ok = build_msix(self._log_fn)
+            if not ok:
+                self._log('[WARNING] MSIX compilation encountered issues -- continuing.', 'yellow')
+
+        # 6. Linux build
         if self.opt_build_linux.get():
-            self._set_status('Step 5/8: Building Linux binaries (.AppImage)...', C_AMBER)
+            self._set_status('Step 6/9: Building Linux binaries (.AppImage)...', C_AMBER)
             ok = build_linux(self._log_fn)
             if not ok:
                 self._log('[WARNING] Linux compilation encountered issues -- continuing.', 'yellow')
 
-        # 6. Installer
+        # 7. Installer
         inno = None
         if self.opt_installer.get():
-            self._set_status('Step 6/8: Compiling Setup installer...', C_AMBER)
+            self._set_status('Step 7/9: Compiling Setup installer...', C_AMBER)
             inno = compile_installer(target, self._log_fn)
             if inno and os.path.exists(inno):
                 self._log(f'[Installer] Successfully generated installer: {inno}', 'green')
 
-        # 7. Organize into Version-Wise Directory: release/<target>/
-        self._set_status(f'Step 7/8: Organizing release/{target}/ archive...', C_AMBER)
+        # 8. Organize into Version-Wise Directory: release/<target>/
+        self._set_status(f'Step 8/9: Organizing release/{target}/ archive...', C_AMBER)
         target_dir, arch_assets = organize_version_release_folder(target, self._log_fn)
         if inno and os.path.exists(inno):
             dest_inno = os.path.join(target_dir, os.path.basename(inno))
@@ -2115,9 +2132,9 @@ class UniDeskStudio(ctk.CTk):
             if fp not in assets and os.path.exists(fp):
                 assets.append(fp)
 
-        # 8. Publish to GitHub Releases
+        # 9. Publish to GitHub Releases
         if self.opt_publish_git.get():
-            self._set_status('Step 8/8: Publishing to GitHub Releases...', C_AMBER)
+            self._set_status('Step 9/9: Publishing to GitHub Releases...', C_AMBER)
             if assets:
                 body = generate_github_markdown(target, wn, bf, imp, rn)
                 pub_ok = upload_to_github(target, assets, body, self._log_fn)
@@ -2126,9 +2143,9 @@ class UniDeskStudio(ctk.CTk):
             else:
                 self._log(f'[WARNING] No artifacts found for v{target} -- skipping GitHub publish.', 'yellow')
 
-        # 7. Broadcast email notifications
+        # 10. Broadcast email notifications
         if self.opt_send_email.get():
-            self._set_status('Step 7/7: Broadcasting email release notifications...', C_AMBER)
+            self._set_status('Step 10/10: Broadcasting email release notifications...', C_AMBER)
             webhook = self._get_webhook()
             clients = fetch_google_clients(webhook)
             if clients:
