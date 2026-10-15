@@ -80,7 +80,7 @@ export default function Settings(): JSX.Element {
   const [updateInfo, setUpdateInfo] = useState<any>(null)
   const [downloadProgress, setDownloadProgress] = useState({ percent: 0, transferredBytes: 0, totalBytes: 0, speedBytesPerSec: 0 })
   const [autoCheckUpdates, setAutoCheckUpdates] = useState(true)
-  const [appVersion, setAppVersion] = useState('26.10.10')
+  const [appVersion, setAppVersion] = useState('26.11.0')
   const [_updateError, setUpdateError] = useState('')
 
   // Auto-start state

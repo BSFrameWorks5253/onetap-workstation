@@ -21,7 +21,7 @@ export default function Sidebar({ activePage, onNavigate, busyPages, adderProgre
   const navRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const [indicatorY, setIndicatorY] = useState(0)
   const [indicatorH, setIndicatorH] = useState(60)
-  const [version, setVersion] = useState('26.10.10')
+  const [version, setVersion] = useState('26.11.0')
   const [collapsed, setCollapsed] = useState(() => {
     const saved = localStorage.getItem('sidebar_collapsed')
     console.log('[Sidebar] Initializing collapsed state from localStorage:', saved)

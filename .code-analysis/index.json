@@ -3375,7 +3375,7 @@
     "path": "src/main/ipc/update.ipc.ts",
     "extension": ".ts",
     "loc": 491,
-    "bytes": 17766,
+    "bytes": 17765,
     "purpose": "Electron Main Process / Background Engine",
     "imports": [
       "{ ipcMain, app, BrowserWindow } from 'electron'",
@@ -3392,14 +3392,14 @@
       "../core/settingsManager"
     ],
     "external_imports": [
-      "electron",
+      "crypto",
       "https",
+      "url",
+      "electron",
       "child_process",
       "path",
-      "crypto",
-      "url",
-      "http",
-      "fs"
+      "fs",
+      "http"
     ],
     "exports": [
       {
@@ -3472,8 +3472,8 @@
     "css_classes": [],
     "raw_tokens": 4441,
     "summary_tokens": 220,
-    "last_analyzed": "2026-10-14T23:33:22.666223",
-    "hash": "8a68d5b530113c3f392587fdb5233bb11bf3e12f0eeb14c730e0a95252230ba9"
+    "last_analyzed": "2026-10-15T11:35:23.521005",
+    "hash": "f4954e4d7b515456d8cf7e7bc7538546e04929e038fde488ddd5ccf05bc3b301"
   },
   "src/main/ipc/userProfile.ipc.ts": {
     "path": "src/main/ipc/userProfile.ipc.ts",
@@ -9082,7 +9082,7 @@
     "path": "src/renderer/src/components/Sidebar/Sidebar.tsx",
     "extension": ".tsx",
     "loc": 204,
-    "bytes": 7352,
+    "bytes": 7351,
     "purpose": "Modular UI Component",
     "imports": [
       "{ PAGE_META } from '../../types'",
@@ -9093,12 +9093,12 @@
       "PageHoverPreview from '../TaskbarPreview/PageHoverPreview'"
     ],
     "internal_imports": [
-      "../TaskbarPreview/PageHoverPreview",
-      "../NavItem",
+      "../../types",
       "./Sidebar.css",
-      "../MorphingBrand",
       "../../theme/ThemeContext",
-      "../../types"
+      "../MorphingBrand",
+      "../NavItem",
+      "../TaskbarPreview/PageHoverPreview"
     ],
     "external_imports": [],
     "exports": [
@@ -9149,10 +9149,10 @@
       }
     ],
     "css_classes": [],
-    "raw_tokens": 1838,
+    "raw_tokens": 1837,
     "summary_tokens": 220,
-    "last_analyzed": "2026-10-14T23:33:23.245393",
-    "hash": "6a60cf97455cb4f01cbf95e14241cc04b0f52fccee3c8d2fc82b5977361e8c1a"
+    "last_analyzed": "2026-10-15T11:35:23.555980",
+    "hash": "ac35fcd6d319729d2feb61b1dfe8687a95d0b5e55946f99e3a7050c4de1cf985"
   },
   "src/renderer/src/components/Skeleton/index.ts": {
     "path": "src/renderer/src/components/Skeleton/index.ts",
@@ -9414,15 +9414,15 @@
     "path": "src/renderer/src/components/SplashScreen/SplashScreen.tsx",
     "extension": ".tsx",
     "loc": 342,
-    "bytes": 11393,
+    "bytes": 11392,
     "purpose": "Modular UI Component",
     "imports": [
       "* from './SplashScreen.css'",
       "zenLogo from '../../assets/zen_final_nobg.png'"
     ],
     "internal_imports": [
-      "./SplashScreen.css",
-      "../../assets/zen_final_nobg.png"
+      "../../assets/zen_final_nobg.png",
+      "./SplashScreen.css"
     ],
     "external_imports": [],
     "exports": [
@@ -9489,8 +9489,8 @@
     "css_classes": [],
     "raw_tokens": 2848,
     "summary_tokens": 220,
-    "last_analyzed": "2026-10-14T23:33:23.286670",
-    "hash": "b29982f3c7b1205807b50e09ba673f907620441f2c1581c65a9c52c086ea34ba"
+    "last_analyzed": "2026-10-15T11:35:23.561797",
+    "hash": "1aa8934075419d507d512ff531365d884eb86a60c78a66f9185ca0c5b39893b0"
   },
   "src/renderer/src/components/StatCard/index.ts": {
     "path": "src/renderer/src/components/StatCard/index.ts",
@@ -12785,7 +12785,7 @@
     "path": "src/renderer/src/pages/Settings/Settings.tsx",
     "extension": ".tsx",
     "loc": 2135,
-    "bytes": 103266,
+    "bytes": 103265,
     "purpose": "Renderer UI Page View",
     "imports": [
       "{ createPortal } from 'react-dom'",
@@ -12802,17 +12802,17 @@
       "* from './Settings.css'"
     ],
     "internal_imports": [
-      "../../components/Toast",
-      "./FileViewerSettingsCard",
-      "../../components/Loaders",
-      "../CameraTransfer/CameraTransfer",
-      "../../components/SoundProvider",
-      "../../components/Button",
-      "../../components/StatCard",
-      "../../theme/ThemeContext",
       "../../components/Card",
       "./Settings.css",
-      "../../components/Input"
+      "../../theme/ThemeContext",
+      "../../components/Toast",
+      "../../components/SoundProvider",
+      "../../components/Input",
+      "../../components/StatCard",
+      "../../components/Loaders",
+      "./FileViewerSettingsCard",
+      "../../components/Button",
+      "../CameraTransfer/CameraTransfer"
     ],
     "external_imports": [
       "react-dom"
@@ -12988,8 +12988,8 @@
     "css_classes": [],
     "raw_tokens": 25816,
     "summary_tokens": 220,
-    "last_analyzed": "2026-10-14T23:42:04.076757",
-    "hash": "2c4f4d82523cf740a05d79a32e4ae2f834e153cab9a37aa76e51ad1a8bb08f7b"
+    "last_analyzed": "2026-10-15T11:35:23.619809",
+    "hash": "0b7610b82cf7bcf6b6a6f5857efb49abd3b0f097f4d461a57e0384fd2f925e56"
   },
   "src/renderer/src/pages/Stats/Stats.css": {
     "path": "src/renderer/src/pages/Stats/Stats.css",
@@ -15195,8 +15195,8 @@
   "scripts/build-win.js": {
     "path": "scripts/build-win.js",
     "extension": ".js",
-    "loc": 170,
-    "bytes": 6584,
+    "loc": 171,
+    "bytes": 6651,
     "purpose": "Automation, Build & Packaging Script",
     "imports": [],
     "internal_imports": [],
@@ -15248,10 +15248,10 @@
       }
     ],
     "css_classes": [],
-    "raw_tokens": 1646,
+    "raw_tokens": 1662,
     "summary_tokens": 220,
-    "last_analyzed": "2026-10-15T11:13:10.896167",
-    "hash": "828d9dfc64bd84f757adc9819cc163c27cd4cf0e0ea4743e308af6f7efbc7d38"
+    "last_analyzed": "2026-10-15T11:35:23.642623",
+    "hash": "85bf9f337036a9f5427e57b23573dadde164f9c992c040973837677193eff121"
   },
   "scripts/codebase_analyzer.py": {
     "path": "scripts/codebase_analyzer.py",
@@ -15685,7 +15685,7 @@
     "path": "scripts/make_exe_cross.py",
     "extension": ".py",
     "loc": 2212,
-    "bytes": 105937,
+    "bytes": 105955,
     "purpose": "Automation, Build & Packaging Script",
     "imports": [
       "import json",
@@ -15991,10 +15991,10 @@
       }
     ],
     "css_classes": [],
-    "raw_tokens": 26484,
+    "raw_tokens": 26488,
     "summary_tokens": 220,
-    "last_analyzed": "2026-10-15T11:13:10.905235",
-    "hash": "2f89eae819699fb341b5def62fb6d1dea9ada810ca4030221ec4613d79ad4d34"
+    "last_analyzed": "2026-10-15T11:35:23.654394",
+    "hash": "004a31522af64290eb67d5bc8a4c0ed4dd00dacf45e5999306f7809b209c4e09"
   },
   "scripts/make_exe_gui.py": {
     "path": "scripts/make_exe_gui.py",

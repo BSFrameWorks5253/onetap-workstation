@@ -1,8 +1,8 @@
 # 🧠 UniDesk Studio — Hierarchical Codebase Knowledge Base & Analysis Cache
-> **Last Synced**: 2026-10-15 11:25:23  
+> **Last Synced**: 2026-10-15 11:35:23  
 > **Total Files Indexed**: 228  
-> **Unchanged (Cached)**: 223 | **Re-analyzed**: 5  
-> **Estimated AI Context Tokens Saved**: ~892,239 tokens!
+> **Unchanged (Cached)**: 222 | **Re-analyzed**: 6  
+> **Estimated AI Context Tokens Saved**: ~892,258 tokens!
 
 This document and the mirrored hierarchy under `.code-analysis/` contain pre-analyzed architectural summaries, exports, interfaces, hooks, and IPC channels for every source file.
 **AI Agents**: Consult `.code-analysis/<path>.md` before reading full raw source files to conserve context window!
@@ -27,7 +27,7 @@ This document and the mirrored hierarchy under `.code-analysis/` contain pre-ana
 
 ### `scripts/build-win.js`
 
-- **[scripts/build-win.js](scripts/build-win.js.md)**: Automation, Build & Packaging Script (170 lines)
+- **[scripts/build-win.js](scripts/build-win.js.md)**: Automation, Build & Packaging Script (171 lines)
 
 ### `scripts/codebase_analyzer.py`
 

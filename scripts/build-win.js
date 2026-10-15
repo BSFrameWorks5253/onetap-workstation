@@ -99,20 +99,21 @@ function buildWindows() {
   prepareCustomMsiTemplate()
 
   const requestedTarget = process.argv[2] // e.g. "zip", "nsis", "msi", "msix", "dir"
+  let builderTarget = requestedTarget ? requestedTarget : ''
 
-  if (requestedTarget === 'msix') {
+  if (requestedTarget === 'msix' || requestedTarget === 'appx') {
+    builderTarget = 'appx'
     try {
       const { generateAppxAssets } = require('./generate_appx_assets')
       generateAppxAssets()
     } catch (e) {
-      logWarn('Could not auto-generate MSIX assets: ' + e.message)
+      logWarn('Could not auto-generate MSIX/AppX assets: ' + e.message)
     }
   }
 
   if (process.platform === 'win32') {
-    const targetFlag = requestedTarget ? requestedTarget : ''
-    log(`Building Windows application natively on Windows (${targetFlag || 'nsis'})...`)
-    execSync(`npx electron-builder --win ${targetFlag}`, { stdio: 'inherit' })
+    log(`Building Windows application natively on Windows (${builderTarget || 'nsis'})...`)
+    execSync(`npx electron-builder --win ${builderTarget}`, { stdio: 'inherit' })
     logSuccess('Windows compilation finished successfully.')
     return
   }

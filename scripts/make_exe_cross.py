@@ -447,7 +447,7 @@ def organize_version_release_folder(version: str, log_fn) -> tuple:
                 except Exception:
                     pass
 
-    exts = ('.exe', '.msi', '.msix', '.appimage', '.deb', '.zip', '.tar.gz', '.blockmap')
+    exts = ('.exe', '.msi', '.msix', '.appx', '.appimage', '.deb', '.zip', '.tar.gz', '.blockmap')
     collected = []
 
     for d in ['release', 'out']:
@@ -528,7 +528,7 @@ def compile_installer(version: str, log_fn):
 
 
 def find_all_release_assets(version: str) -> list:
-    exts = ('.exe', '.msi', '.msix', '.appimage', '.deb', '.zip', '.tar.gz')
+    exts = ('.exe', '.msi', '.msix', '.appx', '.appimage', '.deb', '.zip', '.tar.gz')
     clean = version.strip().lstrip('vV')
     found = []
     seen_basenames = set()

@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/main/ipc/update.ipc.ts`
 > **Role**: Electron Main Process / Background Engine  
 > **Metrics**: 491 lines · 17.3 KB · ~4,441 raw tokens → ~220 cached (95.0% saved)  
-> **Last Analyzed**: 2026-10-14T23:33:22.666223  
+> **Last Analyzed**: 2026-10-15T11:35:23.521005  
 
 ---
 
@@ -36,7 +36,7 @@ This file operates as part of the **Electron Main Process / Background Engine** 
 | 213 | `registerUpdateIPC(mainWindowGetter: ()` |
 
 ## 8. Dependencies & Module Linkages
-- **External Packages**: `electron`, `https`, `child_process`, `path`, `crypto`, `url`, `http`, `fs`
+- **External Packages**: `crypto`, `https`, `url`, `electron`, `child_process`, `path`, `fs`, `http`
 - **Internal Relatives**: `../core/settingsManager`
 
 ---

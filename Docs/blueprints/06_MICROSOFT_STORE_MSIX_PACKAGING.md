@@ -92,7 +92,7 @@ The following configuration demonstrates a production-grade Windows configuratio
       "icon": "resources/icon.ico",
       "publisherName": "BS.Framework"
     },
-    "msix": {
+    "appx": {
       "identityName": "BSFramework.UniDesk",
       "publisherDisplayName": "BS.Framework",
       "publisher": "CN=YOUR-MICROSOFT-PUBLISHER-ID",
@@ -101,21 +101,18 @@ The following configuration demonstrates a production-grade Windows configuratio
       "languages": ["en-US"],
       "backgroundColor": "#0c1017",
       "showNameOnTiles": true,
-      "capabilities": [
-        "runFullTrust"
-      ],
-      "artifactName": "${productName}_Store_V${version}.${ext}",
-      "autoUpdate": false
+      "artifactName": "${productName}_Store_V${version}.${ext}"
     }
   }
 }
 ```
 
-### Critical MSIX Fields Explained:
-* **`capabilities: ["runFullTrust"]`**: Mandatory for Electron apps. Tells Windows that the application utilizes the desktop bridge to run full Win32 Node.js APIs.
+### Critical MSIX / AppX Fields Explained:
+* **Target Key `"appx"`**: In `electron-builder` 24.x, the top-level configuration key is `"appx"`. Electron-builder targets both `.appx` and modern `.msix` containers using Microsoft Desktop Bridge (Project Centennial).
+* **Automatic `runFullTrust` Capability**: Electron-builder's internal template (`app-builder-lib/templates/appx/appxmanifest.xml`) automatically injects the `runFullTrust` capability into the manifest so Win32/Node.js APIs function seamlessly without manual declaration.
 * **`backgroundColor: "#0c1017"`**: Hex color used as the backdrop for Windows 10/11 Start Menu tiles, search results, and initial splash screen windows.
 * **`showNameOnTiles: true`**: Renders the product name typography cleanly over the medium and wide tiles.
-* **`autoUpdate: false`**: Disables `electron-updater` inside the MSIX package. The Microsoft Store automatically handles seamless background binary delta updates.
+* **Store-Managed Updates**: Microsoft Store automatically handles seamless background binary delta updates on Windows 10/11.
 
 ---
 

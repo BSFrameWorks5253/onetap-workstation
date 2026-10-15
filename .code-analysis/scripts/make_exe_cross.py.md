@@ -1,7 +1,7 @@
 # Detailed Analysis: `scripts/make_exe_cross.py`
 > **Role**: Automation, Build & Packaging Script  
-> **Metrics**: 2212 lines · 103.5 KB · ~26,484 raw tokens → ~220 cached (99.2% saved)  
-> **Last Analyzed**: 2026-10-15T11:13:10.905235  
+> **Metrics**: 2212 lines · 103.5 KB · ~26,488 raw tokens → ~220 cached (99.2% saved)  
+> **Last Analyzed**: 2026-10-15T11:35:23.654394  
 
 ---
 

@@ -1,5 +1,5 @@
 [VERSION]
-26.10.10
+26.11.0
 
 [WHATS_NEW]
 * Hierarchical Codebase Analysis Engine: Automatically mirrors folder structure in .code-analysis/ with minute details (exports, types, hooks, IPC channels) saving ~888,000+ AI context tokens.
@@ -20,4 +20,4 @@
 * Light & Dark Mode Contrast Tuning: Warm architectural linen light mode and high-contrast obsidian dark mode for zero eye strain.
 
 [RELEASE_NOTES]
-UniDesk Studio v26.10.10 is a major milestone release introducing an enterprise-grade hierarchical codebase token caching engine, native Windows taskbar-style live page previews, an authentic Islamic welcome screen with kinetic Arabic typography, multi-folder batch rendering reordering, and critical stability fixes preventing Task Tracker background freezes.
+UniDesk Studio v26.11.0 is a major milestone release introducing an enterprise-grade hierarchical codebase token caching engine, native Windows taskbar-style live page previews, an authentic Islamic welcome screen with kinetic Arabic typography, multi-folder batch rendering reordering, and critical stability fixes preventing Task Tracker background freezes.
