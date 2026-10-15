@@ -75,6 +75,33 @@ function ensureProcessClosed() {
 
 function prepareCustomMsiTemplate() {
   try {
+    const { generateInstallerAssets } = require('./generate_installer_assets')
+    generateInstallerAssets()
+  } catch (err) {
+    logWarn('Could not auto-generate installer assets: ' + err.message)
+  }
+
+  try {
+    const msiTargetFile = path.join(process.cwd(), 'node_modules', 'app-builder-lib', 'out', 'targets', 'MsiTarget.js')
+    if (fs.existsSync(msiTargetFile)) {
+      let code = fs.readFileSync(msiTargetFile, 'utf8')
+      if (code.includes('path.join(resourceDir, "installer_banner.bmp")')) {
+        code = code.replace(
+          'path.join(resourceDir, "installer_banner.bmp")',
+          'path.join(this.packager.projectDir, "build", "wix_dialog.bmp")'
+        ).replace(
+          'path.join(resourceDir, "installer_small.bmp")',
+          'path.join(this.packager.projectDir, "build", "wix_banner.bmp")'
+        )
+        fs.writeFileSync(msiTargetFile, code, 'utf8')
+        logSuccess('Routed professional 493x312 WiX dialog bitmap to MsiTarget.')
+      }
+    }
+  } catch (err) {
+    logWarn('Could not auto-patch MsiTarget: ' + err.message)
+  }
+
+  try {
     const tplPath = path.join(process.cwd(), 'node_modules', 'app-builder-lib', 'templates', 'msi', 'template.xml')
     if (fs.existsSync(tplPath)) {
       let content = fs.readFileSync(tplPath, 'utf8')
@@ -128,6 +155,15 @@ function buildWindows() {
   if (process.platform === 'win32') {
     log(`Building Windows application natively on Windows (${builderTarget || 'nsis'})...`)
     execSync(`npx electron-builder --win ${builderTarget}`, { stdio: 'inherit' })
+    if (builderTarget === 'appx') {
+      try {
+        log('Signing AppX / MSIX package with Windows SDK SignTool and developer certificate...')
+        execSync(`powershell -NoProfile -ExecutionPolicy Bypass -File "${path.join(__dirname, 'sign_appx.ps1')}"`, { stdio: 'inherit' })
+        logSuccess('AppX / MSIX package successfully signed with trusted developer certificate!')
+      } catch (signErr) {
+        logWarn('Could not auto-sign AppX package: ' + signErr.message)
+      }
+    }
     logSuccess('Windows compilation finished successfully.')
     return
   }

@@ -1176,8 +1176,8 @@
   "src/main/core/settingsManager.ts": {
     "path": "src/main/core/settingsManager.ts",
     "extension": ".ts",
-    "loc": 520,
-    "bytes": 19036,
+    "loc": 530,
+    "bytes": 19572,
     "purpose": "Electron Main Process / Background Engine",
     "imports": [
       "fs from 'fs'",
@@ -1204,82 +1204,82 @@
       {
         "kind": "function",
         "name": "flushSaveSync",
-        "line": 329
+        "line": 339
       },
       {
         "kind": "function",
         "name": "initSettings",
-        "line": 395
+        "line": 405
       },
       {
         "kind": "function",
         "name": "needsSetup",
-        "line": 428
+        "line": 438
       },
       {
         "kind": "function",
         "name": "completeSetup",
-        "line": 432
+        "line": 442
       },
       {
         "kind": "function",
         "name": "changeSettingsFolder",
-        "line": 441
+        "line": 451
       },
       {
         "kind": "function",
         "name": "setSettingsFilePath",
-        "line": 458
+        "line": 468
       },
       {
         "kind": "function",
         "name": "get",
-        "line": 471
-      },
-      {
-        "kind": "function",
-        "name": "set",
-        "line": 477
-      },
-      {
-        "kind": "function",
-        "name": "setAndSave",
         "line": 481
       },
       {
         "kind": "function",
+        "name": "set",
+        "line": 487
+      },
+      {
+        "kind": "function",
+        "name": "setAndSave",
+        "line": 491
+      },
+      {
+        "kind": "function",
         "name": "getAll",
-        "line": 486
+        "line": 496
       },
       {
         "kind": "function",
         "name": "getSettingsFilePath",
-        "line": 490
+        "line": 500
       },
       {
         "kind": "function",
         "name": "getSettingsFolder",
-        "line": 494
+        "line": 504
       },
       {
         "kind": "function",
         "name": "resetSection",
-        "line": 498
+        "line": 508
       },
       {
         "kind": "function",
         "name": "resetAll",
-        "line": 505
+        "line": 515
       },
       {
         "kind": "function",
         "name": "isConfirmationDisabled",
-        "line": 510
+        "line": 520
       },
       {
         "kind": "function",
         "name": "disableConfirmation",
-        "line": 515
+        "line": 525
       }
     ],
     "interfaces_types": [],
@@ -1309,109 +1309,109 @@
       {
         "name": "writeLocator",
         "args": "folder: string",
-        "line": 278
+        "line": 288
       },
       {
         "name": "loadFromFile",
         "args": "",
-        "line": 292
+        "line": 302
       },
       {
         "name": "flushSaveSync",
         "args": "",
-        "line": 329
+        "line": 339
       },
       {
         "name": "performAsyncSave",
         "args": "",
-        "line": 351
+        "line": 361
       },
       {
         "name": "save",
         "args": "immediate = false",
-        "line": 380
+        "line": 390
       },
       {
         "name": "initSettings",
         "args": "",
-        "line": 395
+        "line": 405
       },
       {
         "name": "needsSetup",
         "args": "",
-        "line": 428
+        "line": 438
       },
       {
         "name": "completeSetup",
         "args": "folder: string",
-        "line": 432
+        "line": 442
       },
       {
         "name": "changeSettingsFolder",
         "args": "newFolder: string",
-        "line": 441
+        "line": 451
       },
       {
         "name": "setSettingsFilePath",
         "args": "filePath: string",
-        "line": 458
+        "line": 468
       },
       {
         "name": "get",
         "args": "key: string, defaultVal?: unknown",
-        "line": 471
+        "line": 481
       },
       {
         "name": "set",
         "args": "key: string, value: unknown",
-        "line": 477
+        "line": 487
       },
       {
         "name": "setAndSave",
         "args": "key: string, value: unknown",
-        "line": 481
+        "line": 491
       },
       {
         "name": "getAll",
         "args": "",
-        "line": 486
+        "line": 496
       },
       {
         "name": "getSettingsFilePath",
         "args": "",
-        "line": 490
+        "line": 500
       },
       {
         "name": "getSettingsFolder",
         "args": "",
-        "line": 494
+        "line": 504
       },
       {
         "name": "resetSection",
         "args": "keys: string[]",
-        "line": 498
+        "line": 508
       },
       {
         "name": "resetAll",
         "args": "",
-        "line": 505
+        "line": 515
       },
       {
         "name": "isConfirmationDisabled",
         "args": "actionId: string",
-        "line": 510
+        "line": 520
       },
       {
         "name": "disableConfirmation",
         "args": "actionId: string",
-        "line": 515
+        "line": 525
       }
     ],
     "css_classes": [],
-    "raw_tokens": 4759,
+    "raw_tokens": 4893,
     "summary_tokens": 220,
-    "last_analyzed": "2026-10-15T00:38:41.546652",
-    "hash": "b2bce27f6cc1b7bdee743872d1a74a6ef4f04222621f98646ee531a24cfe612c"
+    "last_analyzed": "2026-10-15T12:47:54.063262",
+    "hash": "56252bad0b82bf5678a2bbf0e15c4a92953e8021017a20807c3eeefa4cc9cd51"
   },
   "src/main/core/syncReportExporter.ts": {
     "path": "src/main/core/syncReportExporter.ts",
@@ -3392,14 +3392,14 @@
       "../core/settingsManager"
     ],
     "external_imports": [
-      "electron",
       "crypto",
-      "fs",
+      "url",
+      "child_process",
       "http",
       "path",
-      "child_process",
+      "fs",
       "https",
-      "url"
+      "electron"
     ],
     "exports": [
       {
@@ -3472,8 +3472,8 @@
     "css_classes": [],
     "raw_tokens": 4441,
     "summary_tokens": 220,
-    "last_analyzed": "2026-10-15T12:10:36.539428",
-    "hash": "be23640e68c07d4a3686801d313acf07ec172a515f6529541b8128a9fdea6389"
+    "last_analyzed": "2026-10-15T12:47:54.071681",
+    "hash": "a00d177e2a656fe64bf4716851906015aacb15e98057dbadf988229f3fa31abe"
   },
   "src/main/ipc/userProfile.ipc.ts": {
     "path": "src/main/ipc/userProfile.ipc.ts",
@@ -9093,12 +9093,12 @@
       "PageHoverPreview from '../TaskbarPreview/PageHoverPreview'"
     ],
     "internal_imports": [
-      "../MorphingBrand",
+      "../TaskbarPreview/PageHoverPreview",
       "../../types",
       "./Sidebar.css",
-      "../TaskbarPreview/PageHoverPreview",
-      "../../theme/ThemeContext",
-      "../NavItem"
+      "../NavItem",
+      "../MorphingBrand",
+      "../../theme/ThemeContext"
     ],
     "external_imports": [],
     "exports": [
@@ -9151,8 +9151,8 @@
     "css_classes": [],
     "raw_tokens": 1838,
     "summary_tokens": 220,
-    "last_analyzed": "2026-10-15T12:10:36.677387",
-    "hash": "341c2d7e2b1390df0c5b316561db0478cc351b25995b525646474f4ed5f5f9dd"
+    "last_analyzed": "2026-10-15T12:47:54.094679",
+    "hash": "eb6c6c39b5deee7cf2113bf2a48125b096f958ea0d9c2a11d65a1b3725a88e85"
   },
   "src/renderer/src/components/Skeleton/index.ts": {
     "path": "src/renderer/src/components/Skeleton/index.ts",
@@ -9489,8 +9489,8 @@
     "css_classes": [],
     "raw_tokens": 2848,
     "summary_tokens": 220,
-    "last_analyzed": "2026-10-15T12:10:36.697950",
-    "hash": "4252094a2fbdc7742612801216137f88c5f186c002af694aabe9ab1c57e72679"
+    "last_analyzed": "2026-10-15T12:47:54.098929",
+    "hash": "1426d0e21d3f8e886de1859d94d372cc09ac19e4385c0732436596cef20b40a8"
   },
   "src/renderer/src/components/StatCard/index.ts": {
     "path": "src/renderer/src/components/StatCard/index.ts",
@@ -12802,17 +12802,17 @@
       "* from './Settings.css'"
     ],
     "internal_imports": [
-      "../../components/StatCard",
-      "../../components/Input",
-      "../../components/Loaders",
-      "../../components/Card",
       "./FileViewerSettingsCard",
-      "../../components/SoundProvider",
-      "../CameraTransfer/CameraTransfer",
-      "../../theme/ThemeContext",
+      "../../components/StatCard",
       "../../components/Toast",
+      "../CameraTransfer/CameraTransfer",
       "./Settings.css",
-      "../../components/Button"
+      "../../components/Input",
+      "../../components/Button",
+      "../../components/Loaders",
+      "../../theme/ThemeContext",
+      "../../components/Card",
+      "../../components/SoundProvider"
     ],
     "external_imports": [
       "react-dom"
@@ -12988,8 +12988,8 @@
     "css_classes": [],
     "raw_tokens": 25816,
     "summary_tokens": 220,
-    "last_analyzed": "2026-10-15T12:10:36.836833",
-    "hash": "66bc83f8022382607a85feab733bc2394d84df9de45cfe4a4de5c26d084bc7f8"
+    "last_analyzed": "2026-10-15T12:47:54.139980",
+    "hash": "2a58105f8f4c473b37602718931de2ba82f872016e9890140fa7cd585b4f3d51"
   },
   "src/renderer/src/pages/Stats/Stats.css": {
     "path": "src/renderer/src/pages/Stats/Stats.css",
@@ -15195,8 +15195,8 @@
   "scripts/build-win.js": {
     "path": "scripts/build-win.js",
     "extension": ".js",
-    "loc": 185,
-    "bytes": 7114,
+    "loc": 221,
+    "bytes": 8682,
     "purpose": "Automation, Build & Packaging Script",
     "imports": [],
     "internal_imports": [],
@@ -15244,14 +15244,14 @@
       {
         "name": "buildWindows",
         "args": "",
-        "line": 110
+        "line": 137
       }
     ],
     "css_classes": [],
-    "raw_tokens": 1778,
+    "raw_tokens": 2170,
     "summary_tokens": 220,
-    "last_analyzed": "2026-10-15T11:51:26.576884",
-    "hash": "53bea111df179f86e3e0fa9e40a4de13b636285102f4a30a3cbf467a7275746c"
+    "last_analyzed": "2026-10-15T12:47:54.152841",
+    "hash": "20746f7c896eeaa3c6f74525440e4ce52ba1921c9766e39524bc83817deb267b"
   },
   "scripts/codebase_analyzer.py": {
     "path": "scripts/codebase_analyzer.py",
@@ -16676,5 +16676,36 @@
     "summary_tokens": 220,
     "last_analyzed": "2026-10-15T11:13:10.897751",
     "hash": "0fe58960ee87e2810bf4efd648978aa470ae079f6bd7a7a7fb8da26a27737d68"
+  },
+  "scripts/generate_installer_assets.js": {
+    "path": "scripts/generate_installer_assets.js",
+    "extension": ".js",
+    "loc": 176,
+    "bytes": 7612,
+    "purpose": "Automation, Build & Packaging Script",
+    "imports": [],
+    "internal_imports": [],
+    "external_imports": [],
+    "exports": [],
+    "interfaces_types": [],
+    "react_hooks": [],
+    "ipc_channels": [],
+    "functions_methods": [
+      {
+        "name": "rawRgbToBmp",
+        "args": "buffer, width, height",
+        "line": 5
+      },
+      {
+        "name": "generateInstallerAssets",
+        "args": "",
+        "line": 37
+      }
+    ],
+    "css_classes": [],
+    "raw_tokens": 1903,
+    "summary_tokens": 220,
+    "last_analyzed": "2026-10-15T12:47:54.155435",
+    "hash": "cd2e35b8d09d0e96c128957dbfdf96e6dbdfdef6a494fe6200163adea27b734e"
   }
 }

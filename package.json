@@ -1,6 +1,6 @@
 {
   "name": "UniDesk_App",
-  "version": "26.10.11",
+  "version": "26.10.12",
   "description": "UniDesk Studio \u2014 Next-Generation Automated Video Production Workstation, Sequential Multi-Batch Rendering Engine and Media Asset Management Platform for Windows and Linux.",
   "author": "BS.Framework <bs.framework5253@gmail.com>",
   "license": "SEE LICENSE IN LICENSE",
@@ -286,7 +286,7 @@
     "appx": {
       "identityName": "BSFramework.UniDesk",
       "publisherDisplayName": "BS.Framework",
-      "publisher": "CN=YOUR-MICROSOFT-PUBLISHER-ID",
+      "publisher": "CN=BSFramework.UniDesk",
       "applicationId": "UniDesk",
       "displayName": "Uni Desk",
       "languages": [

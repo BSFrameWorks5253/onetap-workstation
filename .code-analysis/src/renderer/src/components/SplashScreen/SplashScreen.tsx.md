@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/components/SplashScreen/SplashScreen.tsx`
 > **Role**: Modular UI Component  
 > **Metrics**: 342 lines · 11.1 KB · ~2,848 raw tokens → ~220 cached (92.3% saved)  
-> **Last Analyzed**: 2026-10-15T12:10:36.697950  
+> **Last Analyzed**: 2026-10-15T12:47:54.098929  
 
 ---
 

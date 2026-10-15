@@ -266,9 +266,19 @@ function readLocator(): string | null {
         writeLocator(fallbackDir)
         return fallbackDir
       }
+    // 4. Default fallback on fresh install: automatically assign standard storage without interrupting the user
+    const autoDir = path.join(os.homedir(), 'Documents', 'Uni Desk')
+    try {
+      fs.mkdirSync(autoDir, { recursive: true })
+      writeLocator(autoDir)
+      console.log(`[Settings] Fresh install detected. Auto-assigned storage to: ${autoDir}`)
+      return autoDir
+    } catch {
+      const fallbackDir = PRIMARY_LOCATOR_DIR
+      fs.mkdirSync(fallbackDir, { recursive: true })
+      writeLocator(fallbackDir)
+      return fallbackDir
     }
-
-    return null
   } catch (e) {
     console.error('[Settings] Error resolving locator:', e)
     return null

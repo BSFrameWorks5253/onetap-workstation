@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/main/core/settingsManager.ts`
 > **Role**: Electron Main Process / Background Engine  
-> **Metrics**: 520 lines · 18.6 KB · ~4,759 raw tokens → ~220 cached (95.4% saved)  
-> **Last Analyzed**: 2026-10-15T00:38:41.546652  
+> **Metrics**: 530 lines · 19.1 KB · ~4,893 raw tokens → ~220 cached (95.5% saved)  
+> **Last Analyzed**: 2026-10-15T12:47:54.063262  
 
 ---
 
@@ -13,22 +13,22 @@ This file operates as part of the **Electron Main Process / Background Engine** 
 |:---|:---|:---:|
 | `function` | `getDefaultTitlesFolder` | Line 38 |
 | `const` | `DEFAULTS` | Line 67 |
-| `function` | `flushSaveSync` | Line 329 |
-| `function` | `initSettings` | Line 395 |
-| `function` | `needsSetup` | Line 428 |
-| `function` | `completeSetup` | Line 432 |
-| `function` | `changeSettingsFolder` | Line 441 |
-| `function` | `setSettingsFilePath` | Line 458 |
-| `function` | `get` | Line 471 |
-| `function` | `set` | Line 477 |
-| `function` | `setAndSave` | Line 481 |
-| `function` | `getAll` | Line 486 |
-| `function` | `getSettingsFilePath` | Line 490 |
-| `function` | `getSettingsFolder` | Line 494 |
-| `function` | `resetSection` | Line 498 |
-| `function` | `resetAll` | Line 505 |
-| `function` | `isConfirmationDisabled` | Line 510 |
-| `function` | `disableConfirmation` | Line 515 |
+| `function` | `flushSaveSync` | Line 339 |
+| `function` | `initSettings` | Line 405 |
+| `function` | `needsSetup` | Line 438 |
+| `function` | `completeSetup` | Line 442 |
+| `function` | `changeSettingsFolder` | Line 451 |
+| `function` | `setSettingsFilePath` | Line 468 |
+| `function` | `get` | Line 481 |
+| `function` | `set` | Line 487 |
+| `function` | `setAndSave` | Line 491 |
+| `function` | `getAll` | Line 496 |
+| `function` | `getSettingsFilePath` | Line 500 |
+| `function` | `getSettingsFolder` | Line 504 |
+| `function` | `resetSection` | Line 508 |
+| `function` | `resetAll` | Line 515 |
+| `function` | `isConfirmationDisabled` | Line 520 |
+| `function` | `disableConfirmation` | Line 525 |
 
 ## 6. Key Functions & Methods
 | Line | Function Signature |
@@ -37,26 +37,26 @@ This file operates as part of the **Electron Main Process / Background Engine** 
 | 38 | `getDefaultTitlesFolder()` |
 | 178 | `getCandidateAppDirs()` |
 | 196 | `readLocator()` |
-| 278 | `writeLocator(folder: string)` |
-| 292 | `loadFromFile()` |
-| 329 | `flushSaveSync()` |
-| 351 | `performAsyncSave()` |
-| 380 | `save(immediate = false)` |
-| 395 | `initSettings()` |
-| 428 | `needsSetup()` |
-| 432 | `completeSetup(folder: string)` |
-| 441 | `changeSettingsFolder(newFolder: string)` |
-| 458 | `setSettingsFilePath(filePath: string)` |
-| 471 | `get(key: string, defaultVal?: unknown)` |
-| 477 | `set(key: string, value: unknown)` |
-| 481 | `setAndSave(key: string, value: unknown)` |
-| 486 | `getAll()` |
-| 490 | `getSettingsFilePath()` |
-| 494 | `getSettingsFolder()` |
-| 498 | `resetSection(keys: string[])` |
-| 505 | `resetAll()` |
-| 510 | `isConfirmationDisabled(actionId: string)` |
-| 515 | `disableConfirmation(actionId: string)` |
+| 288 | `writeLocator(folder: string)` |
+| 302 | `loadFromFile()` |
+| 339 | `flushSaveSync()` |
+| 361 | `performAsyncSave()` |
+| 390 | `save(immediate = false)` |
+| 405 | `initSettings()` |
+| 438 | `needsSetup()` |
+| 442 | `completeSetup(folder: string)` |
+| 451 | `changeSettingsFolder(newFolder: string)` |
+| 468 | `setSettingsFilePath(filePath: string)` |
+| 481 | `get(key: string, defaultVal?: unknown)` |
+| 487 | `set(key: string, value: unknown)` |
+| 491 | `setAndSave(key: string, value: unknown)` |
+| 496 | `getAll()` |
+| 500 | `getSettingsFilePath()` |
+| 504 | `getSettingsFolder()` |
+| 508 | `resetSection(keys: string[])` |
+| 515 | `resetAll()` |
+| 520 | `isConfirmationDisabled(actionId: string)` |
+| 525 | `disableConfirmation(actionId: string)` |
 
 ## 8. Dependencies & Module Linkages
 - **External Packages**: `path`, `os`, `fs`

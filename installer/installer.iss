@@ -4,7 +4,7 @@
 [Setup]
 AppId={{com.bsframework.onetap}}
 AppName=Uni Desk
-AppVersion=26.10.11
+AppVersion=26.10.12
 AppPublisher=BS Framework
 AppPublisherURL=https://bsframework.com/
 DefaultDirName={autopf}\Uni Desk
@@ -19,7 +19,7 @@ Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
 OutputDir=..\release
-OutputBaseFilename=UniDesk_V26.10.11_Setup
+OutputBaseFilename=UniDesk_V26.10.12_Setup
 PrivilegesRequired=lowest
 SetupMutex=UniDesk_Setup_Mutex
 AppMutex=UniDesk_App_Mutex

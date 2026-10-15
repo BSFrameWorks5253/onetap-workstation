@@ -1,8 +1,8 @@
 # 🧠 UniDesk Studio — Hierarchical Codebase Knowledge Base & Analysis Cache
-> **Last Synced**: 2026-10-15 12:10:37  
-> **Total Files Indexed**: 228  
-> **Unchanged (Cached)**: 224 | **Re-analyzed**: 4  
-> **Estimated AI Context Tokens Saved**: ~892,375 tokens!
+> **Last Synced**: 2026-10-15 12:47:54  
+> **Total Files Indexed**: 229  
+> **Unchanged (Cached)**: 222 | **Re-analyzed**: 7  
+> **Estimated AI Context Tokens Saved**: ~894,584 tokens!
 
 This document and the mirrored hierarchy under `.code-analysis/` contain pre-analyzed architectural summaries, exports, interfaces, hooks, and IPC channels for every source file.
 **AI Agents**: Consult `.code-analysis/<path>.md` before reading full raw source files to conserve context window!
@@ -18,7 +18,7 @@ This document and the mirrored hierarchy under `.code-analysis/` contain pre-ana
 | `src/renderer/src/pages` | 40 | Core workstation pages (TitleAdder, VideoConverter, TaskTracker, Settings, etc.) |
 | `src/renderer/src/components` | 104 | Modular UI cards, buttons, loaders, modals, taskbar previews |
 | `src/renderer/src/styles` | 3 | CSS design tokens, soft linen light mode & obsidian dark mode |
-| `scripts` | 12 | Automated build, cross-packaging, analysis and packaging scripts |
+| `scripts` | 13 | Automated build, cross-packaging, analysis and packaging scripts |
 
 ---
 
@@ -27,7 +27,7 @@ This document and the mirrored hierarchy under `.code-analysis/` contain pre-ana
 
 ### `scripts/build-win.js`
 
-- **[scripts/build-win.js](scripts/build-win.js.md)**: Automation, Build & Packaging Script (185 lines)
+- **[scripts/build-win.js](scripts/build-win.js.md)**: Automation, Build & Packaging Script (221 lines)
 
 ### `scripts/codebase_analyzer.py`
 
@@ -36,6 +36,10 @@ This document and the mirrored hierarchy under `.code-analysis/` contain pre-ana
 ### `scripts/generate_appx_assets.js`
 
 - **[scripts/generate_appx_assets.js](scripts/generate_appx_assets.js.md)**: Automation, Build & Packaging Script (81 lines)
+
+### `scripts/generate_installer_assets.js`
+
+- **[scripts/generate_installer_assets.js](scripts/generate_installer_assets.js.md)**: Automation, Build & Packaging Script (176 lines)
 
 ### `scripts/generate_naming_samples.py`
 
@@ -88,7 +92,7 @@ This document and the mirrored hierarchy under `.code-analysis/` contain pre-ana
 - **[src/main/core/hashVerifier.ts](src/main/core/hashVerifier.ts.md)**: Electron Main Process / Background Engine (214 lines) — Exports: `XXHash64`, `computeBufferXxHash64`
 - **[src/main/core/safarHierarchy.ts](src/main/core/safarHierarchy.ts.md)**: Electron Main Process / Background Engine (370 lines) — Exports: `extractEventCodeFromPath`, `extractCity`, `extractSafarFromContainerPath`, `parseSafarFromPath`
 - **[src/main/core/safarPdfGenerator.ts](src/main/core/safarPdfGenerator.ts.md)**: Electron Main Process / Background Engine (426 lines) — Exports: `generateSafarPdfHtml`
-- **[src/main/core/settingsManager.ts](src/main/core/settingsManager.ts.md)**: Electron Main Process / Background Engine (520 lines) — Exports: `getDefaultTitlesFolder`, `DEFAULTS`, `flushSaveSync`, `initSettings`
+- **[src/main/core/settingsManager.ts](src/main/core/settingsManager.ts.md)**: Electron Main Process / Background Engine (530 lines) — Exports: `getDefaultTitlesFolder`, `DEFAULTS`, `flushSaveSync`, `initSettings`
 - **[src/main/core/syncReportExporter.ts](src/main/core/syncReportExporter.ts.md)**: Electron Main Process / Background Engine (308 lines) — Exports: `generateSyncExcelReport`
 - **[src/main/index.ts](src/main/index.ts.md)**: Electron Main Process / Background Engine (1151 lines)
 - **[src/main/ipc/archiveCatalog.ipc.ts](src/main/ipc/archiveCatalog.ipc.ts.md)**: Electron Main Process / Background Engine (797 lines) — Exports: `registerArchiveCatalogIPC`, `stopArchiveWatchers`, `setupArchiveAutoWatcher`
