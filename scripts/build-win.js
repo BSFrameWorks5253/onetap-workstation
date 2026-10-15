@@ -54,8 +54,22 @@ function ensureWinSharp() {
 function ensureProcessClosed() {
   if (process.platform === 'win32') {
     try {
-      execSync('powershell -Command "Get-Process -Name \'*Uni Desk*\' -ErrorAction SilentlyContinue | Stop-Process -Force"', { stdio: 'ignore' })
+      execSync('powershell -NoProfile -Command "Stop-Process -Name \'Uni Desk\', \'electron\' -Force -ErrorAction SilentlyContinue"', { stdio: 'ignore' })
     } catch {}
+
+    const unlocker = path.join(__dirname, 'unlock_asar.ps1')
+    if (fs.existsSync(unlocker)) {
+      try {
+        execSync(`powershell -NoProfile -ExecutionPolicy Bypass -File "${unlocker}"`, { stdio: 'ignore' })
+      } catch {}
+    }
+
+    const unpackedDir = path.join(process.cwd(), 'release', 'win-unpacked')
+    if (fs.existsSync(unpackedDir)) {
+      try {
+        fs.rmSync(unpackedDir, { recursive: true, force: true })
+      } catch {}
+    }
   }
 }
 

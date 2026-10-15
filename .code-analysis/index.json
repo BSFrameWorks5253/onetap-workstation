@@ -15195,8 +15195,8 @@
   "scripts/build-win.js": {
     "path": "scripts/build-win.js",
     "extension": ".js",
-    "loc": 171,
-    "bytes": 6651,
+    "loc": 185,
+    "bytes": 7114,
     "purpose": "Automation, Build & Packaging Script",
     "imports": [],
     "internal_imports": [],
@@ -15239,19 +15239,19 @@
       {
         "name": "prepareCustomMsiTemplate",
         "args": "",
-        "line": 62
+        "line": 76
       },
       {
         "name": "buildWindows",
         "args": "",
-        "line": 96
+        "line": 110
       }
     ],
     "css_classes": [],
-    "raw_tokens": 1662,
+    "raw_tokens": 1778,
     "summary_tokens": 220,
-    "last_analyzed": "2026-10-15T11:35:23.642623",
-    "hash": "85bf9f337036a9f5427e57b23573dadde164f9c992c040973837677193eff121"
+    "last_analyzed": "2026-10-15T11:51:26.576884",
+    "hash": "53bea111df179f86e3e0fa9e40a4de13b636285102f4a30a3cbf467a7275746c"
   },
   "scripts/codebase_analyzer.py": {
     "path": "scripts/codebase_analyzer.py",
