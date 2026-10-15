@@ -1,7 +1,7 @@
 # Detailed Analysis: `scripts/build-win.js`
 > **Role**: Automation, Build & Packaging Script  
-> **Metrics**: 221 lines · 8.5 KB · ~2,170 raw tokens → ~220 cached (89.9% saved)  
-> **Last Analyzed**: 2026-10-15T12:47:54.152841  
+> **Metrics**: 236 lines · 9.1 KB · ~2,327 raw tokens → ~220 cached (90.5% saved)  
+> **Last Analyzed**: 2026-10-15T18:48:16.372527  
 
 ---
 

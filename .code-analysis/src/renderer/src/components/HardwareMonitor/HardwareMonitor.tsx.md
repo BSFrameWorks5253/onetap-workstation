@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/components/HardwareMonitor/HardwareMonitor.tsx`
 > **Role**: Modular UI Component  
-> **Metrics**: 90 lines · 2.9 KB · ~748 raw tokens → ~220 cached (70.6% saved)  
-> **Last Analyzed**: 2026-10-15T00:38:41.850964  
+> **Metrics**: 92 lines · 3.0 KB · ~761 raw tokens → ~220 cached (71.1% saved)  
+> **Last Analyzed**: 2026-10-15T18:48:13.842942  
 
 ---
 
@@ -20,6 +20,7 @@ Utilizes: `useEffect`, `useState`
 | Line | Function Signature |
 |:---:|:---|
 | 6 | `HardwareMonitor()` |
+| 13 | `fetchStats()` |
 
 ## 8. Dependencies & Module Linkages
 - **Internal Relatives**: `./HardwareMonitor.css`

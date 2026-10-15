@@ -163,6 +163,21 @@ function buildWindows() {
       } catch (signErr) {
         logWarn('Could not auto-sign AppX package: ' + signErr.message)
       }
+
+      // Generate .msix copy so user can upload directly to Microsoft Store as .msix or .appx
+      try {
+        const relDir = path.join(process.cwd(), 'release')
+        const files = fs.readdirSync(relDir)
+        for (const f of files) {
+          if (f.endsWith('.appx')) {
+            const msixPath = path.join(relDir, f.replace(/\.appx$/, '.msix'))
+            fs.copyFileSync(path.join(relDir, f), msixPath)
+            logSuccess(`Created Microsoft Store package: ${path.basename(msixPath)}`)
+          }
+        }
+      } catch (copyErr) {
+        logWarn('Could not create .msix alias: ' + copyErr.message)
+      }
     }
     logSuccess('Windows compilation finished successfully.')
     return

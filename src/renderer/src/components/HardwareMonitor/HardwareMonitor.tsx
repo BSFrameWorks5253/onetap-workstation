@@ -10,13 +10,15 @@ export default function HardwareMonitor(): JSX.Element {
   useEffect(() => {
     if (!api || !api.system || !api.titleAdder) return
 
-    const timer = setInterval(async () => {
+    const fetchStats = async () => {
       if (document.hidden) return
       try {
         const res = await api.system.getStats()
         if (res) setStats(res)
       } catch (e) { console.error(e) }
-    }, 5000)
+    }
+    fetchStats()
+    const timer = setInterval(fetchStats, 5000)
 
     // Listen for render status
     let unAdder: any, unDone: any

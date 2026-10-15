@@ -2025,7 +2025,8 @@ export default function TitleAdder(): JSX.Element {
       try {
         const mode = await api.audio.describeMode()
         const pool = await api.audio.poolInfo()
-        setStatus(`${mode} · ${pool}`)
+        const poolStr = typeof pool === 'string' ? pool : (pool?.total ? `Pool: ${pool.total} tracks loaded` : '')
+        setStatus(poolStr ? `${mode} · ${poolStr}` : String(mode || ''))
       } catch (e) {
         console.error('Failed to fetch audio status:', e)
       }

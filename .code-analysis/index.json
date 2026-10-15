@@ -1176,8 +1176,8 @@
   "src/main/core/settingsManager.ts": {
     "path": "src/main/core/settingsManager.ts",
     "extension": ".ts",
-    "loc": 530,
-    "bytes": 19572,
+    "loc": 532,
+    "bytes": 19579,
     "purpose": "Electron Main Process / Background Engine",
     "imports": [
       "fs from 'fs'",
@@ -1186,9 +1186,9 @@
     ],
     "internal_imports": [],
     "external_imports": [
-      "path",
+      "fs",
       "os",
-      "fs"
+      "path"
     ],
     "exports": [
       {
@@ -1204,82 +1204,82 @@
       {
         "kind": "function",
         "name": "flushSaveSync",
-        "line": 339
+        "line": 341
       },
       {
         "kind": "function",
         "name": "initSettings",
-        "line": 405
+        "line": 407
       },
       {
         "kind": "function",
         "name": "needsSetup",
-        "line": 438
+        "line": 440
       },
       {
         "kind": "function",
         "name": "completeSetup",
-        "line": 442
+        "line": 444
       },
       {
         "kind": "function",
         "name": "changeSettingsFolder",
-        "line": 451
+        "line": 453
       },
       {
         "kind": "function",
         "name": "setSettingsFilePath",
-        "line": 468
+        "line": 470
       },
       {
         "kind": "function",
         "name": "get",
-        "line": 481
+        "line": 483
       },
       {
         "kind": "function",
         "name": "set",
-        "line": 487
+        "line": 489
       },
       {
         "kind": "function",
         "name": "setAndSave",
-        "line": 491
+        "line": 493
       },
       {
         "kind": "function",
         "name": "getAll",
-        "line": 496
+        "line": 498
       },
       {
         "kind": "function",
         "name": "getSettingsFilePath",
-        "line": 500
+        "line": 502
       },
       {
         "kind": "function",
         "name": "getSettingsFolder",
-        "line": 504
+        "line": 506
       },
       {
         "kind": "function",
         "name": "resetSection",
-        "line": 508
+        "line": 510
       },
       {
         "kind": "function",
         "name": "resetAll",
-        "line": 515
+        "line": 517
       },
       {
         "kind": "function",
         "name": "isConfirmationDisabled",
-        "line": 520
+        "line": 522
       },
       {
         "kind": "function",
         "name": "disableConfirmation",
-        "line": 525
+        "line": 527
       }
     ],
     "interfaces_types": [],
@@ -1309,109 +1309,109 @@
       {
         "name": "writeLocator",
         "args": "folder: string",
-        "line": 288
+        "line": 290
       },
       {
         "name": "loadFromFile",
         "args": "",
-        "line": 302
+        "line": 304
       },
       {
         "name": "flushSaveSync",
         "args": "",
-        "line": 339
+        "line": 341
       },
       {
         "name": "performAsyncSave",
         "args": "",
-        "line": 361
+        "line": 363
       },
       {
         "name": "save",
         "args": "immediate = false",
-        "line": 390
+        "line": 392
       },
       {
         "name": "initSettings",
         "args": "",
-        "line": 405
+        "line": 407
       },
       {
         "name": "needsSetup",
         "args": "",
-        "line": 438
+        "line": 440
       },
       {
         "name": "completeSetup",
         "args": "folder: string",
-        "line": 442
+        "line": 444
       },
       {
         "name": "changeSettingsFolder",
         "args": "newFolder: string",
-        "line": 451
+        "line": 453
       },
       {
         "name": "setSettingsFilePath",
         "args": "filePath: string",
-        "line": 468
+        "line": 470
       },
       {
         "name": "get",
         "args": "key: string, defaultVal?: unknown",
-        "line": 481
+        "line": 483
       },
       {
         "name": "set",
         "args": "key: string, value: unknown",
-        "line": 487
+        "line": 489
       },
       {
         "name": "setAndSave",
         "args": "key: string, value: unknown",
-        "line": 491
+        "line": 493
       },
       {
         "name": "getAll",
         "args": "",
-        "line": 496
+        "line": 498
       },
       {
         "name": "getSettingsFilePath",
         "args": "",
-        "line": 500
+        "line": 502
       },
       {
         "name": "getSettingsFolder",
         "args": "",
-        "line": 504
+        "line": 506
       },
       {
         "name": "resetSection",
         "args": "keys: string[]",
-        "line": 508
+        "line": 510
       },
       {
         "name": "resetAll",
         "args": "",
-        "line": 515
+        "line": 517
       },
       {
         "name": "isConfirmationDisabled",
         "args": "actionId: string",
-        "line": 520
+        "line": 522
       },
       {
         "name": "disableConfirmation",
         "args": "actionId: string",
-        "line": 525
+        "line": 527
       }
     ],
     "css_classes": [],
-    "raw_tokens": 4893,
+    "raw_tokens": 4894,
     "summary_tokens": 220,
-    "last_analyzed": "2026-10-15T12:47:54.063262",
-    "hash": "56252bad0b82bf5678a2bbf0e15c4a92953e8021017a20807c3eeefa4cc9cd51"
+    "last_analyzed": "2026-10-15T18:48:12.309283",
+    "hash": "bb63f5ee96ea834c10abe4b041100d105e2e4830607698ad5015dcdc8eb0b1fe"
   },
   "src/main/core/syncReportExporter.ts": {
     "path": "src/main/core/syncReportExporter.ts",
@@ -7382,8 +7382,8 @@
   "src/renderer/src/components/HardwareMonitor/HardwareMonitor.tsx": {
     "path": "src/renderer/src/components/HardwareMonitor/HardwareMonitor.tsx",
     "extension": ".tsx",
-    "loc": 90,
-    "bytes": 2994,
+    "loc": 92,
+    "bytes": 3045,
     "purpose": "Modular UI Component",
     "imports": [
       "* from './HardwareMonitor.css'"
@@ -7410,13 +7410,18 @@
         "name": "HardwareMonitor",
         "args": "",
         "line": 6
+      },
+      {
+        "name": "fetchStats",
+        "args": "",
+        "line": 13
       }
     ],
     "css_classes": [],
-    "raw_tokens": 748,
+    "raw_tokens": 761,
     "summary_tokens": 220,
-    "last_analyzed": "2026-10-15T00:38:41.850964",
-    "hash": "4266e88d6e26b40673f212abaf28d7368f074e48cac5090d64f9563bbd18efdf"
+    "last_analyzed": "2026-10-15T18:48:13.842942",
+    "hash": "efbbe2b7a14786dfeaed492148a9f7fc2a01f4adace88da4402b475b345173d2"
   },
   "src/renderer/src/components/HardwareMonitor/index.ts": {
     "path": "src/renderer/src/components/HardwareMonitor/index.ts",
@@ -13727,8 +13732,8 @@
   "src/renderer/src/pages/TitleAdder/TitleAdder.tsx": {
     "path": "src/renderer/src/pages/TitleAdder/TitleAdder.tsx",
     "extension": ".tsx",
-    "loc": 4571,
-    "bytes": 195104,
+    "loc": 4572,
+    "bytes": 195253,
     "purpose": "Renderer UI Page View",
     "imports": [
       "{ PAGE_META } from '../../types'",
@@ -13744,16 +13749,16 @@
       "{ getPrefixColorTheme } from '../../utils/safarUtils'"
     ],
     "internal_imports": [
-      "../../components/StatCard",
+      "../../components/Toast",
       "../../types",
-      "../../components/SoundProvider",
-      "../../stores/titleAdderStore",
+      "../../components/StatCard",
       "../../components/Card",
-      "../../components/Button",
+      "../../stores/titleAdderStore",
       "./TitleAdder.css",
-      "../../components/Input",
       "../../utils/safarUtils",
-      "../../components/Toast"
+      "../../components/SoundProvider",
+      "../../components/Input",
+      "../../components/Button"
     ],
     "external_imports": [
       "canvas-confetti"
@@ -13951,10 +13956,10 @@
       }
     ],
     "css_classes": [],
-    "raw_tokens": 48776,
+    "raw_tokens": 48813,
     "summary_tokens": 220,
-    "last_analyzed": "2026-10-15T00:38:42.459325",
-    "hash": "87f0231a4fee0f790285f72d4f189d4060f3db344f328e606ed080f11ab30818"
+    "last_analyzed": "2026-10-15T18:48:16.069021",
+    "hash": "e0699533a2c217384f04c401e6d5d05c801a3568fe6b1317d4542d7a50bf4277"
   },
   "src/renderer/src/pages/Utilities/Utilities.css": {
     "path": "src/renderer/src/pages/Utilities/Utilities.css",
@@ -15195,8 +15200,8 @@
   "scripts/build-win.js": {
     "path": "scripts/build-win.js",
     "extension": ".js",
-    "loc": 221,
-    "bytes": 8682,
+    "loc": 236,
+    "bytes": 9311,
     "purpose": "Automation, Build & Packaging Script",
     "imports": [],
     "internal_imports": [],
@@ -15248,10 +15253,10 @@
       }
     ],
     "css_classes": [],
-    "raw_tokens": 2170,
+    "raw_tokens": 2327,
     "summary_tokens": 220,
-    "last_analyzed": "2026-10-15T12:47:54.152841",
-    "hash": "20746f7c896eeaa3c6f74525440e4ce52ba1921c9766e39524bc83817deb267b"
+    "last_analyzed": "2026-10-15T18:48:16.372527",
+    "hash": "a5918faddfe9ce7aef841fb7f22eba785ec8999f495695d18199e13a5306c750"
   },
   "scripts/codebase_analyzer.py": {
     "path": "scripts/codebase_analyzer.py",
@@ -16707,5 +16712,200 @@
     "summary_tokens": 220,
     "last_analyzed": "2026-10-15T12:47:54.155435",
     "hash": "cd2e35b8d09d0e96c128957dbfdf96e6dbdfdef6a494fe6200163adea27b734e"
+  },
+  "scripts/capture_perfect_screenshots.js": {
+    "path": "scripts/capture_perfect_screenshots.js",
+    "extension": ".js",
+    "loc": 467,
+    "bytes": 20218,
+    "purpose": "Automation, Build & Packaging Script",
+    "imports": [],
+    "internal_imports": [],
+    "external_imports": [],
+    "exports": [],
+    "interfaces_types": [],
+    "react_hooks": [
+      "useContentSize"
+    ],
+    "ipc_channels": [],
+    "functions_methods": [
+      {
+        "name": "registerIpcMocks",
+        "args": "",
+        "line": 125
+      },
+      {
+        "name": "handle",
+        "args": "ch, fn",
+        "line": 126
+      },
+      {
+        "name": "clickNav",
+        "args": "label, waitMs = 3500",
+        "line": 260
+      }
+    ],
+    "css_classes": [],
+    "raw_tokens": 5054,
+    "summary_tokens": 220,
+    "last_analyzed": "2026-10-15T18:48:16.404100",
+    "hash": "730eda5d4e43e0deb8a80ff2f023331261c025f3decde3555b56455bf2d6e6fc"
+  },
+  "scripts/debug_console.js": {
+    "path": "scripts/debug_console.js",
+    "extension": ".js",
+    "loc": 82,
+    "bytes": 2542,
+    "purpose": "Automation, Build & Packaging Script",
+    "imports": [],
+    "internal_imports": [],
+    "external_imports": [],
+    "exports": [],
+    "interfaces_types": [],
+    "react_hooks": [],
+    "ipc_channels": [],
+    "functions_methods": [
+      {
+        "name": "registerIpcMocks",
+        "args": "",
+        "line": 7
+      },
+      {
+        "name": "handle",
+        "args": "ch, fn",
+        "line": 8
+      }
+    ],
+    "css_classes": [],
+    "raw_tokens": 635,
+    "summary_tokens": 220,
+    "last_analyzed": "2026-10-15T18:48:16.425447",
+    "hash": "83c0ede5a63fd9ef2dbcaafc94bcac67f8a7c42ff799a5828653069f95191fff"
+  },
+  "scripts/debug_pages.js": {
+    "path": "scripts/debug_pages.js",
+    "extension": ".js",
+    "loc": 74,
+    "bytes": 2617,
+    "purpose": "Renderer UI Page View",
+    "imports": [],
+    "internal_imports": [],
+    "external_imports": [],
+    "exports": [],
+    "interfaces_types": [],
+    "react_hooks": [],
+    "ipc_channels": [],
+    "functions_methods": [
+      {
+        "name": "registerIpcMocks",
+        "args": "",
+        "line": 7
+      },
+      {
+        "name": "handle",
+        "args": "ch, fn",
+        "line": 8
+      }
+    ],
+    "css_classes": [],
+    "raw_tokens": 654,
+    "summary_tokens": 220,
+    "last_analyzed": "2026-10-15T18:48:16.471013",
+    "hash": "ac7804da43b7cd44e5ace6e8505a4f92be3d5e2274c24f1e604595481c2db741"
+  },
+  "scripts/generate_store_assets.js": {
+    "path": "scripts/generate_store_assets.js",
+    "extension": ".js",
+    "loc": 135,
+    "bytes": 6772,
+    "purpose": "Automation, Build & Packaging Script",
+    "imports": [],
+    "internal_imports": [],
+    "external_imports": [],
+    "exports": [],
+    "interfaces_types": [],
+    "react_hooks": [
+      "useContentSize"
+    ],
+    "ipc_channels": [],
+    "functions_methods": [],
+    "css_classes": [],
+    "raw_tokens": 1693,
+    "summary_tokens": 220,
+    "last_analyzed": "2026-10-15T18:48:16.651605",
+    "hash": "22e94d35325831c93acb040be596326a6c1bc089fe7e3a3fb070d6438c5557d5"
+  },
+  "scripts/make_proper_store_assets.js": {
+    "path": "scripts/make_proper_store_assets.js",
+    "extension": ".js",
+    "loc": 616,
+    "bytes": 18720,
+    "purpose": "Automation, Build & Packaging Script",
+    "imports": [],
+    "internal_imports": [],
+    "external_imports": [],
+    "exports": [],
+    "interfaces_types": [],
+    "react_hooks": [
+      "useContentSize"
+    ],
+    "ipc_channels": [],
+    "functions_methods": [],
+    "css_classes": [],
+    "raw_tokens": 4680,
+    "summary_tokens": 220,
+    "last_analyzed": "2026-10-15T18:48:16.775020",
+    "hash": "dc13c0e78ebd35cf3fc34890481a49c07058f7699e41e44d191ef3a5a437841b"
+  },
+  "scripts/test_dismiss.js": {
+    "path": "scripts/test_dismiss.js",
+    "extension": ".js",
+    "loc": 34,
+    "bytes": 1065,
+    "purpose": "Automation, Build & Packaging Script",
+    "imports": [],
+    "internal_imports": [],
+    "external_imports": [],
+    "exports": [],
+    "interfaces_types": [],
+    "react_hooks": [],
+    "ipc_channels": [],
+    "functions_methods": [],
+    "css_classes": [],
+    "raw_tokens": 266,
+    "summary_tokens": 220,
+    "last_analyzed": "2026-10-15T18:48:16.993198",
+    "hash": "953232820cd8abad997e6bdfa21944b86c5cb9f80aaf48a39d75fcb8c91a7ad4"
+  },
+  "scripts/test_nav.js": {
+    "path": "scripts/test_nav.js",
+    "extension": ".js",
+    "loc": 113,
+    "bytes": 3556,
+    "purpose": "Automation, Build & Packaging Script",
+    "imports": [],
+    "internal_imports": [],
+    "external_imports": [],
+    "exports": [],
+    "interfaces_types": [],
+    "react_hooks": [],
+    "ipc_channels": [],
+    "functions_methods": [
+      {
+        "name": "registerIpcMocks",
+        "args": "",
+        "line": 23
+      },
+      {
+        "name": "handle",
+        "args": "ch, fn",
+        "line": 24
+      }
+    ],
+    "css_classes": [],
+    "raw_tokens": 889,
+    "summary_tokens": 220,
+    "last_analyzed": "2026-10-15T18:48:17.104248",
+    "hash": "986d15db8b311e7658f62fa474e9c78d6918adb2501818b83900bae4bb589c3d"
   }
 }

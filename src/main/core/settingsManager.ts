@@ -266,6 +266,8 @@ function readLocator(): string | null {
         writeLocator(fallbackDir)
         return fallbackDir
       }
+    }
+
     // 4. Default fallback on fresh install: automatically assign standard storage without interrupting the user
     const autoDir = path.join(os.homedir(), 'Documents', 'Uni Desk')
     try {

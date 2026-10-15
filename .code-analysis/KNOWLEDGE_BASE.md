@@ -1,8 +1,8 @@
 # 🧠 UniDesk Studio — Hierarchical Codebase Knowledge Base & Analysis Cache
-> **Last Synced**: 2026-10-15 12:47:54  
-> **Total Files Indexed**: 229  
-> **Unchanged (Cached)**: 222 | **Re-analyzed**: 7  
-> **Estimated AI Context Tokens Saved**: ~894,584 tokens!
+> **Last Synced**: 2026-10-15 18:48:17  
+> **Total Files Indexed**: 236  
+> **Unchanged (Cached)**: 225 | **Re-analyzed**: 11  
+> **Estimated AI Context Tokens Saved**: ~907,123 tokens!
 
 This document and the mirrored hierarchy under `.code-analysis/` contain pre-analyzed architectural summaries, exports, interfaces, hooks, and IPC channels for every source file.
 **AI Agents**: Consult `.code-analysis/<path>.md` before reading full raw source files to conserve context window!
@@ -18,7 +18,7 @@ This document and the mirrored hierarchy under `.code-analysis/` contain pre-ana
 | `src/renderer/src/pages` | 40 | Core workstation pages (TitleAdder, VideoConverter, TaskTracker, Settings, etc.) |
 | `src/renderer/src/components` | 104 | Modular UI cards, buttons, loaders, modals, taskbar previews |
 | `src/renderer/src/styles` | 3 | CSS design tokens, soft linen light mode & obsidian dark mode |
-| `scripts` | 13 | Automated build, cross-packaging, analysis and packaging scripts |
+| `scripts` | 20 | Automated build, cross-packaging, analysis and packaging scripts |
 
 ---
 
@@ -27,11 +27,23 @@ This document and the mirrored hierarchy under `.code-analysis/` contain pre-ana
 
 ### `scripts/build-win.js`
 
-- **[scripts/build-win.js](scripts/build-win.js.md)**: Automation, Build & Packaging Script (221 lines)
+- **[scripts/build-win.js](scripts/build-win.js.md)**: Automation, Build & Packaging Script (236 lines)
+
+### `scripts/capture_perfect_screenshots.js`
+
+- **[scripts/capture_perfect_screenshots.js](scripts/capture_perfect_screenshots.js.md)**: Automation, Build & Packaging Script (467 lines) [Hooks: useContentSize]
 
 ### `scripts/codebase_analyzer.py`
 
 - **[scripts/codebase_analyzer.py](scripts/codebase_analyzer.py.md)**: Automation, Build & Packaging Script (361 lines) — Exports: `get_file_hash`, `analyze_source_file`, `generate_module_markdown`, `run_analysis`
+
+### `scripts/debug_console.js`
+
+- **[scripts/debug_console.js](scripts/debug_console.js.md)**: Automation, Build & Packaging Script (82 lines)
+
+### `scripts/debug_pages.js`
+
+- **[scripts/debug_pages.js](scripts/debug_pages.js.md)**: Renderer UI Page View (74 lines)
 
 ### `scripts/generate_appx_assets.js`
 
@@ -49,6 +61,10 @@ This document and the mirrored hierarchy under `.code-analysis/` contain pre-ana
 
 - **[scripts/generate_safar_structure.py](scripts/generate_safar_structure.py.md)**: Automation, Build & Packaging Script (203 lines)
 
+### `scripts/generate_store_assets.js`
+
+- **[scripts/generate_store_assets.js](scripts/generate_store_assets.js.md)**: Automation, Build & Packaging Script (135 lines) [Hooks: useContentSize]
+
 ### `scripts/make_exe.py`
 
 - **[scripts/make_exe.py](scripts/make_exe.py.md)**: Automation, Build & Packaging Script (1853 lines) — Exports: `load_env`, `save_github_token`, `check_dependencies`, `get_iscc_path`
@@ -60,6 +76,10 @@ This document and the mirrored hierarchy under `.code-analysis/` contain pre-ana
 ### `scripts/make_exe_gui.py`
 
 - **[scripts/make_exe_gui.py](scripts/make_exe_gui.py.md)**: Automation, Build & Packaging Script (1100 lines) — Exports: `load_env`, `save_github_token`, `get_current_version`, `sanitize_semver`
+
+### `scripts/make_proper_store_assets.js`
+
+- **[scripts/make_proper_store_assets.js](scripts/make_proper_store_assets.js.md)**: Automation, Build & Packaging Script (616 lines) [Hooks: useContentSize]
 
 ### `scripts/process_logos.js`
 
@@ -73,9 +93,17 @@ This document and the mirrored hierarchy under `.code-analysis/` contain pre-ana
 
 - **[scripts/take_screenshots.js](scripts/take_screenshots.js.md)**: Automation, Build & Packaging Script (97 lines)
 
+### `scripts/test_dismiss.js`
+
+- **[scripts/test_dismiss.js](scripts/test_dismiss.js.md)**: Automation, Build & Packaging Script (34 lines)
+
 ### `scripts/test_fade_logic.js`
 
 - **[scripts/test_fade_logic.js](scripts/test_fade_logic.js.md)**: Automation, Build & Packaging Script (148 lines)
+
+### `scripts/test_nav.js`
+
+- **[scripts/test_nav.js](scripts/test_nav.js.md)**: Automation, Build & Packaging Script (113 lines)
 
 ### `src/main`
 
@@ -92,7 +120,7 @@ This document and the mirrored hierarchy under `.code-analysis/` contain pre-ana
 - **[src/main/core/hashVerifier.ts](src/main/core/hashVerifier.ts.md)**: Electron Main Process / Background Engine (214 lines) — Exports: `XXHash64`, `computeBufferXxHash64`
 - **[src/main/core/safarHierarchy.ts](src/main/core/safarHierarchy.ts.md)**: Electron Main Process / Background Engine (370 lines) — Exports: `extractEventCodeFromPath`, `extractCity`, `extractSafarFromContainerPath`, `parseSafarFromPath`
 - **[src/main/core/safarPdfGenerator.ts](src/main/core/safarPdfGenerator.ts.md)**: Electron Main Process / Background Engine (426 lines) — Exports: `generateSafarPdfHtml`
-- **[src/main/core/settingsManager.ts](src/main/core/settingsManager.ts.md)**: Electron Main Process / Background Engine (530 lines) — Exports: `getDefaultTitlesFolder`, `DEFAULTS`, `flushSaveSync`, `initSettings`
+- **[src/main/core/settingsManager.ts](src/main/core/settingsManager.ts.md)**: Electron Main Process / Background Engine (532 lines) — Exports: `getDefaultTitlesFolder`, `DEFAULTS`, `flushSaveSync`, `initSettings`
 - **[src/main/core/syncReportExporter.ts](src/main/core/syncReportExporter.ts.md)**: Electron Main Process / Background Engine (308 lines) — Exports: `generateSyncExcelReport`
 - **[src/main/index.ts](src/main/index.ts.md)**: Electron Main Process / Background Engine (1151 lines)
 - **[src/main/ipc/archiveCatalog.ipc.ts](src/main/ipc/archiveCatalog.ipc.ts.md)**: Electron Main Process / Background Engine (797 lines) — Exports: `registerArchiveCatalogIPC`, `stopArchiveWatchers`, `setupArchiveAutoWatcher`
@@ -163,7 +191,7 @@ This document and the mirrored hierarchy under `.code-analysis/` contain pre-ana
 - **[src/renderer/src/components/GlobalDropOverlay/GlobalDropOverlay.tsx](src/renderer/src/components/GlobalDropOverlay/GlobalDropOverlay.tsx.md)**: Modular UI Component (224 lines) — Exports: `GlobalDropOverlay` [Hooks: useEffect, useRef, useSound]
 - **[src/renderer/src/components/GlobalDropOverlay/index.ts](src/renderer/src/components/GlobalDropOverlay/index.ts.md)**: Modular UI Component (2 lines)
 - **[src/renderer/src/components/HardwareMonitor/HardwareMonitor.css](src/renderer/src/components/HardwareMonitor/HardwareMonitor.css.md)**: Modular UI Component (261 lines)
-- **[src/renderer/src/components/HardwareMonitor/HardwareMonitor.tsx](src/renderer/src/components/HardwareMonitor/HardwareMonitor.tsx.md)**: Modular UI Component (90 lines) — Exports: `HardwareMonitor` [Hooks: useEffect, useState]
+- **[src/renderer/src/components/HardwareMonitor/HardwareMonitor.tsx](src/renderer/src/components/HardwareMonitor/HardwareMonitor.tsx.md)**: Modular UI Component (92 lines) — Exports: `HardwareMonitor` [Hooks: useEffect, useState]
 - **[src/renderer/src/components/HardwareMonitor/index.ts](src/renderer/src/components/HardwareMonitor/index.ts.md)**: Modular UI Component (2 lines)
 - **[src/renderer/src/components/Input/Input.css](src/renderer/src/components/Input/Input.css.md)**: Modular UI Component (144 lines)
 - **[src/renderer/src/components/Input/Input.tsx](src/renderer/src/components/Input/Input.tsx.md)**: Modular UI Component (111 lines) — Exports: `Input`, `BrowseRow` [Hooks: useState]
@@ -282,7 +310,7 @@ This document and the mirrored hierarchy under `.code-analysis/` contain pre-ana
 - **[src/renderer/src/pages/TaskTracker/TaskTracker.css](src/renderer/src/pages/TaskTracker/TaskTracker.css.md)**: Renderer UI Page View (2062 lines)
 - **[src/renderer/src/pages/TaskTracker/TaskTracker.tsx](src/renderer/src/pages/TaskTracker/TaskTracker.tsx.md)**: Renderer UI Page View (2177 lines) — Exports: `normalizeDrive`, `TaskTracker` [Hooks: useEffect, useMemo, useRef]
 - **[src/renderer/src/pages/TitleAdder/TitleAdder.css](src/renderer/src/pages/TitleAdder/TitleAdder.css.md)**: Renderer UI Page View (3640 lines)
-- **[src/renderer/src/pages/TitleAdder/TitleAdder.tsx](src/renderer/src/pages/TitleAdder/TitleAdder.tsx.md)**: Renderer UI Page View (4571 lines) — Exports: `stripDvdFolderFromPath`, `isGroupPhotoVideo`, `validateFilename`, `TitleAdder` [Hooks: useEffect, useLogLines, useMemo]
+- **[src/renderer/src/pages/TitleAdder/TitleAdder.tsx](src/renderer/src/pages/TitleAdder/TitleAdder.tsx.md)**: Renderer UI Page View (4572 lines) — Exports: `stripDvdFolderFromPath`, `isGroupPhotoVideo`, `validateFilename`, `TitleAdder` [Hooks: useEffect, useLogLines, useMemo]
 - **[src/renderer/src/pages/Utilities/Utilities.css](src/renderer/src/pages/Utilities/Utilities.css.md)**: Renderer UI Page View (641 lines)
 - **[src/renderer/src/pages/Utilities/Utilities.tsx](src/renderer/src/pages/Utilities/Utilities.tsx.md)**: Renderer UI Page View (1492 lines) — Exports: `Utilities` [Hooks: useCallback, useEffect, useMemo]
 - **[src/renderer/src/pages/VideoTransfer/VideoTransfer.css](src/renderer/src/pages/VideoTransfer/VideoTransfer.css.md)**: Renderer UI Page View (727 lines)
