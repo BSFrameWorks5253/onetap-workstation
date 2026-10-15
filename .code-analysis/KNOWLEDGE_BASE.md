@@ -1,8 +1,8 @@
 # 🧠 UniDesk Studio — Hierarchical Codebase Knowledge Base & Analysis Cache
-> **Last Synced**: 2026-10-15 11:16:22  
+> **Last Synced**: 2026-10-15 11:25:23  
 > **Total Files Indexed**: 228  
-> **Unchanged (Cached)**: 228 | **Re-analyzed**: 0  
-> **Estimated AI Context Tokens Saved**: ~892,137 tokens!
+> **Unchanged (Cached)**: 223 | **Re-analyzed**: 5  
+> **Estimated AI Context Tokens Saved**: ~892,239 tokens!
 
 This document and the mirrored hierarchy under `.code-analysis/` contain pre-analyzed architectural summaries, exports, interfaces, hooks, and IPC channels for every source file.
 **AI Agents**: Consult `.code-analysis/<path>.md` before reading full raw source files to conserve context window!
@@ -129,7 +129,7 @@ This document and the mirrored hierarchy under `.code-analysis/` contain pre-ana
 
 ### `src/renderer`
 
-- **[src/renderer/src/App.tsx](src/renderer/src/App.tsx.md)**: Utility / Helper Module (1281 lines) — Exports: `App` [Hooks: useEffect, useRef, useSound]
+- **[src/renderer/src/App.tsx](src/renderer/src/App.tsx.md)**: Utility / Helper Module (1282 lines) — Exports: `App` [Hooks: useEffect, useRef, useSound]
 - **[src/renderer/src/components/AnimateNumber/AnimateNumber.tsx](src/renderer/src/components/AnimateNumber/AnimateNumber.tsx.md)**: Modular UI Component (51 lines) — Exports: `AnimateNumber` [Hooks: useEffect, useRef, useState]
 - **[src/renderer/src/components/AnimateNumber/index.ts](src/renderer/src/components/AnimateNumber/index.ts.md)**: Modular UI Component (2 lines)
 - **[src/renderer/src/components/AutoUpdateModal/AutoUpdateModal.css](src/renderer/src/components/AutoUpdateModal/AutoUpdateModal.css.md)**: Modular UI Component (346 lines)
@@ -230,8 +230,8 @@ This document and the mirrored hierarchy under `.code-analysis/` contain pre-ana
 - **[src/renderer/src/components/TrayDock/TrayDock.css](src/renderer/src/components/TrayDock/TrayDock.css.md)**: Modular UI Component (172 lines)
 - **[src/renderer/src/components/TrayDock/TrayDock.tsx](src/renderer/src/components/TrayDock/TrayDock.tsx.md)**: Modular UI Component (101 lines) — Exports: `TrayDock`
 - **[src/renderer/src/components/TrayDock/index.ts](src/renderer/src/components/TrayDock/index.ts.md)**: Modular UI Component (2 lines)
-- **[src/renderer/src/components/WelcomeScreen/WelcomeScreen.css](src/renderer/src/components/WelcomeScreen/WelcomeScreen.css.md)**: Modular UI Component (259 lines)
-- **[src/renderer/src/components/WelcomeScreen/WelcomeScreen.tsx](src/renderer/src/components/WelcomeScreen/WelcomeScreen.tsx.md)**: Modular UI Component (242 lines) — Exports: `WelcomeScreen` [Hooks: useEffect, useMemo, useRef]
+- **[src/renderer/src/components/WelcomeScreen/WelcomeScreen.css](src/renderer/src/components/WelcomeScreen/WelcomeScreen.css.md)**: Modular UI Component (257 lines)
+- **[src/renderer/src/components/WelcomeScreen/WelcomeScreen.tsx](src/renderer/src/components/WelcomeScreen/WelcomeScreen.tsx.md)**: Modular UI Component (259 lines) — Exports: `WelcomeScreen` [Hooks: useEffect, useMemo, useRef]
 - **[src/renderer/src/components/WelcomeScreen/index.ts](src/renderer/src/components/WelcomeScreen/index.ts.md)**: Modular UI Component (2 lines)
 - **[src/renderer/src/components/index.ts](src/renderer/src/components/index.ts.md)**: Modular UI Component (30 lines)
 - **[src/renderer/src/cursor/CursorArea.tsx](src/renderer/src/cursor/CursorArea.tsx.md)**: Utility / Helper Module (26 lines) — Exports: `CursorArea`
@@ -286,8 +286,8 @@ This document and the mirrored hierarchy under `.code-analysis/` contain pre-ana
 - **[src/renderer/src/stores/prprojStore.ts](src/renderer/src/stores/prprojStore.ts.md)**: Global State Store (Zustand / Event Emitter) (136 lines) — Exports: `prprojStore`, `usePrprojStore` [Hooks: useEffect, usePrprojStore, useState]
 - **[src/renderer/src/stores/titleAdderStore.ts](src/renderer/src/stores/titleAdderStore.ts.md)**: Global State Store (Zustand / Event Emitter) (341 lines) — Exports: `titleAdderStore`, `useTitleAdderStore` [Hooks: useEffect, useState, useTitleAdderStore]
 - **[src/renderer/src/styles/animations.css](src/renderer/src/styles/animations.css.md)**: Design Tokens & Stylesheet (325 lines)
-- **[src/renderer/src/styles/global.css](src/renderer/src/styles/global.css.md)**: Design Tokens & Stylesheet (834 lines)
-- **[src/renderer/src/styles/tokens.css](src/renderer/src/styles/tokens.css.md)**: Design Tokens & Stylesheet (740 lines)
+- **[src/renderer/src/styles/global.css](src/renderer/src/styles/global.css.md)**: Design Tokens & Stylesheet (837 lines)
+- **[src/renderer/src/styles/tokens.css](src/renderer/src/styles/tokens.css.md)**: Design Tokens & Stylesheet (738 lines)
 - **[src/renderer/src/theme/ThemeContext.tsx](src/renderer/src/theme/ThemeContext.tsx.md)**: Utility / Helper Module (307 lines) — Exports: `ThemeProvider`, `useTheme` [Hooks: useCallback, useContext, useEffect]
 - **[src/renderer/src/types/index.ts](src/renderer/src/types/index.ts.md)**: Electron Main Process / Background Engine (510 lines) — Exports: `PAGE_META`, `NAV_ORDER`
 - **[src/renderer/src/utils/cityUtils.ts](src/renderer/src/utils/cityUtils.ts.md)**: Utility / Helper Module (154 lines) — Exports: `COMMON_CITIES`, `parseFolderName`, `detectCity`

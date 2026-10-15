@@ -515,8 +515,9 @@ h1, h2, h3 {
 .aura-blob {
   position: absolute;
   border-radius: 50%;
-  filter: blur(100px);
-  will-change: transform;
+  filter: blur(45px);
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
   pointer-events: none;
   opacity: 0.6;
 }
@@ -558,6 +559,7 @@ h1, h2, h3 {
   z-index: 0;
   opacity: 0.75;
   transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  contain: strict;
 }
 
 [data-theme="glass"] .app-liquid-mesh,
@@ -573,9 +575,10 @@ h1, h2, h3 {
 .app-liquid-orb {
   position: absolute;
   border-radius: 50%;
-  filter: blur(85px);
+  filter: blur(42px);
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
   opacity: 0.42;
-  will-change: transform;
 }
 
 .app-liquid-orb-1 {

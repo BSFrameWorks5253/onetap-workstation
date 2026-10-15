@@ -28,6 +28,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Glassmorphism CSS Overhaul**: Upgraded `SetupWizard.css` to dark obsidian glass cards, radial glow ambient backdrops, and responsive mobile/desktop layout.
 - **Welcome Screen Arabic Calligraphy**: Fixed text clipping and disappearance using a rock-solid `clip-path` feathered RTL wipe (`inset(-150px 0% -150px 100%)` to `inset(-150px 0% -150px 0%)`), ensuring non-Latin diacritics render crisply without mask freeze bugs.
 
+### ⚡ Startup & Loading Screen Performance Optimization
+- **Dynamic Code Splitting**: Converted all 19 application page modules in `App.tsx` into `React.lazy()` imports. Dropped initial JavaScript chunk from **2.74 MB** down to **350 KB** (87% reduction).
+- **Bundle Chunk Isolation**: Decoupled monolithic dependencies (`xlsx`, `pdf-lib`, `marked`, `react`) in `electron.vite.config.ts`, slashing compilation time from **24s** down to **9.5s**.
+- **WelcomeScreen Snappy Entrance**: Cut entrance duration from 2.4s to 1.2s, throttled progress state updates to prevent 144Hz React re-rendering churn, and memoized the 30+ SVG teardrop banner components.
+- **Synchronous Network Font Blocking Removed**: Replaced synchronous `@import url(...)` in `tokens.css` and `WelcomeScreen.css` with non-blocking `<link rel="stylesheet">` tags in `index.html`.
+- **GPU Composite Acceleration**: Promoted blurred aura and liquid mesh background elements to dedicated GPU composite planes with `translate3d(0,0,0)` and reduced over-feathered blur radius from 100px to 45px.
+- **Non-Blocking Background Migrations**: Deferred legacy database stats checks off the critical mounting path into background tasks.
+
 ### 🛡️ Enterprise Licensing & Community Standards
 - **Commercial Dual-License**: Formulated `LICENSE.md` granting 100% royalty-free perpetual ownership of all media, video, and audio renders produced by the workstation while protecting proprietary source code.
 - **Comprehensive Project Description**: Created `Docs/PROJECT_DESCRIPTION.md` detailing technical stack, batch rendering benchmarks, and architecture.

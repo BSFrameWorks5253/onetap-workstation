@@ -81,7 +81,7 @@ export default function WelcomeScreen({ onDone, version = '26.8.9' }: WelcomeScr
     setFadeOut(true)
     setTimeout(() => {
       onDone()
-    }, 500)
+    }, 280)
   }
 
   // Play soft luxury ambient chime when typing begins
@@ -103,42 +103,49 @@ export default function WelcomeScreen({ onDone, version = '26.8.9' }: WelcomeScr
           const gain = ctx.createGain()
 
           osc.type = 'sine'
-          osc.frequency.setValueAtTime(freq, now + i * 0.07)
+          osc.frequency.setValueAtTime(freq, now + i * 0.05)
 
-          gain.gain.setValueAtTime(0.0001, now + i * 0.07)
-          gain.gain.exponentialRampToValueAtTime(0.038, now + i * 0.07 + 0.04)
-          gain.gain.exponentialRampToValueAtTime(0.00001, now + i * 0.07 + 1.8)
+          gain.gain.setValueAtTime(0.0001, now + i * 0.05)
+          gain.gain.exponentialRampToValueAtTime(0.032, now + i * 0.05 + 0.03)
+          gain.gain.exponentialRampToValueAtTime(0.00001, now + i * 0.05 + 1.2)
 
           osc.connect(gain)
           gain.connect(ctx.destination)
 
-          osc.start(now + i * 0.07)
-          osc.stop(now + i * 0.07 + 1.9)
+          osc.start(now + i * 0.05)
+          osc.stop(now + i * 0.05 + 1.3)
         })
       } catch (e) {
         // Audio policy or silent
       }
-    }, 300)
+    }, 180)
 
     return () => clearTimeout(chimeTimer)
   }, [typingKey])
 
-  // Auto-advance after loader animation completes (2.4s total duration)
+  // Fast, smooth loader animation (1.2s duration, throttled progress state)
   useEffect(() => {
     let startTime: number | null = null
-    const duration = 2400
+    const duration = 1200
 
     let rafId: number
+    let lastReported = -1
+
     const step = (time: number) => {
       if (!startTime) startTime = time
       const elapsed = time - startTime
       const progress = Math.min(100, (elapsed / duration) * 100)
-      setLoaderProgress(Math.round(progress))
+      const rounded = Math.round(progress)
+
+      if (rounded - lastReported >= 2 || rounded === 100) {
+        lastReported = rounded
+        setLoaderProgress(rounded)
+      }
 
       if (progress < 100) {
         rafId = requestAnimationFrame(step)
       } else {
-        setTimeout(handleComplete, 300)
+        setTimeout(handleComplete, 100)
       }
     }
 
@@ -146,7 +153,7 @@ export default function WelcomeScreen({ onDone, version = '26.8.9' }: WelcomeScr
     return () => cancelAnimationFrame(rafId)
   }, [typingKey])
 
-  // Keyboard shortcut (Enter / Space / Escape to continue)
+  // Keyboard shortcut (Enter / Space / Escape to continue immediately)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') {
@@ -167,8 +174,6 @@ export default function WelcomeScreen({ onDone, version = '26.8.9' }: WelcomeScr
     setTypingKey(k => k + 1)
   }
 
-  const svgTeardropPath = 'M 50 0 C 45 40, 0 75, 0 110 C 0 145, 22.4 162, 50 162 C 77.6 162, 100 145, 100 110 C 100 75, 55 40, 50 0 Z'
-
   const content = (
     <div
       className={`welcome-screen-overlay ${fadeOut ? 'welcome-fade-out' : ''}`}
@@ -184,33 +189,8 @@ export default function WelcomeScreen({ onDone, version = '26.8.9' }: WelcomeScr
       {/* Ambient Center Radial Glow */}
       <div className="welcome-ambient-glow" />
 
-      {/* Responsive Teardrops Header Banner */}
-      <div className="welcome-teardrops-banner">
-        {Array.from({ length: teardropsLayout.count }).map((_, i) => {
-          const isMaroon = i % 2 === 0
-          const fillClass = isMaroon ? 'welcome-teardrop-maroon' : 'welcome-teardrop-gold'
-
-          return (
-            <div
-              key={i}
-              className="welcome-teardrop-item"
-              style={{
-                animationDelay: `${Math.min(i * 25, 450)}ms`
-              }}
-            >
-              <svg
-                className={`welcome-teardrop-svg ${fillClass}`}
-                width={teardropsLayout.dropWidth}
-                height={teardropsLayout.dropHeight}
-                viewBox="0 0 100 162"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path d={svgTeardropPath} />
-              </svg>
-            </div>
-          )
-        })}
-      </div>
+      {/* Memoized Responsive Teardrops Header Banner */}
+      <TeardropsBanner layout={teardropsLayout} />
 
       {/* Central Welcome Card - Centered in middle of screen */}
       <div className="welcome-content-card">
@@ -240,3 +220,40 @@ export default function WelcomeScreen({ onDone, version = '26.8.9' }: WelcomeScr
 
   return createPortal(content, document.body)
 }
+
+const svgTeardropPath = 'M 50 0 C 45 40, 0 75, 0 110 C 0 145, 22.4 162, 50 162 C 77.6 162, 100 145, 100 110 C 100 75, 55 40, 50 0 Z'
+
+const TeardropsBanner = React.memo(function TeardropsBanner({
+  layout
+}: {
+  layout: { count: number; dropWidth: number; dropHeight: number }
+}) {
+  return (
+    <div className="welcome-teardrops-banner">
+      {Array.from({ length: layout.count }).map((_, i) => {
+        const isMaroon = i % 2 === 0
+        const fillClass = isMaroon ? 'welcome-teardrop-maroon' : 'welcome-teardrop-gold'
+
+        return (
+          <div
+            key={i}
+            className="welcome-teardrop-item"
+            style={{
+              animationDelay: `${Math.min(i * 15, 300)}ms`
+            }}
+          >
+            <svg
+              className={`welcome-teardrop-svg ${fillClass}`}
+              width={layout.dropWidth}
+              height={layout.dropHeight}
+              viewBox="0 0 100 162"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path d={svgTeardropPath} />
+            </svg>
+          </div>
+        )
+      })}
+    </div>
+  )
+})

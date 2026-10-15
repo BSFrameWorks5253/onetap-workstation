@@ -5680,13 +5680,12 @@
   "src/renderer/src/App.tsx": {
     "path": "src/renderer/src/App.tsx",
     "extension": ".tsx",
-    "loc": 1281,
-    "bytes": 47526,
+    "loc": 1282,
+    "bytes": 48034,
     "purpose": "Utility / Helper Module",
     "imports": [
       "{ ThemeProvider, useTheme } from './theme/ThemeContext'",
       "{ SoundProvider, useSound } from './components/SoundProvider'",
-      "SplashScreen from './components/SplashScreen'",
       "WelcomeScreen from './components/WelcomeScreen'",
       "SetupWizard from './components/SetupWizard'",
       "Sidebar from './components/Sidebar'",
@@ -5707,32 +5706,31 @@
       "{ CursorProvider } from './cursor'",
       "{ parseFolderName, detectCity } from './utils/cityUtils'",
       "{ parseSafarHierarchy } from './utils/safarUtils'",
-      "{ prprojStore } from './stores/prprojStore'",
-      "Dashboard from './pages/Dashboard/Dashboard'"
+      "{ prprojStore } from './stores/prprojStore'"
     ],
     "internal_imports": [
-      "./components/Sidebar",
+      "./cursor",
       "./components/Toast",
-      "./pages/Stats/Stats",
-      "./pages/Dashboard/Dashboard",
-      "./pages/PVSeparator/PVSeparator",
-      "./pages/FolderMaker/FolderMaker",
-      "./pages/PrprojGenerator/PrprojGenerator",
-      "./pages/TitleAdder/TitleAdder",
-      "./components/FileViewer/FileViewer",
-      "./pages/ArchiveVault/ArchiveVault",
+      "./components/SoundProvider",
+      "./components/AutoUpdateModal",
+      "./components/TrayDock",
+      "./theme/ThemeContext",
+      "./utils/safarUtils",
       "./components/ErrorBoundary/WorkstationErrorBoundary",
+      "./components/Sidebar",
       "./components/GlobalDropOverlay",
       "./styles/global.css",
-      "./pages/InventoryMerger/InventoryMerger",
-      "./assets/zen_final_nobg.png"
+      "./components/Toolbar",
+      "./assets/zen_final_nobg.png",
+      "./components/EmailBroadcast/EmailBroadcastModal",
+      "./stores/prprojStore"
     ],
     "external_imports": [],
     "exports": [
       {
         "kind": "function",
         "name": "App",
-        "line": 1269
+        "line": 1270
       }
     ],
     "interfaces_types": [],
@@ -5749,89 +5747,89 @@
       {
         "name": "AppInner",
         "args": "",
-        "line": 84
+        "line": 83
       },
       {
         "name": "handleGlobalHotkeys",
         "args": "e: KeyboardEvent",
-        "line": 321
+        "line": 320
       },
       {
         "name": "check",
         "args": "",
-        "line": 356
+        "line": 355
       },
       {
         "name": "handleFound",
         "args": "d: { total: number }",
-        "line": 525
+        "line": 526
       },
       {
         "name": "handleProgress",
         "args": "d: { percent: number; status: string; fps?: string; speed?: string }",
-        "line": 530
+        "line": 531
       },
       {
         "name": "handleVideosDone",
         "args": "d: { done: number }",
-        "line": 556
+        "line": 557
       },
       {
         "name": "handleDone",
         "args": "d: { success: boolean; done?: number; total?: number }",
-        "line": 560
+        "line": 561
       },
       {
         "name": "handleFound",
         "args": "d: { total: number }",
-        "line": 589
+        "line": 590
       },
       {
         "name": "handleProgress",
         "args": "d: { percent: number; speedMBs?: string; done?: number }",
-        "line": 593
+        "line": 594
       },
       {
         "name": "handleDone",
         "args": "d: { copied: number; cancelled?: boolean }",
-        "line": 604
+        "line": 605
       },
       {
         "name": "handleKeyDown",
         "args": "e: KeyboardEvent",
-        "line": 818
+        "line": 819
       },
       {
         "name": "navigate",
         "args": "page: PageKey",
-        "line": 856
+        "line": 857
       },
       {
         "name": "handleNavEvent",
         "args": "e: any",
-        "line": 867
+        "line": 868
       },
       {
         "name": "handleStartDownload",
         "args": "",
-        "line": 878
+        "line": 879
       },
       {
         "name": "handleApplyUpdate",
         "args": "",
-        "line": 903
+        "line": 904
       },
       {
         "name": "App",
         "args": "",
-        "line": 1269
+        "line": 1270
       }
     ],
     "css_classes": [],
-    "raw_tokens": 11881,
+    "raw_tokens": 12008,
     "summary_tokens": 220,
-    "last_analyzed": "2026-10-15T00:38:41.779135",
-    "hash": "71ff9629043c690bf1ea31ac1ff9478d9437ce3530a189d01da4dc42fd431425"
+    "last_analyzed": "2026-10-15T11:25:23.778003",
+    "hash": "52e464d9110e7f0aefa4f0f21f817f19a10a1ffe9bd22d4419cf83846e6d7157"
   },
   "src/renderer/src/main.tsx": {
     "path": "src/renderer/src/main.tsx",
@@ -10065,8 +10063,8 @@
   "src/renderer/src/components/WelcomeScreen/WelcomeScreen.css": {
     "path": "src/renderer/src/components/WelcomeScreen/WelcomeScreen.css",
     "extension": ".css",
-    "loc": 259,
-    "bytes": 7744,
+    "loc": 257,
+    "bytes": 7564,
     "purpose": "Modular UI Component",
     "imports": [],
     "internal_imports": [],
@@ -10093,16 +10091,16 @@
       ".welcome-teardrop-svg",
       ".welcome-teardrops-banner"
     ],
-    "raw_tokens": 1936,
+    "raw_tokens": 1891,
     "summary_tokens": 220,
-    "last_analyzed": "2026-10-15T10:56:29.325998",
-    "hash": "f7a4cb544bfc88e0a7914ecd6beca364574bb8056a026b6eec3fd019f0322e74"
+    "last_analyzed": "2026-10-15T11:25:23.817748",
+    "hash": "98a1ed7357f6a9bc410aa6856df77ebbe837c5801e622d3625656fd6c1b8cc7f"
   },
   "src/renderer/src/components/WelcomeScreen/WelcomeScreen.tsx": {
     "path": "src/renderer/src/components/WelcomeScreen/WelcomeScreen.tsx",
     "extension": ".tsx",
-    "loc": 242,
-    "bytes": 8221,
+    "loc": 259,
+    "bytes": 8544,
     "purpose": "Modular UI Component",
     "imports": [
       "{ createPortal } from 'react-dom'",
@@ -10152,24 +10150,24 @@
       {
         "name": "step",
         "args": "time: number",
-        "line": 132
+        "line": 134
       },
       {
         "name": "handleKeyDown",
         "args": "e: KeyboardEvent",
-        "line": 151
+        "line": 158
       },
       {
         "name": "toggleGreetingMode",
         "args": "e: React.MouseEvent",
-        "line": 162
+        "line": 169
       }
     ],
     "css_classes": [],
-    "raw_tokens": 2055,
+    "raw_tokens": 2136,
     "summary_tokens": 220,
-    "last_analyzed": "2026-10-15T01:04:20.213549",
-    "hash": "78d057bca31dcb64853c35ac63e28443fdf274525c964d416af2aa12a3d70bb9"
+    "last_analyzed": "2026-10-15T11:25:23.821275",
+    "hash": "a43bd9c5e5c8bcfcea0cefa90881f9157f38346d34d2e0be79df36aeda7904f9"
   },
   "src/renderer/src/cursor/cursor.css": {
     "path": "src/renderer/src/cursor/cursor.css",
@@ -14483,8 +14481,8 @@
   "src/renderer/src/styles/global.css": {
     "path": "src/renderer/src/styles/global.css",
     "extension": ".css",
-    "loc": 834,
-    "bytes": 24064,
+    "loc": 837,
+    "bytes": 24162,
     "purpose": "Design Tokens & Stylesheet",
     "imports": [],
     "internal_imports": [],
@@ -14525,16 +14523,16 @@
       ".toolbar",
       ".vault-btn-primary"
     ],
-    "raw_tokens": 6016,
+    "raw_tokens": 6040,
     "summary_tokens": 220,
-    "last_analyzed": "2026-10-15T00:38:42.541097",
-    "hash": "37e011e5a279cd81c7d9b413d78870481bcc533e37d1d4ca5d8ba581fe417e74"
+    "last_analyzed": "2026-10-15T11:25:23.848413",
+    "hash": "f4ff95ff4fd8ed4235600c53a79748fe64b4e1dc534c990fc36d335c77ede5d9"
   },
   "src/renderer/src/styles/tokens.css": {
     "path": "src/renderer/src/styles/tokens.css",
     "extension": ".css",
-    "loc": 740,
-    "bytes": 25623,
+    "loc": 738,
+    "bytes": 25281,
     "purpose": "Design Tokens & Stylesheet",
     "imports": [],
     "internal_imports": [],
@@ -14547,10 +14545,10 @@
     "css_classes": [
       ".dark-theme"
     ],
-    "raw_tokens": 6405,
+    "raw_tokens": 6320,
     "summary_tokens": 220,
-    "last_analyzed": "2026-10-15T00:38:42.543258",
-    "hash": "79366565437741e803fdbce2a719d8319f28bb933c3885dd3b970ff27d2f9b1b"
+    "last_analyzed": "2026-10-15T11:25:23.849748",
+    "hash": "076e904709c099112bd064ab0c5ded5e5507273a50c99a6b44e44bb2f3a201fa"
   },
   "src/renderer/src/theme/ThemeContext.tsx": {
     "path": "src/renderer/src/theme/ThemeContext.tsx",

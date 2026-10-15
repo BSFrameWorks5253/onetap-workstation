@@ -1,7 +1,7 @@
 # Detailed Analysis: `src/renderer/src/components/WelcomeScreen/WelcomeScreen.tsx`
 > **Role**: Modular UI Component  
-> **Metrics**: 242 lines · 8.0 KB · ~2,055 raw tokens → ~220 cached (89.3% saved)  
-> **Last Analyzed**: 2026-10-15T01:04:20.213549  
+> **Metrics**: 259 lines · 8.3 KB · ~2,136 raw tokens → ~220 cached (89.7% saved)  
+> **Last Analyzed**: 2026-10-15T11:25:23.821275  
 
 ---
 
@@ -22,9 +22,9 @@ Utilizes: `useEffect`, `useMemo`, `useRef`, `useState`
 | 14 | `WelcomeScreen({ onDone, version = '26.8.9' }: WelcomeScreenProps)` |
 | 34 | `handleResize()` |
 | 78 | `handleComplete()` |
-| 132 | `step(time: number)` |
-| 151 | `handleKeyDown(e: KeyboardEvent)` |
-| 162 | `toggleGreetingMode(e: React.MouseEvent)` |
+| 134 | `step(time: number)` |
+| 158 | `handleKeyDown(e: KeyboardEvent)` |
+| 169 | `toggleGreetingMode(e: React.MouseEvent)` |
 
 ## 8. Dependencies & Module Linkages
 - **External Packages**: `react-dom`

@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, Suspense } from 'react'
 import { ThemeProvider, useTheme } from './theme/ThemeContext'
 import { SoundProvider, useSound } from './components/SoundProvider'
-import SplashScreen from './components/SplashScreen'
 import WelcomeScreen from './components/WelcomeScreen'
 import SetupWizard from './components/SetupWizard'
 import Sidebar from './components/Sidebar'
@@ -26,26 +25,26 @@ import { parseFolderName, detectCity } from './utils/cityUtils'
 import { parseSafarHierarchy } from './utils/safarUtils'
 import { prprojStore } from './stores/prprojStore'
 
-// Lazy-load pages (only parsed on first navigation)
-import Dashboard from './pages/Dashboard/Dashboard'
-import TitleAdder from './pages/TitleAdder/TitleAdder'
-import Converter from './pages/Converter/Converter'
-import DriveSync from './pages/DriveSync/DriveSync'
-import FolderMaker from './pages/FolderMaker/FolderMaker'
-import Settings from './pages/Settings/Settings'
-import Stats from './pages/Stats/Stats'
-import StickyNotes from './pages/StickyNotes/StickyNotes'
-import CloudPortal from './pages/CloudPortal/CloudPortal'
-import GDrivePortal from './pages/GDrivePortal/GDrivePortal'
-import Utilities from './pages/Utilities/Utilities'
-import CameraTransfer from './pages/CameraTransfer/CameraTransfer'
-import PrprojGenerator from './pages/PrprojGenerator/PrprojGenerator'
-import VideoTransfer from './pages/VideoTransfer/VideoTransfer'
-import Cleaner from './pages/Cleaner/Cleaner'
-import PVSeparator from './pages/PVSeparator/PVSeparator'
-import InventoryMerger from './pages/InventoryMerger/InventoryMerger'
-import TaskTracker from './pages/TaskTracker/TaskTracker'
-import ArchiveVault from './pages/ArchiveVault/ArchiveVault'
+// Truly code-split pages — evaluated on-demand upon first navigation
+const Dashboard = React.lazy(() => import('./pages/Dashboard/Dashboard'))
+const TitleAdder = React.lazy(() => import('./pages/TitleAdder/TitleAdder'))
+const Converter = React.lazy(() => import('./pages/Converter/Converter'))
+const DriveSync = React.lazy(() => import('./pages/DriveSync/DriveSync'))
+const FolderMaker = React.lazy(() => import('./pages/FolderMaker/FolderMaker'))
+const Settings = React.lazy(() => import('./pages/Settings/Settings'))
+const Stats = React.lazy(() => import('./pages/Stats/Stats'))
+const StickyNotes = React.lazy(() => import('./pages/StickyNotes/StickyNotes'))
+const CloudPortal = React.lazy(() => import('./pages/CloudPortal/CloudPortal'))
+const GDrivePortal = React.lazy(() => import('./pages/GDrivePortal/GDrivePortal'))
+const Utilities = React.lazy(() => import('./pages/Utilities/Utilities'))
+const CameraTransfer = React.lazy(() => import('./pages/CameraTransfer/CameraTransfer'))
+const PrprojGenerator = React.lazy(() => import('./pages/PrprojGenerator/PrprojGenerator'))
+const VideoTransfer = React.lazy(() => import('./pages/VideoTransfer/VideoTransfer'))
+const Cleaner = React.lazy(() => import('./pages/Cleaner/Cleaner'))
+const PVSeparator = React.lazy(() => import('./pages/PVSeparator/PVSeparator'))
+const InventoryMerger = React.lazy(() => import('./pages/InventoryMerger/InventoryMerger'))
+const TaskTracker = React.lazy(() => import('./pages/TaskTracker/TaskTracker'))
+const ArchiveVault = React.lazy(() => import('./pages/ArchiveVault/ArchiveVault'))
 
 const PAGE_COMPONENTS: Record<PageKey, React.LazyExoticComponent<() => JSX.Element>> = {
   dashboard: Dashboard as any,
@@ -407,101 +406,103 @@ function AppInner(): JSX.Element {
           }, 3000)
         }
 
-        // 4. Database migration for legacy folders, Safars and unassigned cities
-        if (allSettings.render_stats) {
-          let loadedRecords: any[] = typeof allSettings.render_stats === 'string'
-            ? JSON.parse(allSettings.render_stats)
-            : allSettings.render_stats as any[]
+        // 4. Deferred non-blocking background migration for legacy stats
+        setTimeout(async () => {
+          try {
+            if (!allSettings.render_stats) return
+            let loadedRecords: any[] = typeof allSettings.render_stats === 'string'
+              ? JSON.parse(allSettings.render_stats)
+              : allSettings.render_stats as any[]
 
-          const folderCities = (allSettings.stats_folder_cities
-            ? (typeof allSettings.stats_folder_cities === 'string' ? JSON.parse(allSettings.stats_folder_cities) : allSettings.stats_folder_cities)
-            : {}) as Record<string, string>
+            const folderCities = (allSettings.stats_folder_cities
+              ? (typeof allSettings.stats_folder_cities === 'string' ? JSON.parse(allSettings.stats_folder_cities) : allSettings.stats_folder_cities)
+              : {}) as Record<string, string>
 
-          let migrated = false
-          if (loadedRecords && loadedRecords.length > 0) {
-            loadedRecords = loadedRecords.map(r => {
-              // A. Migrate legacy folders directly
-              if (r.folder === '06-12 01M Bethak QMZ' || r.folder === 'trial finished' || r.folder === 'trial 2') {
-                migrated = true
-                return {
-                  ...r,
-                  folder: '1447-12 Mumbai',
-                  safar: '1447-12 Mumbai',
-                  city: 'Mumbai',
-                  hijriYear: 1447,
-                  hijriMonth: 12
+            let migrated = false
+            if (loadedRecords && loadedRecords.length > 0) {
+              loadedRecords = loadedRecords.map(r => {
+                if (r.folder === '06-12 01M Bethak QMZ' || r.folder === 'trial finished' || r.folder === 'trial 2') {
+                  migrated = true
+                  return {
+                    ...r,
+                    folder: '1447-12 Mumbai',
+                    safar: '1447-12 Mumbai',
+                    city: 'Mumbai',
+                    hijriYear: 1447,
+                    hijriMonth: 12
+                  }
                 }
-              }
 
-              // B. Populate Safar and hierarchy metadata: Mumbai stays in Mumbai, non-Mumbai to Unassigned
-              const safarHierarchy = parseSafarHierarchy(r.filePath || r.folder || '')
-              const isBogusSafar = r.safar && (/^\d{4}[\s-_.]\d{1,2}[\s-_.]\d{1,2}/.test(r.safar) || (/^\d{4}[\s-_.]\d{1,2}/.test(r.safar) && !/[a-zA-Z]{2,}/.test(r.safar)))
+                const safarHierarchy = parseSafarHierarchy(r.filePath || r.folder || '')
+                const isBogusSafar = r.safar && (/^\d{4}[\s-_.]\d{1,2}[\s-_.]\d{1,2}/.test(r.safar) || (/^\d{4}[\s-_.]\d{1,2}/.test(r.safar) && !/[a-zA-Z]{2,}/.test(r.safar)))
 
-              const isMumbai = (r.city && r.city.toLowerCase() === 'mumbai') ||
-                (r.safar && r.safar.toLowerCase().includes('mumbai')) ||
-                (r.folder && r.folder.toLowerCase().includes('mumbai')) ||
-                (r.filePath && r.filePath.toLowerCase().includes('mumbai')) ||
-                (safarHierarchy.city && safarHierarchy.city.toLowerCase() === 'mumbai')
+                const isMumbai = (r.city && r.city.toLowerCase() === 'mumbai') ||
+                  (r.safar && r.safar.toLowerCase().includes('mumbai')) ||
+                  (r.folder && r.folder.toLowerCase().includes('mumbai')) ||
+                  (r.filePath && r.filePath.toLowerCase().includes('mumbai')) ||
+                  (safarHierarchy.city && safarHierarchy.city.toLowerCase() === 'mumbai')
 
-              let resolvedSafar = 'Unassigned'
-              let resolvedCity = 'Unassigned'
-              let resolvedSafarSerial: string | undefined = undefined
-              let resolvedSafarYear: number | undefined = undefined
+                let resolvedSafar = 'Unassigned'
+                let resolvedCity = 'Unassigned'
+                let resolvedSafarSerial: string | undefined = undefined
+                let resolvedSafarYear: number | undefined = undefined
 
-              if (isMumbai) {
-                resolvedCity = 'Mumbai'
-                if (r.safar && r.safar !== 'Unassigned' && !isBogusSafar) {
-                  resolvedSafar = r.safar
+                if (isMumbai) {
+                  resolvedCity = 'Mumbai'
+                  if (r.safar && r.safar !== 'Unassigned' && !isBogusSafar) {
+                    resolvedSafar = r.safar
+                  } else if (safarHierarchy.safar && safarHierarchy.safar !== 'Unassigned') {
+                    resolvedSafar = safarHierarchy.safar
+                  } else {
+                    resolvedSafar = '1448-03 Mumbai'
+                  }
+                  resolvedSafarSerial = (r.safarSerial && !isBogusSafar) ? r.safarSerial : (safarHierarchy.safarSerial || '03')
+                  resolvedSafarYear = (r.safarYear && !isBogusSafar) ? r.safarYear : (safarHierarchy.safarYear || 1448)
                 } else if (safarHierarchy.safar && safarHierarchy.safar !== 'Unassigned') {
                   resolvedSafar = safarHierarchy.safar
+                  resolvedCity = safarHierarchy.city !== 'Unassigned' ? safarHierarchy.city : (r.city || 'Unassigned')
+                  resolvedSafarSerial = safarHierarchy.safarSerial || r.safarSerial
+                  resolvedSafarYear = safarHierarchy.safarYear || r.safarYear
+                } else if (r.safar && r.safar !== 'Unassigned' && !isBogusSafar) {
+                  resolvedSafar = r.safar
+                  resolvedCity = r.city || 'Unassigned'
+                  resolvedSafarSerial = r.safarSerial
+                  resolvedSafarYear = r.safarYear
                 } else {
-                  resolvedSafar = '1448-03 Mumbai'
+                  resolvedSafar = 'Unassigned'
+                  resolvedCity = 'Unassigned'
                 }
-                resolvedSafarSerial = (r.safarSerial && !isBogusSafar) ? r.safarSerial : (safarHierarchy.safarSerial || '03')
-                resolvedSafarYear = (r.safarYear && !isBogusSafar) ? r.safarYear : (safarHierarchy.safarYear || 1448)
-              } else if (safarHierarchy.safar && safarHierarchy.safar !== 'Unassigned') {
-                resolvedSafar = safarHierarchy.safar
-                resolvedCity = safarHierarchy.city !== 'Unassigned' ? safarHierarchy.city : (r.city || 'Unassigned')
-                resolvedSafarSerial = safarHierarchy.safarSerial || r.safarSerial
-                resolvedSafarYear = safarHierarchy.safarYear || r.safarYear
-              } else if (r.safar && r.safar !== 'Unassigned' && !isBogusSafar) {
-                resolvedSafar = r.safar
-                resolvedCity = r.city || 'Unassigned'
-                resolvedSafarSerial = r.safarSerial
-                resolvedSafarYear = r.safarYear
-              } else {
-                resolvedSafar = 'Unassigned'
-                resolvedCity = 'Unassigned'
+
+                const folderInfo = parseFolderName(r.folder || '')
+                if (resolvedCity !== r.city || resolvedSafar !== r.safar || resolvedSafarSerial !== r.safarSerial || resolvedSafarYear !== r.safarYear) {
+                  migrated = true
+                  return {
+                    ...r,
+                    safar: resolvedSafar,
+                    safarSerial: resolvedSafarSerial,
+                    safarYear: resolvedSafarYear,
+                    city: resolvedCity,
+                    hijriYear: folderInfo.hijriYear || safarHierarchy.hijriYear || r.hijriYear,
+                    hijriMonth: folderInfo.hijriMonth || safarHierarchy.hijriMonth || r.hijriMonth
+                  }
+                }
+                return r
+              })
+
+              if (migrated) {
+                console.log('[App] Background stats migration completed.')
+                localStorage.setItem('render_stats', JSON.stringify(loadedRecords))
+                await api.settings.setAndSave('render_stats', loadedRecords)
               }
 
-              const folderInfo = parseFolderName(r.folder || '')
-              if (resolvedCity !== r.city || resolvedSafar !== r.safar || resolvedSafarSerial !== r.safarSerial || resolvedSafarYear !== r.safarYear) {
-                migrated = true
-                return {
-                  ...r,
-                  safar: resolvedSafar,
-                  safarSerial: resolvedSafarSerial,
-                  safarYear: resolvedSafarYear,
-                  city: resolvedCity,
-                  hijriYear: folderInfo.hijriYear || safarHierarchy.hijriYear || r.hijriYear,
-                  hijriMonth: folderInfo.hijriMonth || safarHierarchy.hijriMonth || r.hijriMonth
-                }
+              if (api && api.statsDb) {
+                api.statsDb.insertRecords(loadedRecords).catch(() => { })
               }
-              return r
-            })
-
-            if (migrated) {
-              console.log('[App] Startup database migration triggered. Saving cleaned stats.')
-              localStorage.setItem('render_stats', JSON.stringify(loadedRecords))
-              await api.settings.setAndSave('render_stats', loadedRecords)
             }
-
-            // Sync into SQLite DB
-            if (api && api.statsDb) {
-              api.statsDb.insertRecords(loadedRecords).catch(() => { })
-            }
+          } catch (migrationErr) {
+            console.warn('[App] Deferred migration warning:', migrationErr)
           }
-        }
+        }, 1500)
       } catch (e) {
         console.error('Initialization error:', e)
         setSetupDone(true)
