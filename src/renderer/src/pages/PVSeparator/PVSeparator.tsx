@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { PAGE_META } from '../../types'
 import { Card, CardHeader, PageHero } from '../../components/Card'
+import { PageIcon } from '../../components/PageIcon'
 import { Button } from '../../components/Button'
 import { BrowseRow } from '../../components/Input'
 import StatCard, { StatusChip } from '../../components/StatCard'
@@ -208,9 +209,8 @@ export default function PVSeparator(): JSX.Element {
           title: 'Extraction & Separation Complete!',
           message: `Successfully processed & moved ${result.success_count} photo files in ${result.elapsed_sec}s!`,
           type: 'success',
-          badge: '🖼️ MEDIA SEPARATOR',
-          icon: '✨',
-          action: { label: '📂 Open Destination', onClick: () => api.shell.openFolder(dDir) }
+          badge: 'MEDIA SEPARATOR',
+          action: { label: 'Open Destination', onClick: () => api.shell.openFolder(dDir) }
         })
       }
     } catch (e: any) {
@@ -254,15 +254,15 @@ export default function PVSeparator(): JSX.Element {
 
       {/* Page Hero Header Component */}
       <PageHero
-        icon={meta.icon}
+        icon={<PageIcon pageKey="pvseparator" size={24} color="#FFFFFF" />}
         label={meta.label}
         subtitle={meta.subtitle}
         accent={meta.accent}
         accentSoft={meta.accentSoft}
         right={
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <StatusChip label={`⚡ ${speedMbps.toFixed(1)} MB/s`} variant="info" />
-            <StatusChip label="⚡ 16 Threads" variant="warning" />
+            <StatusChip label={`${speedMbps.toFixed(1)} MB/s`} variant="info" />
+            <StatusChip label="16 Threads" variant="warning" />
             <StatusChip label="v3.0 Ultra" variant="muted" />
           </div>
         }
@@ -313,15 +313,19 @@ export default function PVSeparator(): JSX.Element {
                     type="button"
                     className={`pvs-mode-pill ${actionMode === 'copy' ? 'active' : ''}`}
                     onClick={() => { playTick(); setActionMode('copy') }}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                   >
-                    📋 Copy (Safe)
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                    <span>Copy (Safe)</span>
                   </button>
                   <button
                     type="button"
                     className={`pvs-mode-pill ${actionMode === 'move' ? 'active' : ''}`}
                     onClick={() => { playTick(); setActionMode('move') }}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                   >
-                    ✂️ Move
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg>
+                    <span>Move</span>
                   </button>
                 </div>
               </div>
@@ -333,12 +337,24 @@ export default function PVSeparator(): JSX.Element {
                   onClick={handleSingleAction}
                   disabled={isScanning || isProcessing || !sourceDir.trim() || !destDir.trim()}
                   variant="primary"
+                  style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                 >
-                  {isScanning
-                    ? '⏳ Analyzing Media...'
-                    : isProcessing
-                    ? '⚡ Extracting Photos...'
-                    : '⚡ Start Photo Extraction'}
+                  {isScanning ? (
+                    <>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="spin-slow"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 10 10"/></svg>
+                      <span>Analyzing Media...</span>
+                    </>
+                  ) : isProcessing ? (
+                    <>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="spin-slow"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 10 10"/></svg>
+                      <span>Extracting Photos...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                      <span>Start Photo Extraction</span>
+                    </>
+                  )}
                 </Button>
 
                 <div className="pvs-status-bar">
@@ -362,7 +378,9 @@ export default function PVSeparator(): JSX.Element {
                 accentSoft={meta.accentSoft}
               />
               <div className="pvs-empty-hud">
-                <span className="pvs-empty-icon">📷</span>
+                <span className="pvs-empty-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5 }}><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                </span>
                 <span className="pvs-empty-title">Ready for Analysis & Extraction</span>
                 <span className="pvs-empty-desc">
                   Select your source and destination directories on the left, then click <strong>Start Photo Extraction</strong> to analyze and extract photo data in one click.
@@ -383,28 +401,28 @@ export default function PVSeparator(): JSX.Element {
                   <StatCard
                     label="Total Files"
                     value={scanData.total_files.toLocaleString()}
-                    icon="📁"
+                    icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>}
                     accent={meta.accent}
                     accentSoft="var(--surface-2)"
                   />
                   <StatCard
                     label="Photos Extracted"
                     value={scanData.total_photos.toLocaleString()}
-                    icon="📷"
+                    icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>}
                     accent="#10b981"
                     accentSoft="rgba(16, 185, 129, 0.12)"
                   />
                   <StatCard
                     label="Photo Payload"
                     value={formatBytes(scanData.photo_bytes)}
-                    icon="💾"
+                    icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>}
                     accent="#8b5cf6"
                     accentSoft="rgba(139, 92, 246, 0.12)"
                   />
                   <StatCard
                     label="Videos Untouched"
                     value={scanData.total_videos.toLocaleString()}
-                    icon="🎬"
+                    icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/></svg>}
                     accent="#f59e0b"
                     accentSoft="rgba(245, 158, 11, 0.12)"
                   />
@@ -466,7 +484,7 @@ export default function PVSeparator(): JSX.Element {
             value={progressPct}
             accent={meta.accent}
             label={progressLabel}
-            status={`⚡ ${speedMbps.toFixed(1)} MB/s  |  ⏱️ ETA: ${formatEta(etaSec)}`}
+            status={`${speedMbps.toFixed(1)} MB/s  |  ETA: ${formatEta(etaSec)}`}
           />
 
           {/* Native LogBox */}

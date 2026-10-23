@@ -4,6 +4,7 @@ import { Card, CardHeader } from '../../components/Card'
 import { BrowseRow } from '../../components/Input'
 import { Button } from '../../components/Button'
 import StatCard from '../../components/StatCard'
+import { PageIcon } from '../../components/PageIcon/PageIcon'
 import { useToast } from '../../components/Toast'
 import { useSound } from '../../components/SoundProvider'
 import confetti from 'canvas-confetti'
@@ -311,9 +312,8 @@ export default function VideoTransfer(): JSX.Element {
           title: 'Video Transfer & Rename Complete!',
           message: `Successfully copied & renamed ${res.transferredCount} video clip(s) and photo thumbnail(s).`,
           type: 'success',
-          badge: '📹 FILE TRANSFER',
-          icon: '📦',
-          action: { label: '📂 Open Photo Directory', onClick: () => api.shell.openFolder(photoFolder) }
+          badge: 'FILE TRANSFER',
+          action: { label: 'Open Photo Directory', onClick: () => api.shell.openFolder(photoFolder) }
         })
       } else {
         throw new Error(res?.error || 'Transfer failed.')
@@ -404,8 +404,8 @@ export default function VideoTransfer(): JSX.Element {
       <Card style={{ padding: '20px 24px', borderLeft: '4px solid #8B5CF6' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(139, 92, 246, 0.15)', color: '#8B5CF6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', fontWeight: 800 }}>
-              📹
+            <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(139, 92, 246, 0.15)', color: '#8B5CF6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <PageIcon pageKey="videotransfer" size={26} color="#8B5CF6" />
             </div>
             <div>
               <div style={{ fontWeight: '800', fontSize: '16px', color: 'var(--text-primary)', letterSpacing: '-0.2px' }}>
@@ -417,8 +417,9 @@ export default function VideoTransfer(): JSX.Element {
             </div>
           </div>
           {dateFolders.length > 0 && (
-            <span style={{ background: 'rgba(139, 92, 246, 0.12)', color: '#6D28D9', border: '1.5px solid rgba(139, 92, 246, 0.3)', padding: '6px 14px', borderRadius: '99px', fontSize: '12px', fontWeight: '800' }}>
-              📁 {dateFolders.length} Date Folder(s) Detected
+            <span style={{ background: 'rgba(139, 92, 246, 0.12)', color: '#6D28D9', border: '1.5px solid rgba(139, 92, 246, 0.3)', padding: '6px 14px', borderRadius: '99px', fontSize: '12px', fontWeight: '800', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              <span>{dateFolders.length} Date Folder(s) Detected</span>
             </span>
           )}
         </div>
@@ -430,7 +431,7 @@ export default function VideoTransfer(): JSX.Element {
         <div style={{ padding: '22px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
           
           <BrowseRow
-            label="📁 Master Directory (Auto-detect Video & Photo Folders)"
+            label="Master Directory (Auto-detect Video & Photo Folders)"
             value={masterFolder}
             placeholder="Select master directory path to auto-detect both video and photo folders..."
             accent="#3B82F6"
@@ -448,7 +449,7 @@ export default function VideoTransfer(): JSX.Element {
           </div>
 
           <BrowseRow
-            label="🎬 1. Video Directory (contains Video Files)"
+            label="1. Video Directory (contains Video Files)"
             value={videoFolder}
             placeholder="Select video directory or drag & drop folder path..."
             accent="#8B5CF6"
@@ -457,7 +458,7 @@ export default function VideoTransfer(): JSX.Element {
           />
 
           <BrowseRow
-            label="📷 2. Photo Directory (contains Date & Photo Sequence Subfolders)"
+            label="2. Photo Directory (contains Date & Photo Sequence Subfolders)"
             value={photoFolder}
             placeholder="Select photo directory or drag & drop folder path..."
             accent="#10B981"
@@ -472,9 +473,19 @@ export default function VideoTransfer(): JSX.Element {
               accentHv="#7C3AED"
               disabled={(!masterFolder && (!videoFolder || !photoFolder)) || scanning}
               onClick={() => handleScan()}
-              style={{ padding: '12px 24px', fontWeight: 700 }}
+              style={{ padding: '12px 24px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '8px' }}
             >
-              {scanning ? '🔍 Scanning & Matching Videos & Photos...' : '🔍 Scan & Match Both Directories'}
+              {scanning ? (
+                <>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="spin-slow"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 10 10"/></svg>
+                  <span>Scanning & Matching Videos & Photos...</span>
+                </>
+              ) : (
+                <>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  <span>Scan & Match Both Directories</span>
+                </>
+              )}
             </Button>
           </div>
         </div>
@@ -486,28 +497,28 @@ export default function VideoTransfer(): JSX.Element {
           {/* Quick Metrics Grid */}
           <div className="vt-stats-grid">
             <StatCard
-              icon="📁"
+              icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>}
               label="Paired Date Folders"
               value={String(dateFolders.length)}
               accent="#8B5CF6"
               accentSoft="rgba(139, 92, 246, 0.12)"
             />
             <StatCard
-              icon="🎬"
+              icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/></svg>}
               label="Matched Video Clips"
               value={String(matched.length)}
               accent="#10B981"
               accentSoft="rgba(16, 185, 129, 0.12)"
             />
             <StatCard
-              icon="📷"
+              icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6366F1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>}
               label="Target Photo Folders"
               value={String(matched.length)}
               accent="#6366F1"
               accentSoft="rgba(99, 102, 241, 0.12)"
             />
             <StatCard
-              icon="⚠️"
+              icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={unmatched.length > 0 ? "#EF4444" : "#10B981"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>}
               label="Sequence Alerts"
               value={String(unmatched.length)}
               accent={unmatched.length > 0 ? "#EF4444" : "#10B981"}
@@ -529,26 +540,28 @@ export default function VideoTransfer(): JSX.Element {
                   className={`vt-tab-btn ${activeTab === 'matched' ? 'active' : ''}`}
                   onClick={() => setActiveTab('matched')}
                 >
-                  ✔ Matched ({matched.length})
+                  Matched ({matched.length})
                 </button>
                 <button
                   className={`vt-tab-btn ${activeTab === 'unmatched' ? 'active' : ''}`}
                   onClick={() => setActiveTab('unmatched')}
                 >
-                  🔴 Mismatches ({unmatched.length})
+                  Mismatches ({unmatched.length})
                 </button>
                 {transferCompleted && (
                   <button
                     className={`vt-tab-btn ${activeTab === 'transferred' ? 'active' : ''}`}
                     onClick={() => setActiveTab('transferred')}
                   >
-                    🎉 Transferred ({transferredLog.length})
+                    Transferred ({transferredLog.length})
                   </button>
                 )}
               </div>
 
               <div className="vt-search-wrap">
-                <span className="vt-search-icon">🔍</span>
+                <span className="vt-search-icon" style={{ display: 'inline-flex', alignItems: 'center' }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                </span>
                 <input
                   type="text"
                   className="vt-search-input"
@@ -580,7 +593,7 @@ export default function VideoTransfer(): JSX.Element {
             <div className="vt-mismatch-container anim-scale-in">
               <div className="vt-mismatch-header">
                 <div className="vt-mismatch-title">
-                  <span>🔴</span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                   <span>Sequence Mismatches / Missing Folders ({filteredUnmatched.length})</span>
                 </div>
                 <div className="vt-btn-row">
@@ -595,7 +608,7 @@ export default function VideoTransfer(): JSX.Element {
                     <div key={u.id} className="vt-mismatch-card">
                       <div className="vt-mismatch-info" style={{ flex: 1 }}>
                         <span className="vt-mismatch-tag">
-                          ⚠️ Date Folder "{u.dateFolderName}": {u.videoName || u.photoFolderName}
+                          Date Folder "{u.dateFolderName}": {u.videoName || u.photoFolderName}
                         </span>
                         <span className="vt-mismatch-reason">{u.reason}</span>
                       </div>
@@ -615,7 +628,7 @@ export default function VideoTransfer(): JSX.Element {
                             <option value="" disabled>-- Pair with Photo Folder --</option>
                             {availablePhotoFolders.map(pf => (
                               <option key={pf.path} value={pf.path}>
-                                📷 {pf.name}
+                                {pf.name}
                               </option>
                             ))}
                           </select>
@@ -648,17 +661,31 @@ export default function VideoTransfer(): JSX.Element {
                     <tbody>
                       {filteredMatched.map((m, idx) => (
                         <tr key={idx}>
-                          <td style={{ fontWeight: '700' }}>📁 {m.dateFolderName}</td>
+                          <td style={{ fontWeight: '700' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                              {m.dateFolderName}
+                            </span>
+                          </td>
                           <td><span className="vt-seq-tag">{m.sequence || '—'}</span></td>
                           <td style={{ fontFamily: 'monospace' }}>
-                            <div>🎬 {m.videoName}</div>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
+                              <span>{m.videoName}</span>
+                            </div>
                             {m.thumbnailName && (
-                              <span style={{ fontSize: '11px', color: '#10B981', background: 'rgba(16, 185, 129, 0.15)', padding: '2px 6px', borderRadius: '4px', marginTop: '3px', display: 'inline-block' }}>
-                                🖼️ + Photo ({m.thumbnailName})
+                              <span style={{ fontSize: '11px', color: '#10B981', background: 'rgba(16, 185, 129, 0.15)', padding: '2px 6px', borderRadius: '4px', marginTop: '3px', display: 'flex', alignItems: 'center', gap: '4px', width: 'fit-content' }}>
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                                <span>+ Photo ({m.thumbnailName})</span>
                               </span>
                             )}
                           </td>
-                          <td style={{ fontFamily: 'monospace' }}>📷 {m.photoFolderName}</td>
+                          <td style={{ fontFamily: 'monospace' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                              {m.photoFolderName}
+                            </span>
+                          </td>
                           <td>
                             <span style={{ color: '#10B981', fontWeight: 800, fontSize: '11px', textTransform: 'uppercase', background: 'rgba(16, 185, 129, 0.12)', padding: '3px 10px', borderRadius: '12px', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
                               APPROVED
@@ -702,9 +729,20 @@ export default function VideoTransfer(): JSX.Element {
                       padding: '6px 14px', borderRadius: '99px', fontSize: '11px', fontWeight: 800,
                       background: dryRunResult.hasSufficientSpace ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
                       color: dryRunResult.hasSufficientSpace ? '#065F46' : '#991B1B',
-                      border: dryRunResult.hasSufficientSpace ? '1.5px solid rgba(16, 185, 129, 0.4)' : '1.5px solid rgba(239, 68, 68, 0.4)'
+                      border: dryRunResult.hasSufficientSpace ? '1.5px solid rgba(16, 185, 129, 0.4)' : '1.5px solid rgba(239, 68, 68, 0.4)',
+                      display: 'inline-flex', alignItems: 'center', gap: '5px'
                     }}>
-                      {dryRunResult.hasSufficientSpace ? '✓ DISK SPACE VALIDATED' : '⚠️ INSUFFICIENT DISK SPACE'}
+                      {dryRunResult.hasSufficientSpace ? (
+                        <>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                          <span>DISK SPACE VALIDATED</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                          <span>INSUFFICIENT DISK SPACE</span>
+                        </>
+                      )}
                     </span>
                   </div>
                 )}
@@ -732,9 +770,10 @@ export default function VideoTransfer(): JSX.Element {
                           variant="secondary"
                           disabled={matched.length === 0 || checkingDryRun}
                           onClick={handleCheckDryRun}
-                          style={{ padding: '12px 18px', fontSize: '13px', fontWeight: 700 }}
+                          style={{ padding: '12px 18px', fontSize: '13px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                         >
-                          {checkingDryRun ? 'Checking Storage...' : '🛡️ Pre-Flight Storage Check'}
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                          <span>{checkingDryRun ? 'Checking Storage...' : 'Pre-Flight Storage Check'}</span>
                         </Button>
 
                         <Button
@@ -743,9 +782,10 @@ export default function VideoTransfer(): JSX.Element {
                           accentHv="#059669"
                           disabled={matched.length === 0}
                           onClick={handleStartTransferWithCheck}
-                          style={{ padding: '12px 24px', fontSize: '14px', fontWeight: 800 }}
+                          style={{ padding: '12px 24px', fontSize: '14px', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '8px' }}
                         >
-                          📂 Transfer {matched.length} Matched Video(s)
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+                          <span>Transfer {matched.length} Matched Video(s)</span>
                         </Button>
                       </div>
                     </div>
@@ -764,8 +804,8 @@ export default function VideoTransfer(): JSX.Element {
                       </div>
 
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px', color: 'var(--text-secondary, #475569)', fontWeight: 600 }}>
-                        <span>🚀 Speed: <strong style={{ color: '#6D28D9' }}>{speedMbps} MB/s</strong></span>
-                        <span>⏱️ ETA: <strong style={{ color: '#6D28D9' }}>{formatSeconds(etaSec)}</strong></span>
+                        <span>Speed: <strong style={{ color: '#6D28D9' }}>{speedMbps} MB/s</strong></span>
+                        <span>ETA: <strong style={{ color: '#6D28D9' }}>{formatSeconds(etaSec)}</strong></span>
                       </div>
                     </div>
                   )}
@@ -779,16 +819,17 @@ export default function VideoTransfer(): JSX.Element {
             <div className="vt-preview-section anim-scale-in">
               <div className="vt-preview-header">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-primary)' }}>
-                    🔍 Transfer Preview & Dual Thumbnail Inspection ({filteredMatched.length} Items)
+                  <span style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-primary)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <span>Transfer Preview & Dual Thumbnail Inspection ({filteredMatched.length} Items)</span>
                   </span>
                   {hasReviewedPreview ? (
                     <span style={{ fontSize: '11px', background: 'rgba(16, 185, 129, 0.15)', color: '#10B981', padding: '2px 8px', borderRadius: '12px', fontWeight: 700, border: '1px solid rgba(16, 185, 129, 0.3)' }}>
-                      ✓ PREVIEW REVIEWED
+                      PREVIEW REVIEWED
                     </span>
                   ) : (
                     <span style={{ fontSize: '11px', background: 'rgba(245, 158, 11, 0.15)', color: '#F59E0B', padding: '2px 8px', borderRadius: '12px', fontWeight: 700, border: '1px solid rgba(245, 158, 11, 0.3)' }}>
-                      ⚠️ PREVIEW UNCHECKED
+                      PREVIEW UNCHECKED
                     </span>
                   )}
                 </div>
@@ -798,9 +839,12 @@ export default function VideoTransfer(): JSX.Element {
                     setIsPreviewOpen(prev => !prev)
                     setHasReviewedPreview(true)
                   }}
-                  style={{ fontSize: '12px', fontWeight: 700, padding: '6px 14px', background: isPreviewOpen ? 'var(--accent-video, #8B5CF6)' : '#F1F5F9', color: isPreviewOpen ? '#FFFFFF' : '#475569', border: '1px solid var(--border-soft, #E2E8F0)', borderRadius: '8px' }}
+                  style={{ fontSize: '12px', fontWeight: 700, padding: '6px 14px', background: isPreviewOpen ? 'var(--accent-video, #8B5CF6)' : '#F1F5F9', color: isPreviewOpen ? '#FFFFFF' : '#475569', border: '1px solid var(--border-soft, #E2E8F0)', borderRadius: '8px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                 >
-                  {isPreviewOpen ? '🔼 Hide Transfer Preview' : '🔽 Open Transfer Preview'}
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    {isPreviewOpen ? <polyline points="18 15 12 9 6 15"/> : <polyline points="6 9 12 15 18 9"/>}
+                  </svg>
+                  <span>{isPreviewOpen ? 'Hide Transfer Preview' : 'Open Transfer Preview'}</span>
                 </button>
               </div>
 
@@ -813,19 +857,28 @@ export default function VideoTransfer(): JSX.Element {
                     return (
                       <div key={idx} className="vt-preview-card">
                         <div className="vt-preview-card-meta">
-                          <span>📁 Date Folder: <strong style={{ color: '#D97706' }}>{m.dateFolderName}</strong></span>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                            Date Folder: <strong style={{ color: '#D97706' }}>{m.dateFolderName}</strong>
+                          </span>
                           <span className="vt-seq-tag">Seq #{m.sequence || '—'}</span>
                         </div>
 
                         <div className="vt-preview-mapping">
                           <div className="vt-preview-mapping-row">
-                            <span style={{ color: '#4338CA', minWidth: '110px', fontWeight: 800 }}>🎬 Source Video:</span>
+                            <span style={{ color: '#4338CA', minWidth: '110px', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
+                              Source Video:
+                            </span>
                             <span className="vt-preview-filename-badge" style={{ color: '#312E81', background: '#EEF2FF', border: '1.5px solid #C7D2FE' }}>
                               {m.videoName}
                             </span>
                           </div>
                           <div className="vt-preview-mapping-row">
-                            <span style={{ color: '#065F46', minWidth: '110px', fontWeight: 800 }}>📷 Target Folder:</span>
+                            <span style={{ color: '#065F46', minWidth: '110px', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                              Target Folder:
+                            </span>
                             <span className="vt-preview-filename-badge" style={{ color: '#064E3B', background: '#ECFDF5', border: '1.5px solid #A7F3D0' }}>
                               {m.photoFolderName}
                             </span>
@@ -835,8 +888,9 @@ export default function VideoTransfer(): JSX.Element {
                         <div className="vt-thumbs-row">
                           {/* Video Thumbnail Box (_V.jpg) */}
                           <div className="vt-thumb-box">
-                            <div className="vt-thumb-box-header" style={{ color: '#5B21B6' }}>
-                              <span>🎬</span> Video Thumb (_V.jpg)
+                            <div className="vt-thumb-box-header" style={{ color: '#5B21B6', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
+                              <span>Video Thumb (_V.jpg)</span>
                             </div>
                             <div
                               className="vt-thumb-img-wrap"
@@ -847,11 +901,11 @@ export default function VideoTransfer(): JSX.Element {
                               {vThumbUrl ? (
                                 <>
                                   <img src={vThumbUrl} alt="Video Thumb" className="vt-thumb-img" />
-                                  <div className="vt-thumb-zoom-overlay">🔍 Zoom</div>
+                                  <div className="vt-thumb-zoom-overlay">Zoom</div>
                                 </>
                               ) : (
                                 <div className="vt-thumb-placeholder">
-                                  <span style={{ fontSize: '28px' }}>🎬</span>
+                                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5 }}><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
                                   <span>No _V.jpg Found</span>
                                 </div>
                               )}
@@ -863,8 +917,9 @@ export default function VideoTransfer(): JSX.Element {
 
                           {/* Photo Thumbnail Box (_P.jpg) */}
                           <div className="vt-thumb-box">
-                            <div className="vt-thumb-box-header" style={{ color: '#065F46' }}>
-                              <span>📷</span> Photo Thumb (_P.jpg)
+                            <div className="vt-thumb-box-header" style={{ color: '#065F46', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                              <span>Photo Thumb (_P.jpg)</span>
                             </div>
                             <div
                               className="vt-thumb-img-wrap"
@@ -875,11 +930,11 @@ export default function VideoTransfer(): JSX.Element {
                               {pThumbUrl ? (
                                 <>
                                   <img src={pThumbUrl} alt="Photo Thumb" className="vt-thumb-img" />
-                                  <div className="vt-thumb-zoom-overlay">🔍 Zoom</div>
+                                  <div className="vt-thumb-zoom-overlay">Zoom</div>
                                 </>
                               ) : (
                                 <div className="vt-thumb-placeholder">
-                                  <span style={{ fontSize: '28px' }}>📷</span>
+                                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5 }}><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
                                   <span>No _P.jpg Found</span>
                                 </div>
                               )}
@@ -904,23 +959,26 @@ export default function VideoTransfer(): JSX.Element {
               <div style={{ padding: '22px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <div style={{ background: '#F8FAFC', border: '1.5px solid #E2E8F0', padding: '16px', borderRadius: '12px', maxHeight: '220px', overflowY: 'auto' }}>
                   {transferredLog.map((item, idx) => (
-                    <div key={idx} style={{ fontSize: '12.5px', fontFamily: 'monospace', color: '#065F46', fontWeight: 700, padding: '4px 0' }}>
-                      ✔ {item.videoName} ➔ {item.photoFolderName}
+                    <div key={idx} style={{ fontSize: '12.5px', fontFamily: 'monospace', color: '#065F46', fontWeight: 700, padding: '4px 0', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      <span>{item.videoName} ➔ {item.photoFolderName}</span>
                     </div>
                   ))}
                 </div>
 
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                  <Button variant="secondary" onClick={() => api?.shell?.openFolder(photoFolder)}>
-                    📂 Open Photo Directory
+                  <Button variant="secondary" onClick={() => api?.shell?.openFolder(photoFolder)} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                    <span>Open Photo Directory</span>
                   </Button>
                   <Button
                     variant="danger"
                     disabled={undoing}
                     onClick={handleUndoTransfer}
-                    style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#EF4444', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '10px 18px', fontWeight: 800 }}
+                    style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#EF4444', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '10px 18px', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                   >
-                    {undoing ? '↩️ Undoing Transfer...' : '↩️ Undo Last Transfer'}
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                    <span>{undoing ? 'Undoing Transfer...' : 'Undo Last Transfer'}</span>
                   </Button>
                 </div>
               </div>
@@ -933,8 +991,8 @@ export default function VideoTransfer(): JSX.Element {
       {showWarningModal && ReactDOM.createPortal(
         <div className="vt-modal-overlay">
           <div className="vt-modal-content anim-scale-in">
-            <div className="vt-modal-header">
-              <span style={{ fontSize: '26px' }}>⚠️</span>
+            <div className="vt-modal-header" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
               <div className="vt-modal-title">Unchecked Transfer Preview Warning</div>
             </div>
 
@@ -950,9 +1008,10 @@ export default function VideoTransfer(): JSX.Element {
                   setIsPreviewOpen(true)
                   setHasReviewedPreview(true)
                 }}
-                style={{ fontWeight: 700, padding: '10px 16px' }}
+                style={{ fontWeight: 700, padding: '10px 16px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
               >
-                🔍 Review Transfer Preview First
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <span>Review Transfer Preview First</span>
               </Button>
               <Button
                 variant="primary"
@@ -962,9 +1021,10 @@ export default function VideoTransfer(): JSX.Element {
                   setHasReviewedPreview(true)
                   handleExecuteTransfer()
                 }}
-                style={{ fontWeight: 800, padding: '10px 18px' }}
+                style={{ fontWeight: 800, padding: '10px 18px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
               >
-                🚀 Proceed Transfer Anyway
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                <span>Proceed Transfer Anyway</span>
               </Button>
             </div>
           </div>
@@ -979,8 +1039,9 @@ export default function VideoTransfer(): JSX.Element {
             <img src={activeLightboxUrl.url} alt={activeLightboxUrl.title} className="vt-lightbox-img" />
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
               <div className="vt-lightbox-title">{activeLightboxUrl.title}</div>
-              <Button variant="secondary" onClick={() => setActiveLightboxUrl(null)} style={{ padding: '6px 16px', fontWeight: 800 }}>
-                ✕ Close Preview
+              <Button variant="secondary" onClick={() => setActiveLightboxUrl(null)} style={{ padding: '6px 16px', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                <span>Close Preview</span>
               </Button>
             </div>
           </div>
@@ -992,8 +1053,8 @@ export default function VideoTransfer(): JSX.Element {
       {dateMismatchData && ReactDOM.createPortal(
         <div className="vt-modal-overlay">
           <div className="vt-modal-content anim-scale-in" style={{ borderColor: '#EF4444', maxWidth: '540px' }}>
-            <div className="vt-modal-header" style={{ color: '#EF4444' }}>
-              <span style={{ fontSize: '28px' }}>⚠️</span>
+            <div className="vt-modal-header" style={{ color: '#EF4444', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
               <div className="vt-modal-title">Folders are of 2 Different Names!</div>
             </div>
 
@@ -1002,11 +1063,17 @@ export default function VideoTransfer(): JSX.Element {
                 The selected <strong>Video</strong> and <strong>Photo</strong> directories belong to 2 different date names and cannot be matched:
               </p>
               <div style={{ background: '#FEF2F2', border: '1.5px solid #FCA5A5', padding: '14px 16px', borderRadius: '10px', fontSize: '13px', color: '#991B1B' }}>
-                <div style={{ fontWeight: 700 }}>📹 Video Folder Date(s):</div>
+                <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
+                  <span>Video Folder Date(s):</span>
+                </div>
                 <div style={{ fontFamily: 'monospace', fontSize: '13.5px', marginTop: '2px', color: '#7F1D1D' }}>
                   {dateMismatchData.videoDates.join(', ') || 'Unknown'}
                 </div>
-                <div style={{ fontWeight: 700, marginTop: '10px' }}>📷 Photo Folder Date(s):</div>
+                <div style={{ fontWeight: 700, marginTop: '10px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                  <span>Photo Folder Date(s):</span>
+                </div>
                 <div style={{ fontFamily: 'monospace', fontSize: '13.5px', marginTop: '2px', color: '#7F1D1D' }}>
                   {dateMismatchData.photoDates.join(', ') || 'Unknown'}
                 </div>
@@ -1020,9 +1087,10 @@ export default function VideoTransfer(): JSX.Element {
               <Button
                 variant="danger"
                 onClick={() => setDateMismatchData(null)}
-                style={{ fontWeight: 800, padding: '10px 22px' }}
+                style={{ fontWeight: 800, padding: '10px 22px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
               >
-                ✕ Close & Re-select Folders
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                <span>Close & Re-select Folders</span>
               </Button>
             </div>
           </div>

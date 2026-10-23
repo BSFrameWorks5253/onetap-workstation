@@ -174,11 +174,11 @@ function AppInner(): JSX.Element {
       }
 
       showToast({
-        title: '🔄 Auto-Converted PNG → JPEG',
+        title: 'Auto-Converted PNG → JPEG',
         message: `Converted & saved ${info.fileName} successfully.`,
         type: 'success',
         action: {
-          label: '📂 Open Folder',
+          label: 'Open Folder',
           onClick: () => {
             if (api.shell) {
               api.shell.openFolder(info.filePath)
@@ -427,6 +427,7 @@ function AppInner(): JSX.Element {
             try {
               const res = await api.update.check()
               if (res && res.updateAvailable) {
+                setUpdateManifest(res)
                 setUpdateBannerVersion(res.latestVersion)
               }
             } catch (e) {
@@ -914,7 +915,7 @@ function AppInner(): JSX.Element {
         if (res && res.success) {
           setUpdateStatus('ready')
           showToast({
-            title: '🎉 Update Download Complete',
+            title: 'Update Download Complete',
             message: 'Workstation update downloaded successfully! Restart to apply.',
             type: 'success'
           })
@@ -922,7 +923,7 @@ function AppInner(): JSX.Element {
       } catch (e) {
         setUpdateStatus('available')
         showToast({
-          title: '✖ Update Download Failed',
+          title: 'Update Download Failed',
           message: String(e),
           type: 'error'
         })
@@ -936,7 +937,7 @@ function AppInner(): JSX.Element {
       try {
         await api.update.install()
       } catch (e) {
-        showToast({ title: '✖ Install Failed', message: String(e), type: 'error' })
+        showToast({ title: 'Install Failed', message: String(e), type: 'error' })
       }
     }
   }
@@ -1126,9 +1127,14 @@ function AppInner(): JSX.Element {
               </div>
             ))}
 
-            <div style={{ marginTop: '20px', padding: '14px', borderRadius: '12px', background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.15)' }}>
+            <div style={{ marginTop: '20px', padding: '14px', borderRadius: '12px', background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.15)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#A78BFA" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="16" x2="12" y2="12" />
+                <line x1="12" y1="8" x2="12.01" y2="8" />
+              </svg>
               <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.6 }}>
-                💡 <strong>Tip:</strong> Press <strong>?</strong> from anywhere in the app to access this panel instantly.
+                <strong>Tip:</strong> Press <strong>?</strong> from anywhere in the app to access this panel instantly.
               </p>
             </div>
           </div>
@@ -1161,8 +1167,14 @@ function AppInner(): JSX.Element {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <span style={{ fontSize: '26px' }}>
-              {updateStatus === 'ready' ? '🎉' : updateStatus === 'downloading' ? '⏳' : '🚀'}
+            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '40px', height: '40px', borderRadius: '10px', background: updateStatus === 'ready' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(139, 92, 246, 0.15)', color: updateStatus === 'ready' ? '#22C55E' : '#A78BFA', flexShrink: 0 }}>
+              {updateStatus === 'ready' ? (
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              ) : updateStatus === 'downloading' ? (
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'spin 1.5s linear infinite' }}><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+              ) : (
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>
+              )}
             </span>
             <div style={{ flex: 1 }}>
               <strong style={{ display: 'block', fontSize: '14px', color: 'var(--text-primary)' }}>
@@ -1174,18 +1186,22 @@ function AppInner(): JSX.Element {
               </strong>
               <span style={{ display: 'block', fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
                 {updateStatus === 'ready'
-                  ? 'Download complete! Restart Uni Desk now to apply the update.'
+                  ? 'Update package ready! Restart One Tap now to apply.'
                   : updateStatus === 'downloading'
                     ? `${updateProgress?.percent ?? 0}% completed ${updateProgress?.speedBytesPerSec ? `· ${(updateProgress.speedBytesPerSec / 1048576).toFixed(1)} MB/s` : ''}`
-                    : 'A newer version of Uni Desk is available.'}
+                    : 'A newer verified version of One Tap is ready from Anything.'}
               </span>
             </div>
             <button
               onClick={() => setUpdateBannerVersion(null)}
-              style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '16px' }}
+              style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px' }}
               title="Dismiss"
+              aria-label="Dismiss"
             >
-              ✕
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
             </button>
           </div>
 

@@ -48,8 +48,10 @@ export function CardHeader({ title, accent, accentSoft, right }: CardHeaderProps
   )
 }
 
+import { PageIcon } from '../PageIcon'
+
 interface PageHeroProps {
-  icon: string
+  icon?: React.ReactNode
   label: string
   subtitle: string
   accent: string
@@ -68,8 +70,14 @@ export function PageHero({ icon, label, subtitle, accent, accentSoft, right }: P
     >
       <div className="page-hero-stripe" style={{ background: accent }} />
       <div className="page-hero-inner">
-        <div className="page-hero-icon" style={{ background: accent }}>
-          <span>{icon}</span>
+        <div className="page-hero-icon" style={{ background: accent, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {React.isValidElement(icon) ? (
+            icon
+          ) : typeof icon === 'string' && (icon.startsWith('data:') || icon.includes('/') || icon.includes('.png') || icon.includes('.svg') || icon.includes('assets')) ? (
+            <img src={icon} alt={label} style={{ width: '24px', height: '24px', objectFit: 'contain' }} />
+          ) : (
+            <PageIcon pageKey={label?.toLowerCase().replace(/[^a-z0-9]/g, '') || ''} size={24} color="#FFFFFF" />
+          )}
         </div>
         <div className="page-hero-text">
           <h2 className="page-hero-title">{label}</h2>

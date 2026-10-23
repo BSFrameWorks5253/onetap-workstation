@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+﻿import React, { useState, useEffect } from 'react'
 import './HardwareMonitor.css'
 
 const api = (window as any).api
@@ -40,9 +40,12 @@ export default function HardwareMonitor(): JSX.Element {
         <span className="hw-dot" />
         <span className="hw-title">System Vitals & Hardware Engine</span>
         {activeJob ? (
-          <span className="hw-status-tag hw-status-tag--active">⚡ Processing High-Load Render</span>
+          <span className="hw-status-tag hw-status-tag--active">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" style={{ marginRight: '4px' }}><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+            Processing High-Load Render
+          </span>
         ) : (
-          <span className="hw-status-tag hw-status-tag--ready">● Optimal</span>
+          <span className="hw-status-tag hw-status-tag--ready">â— Optimal</span>
         )}
       </div>
 
@@ -90,3 +93,4 @@ export default function HardwareMonitor(): JSX.Element {
     </div>
   )
 }
+

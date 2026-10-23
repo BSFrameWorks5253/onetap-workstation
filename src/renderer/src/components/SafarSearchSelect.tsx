@@ -76,7 +76,7 @@ export const SafarSearchSelect: React.FC<SafarSearchSelectProps> = ({
 
   const displayText = useMemo(() => {
     if (selectedId === 'all') {
-      return `🌐 All Scanned Folders (${safars.length})`
+      return `All Scanned Folders (${safars.length})`
     }
     if (selectedSafar) {
       const yearPrefix = selectedSafar.safar_year ? `${selectedSafar.safar_year} - ` : ''
@@ -112,7 +112,12 @@ export const SafarSearchSelect: React.FC<SafarSearchSelectProps> = ({
         <div className="safar-search-select-dropdown">
           {/* Live Search Input */}
           <div className="safar-search-select-input-box">
-            <span className="safar-search-select-search-icon">🔍</span>
+            <span className="safar-search-select-search-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+            </span>
             <input
               ref={inputRef}
               type="text"
@@ -150,7 +155,7 @@ export const SafarSearchSelect: React.FC<SafarSearchSelectProps> = ({
               >
                 <div className="safar-search-select-option-main">
                   <span className="safar-search-select-option-name">
-                    🌐 All Scanned Folders
+                    All Scanned Folders
                   </span>
                   <span className="safar-search-select-badge">{safars.length} safars</span>
                 </div>
@@ -183,7 +188,13 @@ export const SafarSearchSelect: React.FC<SafarSearchSelectProps> = ({
                           {safar.safar_name}
                         </span>
                         {safar.city && (
-                          <span className="safar-search-select-city-tag">📍 {safar.city}</span>
+                          <span className="safar-search-select-city-tag">
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '3px' }}>
+                              <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+                              <circle cx="12" cy="10" r="3" />
+                            </svg>
+                            {safar.city}
+                          </span>
                         )}
                       </div>
                       <div className="safar-search-select-option-meta">

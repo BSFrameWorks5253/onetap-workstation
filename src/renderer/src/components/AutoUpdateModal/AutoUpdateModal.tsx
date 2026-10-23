@@ -12,6 +12,9 @@ export interface UpdateManifestData {
   size?: string
   releaseNotes?: string
   htmlUrl?: string
+  source?: 'anything' | 'github'
+  isLocalFile?: boolean
+  anythingPath?: string
 }
 
 export interface UpdateProgressData {
@@ -46,6 +49,8 @@ export function AutoUpdateModal({
 
   if (!isOpen || !manifest) return null
 
+  const isAnythingSource = manifest.source === 'anything'
+
   const formatMB = (bytes: number): string => {
     if (!bytes || isNaN(bytes)) return '0 MB'
     if (bytes >= 1073741824) return `${(bytes / 1073741824).toFixed(2)} GB`
@@ -64,8 +69,8 @@ export function AutoUpdateModal({
 
   const handleInstallClick = () => {
     showToast({
-      title: '🚀 Launching Installer',
-      message: 'Uni Desk will restart now to apply the update.',
+      title: 'Launching Installer',
+      message: 'One Tap will restart now to apply the update.',
       type: 'success'
     })
     onApplyUpdate()
@@ -80,12 +85,22 @@ export function AutoUpdateModal({
         {/* Header */}
         <div className="update-modal-header">
           <div className="update-modal-header-title">
-            <div className="update-modal-icon">🚀</div>
+            <div className="update-modal-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366F1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z" />
+                <path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z" />
+              </svg>
+            </div>
             <div>
-              <h3 className="update-modal-heading">Software Update</h3>
+              <h3 className="update-modal-heading">
+                {isAnythingSource ? 'Anything Ecosystem Update' : 'Software Update'}
+              </h3>
               <div className="update-modal-tags">
                 <span className="update-modal-tag update-modal-tag--version">
                   v{manifest.latestVersion}
+                </span>
+                <span className="update-modal-tag" style={{ background: isAnythingSource ? 'rgba(16,185,129,0.15)' : 'rgba(99,102,241,0.15)', color: isAnythingSource ? '#10B981' : '#818cf8', border: isAnythingSource ? '1px solid rgba(16,185,129,0.3)' : '1px solid rgba(99,102,241,0.3)' }}>
+                  {isAnythingSource ? 'Anything Hub' : 'GitHub Releases'}
                 </span>
                 {manifest.releaseDate && (
                   <span className="update-modal-tag update-modal-tag--date">
@@ -100,8 +115,11 @@ export function AutoUpdateModal({
               </div>
             </div>
           </div>
-          <button className="update-modal-close" onClick={onClose} title="Close">
-            ✕
+          <button className="update-modal-close" onClick={onClose} title="Close" aria-label="Close">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
           </button>
         </div>
 
@@ -120,18 +138,20 @@ export function AutoUpdateModal({
               ))
             ) : (
               <p className="update-notes-line">
-                A new version of Uni Desk Workstation is available on GitHub Releases with performance improvements and bug fixes.
+                {isAnythingSource
+                  ? 'A new verified version of One Tap is available from your local Anything ecosystem.'
+                  : 'A new version of One Tap Workstation is available on GitHub Releases with performance improvements and bug fixes.'}
               </p>
             )}
           </div>
 
-          {/* Fast Update / Microsoft Store Notice */}
+          {/* Ecosystem / Channel Notice */}
           <div className="update-channel-notice" style={{
             margin: '12px 0',
             padding: '10px 14px',
             borderRadius: '8px',
-            background: 'rgba(99, 102, 241, 0.08)',
-            border: '1px solid rgba(99, 102, 241, 0.25)',
+            background: isAnythingSource ? 'rgba(16, 185, 129, 0.08)' : 'rgba(99, 102, 241, 0.08)',
+            border: isAnythingSource ? '1px solid rgba(16, 185, 129, 0.25)' : '1px solid rgba(99, 102, 241, 0.25)',
             fontSize: '0.82rem',
             color: 'var(--text-muted, #94a3b8)',
             lineHeight: 1.45,
@@ -139,16 +159,28 @@ export function AutoUpdateModal({
             alignItems: 'center',
             gap: '10px'
           }}>
-            <span style={{ fontSize: '1.2rem' }}>⚡</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={isAnythingSource ? '#10B981' : '#818cf8'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+              <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z" />
+            </svg>
             <div>
-              <strong style={{ color: '#818cf8', display: 'block', marginBottom: '2px' }}>Direct GitHub Fast-Track Update</strong>
-              Microsoft Store users get immediate updates directly from GitHub Releases. All your local settings, presets, and project data are safely preserved across updates and reinstalls.
+              <strong style={{ color: isAnythingSource ? '#10B981' : '#818cf8', display: 'block', marginBottom: '2px' }}>
+                {isAnythingSource ? 'Direct Anything Ecosystem Delivery' : 'Direct GitHub Fast-Track Update'}
+              </strong>
+              {isAnythingSource
+                ? 'Update sourced from Anything (C:\\Users\\Burhanuddin\\OneDrive\\Desktop\\New folder (2)\\Anything). All your local presets, render stats, and configurations are safely preserved.'
+                : 'Microsoft Store users get immediate updates directly from GitHub Releases. All your local settings, presets, and project data are safely preserved across updates and reinstalls.'}
             </div>
           </div>
 
           {errorMsg && (
             <div className="update-error-box">
-              <span className="update-error-icon">⚠️</span>
+              <span className="update-error-icon">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+                  <line x1="12" y1="9" x2="12" y2="13" />
+                  <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+              </span>
               <span>{errorMsg}</span>
             </div>
           )}
@@ -159,8 +191,8 @@ export function AutoUpdateModal({
               <div className="update-progress-header">
                 <span className="update-progress-label">
                   {status === 'ready'
-                    ? '🎉 Download Complete — Ready to Install'
-                    : 'Downloading Fast Update from GitHub...'}
+                    ? 'Update Verified — Ready to Install'
+                    : (isAnythingSource ? 'Syncing Update Package from Anything...' : 'Downloading Fast Update from GitHub...')}
                 </span>
                 <span className="update-progress-percent">
                   {status === 'ready' ? '100%' : `${progress?.percent ?? 0}%`}
@@ -197,23 +229,12 @@ export function AutoUpdateModal({
           {status === 'available' && (
             <>
               <button
-                className="update-btn update-btn--secondary"
-                style={{ borderColor: 'rgba(255,255,255,0.15)' }}
-                onClick={() => {
-                  try {
-                    // Try store protocol first, fall back to browser URL
-                    (window as any).electronAPI?.openExternal?.('ms-windows-store://pdp/?productid=9NBLGGH4NNS1')
-                  } catch {
-                    (window as any).electronAPI?.openExternal?.('https://apps.microsoft.com')
-                  }
-                }}
-                title="View Uni Desk in Microsoft Store"
+                className="update-btn update-btn--primary"
+                onClick={handleDownloadClick}
+                title={isAnythingSource ? 'Retrieve update from Anything' : 'Download instant update installer from GitHub'}
+                style={isAnythingSource ? { background: 'linear-gradient(135deg, #10B981, #059669)', border: 'none' } : {}}
               >
-                <span>🏬 Microsoft Store</span>
-              </button>
-
-              <button className="update-btn update-btn--primary" onClick={handleDownloadClick} title="Download instant update installer from GitHub">
-                <span>⚡ Update via GitHub</span>
+                <span>{isAnythingSource ? 'Update via Anything' : 'Update via GitHub'}</span>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                   <polyline points="7 10 12 15 17 10"></polyline>
@@ -226,7 +247,7 @@ export function AutoUpdateModal({
           {status === 'downloading' && (
             <button className="update-btn update-btn--disabled" disabled>
               <span className="update-spinner" />
-              <span>Downloading ({progress?.percent ?? 0}%)...</span>
+              <span>{isAnythingSource ? 'Syncing' : 'Downloading'} ({progress?.percent ?? 0}%)...</span>
             </button>
           )}
 

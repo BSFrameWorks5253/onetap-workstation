@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useTheme } from '../../theme/ThemeContext'
 import { useSound } from '../SoundProvider'
 import { useToast } from '../Toast'
+import { PageIcon } from '../PageIcon/PageIcon'
 import type { ThemeName } from '../../types'
 import './PowerHubModal.css'
 
@@ -122,10 +123,10 @@ export default function PowerHubModal({ isOpen, onClose, onNavigate }: PowerHubM
 
   if (!isOpen) return null
 
-  const THEME_OPTIONS: { name: ThemeName; label: string; icon: string; bgHex: string }[] = [
-    { name: 'beige', label: 'Warm Beige Glass', icon: '☕', bgHex: '#FAF7F2' },
-    { name: 'light', label: 'Plain White Glass', icon: '☀️', bgHex: '#FFFFFF' },
-    { name: 'forest', label: 'Warm Forest Emerald', icon: '🌿', bgHex: '#F4FAF5' }
+  const THEME_OPTIONS: { name: ThemeName; label: string; iconKey: string; bgHex: string }[] = [
+    { name: 'beige', label: 'Warm Beige Glass', iconKey: 'coffee', bgHex: '#FAF7F2' },
+    { name: 'light', label: 'Plain White Glass', iconKey: 'sun', bgHex: '#FFFFFF' },
+    { name: 'forest', label: 'Warm Forest Emerald', iconKey: 'sparkles', bgHex: '#F4FAF5' }
   ]
 
   return (
@@ -134,31 +135,40 @@ export default function PowerHubModal({ isOpen, onClose, onNavigate }: PowerHubM
         {/* Modal Header */}
         <div className="phub-header">
           <div className="phub-header-left">
-            <div className="phub-header-icon">⭐</div>
+            <div className="phub-header-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <PageIcon pageKey="sparkles" size={18} color="#F59E0B" />
+            </div>
             <div>
               <h2 className="phub-title">Workstation Power Hub & Hidden Features</h2>
               <div className="phub-subtitle">Hidden Power Tools, System Health HUD, Quick Bookmarks & Aesthetic Controls</div>
             </div>
           </div>
-          <button className="phub-close-btn" onClick={onClose} title="Close (Esc)">✕</button>
+          <button className="phub-close-btn" onClick={onClose} title="Close (Esc)" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <PageIcon pageKey="close" size={14} />
+          </button>
         </div>
 
         {/* Navigation Tabs */}
         <div className="phub-nav-tabs">
           <button className={`phub-tab-btn ${activeTab === 'hud' ? 'active' : ''}`} onClick={() => { playTick(); setActiveTab('hud') }}>
-            🖥️ Hardware HUD
+            <PageIcon pageKey="monitor" size={14} style={{ marginRight: '6px' }} />
+            Hardware HUD
           </button>
           <button className={`phub-tab-btn ${activeTab === 'bookmarks' ? 'active' : ''}`} onClick={() => { playTick(); setActiveTab('bookmarks') }}>
-            📌 Folder Bookmarks
+            <PageIcon pageKey="pin" size={14} style={{ marginRight: '6px' }} />
+            Folder Bookmarks
           </button>
           <button className={`phub-tab-btn ${activeTab === 'theme' ? 'active' : ''}`} onClick={() => { playTick(); setActiveTab('theme') }}>
-            🎨 Aesthetic Studio
+            <PageIcon pageKey="palette" size={14} style={{ marginRight: '6px' }} />
+            Aesthetic Studio
           </button>
           <button className={`phub-tab-btn ${activeTab === 'sound' ? 'active' : ''}`} onClick={() => { playTick(); setActiveTab('sound') }}>
-            🔊 Sound FX Tester
+            <PageIcon pageKey="volume" size={14} style={{ marginRight: '6px' }} />
+            Sound FX Tester
           </button>
           <button className={`phub-tab-btn ${activeTab === 'hotkeys' ? 'active' : ''}`} onClick={() => { playTick(); setActiveTab('hotkeys') }}>
-            ⌨️ Hotkey Cheat Sheet
+            <PageIcon pageKey="keyboard" size={14} style={{ marginRight: '6px' }} />
+            Hotkey Cheat Sheet
           </button>
         </div>
 
@@ -167,7 +177,10 @@ export default function PowerHubModal({ isOpen, onClose, onNavigate }: PowerHubM
           {/* TAB 1: System Hardware & Workstation Health HUD */}
           {activeTab === 'hud' && (
             <div className="phub-section">
-              <div className="phub-section-title">📊 Real-Time Hardware Specs & Engine Diagnostics</div>
+              <div className="phub-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <PageIcon pageKey="stats" size={16} color="#818CF8" />
+                Real-Time Hardware Specs & Engine Diagnostics
+              </div>
               <div className="phub-grid-3">
                 <div className="phub-card">
                   <span className="phub-card-label">CPU ARCHITECTURE</span>
@@ -184,21 +197,27 @@ export default function PowerHubModal({ isOpen, onClose, onNavigate }: PowerHubM
                 <div className="phub-card">
                   <span className="phub-card-label">SEQUENCE & MEDIA ENGINE</span>
                   <span className="phub-card-value" style={{ color: '#818CF8', fontSize: '15px' }}>Node.js + FFmpeg 6.0</span>
-                  <span style={{ fontSize: '11px', color: '#34D399' }}>✓ Verified & Active</span>
+                  <span style={{ fontSize: '11px', color: '#34D399', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    <PageIcon pageKey="check" size={11} color="#34D399" />
+                    Verified & Active
+                  </span>
                 </div>
               </div>
 
               <div className="phub-card" style={{ marginTop: '8px' }}>
                 <span className="phub-card-label">WORKSTATION SPEED OPTIMIZATIONS</span>
                 <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '6px' }}>
-                  <span className="prproj-status-badge badge-new" style={{ background: 'rgba(99, 102, 241, 0.15)', color: '#A5B4FC' }}>
-                    🚀 Hardware Accelerated FFprobe
+                  <span className="prproj-status-badge badge-new" style={{ background: 'rgba(99, 102, 241, 0.15)', color: '#A5B4FC', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                    <PageIcon pageKey="zap" size={12} color="#A5B4FC" />
+                    Hardware Accelerated FFprobe
                   </span>
-                  <span className="prproj-status-badge badge-new" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#6EE7B7' }}>
-                    ⚡ Async XML Stream Writer
+                  <span className="prproj-status-badge badge-new" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#6EE7B7', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                    <PageIcon pageKey="bolt" size={12} color="#6EE7B7" />
+                    Async XML Stream Writer
                   </span>
-                  <span className="prproj-status-badge badge-new" style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#FDE047' }}>
-                    🛡️ Auto-Recovery Error Shield
+                  <span className="prproj-status-badge badge-new" style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#FDE047', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                    <PageIcon pageKey="shield" size={12} color="#FDE047" />
+                    Auto-Recovery Error Shield
                   </span>
                 </div>
               </div>
@@ -208,7 +227,10 @@ export default function PowerHubModal({ isOpen, onClose, onNavigate }: PowerHubM
           {/* TAB 2: Quick Folder Bookmarks Manager */}
           {activeTab === 'bookmarks' && (
             <div className="phub-section">
-              <div className="phub-section-title">📌 Quick Directory Bookmarks</div>
+              <div className="phub-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <PageIcon pageKey="pin" size={16} color="#EC4899" />
+                Quick Directory Bookmarks
+              </div>
               <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                 Pin your most used master date folders, output directories, or SD card paths for 1-click access.
               </div>
@@ -229,11 +251,13 @@ export default function PowerHubModal({ isOpen, onClose, onNavigate }: PowerHubM
                   onChange={e => setNewBookmarkPath(e.target.value)}
                   style={{ flex: 2, padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-primary)', fontSize: '12px', fontFamily: 'monospace' }}
                 />
-                <button className="phub-sound-btn" style={{ padding: '8px 12px', fontSize: '12px' }} onClick={handleBrowseBookmarkFolder}>
-                  📂 Browse
+                <button className="phub-sound-btn" style={{ padding: '8px 12px', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '6px' }} onClick={handleBrowseBookmarkFolder}>
+                  <PageIcon pageKey="folder_open" size={13} />
+                  Browse
                 </button>
-                <button className="phub-sound-btn" style={{ padding: '8px 14px', fontSize: '12px', background: 'var(--accent-dashboard)', color: '#fff', border: 'none' }} onClick={handleAddBookmark}>
-                  ➕ Pin
+                <button className="phub-sound-btn" style={{ padding: '8px 14px', fontSize: '12px', background: 'var(--accent-dashboard)', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }} onClick={handleAddBookmark}>
+                  <PageIcon pageKey="plus" size={13} color="#fff" />
+                  Pin
                 </button>
               </div>
 
@@ -242,23 +266,28 @@ export default function PowerHubModal({ isOpen, onClose, onNavigate }: PowerHubM
                 {bookmarks.map(item => (
                   <div key={item.id} className="phub-hotkey-row">
                     <div>
-                      <div style={{ fontWeight: '700', fontSize: '13px', color: 'var(--text-primary)' }}>📁 {item.name}</div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{item.path}</div>
+                      <div style={{ fontWeight: '700', fontSize: '13px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <PageIcon pageKey="folder" size={14} color="#F59E0B" />
+                        {item.name}
+                      </div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace', marginTop: '2px' }}>{item.path}</div>
                     </div>
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <button
                         className="phub-sound-btn"
-                        style={{ padding: '4px 10px', fontSize: '11px' }}
+                        style={{ padding: '4px 10px', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
                         onClick={() => api?.shell?.openFolder(item.path)}
                       >
-                        📂 Open Folder
+                        <PageIcon pageKey="folder_open" size={12} />
+                        Open Folder
                       </button>
                       <button
                         className="phub-sound-btn"
-                        style={{ padding: '4px 10px', fontSize: '11px', color: 'var(--danger)' }}
+                        style={{ padding: '4px 10px', fontSize: '11px', color: 'var(--danger)', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
                         onClick={() => handleDeleteBookmark(item.id)}
                       >
-                        🗑️ Delete
+                        <PageIcon pageKey="trash" size={12} color="var(--danger)" />
+                        Delete
                       </button>
                     </div>
                   </div>
@@ -270,14 +299,18 @@ export default function PowerHubModal({ isOpen, onClose, onNavigate }: PowerHubM
           {/* TAB 3: Aesthetics & Glass Studio */}
           {activeTab === 'theme' && (
             <div className="phub-section">
-              <div className="phub-section-title">🎨 Workstation Theme & Aesthetics Studio</div>
+              <div className="phub-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <PageIcon pageKey="palette" size={16} color="#8B5CF6" />
+                Workstation Theme & Aesthetics Studio
+              </div>
 
               {/* Theme Settings Banner */}
               <div className="phub-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', gap: '16px' }}>
                 <div>
                   <span className="phub-card-label">CURRENT ACTIVE THEME</span>
                   <div style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)', marginTop: '4px', textTransform: 'capitalize', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span>🎨</span> {theme} Preset
+                    <PageIcon pageKey="palette" size={16} color="#8B5CF6" />
+                    {theme} Preset
                   </div>
                   <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>
                     Application theme customization is configured exclusively in Settings.
@@ -290,9 +323,10 @@ export default function PowerHubModal({ isOpen, onClose, onNavigate }: PowerHubM
                     onClose()
                     onNavigate('settings')
                   }}
-                  style={{ whiteSpace: 'nowrap', padding: '10px 16px', background: 'var(--accent-folder, #3B82F6)', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}
+                  style={{ whiteSpace: 'nowrap', padding: '10px 16px', background: 'var(--accent-folder, #3B82F6)', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                 >
-                  ⚙️ Change Theme in Settings
+                  <PageIcon pageKey="settings" size={14} color="#fff" />
+                  Change Theme in Settings
                 </button>
               </div>
 
@@ -305,9 +339,9 @@ export default function PowerHubModal({ isOpen, onClose, onNavigate }: PowerHubM
                     onChange={e => setPageTransition(e.target.value)}
                     style={{ padding: '8px', borderRadius: '8px', background: 'var(--surface)', color: 'var(--text-primary)', border: '1px solid var(--border)', fontSize: '13px', fontWeight: '600' }}
                   >
-                    <option value="fade">✨ Smooth Fade</option>
-                    <option value="slide">➡️ Slide Horizontal</option>
-                    <option value="scale">🔍 Spring Zoom Scale</option>
+                    <option value="fade">Smooth Fade</option>
+                    <option value="slide">Slide Horizontal</option>
+                    <option value="scale">Spring Zoom Scale</option>
                   </select>
                 </div>
 
@@ -318,9 +352,9 @@ export default function PowerHubModal({ isOpen, onClose, onNavigate }: PowerHubM
                     onChange={e => setGlassBlur(e.target.value)}
                     style={{ padding: '8px', borderRadius: '8px', background: 'var(--surface)', color: 'var(--text-primary)', border: '1px solid var(--border)', fontSize: '13px', fontWeight: '600' }}
                   >
-                    <option value="12px">💧 Soft Glass (12px)</option>
-                    <option value="20px">💎 Balanced Glass (20px)</option>
-                    <option value="32px">✨ Ultra Heavy Glass (32px)</option>
+                    <option value="12px">Soft Glass (12px)</option>
+                    <option value="20px">Balanced Glass (20px)</option>
+                    <option value="32px">Ultra Heavy Glass (32px)</option>
                   </select>
                 </div>
               </div>
@@ -330,20 +364,26 @@ export default function PowerHubModal({ isOpen, onClose, onNavigate }: PowerHubM
           {/* TAB 4: Audio Soundboard Test */}
           {activeTab === 'sound' && (
             <div className="phub-section">
-              <div className="phub-section-title">🔊 Interactive Soundboard & Audio Feedback Test</div>
+              <div className="phub-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <PageIcon pageKey="volume" size={16} color="#10B981" />
+                Interactive Soundboard & Audio Feedback Test
+              </div>
               <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                 Test workstation audio chimes for action ticks, task completion, and error alerts.
               </div>
 
               <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '8px' }}>
-                <button className="phub-sound-btn" onClick={() => playSuccess()}>
-                  🎉 Play Task Success Chime
+                <button className="phub-sound-btn" onClick={() => playSuccess()} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                  <PageIcon pageKey="sparkles" size={14} color="#10B981" />
+                  Play Task Success Chime
                 </button>
-                <button className="phub-sound-btn" onClick={() => playTick()}>
-                  🎵 Play UI Click Tick
+                <button className="phub-sound-btn" onClick={() => playTick()} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                  <PageIcon pageKey="volume" size={14} color="#818CF8" />
+                  Play UI Click Tick
                 </button>
-                <button className="phub-sound-btn" onClick={() => playError()}>
-                  ⚠️ Play Error Alert Sound
+                <button className="phub-sound-btn" onClick={() => playError()} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                  <PageIcon pageKey="warning" size={14} color="#EF4444" />
+                  Play Error Alert Sound
                 </button>
               </div>
             </div>
@@ -352,7 +392,10 @@ export default function PowerHubModal({ isOpen, onClose, onNavigate }: PowerHubM
           {/* TAB 5: Keyboard Shortcuts Guide */}
           {activeTab === 'hotkeys' && (
             <div className="phub-section">
-              <div className="phub-section-title">⌨️ Keyboard Power Cheat Sheet</div>
+              <div className="phub-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <PageIcon pageKey="keyboard" size={16} color="#F59E0B" />
+                Keyboard Power Cheat Sheet
+              </div>
               {[
                 { keys: ['Ctrl', 'K'], desc: 'Open Spotlight Command Launcher' },
                 { keys: ['Ctrl', 'Shift', 'P'], desc: 'Open Power Hub & Hidden Features' },
@@ -393,9 +436,8 @@ export default function PowerHubModal({ isOpen, onClose, onNavigate }: PowerHubM
         {/* Modal Footer */}
         <div className="phub-footer">
           <span>Tip: Press <kbd style={{ background: 'rgba(255,255,255,0.1)', padding: '2px 6px', borderRadius: '4px' }}>Ctrl + Shift + P</kbd> from anywhere to trigger this Power Hub.</span>
-          <span style={{ fontWeight: 700, color: 'var(--accent-dashboard)' }}>Uni Desk Workstation v26.7</span>
+          <span style={{ fontWeight: 700, color: 'var(--accent-dashboard)' }}>One Tap Workstation v26.10</span>
         </div>
       </div>
-    </div>
   )
 }

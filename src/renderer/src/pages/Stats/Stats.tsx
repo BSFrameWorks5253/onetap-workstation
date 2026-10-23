@@ -3786,7 +3786,12 @@ export default function Stats(): JSX.Element {
                 </select>
               </div>
               <div className="details-search" style={{ flex: 1, minWidth: '200px' }}>
-                <span className="search-icon">🔍</span>
+                <span className="search-icon" style={{ display: 'inline-flex', alignItems: 'center' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="11" cy="11" r="8" />
+                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                  </svg>
+                </span>
                 <input type="text" placeholder="Search folders..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
               </div>
             </div>
@@ -4478,7 +4483,12 @@ export default function Stats(): JSX.Element {
           >
             {/* Search Header */}
             <div className="spotlight-header">
-              <span className="spotlight-search-icon">🔍</span>
+              <span className="spotlight-search-icon" style={{ display: 'inline-flex', alignItems: 'center' }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+              </span>
               <input
                 ref={spotlightInputRef}
                 type="text"
@@ -4552,7 +4562,12 @@ export default function Stats(): JSX.Element {
             <div className="spotlight-results-container">
               {spotlightResults.length === 0 ? (
                 <div className="spotlight-empty-state">
-                  <span className="spotlight-empty-icon">🔍</span>
+                  <span className="spotlight-empty-icon" style={{ display: 'inline-flex', alignItems: 'center', opacity: 0.5 }}>
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="11" cy="11" r="8" />
+                      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </svg>
+                  </span>
                   <div className="spotlight-empty-title">No matching records found</div>
                   <div className="spotlight-empty-subtitle">
                     Try searching by video title, date (e.g. <code>1448-03-14</code>), session (<code>01M</code>), event code (<code>AQ</code>), or Safar name.

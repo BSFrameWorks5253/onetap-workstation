@@ -3,6 +3,7 @@ import confetti from 'canvas-confetti'
 import { PDFDocument, rgb, StandardFonts, degrees } from 'pdf-lib'
 import { useSound } from '../../components/SoundProvider'
 import { useToast } from '../../components/Toast'
+import PageIcon from '../../components/PageIcon'
 import './Utilities.css'
 
 interface UtilityItem {
@@ -14,41 +15,40 @@ interface UtilityItem {
   targetPage?: 'folder' | 'converter' | 'drivesync' | 'adder' | 'stats' | 'notes' | 'settings' | 'cloud' | 'gdrive' | 'tracker' | 'archivevault'
 }
 
-// Focused list containing pre-existing tools and PDF conversion/editing tools
 const UTILITIES_DATA: UtilityItem[] = [
-  { id: 'archive_vault', title: 'Data Search', icon: '🔍', desc: 'Zero-Storage media catalog & intelligent dual-calendar Excel reconciliation.', category: 'Productivity', targetPage: 'archivevault' },
-  { id: 'task_tracker', title: 'Task & Safar Tracker', icon: '🎯', desc: 'Autonomous Safar & Date production lifecycle tracker with live auto-detection.', category: 'Productivity', targetPage: 'tracker' },
-  { id: 'prproj_generator', title: 'Premiere Pro Generator', icon: '🎬', desc: 'Create Adobe Premiere Pro (.prproj) project files in subfolders named after each folder.', category: 'Productivity' },
-  { id: 'title_adder', title: 'Title Adder', icon: '🎬', desc: 'Batch-process videos with intro/outro & smart audio branding.', category: 'Productivity', targetPage: 'adder' },
-  { id: 'convert_png_jpg', title: 'PNG → JPG Converter', icon: '🖼️', desc: 'Convert PNG screenshots to JPEG and rename by video filename.', category: 'Conversion', targetPage: 'converter' },
-  { id: 'folder_maker', title: 'Folder Maker', icon: '📁', desc: 'Design and build complex nested folder structures visually.', category: 'Editing', targetPage: 'folder' },
-  { id: 'drive_sync', title: 'Drive Sync', icon: '☁️', desc: 'Sync workstation templates and audio files with remote drives.', category: 'Productivity', targetPage: 'drivesync' },
-  { id: 'stats_page', title: 'Render Stats', icon: '📊', desc: 'Track video counts, durations, and prefixes dynamically.', category: 'Productivity', targetPage: 'stats' },
-  { id: 'sticky_notes', title: 'Sticky Notes Hub', icon: '📝', desc: 'Workspace Sticky Hub — jot down color-coded reminders and checklists.', category: 'Productivity', targetPage: 'notes' },
+  { id: 'archive_vault', title: 'Data Search', icon: 'search', desc: 'Zero-Storage media catalog & intelligent dual-calendar Excel reconciliation.', category: 'Productivity', targetPage: 'archivevault' },
+  { id: 'task_tracker', title: 'Task & Safar Tracker', icon: 'tracker', desc: 'Autonomous Safar & Date production lifecycle tracker with live auto-detection.', category: 'Productivity', targetPage: 'tracker' },
+  { id: 'prproj_generator', title: 'Premiere Pro Generator', icon: 'prproj', desc: 'Create Adobe Premiere Pro (.prproj) project files in subfolders named after each folder.', category: 'Productivity' },
+  { id: 'title_adder', title: 'Title Adder', icon: 'adder', desc: 'Batch-process videos with intro/outro & smart audio branding.', category: 'Productivity', targetPage: 'adder' },
+  { id: 'convert_png_jpg', title: 'PNG → JPG Converter', icon: 'converter', desc: 'Convert PNG screenshots to JPEG and rename by video filename.', category: 'Conversion', targetPage: 'converter' },
+  { id: 'folder_maker', title: 'Folder Maker', icon: 'folder', desc: 'Design and build complex nested folder structures visually.', category: 'Editing', targetPage: 'folder' },
+  { id: 'drive_sync', title: 'Drive Sync', icon: 'cloud', desc: 'Sync workstation templates and audio files with remote drives.', category: 'Productivity', targetPage: 'drivesync' },
+  { id: 'stats_page', title: 'Render Stats', icon: 'stats', desc: 'Track video counts, durations, and prefixes dynamically.', category: 'Productivity', targetPage: 'stats' },
+  { id: 'sticky_notes', title: 'Sticky Notes Hub', icon: 'notes', desc: 'Workspace Sticky Hub — jot down color-coded reminders and checklists.', category: 'Productivity', targetPage: 'notes' },
   
   // ── PDF Conversion Tools (Functional in Workspace) ──
-  { id: 'pdf_word', title: 'PDF → Word', icon: '📄', desc: 'Convert PDF documents into editable Word files (.doc) with layout retention.', category: 'Conversion' },
-  { id: 'pdf_excel', title: 'PDF → Excel', icon: '📊', desc: 'Extract PDF tables into clean CSV sheets compatible with Excel.', category: 'Conversion' },
-  { id: 'pdf_txt', title: 'PDF → TXT', icon: '🔤', desc: 'Extract character sequences from PDF files, removing layout styling.', category: 'Conversion' },
-  { id: 'pdf_image', title: 'PDF → JPG / PNG', icon: '🖼️', desc: 'Render and extract pages from PDF into separate JPG or PNG images.', category: 'Conversion' },
-  { id: 'pdf_html', title: 'PDF → HTML', icon: '🌐', desc: 'Compile PDF layout sheets into standalone responsive HTML structures.', category: 'Conversion' },
-  { id: 'word_pdf', title: 'Word → PDF', icon: '📕', desc: 'Compile Word doc structures into standardized PDF documents offline.', category: 'Conversion' },
-  { id: 'excel_pdf', title: 'Excel → PDF', icon: '📗', desc: 'Format and compile Excel spreadsheet structures into clean PDFs.', category: 'Conversion' },
-  { id: 'image_pdf', title: 'Images → PDF', icon: '📸', desc: 'Compile JPG, JPEG, and PNG images in bulk into a single PDF.', category: 'Conversion' },
-  { id: 'md_pdf', title: 'Markdown → PDF', icon: '📝', desc: 'Compile markdown source text directly into formatted PDF manuals.', category: 'Conversion' },
+  { id: 'pdf_word', title: 'PDF → Word', icon: 'file_text', desc: 'Convert PDF documents into editable Word files (.doc) with layout retention.', category: 'Conversion' },
+  { id: 'pdf_excel', title: 'PDF → Excel', icon: 'excelmerger', desc: 'Extract PDF tables into clean CSV sheets compatible with Excel.', category: 'Conversion' },
+  { id: 'pdf_txt', title: 'PDF → TXT', icon: 'file_text', desc: 'Extract character sequences from PDF files, removing layout styling.', category: 'Conversion' },
+  { id: 'pdf_image', title: 'PDF → JPG / PNG', icon: 'image', desc: 'Render and extract pages from PDF into separate JPG or PNG images.', category: 'Conversion' },
+  { id: 'pdf_html', title: 'PDF → HTML', icon: 'globe', desc: 'Compile PDF layout sheets into standalone responsive HTML structures.', category: 'Conversion' },
+  { id: 'word_pdf', title: 'Word → PDF', icon: 'file_text', desc: 'Compile Word doc structures into standardized PDF documents offline.', category: 'Conversion' },
+  { id: 'excel_pdf', title: 'Excel → PDF', icon: 'excelmerger', desc: 'Format and compile Excel spreadsheet structures into clean PDFs.', category: 'Conversion' },
+  { id: 'image_pdf', title: 'Images → PDF', icon: 'camera', desc: 'Compile JPG, JPEG, and PNG images in bulk into a single PDF.', category: 'Conversion' },
+  { id: 'md_pdf', title: 'Markdown → PDF', icon: 'file_text', desc: 'Compile markdown source text directly into formatted PDF manuals.', category: 'Conversion' },
 
   // ── PDF Editing & Pages ──
-  { id: 'merge_pdf', title: 'Merge PDFs', icon: '📎', desc: 'Combine multiple PDF documents in any order into a single output.', category: 'Editing' },
-  { id: 'split_pages', title: 'Split Pages', icon: '🥞', desc: 'Extract and split pages into separate standalone PDF files.', category: 'Editing' },
-  { id: 'rotate_pages', title: 'Edit PDF', icon: '✏️', desc: 'Visually rotate pages, rearrange their order, delete pages, and save the result.', category: 'Editing' },
-  { id: 'delete_pages', title: 'Delete Pages', icon: '🗑️', desc: 'Surgically strip target pages or ranges from PDF files.', category: 'Editing' },
-  { id: 'duplicate_pages', title: 'Duplicate Pages', icon: '👥', desc: 'Duplicate specified pages to clone layouts inside documents.', category: 'Editing' },
+  { id: 'merge_pdf', title: 'Merge PDFs', icon: 'link', desc: 'Combine multiple PDF documents in any order into a single output.', category: 'Editing' },
+  { id: 'split_pages', title: 'Split Pages', icon: 'layers', desc: 'Extract and split pages into separate standalone PDF files.', category: 'Editing' },
+  { id: 'rotate_pages', title: 'Edit PDF', icon: 'refresh', desc: 'Visually rotate pages, rearrange their order, delete pages, and save the result.', category: 'Editing' },
+  { id: 'delete_pages', title: 'Delete Pages', icon: 'trash', desc: 'Surgically strip target pages or ranges from PDF files.', category: 'Editing' },
+  { id: 'duplicate_pages', title: 'Duplicate Pages', icon: 'users', desc: 'Duplicate specified pages to clone layouts inside documents.', category: 'Editing' },
 
   // ── Security & Watermarking ──
-  { id: 'password_protect', title: 'Password Protect', icon: '🔒', desc: 'Encrypt PDF files with user and owner passwords for secure sharing.', category: 'Security' },
-  { id: 'remove_password', title: 'Remove Password', icon: '🔓', desc: 'Strip protection layers and remove access restrictions permanently.', category: 'Security' },
-  { id: 'watermark', title: 'Watermark Editor', icon: '🌊', desc: 'Apply customizable text watermarks diagonally across PDF pages.', category: 'Security' },
-  { id: 'metadata', title: 'Metadata Editor', icon: '🏷️', desc: 'Edit document titles, author names, subjects, and keywords.', category: 'Security' }
+  { id: 'password_protect', title: 'Password Protect', icon: 'lock', desc: 'Encrypt PDF files with user and owner passwords for secure sharing.', category: 'Security' },
+  { id: 'remove_password', title: 'Remove Password', icon: 'unlock', desc: 'Strip protection layers and remove access restrictions permanently.', category: 'Security' },
+  { id: 'watermark', title: 'Watermark Editor', icon: 'wave', desc: 'Apply customizable text watermarks diagonally across PDF pages.', category: 'Security' },
+  { id: 'metadata', title: 'Metadata Editor', icon: 'tag', desc: 'Edit document titles, author names, subjects, and keywords.', category: 'Security' }
 ]
 
 const CATEGORIES: Array<UtilityItem['category'] | 'All' | 'Favorites'> = [
@@ -874,9 +874,9 @@ export default function Utilities(): JSX.Element {
         title: activeTool ? `${activeTool.title} Complete!` : 'Task Completed!',
         message: browserMode ? 'Download triggered successfully.' : 'Files processed and saved successfully.',
         type: 'success',
-        badge: activeTool?.id === 'prproj_generator' ? '🎬 PRPROJ CREATOR' : '⚡ WORKFLOW DONE',
-        icon: activeTool?.id === 'prproj_generator' ? '⚡' : '✨',
-        action: outputPath && !browserMode ? { label: '📂 Open Folder', onClick: () => openOutputFolder() } : undefined
+        badge: activeTool?.id === 'prproj_generator' ? 'PRPROJ CREATOR' : 'WORKFLOW DONE',
+        icon: activeTool?.id === 'prproj_generator' ? 'bolt' : 'sparkles',
+        action: outputPath && !browserMode ? { label: 'Open Folder', onClick: () => openOutputFolder() } : undefined
       })
     } catch (err: any) {
       console.error(err)
@@ -931,7 +931,9 @@ export default function Utilities(): JSX.Element {
       <div className="utils-header-container">
         <div className="utils-title-area">
           <div className="utils-title-row">
-            <span style={{ fontSize: '24px' }}>🛠️</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+              <PageIcon pageKey="utilities" size={24} color="#6366F1" />
+            </span>
             <h2>Workstation Utilities Hub {browserMode ? '(Web Mode)' : '(Desktop Mode)'}</h2>
           </div>
           <span className="utils-subtitle">
@@ -947,7 +949,9 @@ export default function Utilities(): JSX.Element {
       <div className="utils-controls">
         <div className="utils-search-row">
           <div className="utils-search-input-wrapper">
-            <span className="utils-search-icon">🔍</span>
+            <span className="utils-search-icon" style={{ display: 'inline-flex', alignItems: 'center' }}>
+              <PageIcon pageKey="search" size={14} color="#94A3B8" />
+            </span>
             <input
               type="text"
               className="utils-search-input"
@@ -956,8 +960,8 @@ export default function Utilities(): JSX.Element {
               onChange={e => setSearch(e.target.value)}
             />
             {search && (
-              <button className="utils-search-clear" onClick={() => setSearch('')}>
-                ✕
+              <button className="utils-search-clear" onClick={() => setSearch('')} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                <PageIcon pageKey="cross" size={12} color="#94A3B8" />
               </button>
             )}
           </div>
@@ -981,7 +985,11 @@ export default function Utilities(): JSX.Element {
                   setActiveTab(cat)
                 }}
               >
-                {cat === 'Favorites' ? '⭐ Favorites' : cat} ({count})
+                {cat === 'Favorites' ? (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                    <PageIcon pageKey="star" size={12} color="#F59E0B" /> Favorites
+                  </span>
+                ) : cat} ({count})
               </button>
             )
           })}
@@ -991,7 +999,9 @@ export default function Utilities(): JSX.Element {
       {/* ── Main Content Grid ── */}
       {filteredUtilities.length === 0 ? (
         <div className="utils-empty">
-          <span className="utils-empty-icon">🔍</span>
+          <span className="utils-empty-icon" style={{ display: 'inline-flex', justifyContent: 'center' }}>
+            <PageIcon pageKey="search" size={32} color="#64748B" />
+          </span>
           <h3>No Utilities Found</h3>
           <p>We couldn't find any utilities matching "{search}". Try searching for categories like "PDF".</p>
         </div>
@@ -1012,7 +1022,9 @@ export default function Utilities(): JSX.Element {
           Object.keys(groupedUtilities).map(category => (
             <div key={category} className="utils-group-section">
               <div className="utils-group-header">
-                <span className="utils-group-badge">📁</span>
+                <span className="utils-group-badge" style={{ display: 'inline-flex', alignItems: 'center' }}>
+                  <PageIcon pageKey="folder" size={14} color="var(--accent, #6366F1)" />
+                </span>
                 <span className="utils-group-title">{category} Tools</span>
                 <span className="utils-group-count">{groupedUtilities[category].length}</span>
               </div>
@@ -1041,14 +1053,16 @@ export default function Utilities(): JSX.Element {
               <div className="util-modal-header" style={{ marginBottom: '8px' }}>
                 <div className="util-modal-title-row">
                   <div className="util-modal-icon">
-                    <span style={{ fontSize: '20px' }}>{activeTool.icon}</span>
+                    <PageIcon pageKey={activeTool.targetPage || activeTool.id} size={22} color="#6366F1" />
                   </div>
                   <div className="util-modal-titles">
                     <h3 className="util-modal-title">{activeTool.title}</h3>
                     <span className="util-modal-category">{activeTool.category} Engine</span>
                   </div>
                 </div>
-                <button className="util-modal-close" onClick={closeWorkspace}>✕</button>
+                <button className="util-modal-close" onClick={closeWorkspace} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <PageIcon pageKey="cross" size={12} />
+                </button>
               </div>
 
               <p className="st-desc" style={{ background: 'rgba(255, 255, 255, 0.03)', padding: '10px 14px', borderRadius: '8px', margin: 0 }}>
@@ -1061,7 +1075,7 @@ export default function Utilities(): JSX.Element {
                   {/* File selector when no pages loaded */}
                   {pdfPages.length === 0 && !pdfLoading && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center', padding: '40px 20px', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px dashed rgba(255,255,255,0.1)', marginTop: '8px' }}>
-                      <span style={{ fontSize: '32px' }}>📄</span>
+                      <PageIcon pageKey="rotate_pages" size={38} color="#6366F1" />
                       <h4 style={{ color: 'var(--text-primary)', margin: 0 }}>Select PDF Document to Edit</h4>
                       <p className="st-desc" style={{ textAlign: 'center', maxWidth: '360px', margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>
                         Choose a PDF file to visually rotate pages, rearrange their order, delete unwanted pages, and compile them into a new file.
@@ -1071,7 +1085,7 @@ export default function Utilities(): JSX.Element {
                         style={{ height: '38px', background: '#6366F1', borderColor: '#6366F1', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: 'bold', padding: '0 24px', borderRadius: '8px', cursor: 'pointer', marginTop: '8px' }}
                         onClick={() => browseFiles(false)}
                       >
-                        📂 Browse PDF File...
+                        Browse PDF File...
                       </button>
                     </div>
                   )}
@@ -1088,8 +1102,9 @@ export default function Utilities(): JSX.Element {
                       {/* Editor Toolbelt */}
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.03)', padding: '10px 16px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.08)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                            📄 Loaded: <span style={{ color: 'var(--text-primary)' }}>{inputFiles[0] ? getDirAndName(inputFiles[0]).filename : rawFiles[0]?.name}</span>
+                          <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <PageIcon pageKey="file_text" size={13} />
+                            Loaded: <span style={{ color: 'var(--text-primary)' }}>{inputFiles[0] ? getDirAndName(inputFiles[0]).filename : rawFiles[0]?.name}</span>
                           </span>
                           <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>|</span>
                           <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
@@ -1102,7 +1117,7 @@ export default function Utilities(): JSX.Element {
                             style={{ height: '28px', fontSize: '11px', padding: '0 12px', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}
                             onClick={() => browseFiles(false)}
                           >
-                            🔄 Change File
+                            <PageIcon pageKey="refresh" size={11} /> Change File
                           </button>
                           <button
                             className="utils-tab"
@@ -1149,7 +1164,7 @@ export default function Utilities(): JSX.Element {
                                 transform: `rotate(${page.rotation}deg)`, transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
                                 boxShadow: '0 4px 10px rgba(0,0,0,0.3)'
                               }}>
-                                <span style={{ fontSize: '20px', color: '#1e293b' }}>📄</span>
+                                <PageIcon pageKey="file_text" size={20} color="#1e293b" />
                                 <span style={{ fontSize: '10px', fontWeight: '900', color: '#6366F1', marginTop: '-2px' }}>{page.originalIndex + 1}</span>
                               </div>
                               
@@ -1185,21 +1200,21 @@ export default function Utilities(): JSX.Element {
                               </button>
                               <button
                                 className="utils-tab"
-                                style={{ flex: 1, height: '24px', padding: 0, minWidth: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                                style={{ flex: 1, height: '24px', padding: 0, minWidth: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '13px' }}
                                 onClick={() => movePage(i, 'left')}
                                 disabled={i === 0}
                                 title="Move page left"
                               >
-                                ◀
+                                ‹
                               </button>
                               <button
                                 className="utils-tab"
-                                style={{ flex: 1, height: '24px', padding: 0, minWidth: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                                style={{ flex: 1, height: '24px', padding: 0, minWidth: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '13px' }}
                                 onClick={() => movePage(i, 'right')}
                                 disabled={i === pdfPages.length - 1}
                                 title="Move page right"
                               >
-                                ▶
+                                ›
                               </button>
                               <button
                                 className="utils-tab"
@@ -1207,7 +1222,7 @@ export default function Utilities(): JSX.Element {
                                 onClick={() => deletePage(i)}
                                 title="Delete page from document"
                               >
-                                🗑️
+                                <PageIcon pageKey="delete_pages" size={13} color="#ef4444" />
                               </button>
                             </div>
                           </div>
@@ -1229,14 +1244,16 @@ export default function Utilities(): JSX.Element {
 
                       {outputPath && (
                         <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.25)', borderRadius: '10px', padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#10B981' }}>✔ Document Edited and Saved Successfully!</span>
+                          <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#10B981', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                            <PageIcon pageKey="check" size={12} color="#10B981" /> Document Edited and Saved Successfully!
+                          </span>
                           {!browserMode ? (
                             <button
                               className="utils-tab active"
                               style={{ height: '32px', background: '#10B981', borderColor: '#10B981', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: 'bold', padding: '0 16px', cursor: 'pointer' }}
                               onClick={openOutputFolder}
                             >
-                              📂 Open Folder
+                              Open Folder
                             </button>
                           ) : (
                             <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Downloaded to your computer.</span>
@@ -1259,7 +1276,8 @@ export default function Utilities(): JSX.Element {
                           style={{ height: '38px', background: 'rgba(99, 102, 241, 0.12)', border: '1px dashed #6366F1', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: 'bold' }}
                           onClick={() => browseFiles(['merge_pdf', 'batch_merge', 'image_pdf', 'exp_png', 'exp_jpg'].includes(activeTool.id))}
                         >
-                          📂 Browse File{['merge_pdf', 'batch_merge', 'image_pdf', 'exp_png', 'exp_jpg'].includes(activeTool.id) ? 's (Bulk)' : ''}...
+                          <PageIcon pageKey="folder_open" size={14} style={{ marginRight: 4 }} />
+                          Browse File{['merge_pdf', 'batch_merge', 'image_pdf', 'exp_png', 'exp_jpg'].includes(activeTool.id) ? 's (Bulk)' : ''}...
                         </button>
 
                         {inputFiles.length > 0 && (
@@ -1406,14 +1424,16 @@ export default function Utilities(): JSX.Element {
 
                     {outputPath && (
                       <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.25)', borderRadius: '10px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#10B981' }}>✔ Process Completed Successfully</span>
+                        <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#10B981', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                          <PageIcon pageKey="check" size={12} color="#10B981" /> Process Completed Successfully
+                        </span>
                         {!browserMode ? (
                           <button
                             className="utils-tab active"
                             style={{ height: '32px', background: '#10B981', borderColor: '#10B981', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: 'bold' }}
                             onClick={openOutputFolder}
                           >
-                            📂 Open Output Folder
+                            Open Output Folder
                           </button>
                         ) : (
                           <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
@@ -1436,7 +1456,7 @@ export default function Utilities(): JSX.Element {
                   onClick={executeTool}
                   disabled={processing}
                 >
-                  {processing ? 'Processing...' : 'Execute Operation ➜'}
+                  {processing ? 'Processing...' : 'Execute Operation'}
                 </button>
               </div>
             </div>
@@ -1460,15 +1480,18 @@ const UtilityCard = React.memo(function UtilityCard({ tool, isFav, onToggleFav, 
     <div className={`util-card ${tool.targetPage ? 'nav-tool' : 'active-tool'}`} style={tool.targetPage ? { borderColor: 'rgba(99, 102, 241, 0.3)', background: 'rgba(99, 102, 241, 0.02)' } : {}}>
       <div className="util-card-header">
         <div className="util-card-icon-title">
-          <div className="util-card-icon" style={tool.targetPage ? { background: 'rgba(99, 102, 241, 0.1)', borderColor: 'rgba(99, 102, 241, 0.2)' } : {}}>{tool.icon}</div>
+          <div className="util-card-icon" style={tool.targetPage ? { background: 'rgba(99, 102, 241, 0.1)', borderColor: 'rgba(99, 102, 241, 0.2)' } : {}}>
+            <PageIcon pageKey={tool.targetPage || tool.id} size={22} color={tool.targetPage ? '#6366F1' : 'var(--text-primary)'} />
+          </div>
           <h4 className="util-card-title">{tool.title}</h4>
         </div>
         <button
           className={`util-card-fav-btn ${isFav ? 'favorited' : ''}`}
           onClick={(e) => onToggleFav(tool.id, e)}
           title={isFav ? 'Remove from Favorites' : 'Add to Favorites'}
+          style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
         >
-          ★
+          <PageIcon pageKey="star" size={13} color={isFav ? '#F59E0B' : 'currentColor'} />
         </button>
       </div>
 
@@ -1484,7 +1507,7 @@ const UtilityCard = React.memo(function UtilityCard({ tool, isFav, onToggleFav, 
           style={tool.targetPage ? { background: '#6366F1' } : {}}
           onClick={() => onLaunch(tool)}
         >
-          {tool.targetPage ? 'Open Page ➜' : 'Launch ➜'}
+          {tool.targetPage ? 'Open Page' : 'Launch'}
         </button>
       </div>
     </div>

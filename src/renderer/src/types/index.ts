@@ -42,7 +42,7 @@ export const PAGE_META: Record<PageKey, PageMeta> = {
   dashboard: {
     key: "dashboard",
     label: "Dashboard",
-    icon: "⚡",
+    icon: "dashboard",
     accent: "var(--accent-dashboard)",
     accentHv: "var(--accent-dashboard-hv)",
     accentSoft: "var(--accent-dashboard-soft)",
@@ -51,7 +51,7 @@ export const PAGE_META: Record<PageKey, PageMeta> = {
   adder: {
     key: "adder",
     label: "Title Adder",
-    icon: "🎬",
+    icon: "adder",
     accent: "var(--accent-adder)",
     accentHv: "var(--accent-adder-hv)",
     accentSoft: "var(--accent-adder-soft)",
@@ -60,7 +60,7 @@ export const PAGE_META: Record<PageKey, PageMeta> = {
   converter: {
     key: "converter",
     label: "PNG → JPG",
-    icon: "🖼️",
+    icon: "converter",
     accent: "var(--accent-converter)",
     accentHv: "var(--accent-converter-hv)",
     accentSoft: "var(--accent-converter-soft)",
@@ -69,7 +69,7 @@ export const PAGE_META: Record<PageKey, PageMeta> = {
   drivesync: {
     key: "drivesync",
     label: "Drive Sync",
-    icon: "☁️",
+    icon: "drivesync",
     accent: "var(--accent-drivesync)",
     accentHv: "var(--accent-drivesync-hv)",
     accentSoft: "var(--accent-drivesync-soft)",
@@ -79,7 +79,7 @@ export const PAGE_META: Record<PageKey, PageMeta> = {
   folder: {
     key: "folder",
     label: "Folder Maker",
-    icon: "📁",
+    icon: "folder",
     accent: "var(--accent-folder)",
     accentHv: "var(--accent-folder-hv)",
     accentSoft: "var(--accent-folder-soft)",
@@ -88,7 +88,7 @@ export const PAGE_META: Record<PageKey, PageMeta> = {
   stats: {
     key: "stats",
     label: "Stats",
-    icon: "📊",
+    icon: "stats",
     accent: "var(--accent-stats)",
     accentHv: "var(--accent-stats-hv)",
     accentSoft: "var(--accent-stats-soft)",
@@ -97,7 +97,7 @@ export const PAGE_META: Record<PageKey, PageMeta> = {
   notes: {
     key: "notes",
     label: "Sticky Hub",
-    icon: "📝",
+    icon: "notes",
     accent: "var(--accent-notes)",
     accentHv: "var(--accent-notes-hv)",
     accentSoft: "var(--accent-notes-soft)",
@@ -107,7 +107,7 @@ export const PAGE_META: Record<PageKey, PageMeta> = {
   cloud: {
     key: "cloud",
     label: "Cloud Portal",
-    icon: "🌐",
+    icon: "cloud",
     accent: "var(--accent-cloud)",
     accentHv: "var(--accent-cloud-hv)",
     accentSoft: "var(--accent-cloud-soft)",
@@ -116,7 +116,7 @@ export const PAGE_META: Record<PageKey, PageMeta> = {
   gdrive: {
     key: "gdrive",
     label: "Sharaf Media",
-    icon: "🌐",
+    icon: "gdrive",
     accent: "#06B6D4",
     accentHv: "#0891B2",
     accentSoft: "rgba(6, 182, 212, 0.12)",
@@ -125,7 +125,7 @@ export const PAGE_META: Record<PageKey, PageMeta> = {
   settings: {
     key: "settings",
     label: "Settings",
-    icon: "⚙️",
+    icon: "settings",
     accent: "var(--accent-settings)",
     accentHv: "var(--accent-settings-hv)",
     accentSoft: "var(--accent-settings-soft)",
@@ -134,7 +134,7 @@ export const PAGE_META: Record<PageKey, PageMeta> = {
   utilities: {
     key: "utilities",
     label: "Workspace Utilities",
-    icon: "🛠️",
+    icon: "utilities",
     accent: "var(--accent-settings)",
     accentHv: "var(--accent-settings-hv)",
     accentSoft: "var(--accent-settings-soft)",
@@ -143,7 +143,7 @@ export const PAGE_META: Record<PageKey, PageMeta> = {
   cameratransfer: {
     key: "cameratransfer",
     label: "Camera Transfer",
-    icon: "📷",
+    icon: "cameratransfer",
     accent: "var(--accent-cameratransfer)",
     accentHv: "var(--accent-cameratransfer-hv)",
     accentSoft: "var(--accent-cameratransfer-soft)",
@@ -161,7 +161,7 @@ export const PAGE_META: Record<PageKey, PageMeta> = {
   videotransfer: {
     key: "videotransfer",
     label: "Match Video Transfer",
-    icon: "📹",
+    icon: "videotransfer",
     accent: "#8B5CF6",
     accentHv: "#7C3AED",
     accentSoft: "rgba(139, 92, 246, 0.12)",
@@ -170,7 +170,7 @@ export const PAGE_META: Record<PageKey, PageMeta> = {
   cleaner: {
     key: "cleaner",
     label: "Workspace Cleaner",
-    icon: "🧹",
+    icon: "cleaner",
     accent: "var(--accent-settings)",
     accentHv: "var(--accent-settings-hv)",
     accentSoft: "var(--accent-settings-soft)",
@@ -179,7 +179,7 @@ export const PAGE_META: Record<PageKey, PageMeta> = {
   pvseparator: {
     key: "pvseparator",
     label: "PV Separator",
-    icon: "📷",
+    icon: "pvseparator",
     accent: "#06B6D4",
     accentHv: "#0891B2",
     accentSoft: "rgba(6, 182, 212, 0.12)",
@@ -188,7 +188,7 @@ export const PAGE_META: Record<PageKey, PageMeta> = {
   excelmerger: {
     key: "excelmerger",
     label: "Inventory Merger",
-    icon: "📑",
+    icon: "excelmerger",
     accent: "#10B981",
     accentHv: "#059669",
     accentSoft: "rgba(16, 185, 129, 0.12)",
@@ -197,7 +197,7 @@ export const PAGE_META: Record<PageKey, PageMeta> = {
   tracker: {
     key: "tracker",
     label: "Task Tracker",
-    icon: "🎯",
+    icon: "tracker",
     accent: "#38BDF8",
     accentHv: "#0284C7",
     accentSoft: "rgba(56, 189, 248, 0.12)",
@@ -206,7 +206,7 @@ export const PAGE_META: Record<PageKey, PageMeta> = {
   archivevault: {
     key: "archivevault",
     label: "Data Search",
-    icon: "🔍",
+    icon: "archivevault",
     accent: "#06B6D4",
     accentHv: "#0891B2",
     accentSoft: "rgba(6, 182, 212, 0.12)",
@@ -215,7 +215,7 @@ export const PAGE_META: Record<PageKey, PageMeta> = {
   admin: {
     key: "admin",
     label: "Admin Command Center",
-    icon: "👑",
+    icon: "admin",
     accent: "#EAB308",
     accentHv: "#CA8A04",
     accentSoft: "rgba(234, 179, 8, 0.15)",

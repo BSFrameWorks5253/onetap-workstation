@@ -2,6 +2,7 @@ import React from 'react'
 import OneTapLogo from '../OneTapLogo'
 import type { PageKey } from '../../types'
 import { PAGE_META } from '../../types'
+import { PageIcon } from '../PageIcon'
 import './PageLoader.css'
 
 interface PageLoaderProps {
@@ -15,14 +16,6 @@ export default function PageLoader({ pageKey }: PageLoaderProps): JSX.Element {
     accent: '#E11D48',
     subtitle: 'Preparing high-speed video production engine...'
   }
-
-  const isImageIcon =
-    typeof meta.icon === 'string' &&
-    (meta.icon.startsWith('data:') ||
-      meta.icon.includes('/') ||
-      meta.icon.includes('.png') ||
-      meta.icon.includes('.svg') ||
-      meta.icon.includes('assets'))
 
   return (
     <div className="page-loader" data-page={pageKey}>
@@ -54,17 +47,15 @@ export default function PageLoader({ pageKey }: PageLoaderProps): JSX.Element {
               />
             </svg>
             <div className="page-loader-center-icon">
-              {isImageIcon ? (
-                <img src={meta.icon} alt={meta.label} style={{ width: '16px', height: '16px', objectFit: 'contain' }} />
-              ) : (
-                <OneTapLogo size={18} glow={false} />
-              )}
+              <OneTapLogo size={18} glow={false} />
             </div>
           </div>
 
           <div className="page-loader-info">
             <div className="page-loader-title-row">
-              <span className="page-loader-page-icon">{!isImageIcon ? meta.icon : ''}</span>
+              <span className="page-loader-page-icon">
+                <PageIcon pageKey={pageKey} size={16} color={meta.accent} />
+              </span>
               <span className="page-loader-title">Switching to {meta.label}</span>
               <span className="page-loader-dots">
                 <span className="dot dot-1">.</span>

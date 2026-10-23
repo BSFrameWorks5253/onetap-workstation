@@ -1,3 +1,4 @@
+import path from 'path'
 import { ipcMain, app, Notification } from 'electron'
 import os from 'os'
 import fs from 'fs'

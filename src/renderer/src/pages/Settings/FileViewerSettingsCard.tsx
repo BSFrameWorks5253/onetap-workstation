@@ -6,12 +6,13 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { Card, CardHeader } from '../../components/Card'
 import { Button } from '../../components/Button'
+import PageIcon from '../../components/PageIcon/PageIcon'
 
 const api = (window as any).api
 
 // ── Types ─────────────────────────────────────────────────────────────
 interface ThumbnailRow {
-  icon: string
+  icon: React.ReactNode
   label: string
   formats: string[]
   status: 'native' | 'codec' | 'unsupported'
@@ -30,19 +31,50 @@ interface RegStatus {
 // ── Status badge ─────────────────────────────────────────────────────
 function StatusBadge({ status }: { status: ThumbnailRow['status'] }) {
   const configs = {
-    native:      { label: '✅ Built-in',    bg: 'rgba(34,197,94,0.12)',  color: '#22c55e' },
-    codec:       { label: '⚠ Needs Codec',  bg: 'rgba(234,179,8,0.12)',  color: '#ca8a04' },
-    unsupported: { label: '❌ No Thumbnail', bg: 'rgba(239,68,68,0.1)',   color: '#ef4444' },
+    native: {
+      label: 'Built-in',
+      icon: (
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 5 }}>
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+      ),
+      bg: 'rgba(34,197,94,0.12)',
+      color: '#22c55e'
+    },
+    codec: {
+      label: 'Needs Codec',
+      icon: (
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 5 }}>
+          <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+          <line x1="12" y1="9" x2="12" y2="13" />
+          <line x1="12" y1="17" x2="12.01" y2="17" />
+        </svg>
+      ),
+      bg: 'rgba(234,179,8,0.12)',
+      color: '#ca8a04'
+    },
+    unsupported: {
+      label: 'No Thumbnail',
+      icon: (
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 5 }}>
+          <line x1="18" y1="6" x2="6" y2="18" />
+          <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+      ),
+      bg: 'rgba(239,68,68,0.1)',
+      color: '#ef4444'
+    },
   }
   const c = configs[status]
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center',
-      padding: '2px 10px', borderRadius: '999px',
+      padding: '3px 10px', borderRadius: '999px',
       background: c.bg, color: c.color,
       fontSize: '11px', fontWeight: 700, whiteSpace: 'nowrap',
       flexShrink: 0,
     }}>
+      {c.icon}
       {c.label}
     </span>
   )
@@ -54,7 +86,14 @@ function RegPill({ registered }: { registered: boolean | null }) {
     return <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>checking…</span>
   }
   return registered
-    ? <span style={{ fontSize: '11px', color: '#22c55e', fontWeight: 700 }}>✅ Set</span>
+    ? (
+      <span style={{ fontSize: '11px', color: '#22c55e', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+        Set
+      </span>
+    )
     : <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.35)', fontWeight: 600 }}>Not set</span>
 }
 
@@ -68,11 +107,11 @@ export default function FileViewerSettingsCard() {
 
   // Registration state per category
   const [regStatus, setRegStatus] = useState<RegStatus[]>([
-    { category: 'images', label: '🖼️  Images',   registered: null },
-    { category: 'raw',    label: '📷  RAW Photos', registered: null },
-    { category: 'video',  label: '🎬  Videos',    registered: null },
-    { category: 'pdf',    label: '📄  PDF',        registered: null },
-    { category: 'docs',   label: '📝  Documents',  registered: null },
+    { category: 'images', label: 'Images', registered: null },
+    { category: 'raw', label: 'RAW Photos', registered: null },
+    { category: 'video', label: 'Videos', registered: null },
+    { category: 'pdf', label: 'PDF Documents', registered: null },
+    { category: 'docs', label: 'Office Docs', registered: null },
   ])
   const [registering, setRegistering] = useState(false)
   const [registerDone, setRegisterDone] = useState(false)
@@ -141,14 +180,14 @@ export default function FileViewerSettingsCard() {
 
   const rows: ThumbnailRow[] = [
     {
-      icon: '🖼️',
+      icon: <PageIcon pageKey="converter" size={20} color="#0EA5E9" />,
       label: 'Standard Images',
       formats: ['JPG', 'PNG', 'GIF', 'BMP', 'WEBP', 'TIFF', 'HEIC'],
       status: 'native',
       note: 'Windows generates thumbnails natively — no extra install needed.',
     },
     {
-      icon: '📷',
+      icon: <PageIcon pageKey="cameratransfer" size={20} color="#F59E0B" />,
       label: 'RAW Camera Photos',
       formats: ['CR2', 'CR3', 'NEF', 'ARW', 'DNG', 'ORF', 'RW2', 'RAF', 'RAW'],
       status: rawCodecAvailable ? 'native' : 'codec',
@@ -158,14 +197,14 @@ export default function FileViewerSettingsCard() {
       link: 'ms-windows-store://pdp/?ProductId=9NCTDW2W1BH8',
     },
     {
-      icon: '🎬',
+      icon: <PageIcon pageKey="videotransfer" size={20} color="#8B5CF6" />,
       label: 'Videos (MP4 / WMV)',
       formats: ['MP4', 'WMV', 'M4V', 'TS'],
       status: 'native',
       note: 'Windows Media Foundation generates thumbnails natively.',
     },
     {
-      icon: '🎞️',
+      icon: <PageIcon pageKey="adder" size={20} color="#EC4899" />,
       label: 'Videos (MKV / AVI / MOV / FLV)',
       formats: ['MKV', 'AVI', 'MOV', 'FLV', 'WEBM'],
       status: ffmpegAvailable ? 'native' : 'codec',
@@ -175,14 +214,14 @@ export default function FileViewerSettingsCard() {
       link: 'https://codecguide.com/download_kl.htm',
     },
     {
-      icon: '📄',
+      icon: <PageIcon pageKey="pdf_word" size={20} color="#EF4444" />,
       label: 'PDF',
       formats: ['PDF'],
       status: 'native',
       note: 'Windows 10/11 generates PDF thumbnails via Microsoft Edge natively.',
     },
     {
-      icon: '📝',
+      icon: <PageIcon pageKey="excelmerger" size={20} color="#10B981" />,
       label: 'Word & Excel',
       formats: ['DOCX', 'XLSX'],
       status: 'unsupported',
@@ -190,7 +229,7 @@ export default function FileViewerSettingsCard() {
       link: 'https://www.libreoffice.org/download/download/',
     },
     {
-      icon: '📋',
+      icon: <PageIcon pageKey="md_pdf" size={20} color="#6366F1" />,
       label: 'Markdown',
       formats: ['MD', 'MARKDOWN'],
       status: 'unsupported',
@@ -203,7 +242,7 @@ export default function FileViewerSettingsCard() {
   return (
     <Card className="anim-scale-in">
       <div onClick={() => setCollapsed(!collapsed)} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ flex: 1 }}><CardHeader title="🖼️  File Viewer & Explorer Thumbnails" accent="#0EA5E9" accentSoft="rgba(14,165,233,0.08)" /></div>
+        <div style={{ flex: 1 }}><CardHeader title="File Viewer & Explorer Thumbnails" accent="#0EA5E9" accentSoft="rgba(14,165,233,0.08)" /></div>
         <span style={{ marginRight: '20px', transition: 'transform 0.2s', transform: collapsed ? 'rotate(-90deg)' : 'none', color: '#0EA5E9', fontWeight: 'bold' }}>▼</span>
       </div>
       {!collapsed && (
@@ -220,8 +259,9 @@ export default function FileViewerSettingsCard() {
             border: '1px solid rgba(14,165,233,0.25)',
             display: 'flex', flexDirection: 'column', gap: '14px',
           }}>
-            <div style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text-main)' }}>
-              🔗 Set Uni Desk as Default Viewer
+            <div style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <PageIcon pageKey="link" size={16} color="#0EA5E9" />
+              Set Uni Desk as Default Viewer
             </div>
 
             {/* Per-category status */}
@@ -248,7 +288,7 @@ export default function FileViewerSettingsCard() {
                 disabled={registering || allRegistered}
                 style={{ padding: '8px 18px', fontSize: '13px', fontWeight: 700 }}
               >
-                {registering ? '⏳ Registering…' : allRegistered ? '✅ All Set' : '⚡ Register All File Types'}
+                {registering ? 'Registering…' : allRegistered ? 'All Set' : 'Register All File Types'}
               </Button>
 
               <button
@@ -276,13 +316,15 @@ export default function FileViewerSettingsCard() {
             </div>
 
             {registerDone && (
-              <div style={{ fontSize: '13px', color: '#22c55e', fontWeight: 600 }}>
-                ✅ File associations registered successfully! You may need to restart Explorer for changes to take effect.
+              <div style={{ fontSize: '13px', color: '#22c55e', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <PageIcon pageKey="check" size={15} color="#22c55e" />
+                File associations registered successfully! You may need to restart Explorer for changes to take effect.
               </div>
             )}
             {registerError && (
-              <div style={{ fontSize: '13px', color: '#ef4444', fontWeight: 600 }}>
-                ⚠️ {registerError}
+              <div style={{ fontSize: '13px', color: '#ef4444', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <PageIcon pageKey="warning" size={15} color="#ef4444" />
+                {registerError}
               </div>
             )}
 
@@ -300,7 +342,7 @@ export default function FileViewerSettingsCard() {
               background: 'linear-gradient(135deg,rgba(245,158,11,0.12),rgba(234,179,8,0.08))',
               border: '1px solid rgba(245,158,11,0.3)',
             }}>
-              <span style={{ fontSize: '22px', flexShrink: 0, marginTop: '1px' }}>📷</span>
+              <PageIcon pageKey="cameratransfer" size={24} color="#F59E0B" style={{ flexShrink: 0, marginTop: '2px' }} />
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '14px', marginBottom: '4px' }}>
                   RAW Photo Thumbnails Need a Codec
@@ -340,14 +382,12 @@ export default function FileViewerSettingsCard() {
               padding: '10px 14px', borderRadius: '10px',
               background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)',
             }}>
-              <span style={{ fontSize: '18px' }}>✅</span>
+              <PageIcon pageKey="check" size={18} color="#22c55e" style={{ flexShrink: 0 }} />
               <span style={{ fontSize: '13px', color: '#22c55e', fontWeight: 600 }}>
                 Windows RAW Image Extension detected — RAW photo thumbnails active in Explorer.
               </span>
             </div>
           )}
-
-
 
           {/* Thumbnail support table */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -364,7 +404,7 @@ export default function FileViewerSettingsCard() {
                   border: '1px solid rgba(255,255,255,0.06)',
                 }}
               >
-                <span style={{ fontSize: '20px', flexShrink: 0, width: '28px', textAlign: 'center' }}>{row.icon}</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, width: '28px' }}>{row.icon}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '13px' }}>
                     {row.label}
@@ -402,10 +442,14 @@ export default function FileViewerSettingsCard() {
             padding: '10px 14px', borderRadius: '8px',
             background: 'rgba(14,165,233,0.05)', border: '1px solid rgba(14,165,233,0.1)',
             lineHeight: 1.6,
+            display: 'flex', alignItems: 'flex-start', gap: '10px'
           }}>
-            💡 <strong>Tip:</strong> Thumbnails in Windows Explorer are generated by Windows' codec system — not by Uni Desk directly.
-            When Uni Desk is your default viewer, it handles <em>opening</em> files instantly.
-            For RAW and MKV files, installing the matching codec gives you thumbnails <em>everywhere</em> — not just in Uni Desk.
+            <PageIcon pageKey="lightbulb" size={16} color="#0EA5E9" style={{ flexShrink: 0, marginTop: '2px' }} />
+            <div>
+              <strong>Tip:</strong> Thumbnails in Windows Explorer are generated by Windows' codec system — not by Uni Desk directly.
+              When Uni Desk is your default viewer, it handles <em>opening</em> files instantly.
+              For RAW and MKV files, installing the matching codec gives you thumbnails <em>everywhere</em> — not just in Uni Desk.
+            </div>
           </div>
         </div>
       )}

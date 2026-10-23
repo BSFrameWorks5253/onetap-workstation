@@ -179,7 +179,7 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
                 title={state.videoName || (state.done ? 'Batch Complete' : 'Title Adder')}
               >
                 {state.done
-                  ? 'Batch Complete 🎉'
+                  ? 'Batch Complete'
                   : state.isPaused
                     ? 'Paused'
                     : (state.videoName || 'Rendering Video')}
@@ -328,7 +328,17 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
                       title={state.isPaused ? 'Resume Rendering' : 'Pause Rendering'}
                       type="button"
                     >
-                      {state.isPaused ? '▶ Resume' : '⏸ Pause'}
+                      {state.isPaused ? (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3" /></svg>
+                          Resume
+                        </span>
+                      ) : (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" /></svg>
+                          Pause
+                        </span>
+                      )}
                     </button>
 
                     <button
@@ -349,7 +359,12 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
                     title="Open Output Folder in Explorer"
                     type="button"
                   >
-                    📂 Output
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z" />
+                      </svg>
+                      Output
+                    </span>
                   </button>
                 )}
               </div>

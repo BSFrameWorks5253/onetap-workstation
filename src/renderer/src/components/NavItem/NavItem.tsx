@@ -2,6 +2,7 @@ import React, { forwardRef } from 'react'
 import type { PageKey } from '../../types'
 import { PAGE_META } from '../../types'
 import { useSound } from '../SoundProvider'
+import { PageIcon } from '../PageIcon'
 import './NavItem.css'
 
 interface NavItemProps {
@@ -44,13 +45,9 @@ const NavItem = forwardRef<HTMLDivElement, NavItemProps>(
           ['--item-accent-soft' as any]: meta.accentSoft || `color-mix(in srgb, ${meta.accent} 15%, transparent)`
         }}
       >
-        {/* Icon pill */}
+        {/* Pro Vector SVG Icon pill */}
         <div className={`nav-item-icon ${active ? 'nav-item-icon--active' : ''}`}>
-          {typeof meta.icon === 'string' && (meta.icon.startsWith('data:') || meta.icon.startsWith('blob:') || meta.icon.includes('/') || meta.icon.includes('.png') || meta.icon.includes('.svg') || meta.icon.includes('assets')) ? (
-            <img src={meta.icon} alt={meta.label} style={{ width: '22px', height: '22px', objectFit: 'contain' }} />
-          ) : (
-            <span>{meta.icon}</span>
-          )}
+          <PageIcon pageKey={pageKey} size={20} color={active ? meta.accent : 'currentColor'} />
         </div>
 
         {/* Label */}

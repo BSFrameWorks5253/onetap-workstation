@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import type { PageKey } from '../../types'
 import { PAGE_META } from '../../types'
+import { PageIcon } from '../PageIcon'
 import './Toolbar.css'
 
 import MorphingBrand from '../MorphingBrand'
@@ -30,15 +31,6 @@ export default function Toolbar({ activePage, onOpenCmdPalette }: ToolbarProps):
     const id = setInterval(tick, 1000)
     return () => clearInterval(id)
   }, [])
-
-  const isImageIcon = typeof meta.icon === 'string' && (
-    meta.icon.startsWith('data:') ||
-    meta.icon.startsWith('blob:') ||
-    meta.icon.includes('/') ||
-    meta.icon.includes('.png') ||
-    meta.icon.includes('.svg') ||
-    meta.icon.includes('assets')
-  )
 
   function openZenInfoWebsite() {
     const url = 'https://www.zeninfo.in/'
@@ -71,11 +63,7 @@ export default function Toolbar({ activePage, onOpenCmdPalette }: ToolbarProps):
           </span>
           <span className="toolbar-crumb-sep">›</span>
           <span className="toolbar-crumb-page" style={{ color: meta.accent, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-            {isImageIcon ? (
-              <img src={meta.icon} alt={meta.label} style={{ width: '16px', height: '16px', objectFit: 'contain' }} />
-            ) : (
-              <span>{meta.icon}</span>
-            )}
+            <PageIcon pageKey={activePage} size={16} color={meta.accent} />
             <span>{meta.label}</span>
           </span>
           <span className="toolbar-hint">Workspace</span>
@@ -103,7 +91,7 @@ export default function Toolbar({ activePage, onOpenCmdPalette }: ToolbarProps):
                 }}
                 title="Creative Cloud Interactive Sandbox Trial Active"
               >
-                <span>⚡</span>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
                 <span>{launchInfo.isTrial ? '7-Day Free Trial' : 'Creative Cloud Demo'}</span>
               </span>
             )}
@@ -111,7 +99,11 @@ export default function Toolbar({ activePage, onOpenCmdPalette }: ToolbarProps):
             {/* Quick Spotlight Launcher */}
             {onOpenCmdPalette && (
               <button className="toolbar-btn-pill" onClick={onOpenCmdPalette} title="Open Spotlight Launcher (Ctrl+K)">
-                <span>🔍 Search</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.85 }}>
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+                <span>Search</span>
                 <kbd style={{ fontSize: '10px', opacity: 0.7, background: 'rgba(255,255,255,0.1)', padding: '1px 4px', borderRadius: '4px' }}>Ctrl+K</kbd>
               </button>
             )}

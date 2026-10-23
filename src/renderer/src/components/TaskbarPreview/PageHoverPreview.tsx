@@ -1,6 +1,7 @@
 import React from 'react'
 import type { PageKey } from '../../types'
 import { PAGE_META } from '../../types'
+import { PageIcon } from '../PageIcon'
 import './PageHoverPreview.css'
 
 interface PageHoverPreviewProps {
@@ -48,7 +49,7 @@ export default function PageHoverPreview({
           previewType: 'stats'
         }
       }
-      case 'tasktracker': {
+      case 'tracker': {
         return {
           status: 'Multi-Drive Autonomous Sentinel',
           badgeVariant: 'info',
@@ -94,7 +95,9 @@ export default function PageHoverPreview({
     >
       <div className="taskbar-preview-header">
         <div className="taskbar-preview-title-row">
-          <span className="taskbar-preview-icon">{meta.icon}</span>
+          <span className="taskbar-preview-icon">
+            <PageIcon pageKey={pageKey} size={18} color={meta.accent} />
+          </span>
           <span className="taskbar-preview-title">{meta.label}</span>
         </div>
         <span className={`taskbar-preview-chip chip-${details.badgeVariant}`}>

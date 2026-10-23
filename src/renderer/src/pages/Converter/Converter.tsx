@@ -8,6 +8,7 @@ import StatCard, { StatusChip } from '../../components/StatCard'
 import { useSound } from '../../components/SoundProvider'
 import { useToast } from '../../components/Toast'
 import confetti from 'canvas-confetti'
+import PageIcon from '../../components/PageIcon'
 import './Converter.css'
 
 const meta = PAGE_META['converter']
@@ -577,7 +578,7 @@ export default function Converter(): JSX.Element {
                 className="cv-toggle-btn"
                 onClick={() => setShowOutputFolder(true)}
               >
-                ⚙️ Set Custom Output Folder (Optional)
+                Set Custom Output Folder (Optional)
               </button>
             ) : (
               <div className="cv-optional-row">
@@ -617,7 +618,7 @@ export default function Converter(): JSX.Element {
               disabled={!inputFolder}
               onClick={runConvert}
             >
-              🔄 Convert PNG → JPG
+              Convert PNG → JPG
             </Button>
             {convertResult && (
               <div className="cv-result cv-result--success">
@@ -660,7 +661,10 @@ export default function Converter(): JSX.Element {
             {batchPairs.length > 1 && (
               <div className="cv-batch-selector-strip">
                 <div className="cv-batch-selector-label">
-                  <span className="cv-batch-label-title">🔀 Batches Synced from Title Adder ({batchPairs.length}):</span>
+                  <span className="cv-batch-label-title" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                    <PageIcon pageKey="adder" size={14} color="#f59e0b" />
+                    Batches Synced from Title Adder ({batchPairs.length}):
+                  </span>
                   <span className="cv-batch-selector-hint">Select a batch to inspect its source & target paths, or run all</span>
                 </div>
                 <div className="cv-batch-pills">
@@ -706,9 +710,9 @@ export default function Converter(): JSX.Element {
             />
             <BrowseRow label="Video folder / Output path (rename target)" value={videoFolder} placeholder="Exact folder containing rendered videos (target destination for renamed JPEGs)…"
               accent={meta.accent}
-              onBrowse={async () => {
+              onBrowse={async () => { 
                 const p = await api.dialog.openFolder()
-                if (p) {
+                if (p) { 
                   const clean = cleanPath(p)
                   setVideoFolder(clean)
                   localStorage.setItem('ot_converter_video_target', clean)
@@ -733,7 +737,10 @@ export default function Converter(): JSX.Element {
               <div className="cv-files-box">
                 <div className="cv-files-box-header">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span className="cv-files-box-title">📂 Files in Folders</span>
+                    <span className="cv-files-box-title" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                      <PageIcon pageKey="folder" size={14} color="currentColor" />
+                      Files in Folders
+                    </span>
                     {countsMatch && (
                       <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--success, #10b981)', background: 'var(--success-soft, rgba(16,185,129,0.12))', border: '1px solid var(--success, #10b981)', borderRadius: '10px', padding: '1px 7px' }}>
                         ✔ Counts Match ({folderImages.length})
@@ -751,15 +758,21 @@ export default function Converter(): JSX.Element {
                     onClick={() => loadFiles()}
                     disabled={filesLoading}
                     title="Refresh file list"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}
                   >
-                    {filesLoading ? '⏳' : '🔄'} Refresh
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: filesLoading ? 'spin 1s linear infinite' : 'none' }}>
+                      <polyline points="23 4 23 10 17 10" />
+                      <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                    </svg>
+                    Refresh
                   </button>
                 </div>
                 <div className="cv-files-panels">
                   {/* Images panel */}
                   <div className="cv-files-panel">
-                    <div className="cv-files-panel-label">
-                      🖼️ Images in Source&nbsp;
+                    <div className="cv-files-panel-label" style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <PageIcon pageKey="converter" size={14} color={meta.accent} />
+                      Images in Source&nbsp;
                       <span className={countBadgeClass} title={countTitle}>{folderImages.length}</span>
                     </div>
                     <div className="cv-files-list">
@@ -772,7 +785,7 @@ export default function Converter(): JSX.Element {
                       ) : (
                         folderImages.map(f => (
                           <div key={f} className="cv-files-item cv-files-item--image">
-                            <span className="cv-files-icon">🖼</span>
+                            <span className="cv-files-icon"><PageIcon pageKey="converter" size={14} color={meta.accent} /></span>
                             <span className="cv-files-name" title={f}>{f}</span>
                           </div>
                         ))
@@ -784,8 +797,9 @@ export default function Converter(): JSX.Element {
 
                   {/* Videos panel */}
                   <div className="cv-files-panel">
-                    <div className="cv-files-panel-label">
-                      🎬 Videos in Destination&nbsp;
+                    <div className="cv-files-panel-label" style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <PageIcon pageKey="adder" size={14} color="#8B5CF6" />
+                      Videos in Destination&nbsp;
                       <span className={countBadgeClass} title={countTitle}>{folderVideos.length}</span>
                     </div>
                     <div className="cv-files-list">
@@ -798,7 +812,7 @@ export default function Converter(): JSX.Element {
                       ) : (
                         folderVideos.map(f => (
                           <div key={f} className="cv-files-item cv-files-item--video">
-                            <span className="cv-files-icon">🎬</span>
+                            <span className="cv-files-icon"><PageIcon pageKey="adder" size={14} color="#8B5CF6" /></span>
                             <span className="cv-files-name" title={f}>{f}</span>
                           </div>
                         ))
@@ -814,7 +828,7 @@ export default function Converter(): JSX.Element {
                 disabled={renameRunning || !jpegFolder || !videoFolder}
                 onClick={() => runRename()}
               >
-                {batchPairs.length > 1 ? '🏷 Rename & Move (Active Batch)' : '🏷 Rename & Move JPEGs by Video'}
+                {batchPairs.length > 1 ? 'Rename & Move (Active Batch)' : 'Rename & Move JPEGs by Video'}
               </Button>
 
               {batchPairs.length > 1 && (
@@ -831,7 +845,7 @@ export default function Converter(): JSX.Element {
                     boxShadow: '0 4px 14px rgba(245, 158, 11, 0.3)'
                   }}
                 >
-                  ⚡ Rename & Move ALL ({batchPairs.length} Batches)
+                  Rename & Move ALL ({batchPairs.length} Batches)
                 </Button>
               )}
 

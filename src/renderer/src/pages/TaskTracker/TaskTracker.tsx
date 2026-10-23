@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { useToast } from '../../components/Toast'
 import { useSound } from '../../components/SoundProvider'
 import Modal from '../../components/Modal'
+import { PageIcon } from '../../components/PageIcon'
 import {
   SafarGroupItem,
   TrackerTaskItem,
@@ -28,42 +29,42 @@ const STATUS_CONFIG: Record<TaskStatus, { label: string; color: string; bg: stri
     label: 'Editing Pending',
     color: '#F59E0B',
     bg: 'rgba(245, 158, 11, 0.15)',
-    icon: '⏳',
+    icon: 'clock',
     stepIndex: 1
   },
   editing: {
     label: 'Editing In Progress',
     color: '#60A5FA',
     bg: 'rgba(59, 130, 246, 0.15)',
-    icon: '🎬',
+    icon: 'videotransfer',
     stepIndex: 2
   },
   review: {
     label: 'Review / Review Editing',
     color: '#A78BFA',
     bg: 'rgba(139, 92, 246, 0.15)',
-    icon: '👁️',
+    icon: 'eye',
     stepIndex: 3
   },
   upload_pending: {
     label: 'Upload Pending (In Final)',
     color: '#22D3EE',
     bg: 'rgba(6, 182, 212, 0.15)',
-    icon: '🌐',
+    icon: 'globe',
     stepIndex: 4
   },
   uploaded: {
     label: 'Uploaded (In To Upload)',
     color: '#34D399',
     bg: 'rgba(16, 185, 129, 0.15)',
-    icon: '🟢',
+    icon: 'check_circle',
     stepIndex: 5
   },
   submitted: {
     label: 'Submitted to AlJamea',
     color: '#10B981',
     bg: 'rgba(5, 150, 105, 0.25)',
-    icon: '🏛️',
+    icon: 'landmark',
     stepIndex: 6
   }
 }
@@ -380,7 +381,7 @@ export default function TaskTracker(): JSX.Element {
     playTick()
     setGeneratingTasks(prev => ({ ...prev, [taskKey]: true }))
     showToast({
-      title: 'Creating Premiere Project 🎬',
+      title: 'Creating Premiere Project',
       message: `Generating .prproj & .xml sequence for ${task.dateFolder} (Single Mode)...`,
       type: 'info'
     })
@@ -397,7 +398,7 @@ export default function TaskTracker(): JSX.Element {
       if (res && res.success) {
         playSuccess()
         showToast({
-          title: 'Project Ready! 🎬',
+          title: 'Project Ready!',
           message: `Generated Premiere Pro project and timeline sequence for ${task.dateFolder}.`,
           type: 'success'
         })
@@ -448,7 +449,7 @@ export default function TaskTracker(): JSX.Element {
     playTick()
     setGeneratingSafars(prev => ({ ...prev, [safar.safarName]: true }))
     showToast({
-      title: 'Generating Safar Projects 🎬',
+      title: 'Generating Safar Projects',
       message: `Batch generating project files for all date subfolders in ${safar.safarName} (Master Data Mode)...`,
       type: 'info'
     })
@@ -467,7 +468,7 @@ export default function TaskTracker(): JSX.Element {
         const count = res.createdCount || res.created?.length || 0
         const skipped = res.skippedCount || res.skipped?.length || 0
         showToast({
-          title: 'Safar Projects Ready! 🎬',
+          title: 'Safar Projects Ready!',
           message: `Created ${count} project file(s) across ${safar.safarName}${skipped > 0 ? ` (${skipped} already existed)` : ''}.`,
           type: 'success'
         })
@@ -553,8 +554,8 @@ export default function TaskTracker(): JSX.Element {
   const handleCopyWhatsApp = (safar: SafarGroupItem) => {
     playSuccess()
     const pct = safar.totalDays > 0 ? Math.round((safar.completedDays / safar.totalDays) * 100) : 0
-    const trophy = safar.isSafarDone ? ' 🏆 *[100% COMPLETE]*' : ''
-    const header = `📊 *${safar.safarName}* (${safar.completedDays}/${safar.totalDays} Done - ${pct}%)${trophy}\n`
+    const trophy = safar.isSafarDone ? ' [100% COMPLETE]' : ''
+    const header = `*${safar.safarName}* (${safar.completedDays}/${safar.totalDays} Done - ${pct}%)${trophy}\n`
 
     const lines = (safar.tasks || []).map(t => {
       const cfg = STATUS_CONFIG[t.status] || STATUS_CONFIG.editing_pending
@@ -562,7 +563,7 @@ export default function TaskTracker(): JSX.Element {
       if (t.renderedAt) {
         extra = ` (Rendered ${new Date(t.renderedAt).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })})`
       }
-      return `${cfg.icon} *${t.dateFolder}*: ${cfg.label}${extra}`
+      return `• *${t.dateFolder}*: ${cfg.label}${extra}`
     })
 
     const text = header + lines.join('\n') + `\n\n_Auto-Tracked via Uni Desk One Tap_`
@@ -840,7 +841,9 @@ export default function TaskTracker(): JSX.Element {
       {/* ── 1. Hero Header ── */}
       <div className="tracker-header">
         <div className="tracker-header-left">
-          <div className="tracker-hero-icon">🎯</div>
+          <div className="tracker-hero-icon">
+            <PageIcon pageKey="tracker" size={26} />
+          </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
               <h1 className="tracker-header-title">Task & Production Tracker</h1>
@@ -866,7 +869,7 @@ export default function TaskTracker(): JSX.Element {
               }}
               title="Safar Group Accordions"
             >
-              📁 Safars
+              <PageIcon pageKey="folder" size={13} style={{ marginRight: 6 }} /> Safars
             </button>
             <button
               className={`view-switch-btn ${viewMode === 'pipeline' ? 'active' : ''}`}
@@ -876,7 +879,7 @@ export default function TaskTracker(): JSX.Element {
               }}
               title="Kanban Studio Board"
             >
-              📊 Pipeline
+              <PageIcon pageKey="stats" size={13} style={{ marginRight: 6 }} /> Pipeline
             </button>
             <button
               className={`view-switch-btn ${viewMode === 'table' ? 'active' : ''}`}
@@ -886,19 +889,21 @@ export default function TaskTracker(): JSX.Element {
               }}
               title="Executive Data Table"
             >
-              📑 Table
+              <PageIcon pageKey="table" size={13} style={{ marginRight: 6 }} /> Table
             </button>
           </div>
 
           <button className="btn-secondary-action" onClick={handleExportExcel} title="Export full spreadsheet">
-            📑 Export Excel
+            <PageIcon pageKey="excelmerger" size={13} style={{ marginRight: 6 }} /> Export Excel
           </button>
           <button
             className="btn-primary-action"
             onClick={() => doScan(true)}
             disabled={loading}
           >
-            <span className={loading ? 'spinning-icon' : ''}>🔄</span>
+            <span className={loading ? 'spinning-icon' : ''}>
+              <PageIcon pageKey="refresh" size={13} style={{ marginRight: 6 }} />
+            </span>
             {loading ? 'Scanning...' : 'Rescan'}
           </button>
         </div>
@@ -914,7 +919,9 @@ export default function TaskTracker(): JSX.Element {
               onClick={() => setSelectedDrive('all')}
             >
               <div className="tracker-drive-tab-main">
-                <span className="drive-tab-icon">🌐</span>
+                <span className="drive-tab-icon">
+                  <PageIcon pageKey="globe" size={14} />
+                </span>
                 <span className="drive-tab-name">All Drives</span>
                 <span className="drive-tab-count">({drives.filter(d => d.enabled).length || 1})</span>
               </div>
@@ -939,11 +946,21 @@ export default function TaskTracker(): JSX.Element {
                   title={`Filter by drive ${d.driveRoot}${space ? ` • ${space.freeGB} GB free (${space.totalGB} GB total)` : ''}${!isOnline ? ' • Offline' : ''}`}
                 >
                   <div className="tracker-drive-tab-main">
-                    <span className="drive-tab-icon">💽</span>
+                    <span className="drive-tab-icon">
+                      <PageIcon pageKey="drive" size={14} />
+                    </span>
                     <span className="drive-tab-name">{d.driveRoot}</span>
                     <span className="drive-tab-count">({safarCountOnDrive})</span>
                     <span className={`drive-tab-badge ${isOnline ? 'badge-connected' : 'badge-offline'}`}>
-                      {isOnline ? '🟢 Connected' : '🔴 Offline'}
+                      {isOnline ? (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          <PageIcon pageKey="dot" size={8} color="#10B981" /> Connected
+                        </span>
+                      ) : (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          <PageIcon pageKey="dot" size={8} color="#EF4444" /> Offline
+                        </span>
+                      )}
                     </span>
                   </div>
 
@@ -954,11 +971,11 @@ export default function TaskTracker(): JSX.Element {
                       </span>
                       {isCritical ? (
                         <span className="drive-tab-alert-pill critical" title="Less than 10 GB free! Premiere render or export failure risk.">
-                          ⚠️ &lt;10 GB
+                          <PageIcon pageKey="warning" size={11} color="#EF4444" style={{ marginRight: 3 }} /> &lt;10 GB
                         </span>
                       ) : isLow ? (
                         <span className="drive-tab-alert-pill warning" title="Less than 20 GB free. Monitor drive space.">
-                          ⚠️ Low Space
+                          <PageIcon pageKey="warning" size={11} color="#F59E0B" style={{ marginRight: 3 }} /> Low Space
                         </span>
                       ) : null}
                       <div className="drive-tab-space-meter" title={`${space.usedPercent}% used`}>
@@ -983,16 +1000,16 @@ export default function TaskTracker(): JSX.Element {
           {/* Quick folder auto-binding health indicators */}
           <div className="tracker-folders-status">
             <span className="tracker-status-item" title="Working Safars auto-bound (e.g. F:\In Process)">
-              <span className="status-dot green" />
-              📁 In Process
+              <PageIcon pageKey="folder_open" size={13} style={{ marginRight: 5 }} />
+              In Process
             </span>
             <span className="tracker-status-item" title="Uploaded deliverables auto-bound (e.g. F:\To Upload)">
-              <span className="status-dot green" />
-              📤 To Upload
+              <PageIcon pageKey="upload" size={13} style={{ marginRight: 5 }} />
+              To Upload
             </span>
             <span className="tracker-status-item" title="Cleanup / submitted archives (e.g. F:\To Delete)">
-              <span className="status-dot green" />
-              🗑️ To Delete
+              <PageIcon pageKey="trash" size={13} style={{ marginRight: 5 }} />
+              To Delete
             </span>
           </div>
 
@@ -1001,7 +1018,7 @@ export default function TaskTracker(): JSX.Element {
             onClick={handleOpenSettings}
             title="Configure Drives and auto-detected folders in Settings"
           >
-            ⚙️ Manage Drives in Settings
+            <PageIcon pageKey="settings" size={13} style={{ marginRight: 6 }} /> Manage Drives in Settings
           </button>
         </div>
       </div>
@@ -1010,7 +1027,9 @@ export default function TaskTracker(): JSX.Element {
       {drives.length === 0 && (
         <div className="tracker-no-drives-banner anim-fade-in">
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '22px' }}>💽</span>
+            <span style={{ display: 'inline-flex' }}>
+              <PageIcon pageKey="drive" size={24} />
+            </span>
             <div>
               <strong style={{ color: '#0F172A', fontSize: '13px' }}>
                 Multi-Drive Storage Workspace Not Configured
@@ -1021,7 +1040,7 @@ export default function TaskTracker(): JSX.Element {
             </div>
           </div>
           <button className="tracker-banner-setup-btn" onClick={handleOpenSettings}>
-            ⚙️ Setup Drives in Settings
+            <PageIcon pageKey="settings" size={13} style={{ marginRight: 6 }} /> Setup Drives in Settings
           </button>
         </div>
       )}
@@ -1034,7 +1053,9 @@ export default function TaskTracker(): JSX.Element {
         >
           <div className="tracker-kpi-top">
             <span className="tracker-kpi-label">Total Days</span>
-            <span className="tracker-kpi-icon">📋</span>
+            <span className="tracker-kpi-icon">
+              <PageIcon pageKey="file_text" size={17} />
+            </span>
           </div>
           <span className="tracker-kpi-val">{kpis.totalDays}</span>
         </div>
@@ -1045,7 +1066,9 @@ export default function TaskTracker(): JSX.Element {
         >
           <div className="tracker-kpi-top">
             <span className="tracker-kpi-label">Editing Pending</span>
-            <span className="tracker-kpi-icon">⏳</span>
+            <span className="tracker-kpi-icon">
+              <PageIcon pageKey="clock" size={17} color="#F59E0B" />
+            </span>
           </div>
           <span className="tracker-kpi-val">{kpis.pending}</span>
         </div>
@@ -1056,7 +1079,9 @@ export default function TaskTracker(): JSX.Element {
         >
           <div className="tracker-kpi-top">
             <span className="tracker-kpi-label">In Progress</span>
-            <span className="tracker-kpi-icon">🎬</span>
+            <span className="tracker-kpi-icon">
+              <PageIcon pageKey="videotransfer" size={17} color="#60A5FA" />
+            </span>
           </div>
           <span className="tracker-kpi-val">{kpis.editing}</span>
         </div>
@@ -1067,7 +1092,9 @@ export default function TaskTracker(): JSX.Element {
         >
           <div className="tracker-kpi-top">
             <span className="tracker-kpi-label">Review Stage</span>
-            <span className="tracker-kpi-icon">👁️</span>
+            <span className="tracker-kpi-icon">
+              <PageIcon pageKey="eye" size={17} color="#A78BFA" />
+            </span>
           </div>
           <span className="tracker-kpi-val">{kpis.review}</span>
         </div>
@@ -1078,7 +1105,9 @@ export default function TaskTracker(): JSX.Element {
         >
           <div className="tracker-kpi-top">
             <span className="tracker-kpi-label">Upload Pending</span>
-            <span className="tracker-kpi-icon">🌐</span>
+            <span className="tracker-kpi-icon">
+              <PageIcon pageKey="globe" size={17} color="#22D3EE" />
+            </span>
           </div>
           <span className="tracker-kpi-val">{kpis.uploadPending}</span>
         </div>
@@ -1089,7 +1118,9 @@ export default function TaskTracker(): JSX.Element {
         >
           <div className="tracker-kpi-top">
             <span className="tracker-kpi-label">Uploaded</span>
-            <span className="tracker-kpi-icon">🟢</span>
+            <span className="tracker-kpi-icon">
+              <PageIcon pageKey="check_circle" size={17} color="#34D399" />
+            </span>
           </div>
           <span className="tracker-kpi-val">{kpis.uploaded}</span>
         </div>
@@ -1100,7 +1131,9 @@ export default function TaskTracker(): JSX.Element {
         >
           <div className="tracker-kpi-top">
             <span className="tracker-kpi-label">AlJamea Done</span>
-            <span className="tracker-kpi-icon">🏛️</span>
+            <span className="tracker-kpi-icon">
+              <PageIcon pageKey="landmark" size={17} color="#10B981" />
+            </span>
           </div>
           <span className="tracker-kpi-val">{kpis.submitted}</span>
         </div>
@@ -1108,7 +1141,9 @@ export default function TaskTracker(): JSX.Element {
         <div className="tracker-kpi-card kpi-safars-done">
           <div className="tracker-kpi-top">
             <span className="tracker-kpi-label">Safars 100% Done</span>
-            <span className="tracker-kpi-icon">🏆</span>
+            <span className="tracker-kpi-icon">
+              <PageIcon pageKey="trophy" size={17} color="#F59E0B" />
+            </span>
           </div>
           <span className="tracker-kpi-val">
             {kpis.safarsDone} / {kpis.totalSafars}
@@ -1118,7 +1153,9 @@ export default function TaskTracker(): JSX.Element {
 
       {/* ── 3.1 Safar-Level Status KPI Cards (Issue 3) ── */}
       <div className="tracker-safar-status-grid">
-        <div className="tracker-safar-status-label">🗂️ Safar-Level Status</div>
+        <div className="tracker-safar-status-label">
+          <PageIcon pageKey="folder" size={14} style={{ marginRight: 6 }} /> Safar-Level Status
+        </div>
 
         <div
           className={`tracker-kpi-card kpi-safar-pending ${safarStatusFilter === 'safar_pending' ? 'active' : ''}`}
@@ -1127,7 +1164,9 @@ export default function TaskTracker(): JSX.Element {
         >
           <div className="tracker-kpi-top">
             <span className="tracker-kpi-label">Safar Pending</span>
-            <span className="tracker-kpi-icon">⏳</span>
+            <span className="tracker-kpi-icon">
+              <PageIcon pageKey="clock" size={16} color="#F59E0B" />
+            </span>
           </div>
           <span className="tracker-kpi-val">{safarStatusBuckets.safarPending}</span>
         </div>
@@ -1139,7 +1178,9 @@ export default function TaskTracker(): JSX.Element {
         >
           <div className="tracker-kpi-top">
             <span className="tracker-kpi-label">In Process</span>
-            <span className="tracker-kpi-icon">🎬</span>
+            <span className="tracker-kpi-icon">
+              <PageIcon pageKey="videotransfer" size={16} color="#60A5FA" />
+            </span>
           </div>
           <span className="tracker-kpi-val">{safarStatusBuckets.inProcess}</span>
         </div>
@@ -1151,7 +1192,9 @@ export default function TaskTracker(): JSX.Element {
         >
           <div className="tracker-kpi-top">
             <span className="tracker-kpi-label">To Delete / Jamea</span>
-            <span className="tracker-kpi-icon">🗑️</span>
+            <span className="tracker-kpi-icon">
+              <PageIcon pageKey="trash" size={16} color="#EF4444" />
+            </span>
           </div>
           <span className="tracker-kpi-val">{safarStatusBuckets.toDelete}</span>
         </div>
@@ -1163,7 +1206,9 @@ export default function TaskTracker(): JSX.Element {
         >
           <div className="tracker-kpi-top">
             <span className="tracker-kpi-label">To Upload</span>
-            <span className="tracker-kpi-icon">📤</span>
+            <span className="tracker-kpi-icon">
+              <PageIcon pageKey="upload" size={16} color="#34D399" />
+            </span>
           </div>
           <span className="tracker-kpi-val">{safarStatusBuckets.toUpload}</span>
         </div>
@@ -1174,7 +1219,9 @@ export default function TaskTracker(): JSX.Element {
       <div className="tracker-upload-progress-card">
         <div className="tracker-upload-progress-header">
           <div className="tracker-upload-progress-left">
-            <span className="tracker-upload-icon">🚀</span>
+            <span className="tracker-upload-icon">
+              <PageIcon pageKey="bolt" size={18} color="#22D3EE" />
+            </span>
             <div>
               <div className="tracker-upload-title">Overall Workstation Delivery & Upload Progress</div>
               <div className="tracker-upload-subtitle">
@@ -1216,7 +1263,9 @@ export default function TaskTracker(): JSX.Element {
       {/* ── 4. Toolbar: Search & Filter Pills ── */}
       <div className="tracker-toolbar">
         <div className="tracker-search-box">
-          <span>🔍</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+            <PageIcon pageKey="search" size={14} color="#94A3B8" />
+          </span>
           <input
             type="text"
             placeholder="Search Safar, Date folder, City..."
@@ -1226,9 +1275,9 @@ export default function TaskTracker(): JSX.Element {
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer' }}
+              style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer', display: 'inline-flex', alignItems: 'center' }}
             >
-              ✕
+              <PageIcon pageKey="cross" size={12} color="#94A3B8" />
             </button>
           )}
         </div>
@@ -1248,7 +1297,7 @@ export default function TaskTracker(): JSX.Element {
                 className={`tracker-pill ${statusFilter === st ? 'active' : ''}`}
                 onClick={() => setStatusFilter(st)}
               >
-                <span>{STATUS_CONFIG[st].icon}</span>
+                <PageIcon pageKey={STATUS_CONFIG[st].icon} size={13} color={STATUS_CONFIG[st].color} style={{ marginRight: 6 }} />
                 <span>{STATUS_CONFIG[st].label}</span>
                 <span style={{ opacity: 0.7 }}>({count})</span>
               </button>
@@ -1264,7 +1313,15 @@ export default function TaskTracker(): JSX.Element {
               onClick={handleToggleSelectAll}
               title={isAllSelected ? 'Deselect all Safars' : 'Select all visible Safars'}
             >
-              <span>{isAllSelected ? '☑️' : selectedSafars.length > 0 ? '⏹️' : '⬜'}</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', marginRight: 4 }}>
+                {isAllSelected ? (
+                  <PageIcon pageKey="check_circle" size={15} color="var(--accent, #6366F1)" />
+                ) : selectedSafars.length > 0 ? (
+                  <PageIcon pageKey="check" size={15} color="var(--accent, #6366F1)" />
+                ) : (
+                  <span style={{ display: 'inline-block', width: 13, height: 13, border: '1.5px solid currentColor', borderRadius: 3 }} />
+                )}
+              </span>
               <span>{isAllSelected ? 'Deselect All' : selectedSafars.length > 0 ? `Selected (${selectedSafars.length})` : 'Select All'}</span>
             </button>
           </div>
@@ -1276,7 +1333,8 @@ export default function TaskTracker(): JSX.Element {
         <div className="tracker-batch-action-bar">
           <div className="batch-bar-left">
             <span className="batch-count-pill">
-              ✨ <strong>{selectedSafars.length}</strong> Safar{selectedSafars.length > 1 ? 's' : ''} Selected
+              <PageIcon pageKey="sparkles" size={13} color="#F59E0B" style={{ marginRight: 5 }} />
+              <strong>{selectedSafars.length}</strong> Safar{selectedSafars.length > 1 ? 's' : ''} Selected
             </span>
             <span className="batch-hint-text">
               Mark deliverables manually or revert to auto:
@@ -1289,28 +1347,28 @@ export default function TaskTracker(): JSX.Element {
               onClick={() => handleSetManualStatus({ safarNames: selectedSafars }, 'uploaded')}
               title="Manually mark all deliverables in selected Safars as Uploaded"
             >
-              <span>🟢</span> Mark as Uploaded
+              <PageIcon pageKey="check_circle" size={13} color="#34D399" style={{ marginRight: 6 }} /> Mark as Uploaded
             </button>
             <button
               className="batch-action-btn batch-submit"
               onClick={() => handleSetManualStatus({ safarNames: selectedSafars }, 'submitted')}
               title="Manually mark all deliverables in selected Safars as Submitted to AlJamea"
             >
-              <span>🏛️</span> Mark as Submitted
+              <PageIcon pageKey="landmark" size={13} color="#10B981" style={{ marginRight: 6 }} /> Mark as Submitted
             </button>
             <button
               className="batch-action-btn batch-auto"
               onClick={() => handleSetManualStatus({ safarNames: selectedSafars }, 'auto')}
               title="Reset selected Safars to automatic file-system detection"
             >
-              <span>⚡</span> Reset to Auto
+              <PageIcon pageKey="bolt" size={13} color="#F59E0B" style={{ marginRight: 6 }} /> Reset to Auto
             </button>
             <button
               className="batch-action-btn batch-clear"
               onClick={handleClearSelection}
               title="Deselect all"
             >
-              ✕ Clear
+              <PageIcon pageKey="cross" size={11} style={{ marginRight: 5 }} /> Clear
             </button>
           </div>
         </div>
@@ -1321,7 +1379,9 @@ export default function TaskTracker(): JSX.Element {
         <div className="tracker-safars-container">
           {filteredSafars.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px 20px', color: '#94A3B8' }}>
-              <div style={{ fontSize: '42px', marginBottom: '12px' }}>📂</div>
+              <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'center' }}>
+                <PageIcon pageKey="folder_open" size={42} color="#64748B" />
+              </div>
               <h3 style={{ margin: '0 0 6px 0', color: '#E2E8F0' }}>No Safars Discovered</h3>
               <p style={{ margin: 0, fontSize: '13px' }}>
                 Please select your Main Working Directory above to start automatic tracking.
@@ -1355,10 +1415,14 @@ export default function TaskTracker(): JSX.Element {
 
                       <div
                         className="safar-folder-icon"
-                        style={{ cursor: 'pointer' }}
+                        style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center' }}
                         onClick={() => toggleCollapse(safar.safarName)}
                       >
-                        {safar.isSafarDone ? '🏆' : '📁'}
+                        {safar.isSafarDone ? (
+                          <PageIcon pageKey="trophy" size={20} color="#F59E0B" />
+                        ) : (
+                          <PageIcon pageKey="folder" size={20} color="var(--accent, #6366F1)" />
+                        )}
                       </div>
                       <div>
                         <div className="safar-title-row">
@@ -1370,22 +1434,30 @@ export default function TaskTracker(): JSX.Element {
                             {safar.safarName}
                           </h3>
                           {safar.city && safar.city !== 'Unassigned' && (
-                            <span className="safar-city-chip">📍 {safar.city}</span>
+                            <span className="safar-city-chip">
+                              <PageIcon pageKey="pin" size={11} style={{ marginRight: 4 }} />
+                              {safar.city}
+                            </span>
                           )}
                           {safar.safarSerial && (
                             <span className="safar-serial-chip">#{safar.safarSerial}</span>
                           )}
                           {safar.currentDrive && (
-                            <span className="safar-drive-chip">💽 {safar.currentDrive}</span>
+                            <span className="safar-drive-chip">
+                              <PageIcon pageKey="drive" size={11} style={{ marginRight: 4 }} />
+                              {safar.currentDrive}
+                            </span>
                           )}
                           {safar.isDriveConnected === false && (
                             <span className="safar-offline-chip" title="Drive is disconnected. All task history & progress remain preserved in SQLite.">
-                              💾 Drive Disconnected
+                              <PageIcon pageKey="drive" size={11} style={{ marginRight: 4 }} />
+                              Drive Disconnected
                             </span>
                           )}
                           {safar.isDriveConnected !== false && safar.isPathExists === false && (
                             <span className="safar-offline-chip moved" title="Folder was moved or completed. Retained in DB.">
-                              📦 Stored in DB
+                              <PageIcon pageKey="package" size={11} style={{ marginRight: 4 }} />
+                              Stored in DB
                             </span>
                           )}
                           {safar.manualStatus ? (
@@ -1393,19 +1465,22 @@ export default function TaskTracker(): JSX.Element {
                               className="safar-manual-badge"
                               title="Deliverables manually marked. Click 'Auto' in header actions to revert to file tracking."
                             >
-                              ✋ Manual: {safar.manualStatus === 'submitted' ? 'Submitted' : 'Uploaded'}
+                              <PageIcon pageKey="user" size={11} style={{ marginRight: 4 }} />
+                              Manual: {safar.manualStatus === 'submitted' ? 'Submitted' : 'Uploaded'}
                             </span>
                           ) : (
                             <span
                               className="safar-auto-badge"
                               title="Tracked automatically from disk."
                             >
-                              ⚡ Auto Tracked
+                              <PageIcon pageKey="bolt" size={11} color="#10B981" style={{ marginRight: 4 }} />
+                              Auto Tracked
                             </span>
                           )}
                           {safar.isSafarDone && (
                             <span className="safar-done-badge">
-                              ✨ 100% SAFAR COMPLETED (All dates in Final)
+                              <PageIcon pageKey="sparkles" size={11} color="#10B981" style={{ marginRight: 4 }} />
+                              100% SAFAR COMPLETED (All dates in Final)
                             </span>
                           )}
                         </div>
@@ -1430,14 +1505,16 @@ export default function TaskTracker(): JSX.Element {
                           onClick={() => handleSetManualStatus({ safarNames: [safar.safarName] }, 'uploaded')}
                           title="Manually mark all deliverables in this Safar as Uploaded"
                         >
-                          🟢 Mark Uploaded
+                          <PageIcon pageKey="check_circle" size={12} color="#34D399" style={{ marginRight: 4 }} />
+                          Mark Uploaded
                         </button>
                         <button
                           className="safar-action-btn mark-submit"
                           onClick={() => handleSetManualStatus({ safarNames: [safar.safarName] }, 'submitted')}
                           title="Manually mark all deliverables in this Safar as Submitted to AlJamea"
                         >
-                          🏛️ Mark Submitted
+                          <PageIcon pageKey="landmark" size={12} color="#10B981" style={{ marginRight: 4 }} />
+                          Mark Submitted
                         </button>
                         {(safar.manualStatus || (safar.tasks || []).some(t => t.manualStatus)) && (
                           <button
@@ -1445,7 +1522,8 @@ export default function TaskTracker(): JSX.Element {
                             onClick={() => handleSetManualStatus({ safarNames: [safar.safarName] }, 'auto')}
                             title="Reset this Safar to automatic file-system detection"
                           >
-                            ⚡ Auto
+                            <PageIcon pageKey="bolt" size={12} color="#F59E0B" style={{ marginRight: 4 }} />
+                            Auto
                           </button>
                         )}
                       </div>
@@ -1456,7 +1534,8 @@ export default function TaskTracker(): JSX.Element {
                         title="Move this Safar between In Process, To Upload, To Delete, or Pending"
                         disabled={safar.isPathExists === false}
                       >
-                        📦 Move
+                        <PageIcon pageKey="package" size={12} style={{ marginRight: 4 }} />
+                        Move
                       </button>
                       <button
                         className="safar-action-btn create-all-prproj"
@@ -1464,7 +1543,15 @@ export default function TaskTracker(): JSX.Element {
                         disabled={generatingSafars[safar.safarName] || safar.isPathExists === false}
                         title="Generate Premiere Pro project files (.prproj & .xml) for all dates in this Safar (Master Data Mode)"
                       >
-                        {generatingSafars[safar.safarName] ? '⏳ Creating...' : '🎬 Batch .prproj'}
+                        {generatingSafars[safar.safarName] ? (
+                          <>
+                            <PageIcon pageKey="clock" size={12} style={{ marginRight: 4 }} /> Creating...
+                          </>
+                        ) : (
+                          <>
+                            <PageIcon pageKey="prproj" size={13} style={{ marginRight: 4 }} /> Batch .prproj
+                          </>
+                        )}
                       </button>
                       <button
                         className="safar-action-btn open-prproj-page-btn"
@@ -1472,14 +1559,16 @@ export default function TaskTracker(): JSX.Element {
                         disabled={safar.isPathExists === false}
                         title="Open Premiere Pro Project Generator page with this Safar's folder pre-loaded"
                       >
-                        🎬 Open in Generator
+                        <PageIcon pageKey="prproj" size={13} style={{ marginRight: 4 }} />
+                        Open in Generator
                       </button>
                       <button
                         className="safar-action-btn"
                         onClick={() => handleCopyWhatsApp(safar)}
                         title="Copy clean WhatsApp status report"
                       >
-                        📋 Copy WhatsApp
+                        <PageIcon pageKey="file_text" size={12} style={{ marginRight: 4 }} />
+                        Copy WhatsApp
                       </button>
                       <button
                         className="safar-action-btn"
@@ -1487,7 +1576,8 @@ export default function TaskTracker(): JSX.Element {
                         title={safar.isPathExists === false ? 'Drive offline or folder moved' : 'Open in Explorer'}
                         style={safar.isPathExists === false || safar.isDriveConnected === false ? { opacity: 0.6 } : undefined}
                       >
-                        📂 Explorer
+                        <PageIcon pageKey="folder_open" size={12} style={{ marginRight: 4 }} />
+                        Explorer
                       </button>
                       <button
                         className="safar-action-btn"
@@ -1512,7 +1602,9 @@ export default function TaskTracker(): JSX.Element {
                           <div key={task.dateFolder} className="date-item-row">
                             {/* Col 1: Date Name & Visual Milestone Stepper */}
                             <div className="date-item-name-col">
-                              <span className="date-icon">{cfg.icon}</span>
+                              <span className="date-icon" style={{ display: 'inline-flex', alignItems: 'center' }}>
+                                <PageIcon pageKey={cfg.icon} size={15} color={cfg.color} />
+                              </span>
                               <div style={{ flex: 1, overflow: 'hidden' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                   <span
@@ -1533,7 +1625,8 @@ export default function TaskTracker(): JSX.Element {
                                   )}
                                   {task.isDriveConnected === false && (
                                     <span className="date-offline-chip" title="Drive disconnected">
-                                      💾 Offline
+                                      <PageIcon pageKey="drive" size={10} style={{ marginRight: 3 }} />
+                                      Offline
                                     </span>
                                   )}
                                 </div>
@@ -1582,16 +1675,18 @@ export default function TaskTracker(): JSX.Element {
                               {task.manualStatus ? (
                                 <span
                                   className="date-manual-pill"
-                                  title="Deliverable status was manually overridden. Click ⚡ to reset to Auto."
+                                  title="Deliverable status was manually overridden. Click to reset to Auto."
                                 >
-                                  ✋ Manual
+                                  <PageIcon pageKey="user" size={10} style={{ marginRight: 3 }} />
+                                  Manual
                                 </span>
                               ) : (
                                 <span
                                   className="date-auto-pill"
                                   title="Deliverable status is auto-detected from drive folders."
                                 >
-                                  ⚡ Auto
+                                  <PageIcon pageKey="bolt" size={10} color="#10B981" style={{ marginRight: 3 }} />
+                                  Auto
                                 </span>
                               )}
                             </div>
@@ -1600,26 +1695,30 @@ export default function TaskTracker(): JSX.Element {
                             <div className="date-timestamps-col">
                               {renderedTs ? (
                                 <span className="ts-row">
-                                  ✨ Rendered:{' '}
+                                  <PageIcon pageKey="sparkles" size={11} color="#60A5FA" style={{ marginRight: 3 }} />
+                                  Rendered:{' '}
                                   <strong>
                                     {renderedTs} ({task.renderVideoCount || 0} vids · {formatBytes(task.renderSizeBytes)})
                                   </strong>
                                 </span>
                               ) : (
                                 <span className="ts-row" style={{ opacity: 0.6 }}>
-                                  ✨ Rendered: <em>Awaiting Final render</em>
+                                  <PageIcon pageKey="sparkles" size={11} style={{ marginRight: 3 }} />
+                                  Rendered: <em>Awaiting Final render</em>
                                 </span>
                               )}
 
                               {uploadedTs && (
                                 <span className="ts-row">
-                                  📤 Uploaded: <strong>{uploadedTs}</strong>
+                                  <PageIcon pageKey="upload" size={11} color="#34D399" style={{ marginRight: 3 }} />
+                                  Uploaded: <strong>{uploadedTs}</strong>
                                 </span>
                               )}
 
                               {submittedTs && (
                                 <span className="ts-row">
-                                  🏛️ Submitted to AlJamea: <strong>{submittedTs}</strong>
+                                  <PageIcon pageKey="landmark" size={11} color="#10B981" style={{ marginRight: 3 }} />
+                                  Submitted to AlJamea: <strong>{submittedTs}</strong>
                                 </span>
                               )}
                             </div>
@@ -1632,7 +1731,7 @@ export default function TaskTracker(): JSX.Element {
                                   onClick={() => handleSetManualStatus({ taskKeys: [{ safarName: task.safarName, dateFolder: task.dateFolder }] }, 'uploaded')}
                                   title="Mark this date deliverable as Uploaded"
                                 >
-                                  🟢
+                                  <PageIcon pageKey="check_circle" size={13} color="#34D399" />
                                 </button>
                               )}
                               {task.status !== 'submitted' && (
@@ -1641,7 +1740,7 @@ export default function TaskTracker(): JSX.Element {
                                   onClick={() => handleSetManualStatus({ taskKeys: [{ safarName: task.safarName, dateFolder: task.dateFolder }] }, 'submitted')}
                                   title="Mark this date deliverable as Submitted to AlJamea"
                                 >
-                                  🏛️
+                                  <PageIcon pageKey="landmark" size={13} color="#10B981" />
                                 </button>
                               )}
                               {task.manualStatus && (
@@ -1650,7 +1749,7 @@ export default function TaskTracker(): JSX.Element {
                                   onClick={() => handleSetManualStatus({ taskKeys: [{ safarName: task.safarName, dateFolder: task.dateFolder }] }, 'auto')}
                                   title="Reset this date deliverable to Auto file tracking"
                                 >
-                                  ⚡
+                                  <PageIcon pageKey="bolt" size={13} color="#F59E0B" />
                                 </button>
                               )}
                               {task.prprojPath ? (
@@ -1659,7 +1758,7 @@ export default function TaskTracker(): JSX.Element {
                                   onClick={() => handleOpenPrproj(task.prprojPath, task.isDriveConnected !== false)}
                                   title={`Open Premiere Project: ${task.dateFolder}.prproj`}
                                 >
-                                  🎬
+                                  <PageIcon pageKey="prproj" size={13} />
                                 </button>
                               ) : (
                                 <button
@@ -1668,7 +1767,11 @@ export default function TaskTracker(): JSX.Element {
                                   disabled={generatingTasks[`${task.safarName}-${task.dateFolder}`]}
                                   title={`Create Premiere Project & XML sequence for ${task.dateFolder} (Single Mode)`}
                                 >
-                                  {generatingTasks[`${task.safarName}-${task.dateFolder}`] ? '⏳' : '🎬+'}
+                                  {generatingTasks[`${task.safarName}-${task.dateFolder}`] ? (
+                                    <PageIcon pageKey="clock" size={13} />
+                                  ) : (
+                                    <PageIcon pageKey="prproj" size={13} />
+                                  )}
                                 </button>
                               )}
                               <button
@@ -1676,14 +1779,14 @@ export default function TaskTracker(): JSX.Element {
                                 onClick={() => handleOpenFolder(task.finalPath || task.workingPath)}
                                 title="Open Folder in Explorer"
                               >
-                                📂
+                                <PageIcon pageKey="folder_open" size={13} />
                               </button>
                               <button
                                 className="icon-action-btn"
                                 onClick={() => handleOpenInspect(task)}
                                 title="Inspect Details & Timeline"
                               >
-                                🔍
+                                <PageIcon pageKey="search" size={13} />
                               </button>
                             </div>
                           </div>
@@ -1708,8 +1811,9 @@ export default function TaskTracker(): JSX.Element {
             return (
               <div key={st} className={`board-col col-${st}`}>
                 <div className="board-col-header">
-                  <span className="board-col-title" style={{ color: cfg.color }}>
-                    {cfg.icon} {cfg.label}
+                  <span className="board-col-title" style={{ color: cfg.color, display: 'inline-flex', alignItems: 'center' }}>
+                    <PageIcon pageKey={cfg.icon} size={14} color={cfg.color} style={{ marginRight: 6 }} />
+                    {cfg.label}
                   </span>
                   <span className="board-col-count">{colTasks.length}</span>
                 </div>
@@ -1738,8 +1842,9 @@ export default function TaskTracker(): JSX.Element {
                         </span>
 
                         {t.renderedAt && (
-                          <span style={{ fontSize: '11px', color: '#94A3B8' }}>
-                            ✨ {formatTimestamp(t.renderedAt)}
+                          <span style={{ fontSize: '11px', color: '#94A3B8', display: 'inline-flex', alignItems: 'center' }}>
+                            <PageIcon pageKey="sparkles" size={11} color="#94A3B8" style={{ marginRight: 3 }} />
+                            {formatTimestamp(t.renderedAt)}
                           </span>
                         )}
 
@@ -1755,7 +1860,7 @@ export default function TaskTracker(): JSX.Element {
                                 onClick={() => handleOpenPrproj(t.prprojPath, t.isDriveConnected !== false)}
                                 title={`Open Premiere Project: ${t.dateFolder}.prproj`}
                               >
-                                🎬
+                                <PageIcon pageKey="prproj" size={12} />
                               </button>
                             ) : (
                               <button
@@ -1765,7 +1870,11 @@ export default function TaskTracker(): JSX.Element {
                                 disabled={generatingTasks[`${t.safarName}-${t.dateFolder}`]}
                                 title={`Create Premiere Project & XML sequence for ${t.dateFolder} (Single Mode)`}
                               >
-                                {generatingTasks[`${t.safarName}-${t.dateFolder}`] ? '⏳' : '🎬'}
+                                {generatingTasks[`${t.safarName}-${t.dateFolder}`] ? (
+                                  <PageIcon pageKey="clock" size={12} />
+                                ) : (
+                                  <PageIcon pageKey="prproj" size={12} />
+                                )}
                               </button>
                             )}
                             <button
@@ -1774,7 +1883,7 @@ export default function TaskTracker(): JSX.Element {
                               onClick={() => handleOpenInspect(t)}
                               title="Inspect Details"
                             >
-                              🔍
+                              <PageIcon pageKey="search" size={12} />
                             </button>
                           </div>
                         </div>
@@ -1851,31 +1960,31 @@ export default function TaskTracker(): JSX.Element {
                           {t.status !== 'uploaded' && (
                             <button
                               className="icon-action-btn"
-                              style={{ width: '26px', height: '26px', fontSize: '11px' }}
+                              style={{ width: '26px', height: '26px' }}
                               onClick={() => handleSetManualStatus({ taskKeys: [{ safarName: t.safarName, dateFolder: t.dateFolder }] }, 'uploaded')}
                               title="Mark as Uploaded"
                             >
-                              🟢
+                              <PageIcon pageKey="check_circle" size={13} color="#34D399" />
                             </button>
                           )}
                           {t.status !== 'submitted' && (
                             <button
                               className="icon-action-btn"
-                              style={{ width: '26px', height: '26px', fontSize: '11px' }}
+                              style={{ width: '26px', height: '26px' }}
                               onClick={() => handleSetManualStatus({ taskKeys: [{ safarName: t.safarName, dateFolder: t.dateFolder }] }, 'submitted')}
                               title="Mark as Submitted"
                             >
-                              🏛️
+                              <PageIcon pageKey="landmark" size={13} color="#10B981" />
                             </button>
                           )}
                           {t.manualStatus && (
                             <button
                               className="icon-action-btn"
-                              style={{ width: '26px', height: '26px', fontSize: '11px' }}
+                              style={{ width: '26px', height: '26px' }}
                               onClick={() => handleSetManualStatus({ taskKeys: [{ safarName: t.safarName, dateFolder: t.dateFolder }] }, 'auto')}
                               title="Reset to Auto"
                             >
-                              ⚡
+                              <PageIcon pageKey="bolt" size={13} color="#F59E0B" />
                             </button>
                           )}
                           {t.prprojPath ? (
@@ -1885,7 +1994,7 @@ export default function TaskTracker(): JSX.Element {
                               onClick={() => handleOpenPrproj(t.prprojPath, t.isDriveConnected !== false)}
                               title={`Open Premiere Project: ${t.dateFolder}.prproj`}
                             >
-                              🎬
+                              <PageIcon pageKey="prproj" size={13} />
                             </button>
                           ) : (
                             <button
@@ -1895,7 +2004,11 @@ export default function TaskTracker(): JSX.Element {
                               disabled={generatingTasks[`${t.safarName}-${t.dateFolder}`]}
                               title={`Create Premiere Project & XML sequence for ${t.dateFolder} (Single Mode)`}
                             >
-                              {generatingTasks[`${t.safarName}-${t.dateFolder}`] ? '⏳' : '🎬'}
+                              {generatingTasks[`${t.safarName}-${t.dateFolder}`] ? (
+                                <PageIcon pageKey="clock" size={13} />
+                              ) : (
+                                <PageIcon pageKey="prproj" size={13} />
+                              )}
                             </button>
                           )}
                           <button
@@ -1904,7 +2017,7 @@ export default function TaskTracker(): JSX.Element {
                             onClick={() => handleOpenFolder(t.finalPath || t.workingPath)}
                             title="Open in Explorer"
                           >
-                            📂
+                            <PageIcon pageKey="folder_open" size={13} />
                           </button>
                           <button
                             className="icon-action-btn"
@@ -1912,7 +2025,7 @@ export default function TaskTracker(): JSX.Element {
                             onClick={() => handleOpenInspect(t)}
                             title="Inspect Details"
                           >
-                            🔍
+                            <PageIcon pageKey="search" size={13} />
                           </button>
                         </div>
                       </td>
@@ -1930,7 +2043,7 @@ export default function TaskTracker(): JSX.Element {
         <Modal
           show={!!inspectTask}
           title={`Task Inspector — ${inspectTask.dateFolder}`}
-          icon="🔍"
+          icon="search"
           confirmText="Close"
           onConfirm={() => setInspectTask(null)}
           onClose={() => setInspectTask(null)}
@@ -1965,11 +2078,15 @@ export default function TaskTracker(): JSX.Element {
               <div style={{ fontSize: '11px', color: '#64748B', marginBottom: '8px' }}>
                 Current Mode:{' '}
                 {inspectTask.manualStatus ? (
-                  <strong style={{ color: '#F59E0B' }}>
-                    ✋ Manual ({inspectTask.manualStatus === 'submitted' ? 'Submitted to AlJamea' : 'Uploaded'})
+                  <strong style={{ color: '#F59E0B', display: 'inline-flex', alignItems: 'center' }}>
+                    <PageIcon pageKey="user" size={12} style={{ marginRight: 4 }} />
+                    Manual ({inspectTask.manualStatus === 'submitted' ? 'Submitted to AlJamea' : 'Uploaded'})
                   </strong>
                 ) : (
-                  <strong style={{ color: '#10B981' }}>⚡ Auto File-System Tracking</strong>
+                  <strong style={{ color: '#10B981', display: 'inline-flex', alignItems: 'center' }}>
+                    <PageIcon pageKey="bolt" size={12} color="#10B981" style={{ marginRight: 4 }} />
+                    Auto File-System Tracking
+                  </strong>
                 )}
               </div>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -1981,7 +2098,7 @@ export default function TaskTracker(): JSX.Element {
                   }}
                   title="Manually force status to Uploaded"
                 >
-                  🟢 Mark as Uploaded
+                  <PageIcon pageKey="check_circle" size={13} color="#34D399" style={{ marginRight: 6 }} /> Mark as Uploaded
                 </button>
                 <button
                   className={`btn-choice-status ${inspectTask.status === 'submitted' ? 'active-submit' : ''}`}
@@ -1991,7 +2108,7 @@ export default function TaskTracker(): JSX.Element {
                   }}
                   title="Manually force status to Submitted (AlJamea)"
                 >
-                  🏛️ Mark as Submitted
+                  <PageIcon pageKey="landmark" size={13} color="#10B981" style={{ marginRight: 6 }} /> Mark as Submitted
                 </button>
                 {inspectTask.manualStatus && (
                   <button
@@ -2002,7 +2119,7 @@ export default function TaskTracker(): JSX.Element {
                     }}
                     title="Reset to automatic file-system detection"
                   >
-                    ⚡ Reset to Auto
+                    <PageIcon pageKey="bolt" size={13} color="#F59E0B" style={{ marginRight: 6 }} /> Reset to Auto
                   </button>
                 )}
               </div>
@@ -2079,14 +2196,14 @@ export default function TaskTracker(): JSX.Element {
                   className="btn-primary-action"
                   onClick={() => handleOpenPrproj(inspectTask.prprojPath)}
                 >
-                  🎬 Open .prproj
+                  <PageIcon pageKey="prproj" size={13} style={{ marginRight: 6 }} /> Open .prproj
                 </button>
               )}
               <button
                 className="btn-secondary-action"
                 onClick={() => handleOpenFolder(inspectTask.finalPath || inspectTask.workingPath)}
               >
-                📂 Open Folder
+                <PageIcon pageKey="folder_open" size={13} style={{ marginRight: 6 }} /> Open Folder
               </button>
             </div>
           </div>
@@ -2119,7 +2236,9 @@ export default function TaskTracker(): JSX.Element {
                 onClick={() => handleMoveSafar('in_process')}
                 disabled={isMoving}
               >
-                <div style={{ fontWeight: 700, fontSize: '13px' }}>🔄 In Process</div>
+                <div style={{ fontWeight: 700, fontSize: '13px', display: 'flex', alignItems: 'center' }}>
+                  <PageIcon pageKey="refresh" size={14} style={{ marginRight: 6 }} /> In Process
+                </div>
                 <div style={{ fontSize: '11px', color: '#3B82F6' }}>Active editing directory</div>
               </button>
 
@@ -2129,7 +2248,9 @@ export default function TaskTracker(): JSX.Element {
                 onClick={() => handleMoveSafar('to_upload')}
                 disabled={isMoving}
               >
-                <div style={{ fontWeight: 700, fontSize: '13px' }}>📤 To Upload</div>
+                <div style={{ fontWeight: 700, fontSize: '13px', display: 'flex', alignItems: 'center' }}>
+                  <PageIcon pageKey="upload" size={14} style={{ marginRight: 6 }} /> To Upload
+                </div>
                 <div style={{ fontSize: '11px', color: '#16A34A' }}>Ready for SSD distribution</div>
               </button>
 
@@ -2139,7 +2260,9 @@ export default function TaskTracker(): JSX.Element {
                 onClick={() => handleMoveSafar('to_delete')}
                 disabled={isMoving}
               >
-                <div style={{ fontWeight: 700, fontSize: '13px' }}>🗑️ To Delete</div>
+                <div style={{ fontWeight: 700, fontSize: '13px', display: 'flex', alignItems: 'center' }}>
+                  <PageIcon pageKey="trash" size={14} style={{ marginRight: 6 }} /> To Delete
+                </div>
                 <div style={{ fontSize: '11px', color: '#DC2626' }}>Submitted & ready to purge</div>
               </button>
 
@@ -2149,7 +2272,9 @@ export default function TaskTracker(): JSX.Element {
                 onClick={() => handleMoveSafar('pending')}
                 disabled={isMoving}
               >
-                <div style={{ fontWeight: 700, fontSize: '13px' }}>⏳ Pending</div>
+                <div style={{ fontWeight: 700, fontSize: '13px', display: 'flex', alignItems: 'center' }}>
+                  <PageIcon pageKey="clock" size={14} style={{ marginRight: 6 }} /> Pending
+                </div>
                 <div style={{ fontSize: '11px', color: '#D97706' }}>Raw files awaiting assignment</div>
               </button>
             </div>

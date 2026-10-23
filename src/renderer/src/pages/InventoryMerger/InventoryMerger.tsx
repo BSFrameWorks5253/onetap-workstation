@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { PAGE_META } from '../../types'
+import { PageIcon } from '../../components/PageIcon'
 import { useToast } from '../../components/Toast'
 import './InventoryMerger.css'
 
@@ -151,14 +152,17 @@ export default function InventoryMerger(): JSX.Element {
       {/* Header Banner */}
       <div className="im-hero-banner">
         <div className="im-hero-left">
-          <div className="im-hero-icon">{meta.icon}</div>
+          <div className="im-hero-icon">
+            <PageIcon pageKey="excelmerger" size={26} color="#10B981" />
+          </div>
           <div className="im-hero-text">
             <h1 className="im-hero-title">{meta.label}</h1>
             <p className="im-hero-sub">Merge Video Inventory & Photo Inventory reports into a single joint Excel file</p>
           </div>
         </div>
-        <button className="im-btn-demo" onClick={handleLoadDemoFiles} title="Load Scratch/2 Excel sample files">
-          ⚡ Load Demo Files
+        <button className="im-btn-demo" onClick={handleLoadDemoFiles} title="Load Scratch/2 Excel sample files" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          <span>Load Demo Files</span>
         </button>
       </div>
 
@@ -192,8 +196,8 @@ export default function InventoryMerger(): JSX.Element {
                 onChange={(e) => setFile1(e.target.value)}
               />
               {file1 && (
-                <button className="im-btn-clear" onClick={() => setFile1('')} title="Clear file selection">
-                  ✕
+                <button className="im-btn-clear" onClick={() => setFile1('')} title="Clear file selection" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
               )}
               <button className="im-btn-browse" onClick={handlePickVideoReport}>
@@ -224,8 +228,8 @@ export default function InventoryMerger(): JSX.Element {
                 onChange={(e) => setFile2(e.target.value)}
               />
               {file2 && (
-                <button className="im-btn-clear" onClick={() => setFile2('')} title="Clear file selection">
-                  ✕
+                <button className="im-btn-clear" onClick={() => setFile2('')} title="Clear file selection" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
               )}
               <button className="im-btn-browse" onClick={handlePickPhotoReport}>
@@ -241,6 +245,7 @@ export default function InventoryMerger(): JSX.Element {
             className="im-btn-start"
             disabled={isProcessing || !file1 || !file2}
             onClick={handleMerge}
+            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
           >
             {isProcessing ? (
               <>
@@ -248,15 +253,16 @@ export default function InventoryMerger(): JSX.Element {
               </>
             ) : (
               <>
-                ⚡ Merge Inventory Reports
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                <span>Merge Inventory Reports</span>
               </>
             )}
           </button>
         </div>
 
         {errorMsg && (
-          <div className="im-error-box">
-            <span>⚠️</span>
+          <div className="im-error-box" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             <span>{errorMsg}</span>
           </div>
         )}

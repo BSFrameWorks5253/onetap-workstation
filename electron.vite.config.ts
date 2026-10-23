@@ -23,6 +23,7 @@ export default defineConfig({
             if (id.includes('node_modules/pdf-lib')) return 'vendor-pdf'
             if (id.includes('node_modules/marked')) return 'vendor-marked'
             if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/')) return 'vendor-react'
+            return undefined
           }
         }
       }

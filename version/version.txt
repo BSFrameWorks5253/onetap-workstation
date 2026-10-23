@@ -1,5 +1,5 @@
-Version:    26.10.12
-Build Date: 2026-10-15 12:14:48
+Version:    26.10.13
+Build Date: 2026-10-23 20:54:07
 
 === What's New ===
 * Hierarchical Codebase Analysis Engine: Automatically mirrors folder structure in .code-analysis/ with minute details (exports, types, hooks, IPC channels) saving ~888,000+ AI context tokens.

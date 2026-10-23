@@ -1,5 +1,6 @@
 import React from 'react'
 import type { PageKey } from '../../types'
+import PageIcon from '../PageIcon'
 import './TrayDock.css'
 
 interface ActiveJob {
@@ -34,11 +35,11 @@ export default function TrayDock({ adderJob, syncJob, prprojJob, onNavigate }: T
 
   return (
     <div className="tray-dock anim-slide-in-up">
-      {/* 🎬 Video Render Active Job */}
+      {/* Video Render Active Job */}
       {showAdder && (
         <div className="tray-card tray-card--adder" onClick={() => onNavigate('adder')}>
           <div className="tray-header">
-            <span className="tray-icon">🎬</span>
+            <span className="tray-icon"><PageIcon pageKey="adder" size={18} color="var(--accent-adder)" /></span>
             <span className="tray-title">Title Adder Active</span>
             <span className="tray-pulse" />
           </div>
@@ -56,11 +57,11 @@ export default function TrayDock({ adderJob, syncJob, prprojJob, onNavigate }: T
         </div>
       )}
 
-      {/* 🎞️ Premiere Project Generator Active Job */}
+      {/* Premiere Project Generator Active Job */}
       {showPrproj && (
         <div className="tray-card tray-card--adder" onClick={() => onNavigate('prproj')} style={{ borderLeftColor: '#9999FF' }}>
           <div className="tray-header">
-            <span className="tray-icon">🎞️</span>
+            <span className="tray-icon"><PageIcon pageKey="prproj" size={18} /></span>
             <span className="tray-title">Sequence Generator Active</span>
             <span className="tray-pulse" />
           </div>
@@ -76,11 +77,11 @@ export default function TrayDock({ adderJob, syncJob, prprojJob, onNavigate }: T
         </div>
       )}
 
-      {/* ☁️ Drive Sync Active Job */}
+      {/* Drive Sync Active Job */}
       {showSync && (
         <div className="tray-card tray-card--sync" onClick={() => onNavigate('drivesync')}>
           <div className="tray-header">
-            <span className="tray-icon">☁️</span>
+            <span className="tray-icon"><PageIcon pageKey="drivesync" size={18} color="#34D399" /></span>
             <span className="tray-title">Drive Sync Active</span>
             <span className="tray-pulse" />
           </div>

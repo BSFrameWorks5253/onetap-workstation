@@ -194,9 +194,8 @@ export default function FolderMaker(): JSX.Element {
         title: 'Project Structure Created!',
         message: 'Successfully generated folder structure and template files.',
         type: 'success',
-        badge: '📁 FOLDER MAKER',
-        icon: '🗂',
-        action: { label: '📂 Open Project', onClick: () => api.shell.openFolder(rootPath) }
+        badge: 'FOLDER MAKER',
+        action: { label: 'Open Project', onClick: () => api.shell.openFolder(rootPath) }
       })
     }
   }
@@ -217,7 +216,7 @@ export default function FolderMaker(): JSX.Element {
       {/* Photographer Input */}
       <Card className="anim-scale-in">
         <CardHeader 
-          title="👤 Photographers" 
+          title="Photographers" 
           accent="var(--accent-folder)" 
           accentSoft="var(--accent-folder-soft)" 
           right={<StatusChip label={photoCodes.length > 0 ? `${photoCodes.length} Photographers` : 'No Photographers'} variant={photoCodes.length > 0 ? 'info' : 'muted'} />}
@@ -240,7 +239,7 @@ export default function FolderMaker(): JSX.Element {
 
       {/* Tree Builder */}
       <Card className="anim-scale-in">
-        <CardHeader title="📁 Folder Structure Builder" accent="var(--accent-folder)" accentSoft="var(--accent-folder-soft)"
+        <CardHeader title="Folder Structure Builder" accent="var(--accent-folder)" accentSoft="var(--accent-folder-soft)"
           right={
             <div className="fm-header-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
               <GhostButton size="sm" onClick={() => setPanelAlign(p => p === 'left' ? 'right' : 'left')}>⇆ Layout</GhostButton>
@@ -249,7 +248,10 @@ export default function FolderMaker(): JSX.Element {
                 setCollapsedNodeIds(allParentIds)
               }}>Collapse All</GhostButton>
               <GhostButton size="sm" onClick={() => setCollapsedNodeIds([])}>Expand All</GhostButton>
-              <GhostButton size="sm" onClick={() => setShowQuickBuilder(true)}>⚡ Quick Builder</GhostButton>
+              <GhostButton size="sm" onClick={() => setShowQuickBuilder(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                <span>Quick Builder</span>
+              </GhostButton>
               <GhostButton size="sm" onClick={() => setStructure([mkNode('New Project', 0)])}>Reset</GhostButton>
             </div>
           }
@@ -266,11 +268,20 @@ export default function FolderMaker(): JSX.Element {
                     className={`fm-collapse-btn ${node.children.length > 0 ? '' : 'fm-collapse-btn--empty'}`}
                     onClick={() => node.children.length > 0 && toggleCollapse(node.id)}
                     title={collapsedNodeIds.includes(node.id) ? 'Expand' : 'Collapse'}
+                    style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                   >
-                    {node.children.length > 0 ? (collapsedNodeIds.includes(node.id) ? '▶' : '▼') : ''}
+                    {node.children.length > 0 ? (
+                      collapsedNodeIds.includes(node.id) ? (
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                      ) : (
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                      )
+                    ) : ''}
                   </button>
 
-                  <span className="fm-tree-icon">{node.children.length > 0 ? '📂' : '📁'}</span>
+                  <span className="fm-tree-icon" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                  </span>
                   <input 
                     className="fm-tree-input" 
                     value={node.name} 
@@ -286,16 +297,18 @@ export default function FolderMaker(): JSX.Element {
                   )}
 
                   <div className="fm-tree-actions">
-                    <button className="fm-icon-btn fm-icon-btn--seq" title="Add Sequence" onClick={() => {
+                    <button className="fm-icon-btn fm-icon-btn--seq" title="Add Sequence" style={{ fontSize: '11px', fontWeight: 700 }} onClick={() => {
                       setActiveSeqNodeId(prev => prev === node.id ? null : node.id)
                       setSeqCounts({
                         MZ: 30, Z: 0, Q: 0, MQ: 0, BQ: 0, BZ: 0, N: 0, AQ: 0, ID: 0, WAAZ: 0
                       })
-                    }}>🔢</button>
+                    }}>#</button>
                     <button className="fm-icon-btn fm-icon-btn--add" title="Add Subfolder" onClick={() => addChild(node.id)}>+</button>
                     <button className="fm-icon-btn fm-icon-btn--sib" title="Add Sibling" onClick={() => addSibling(node.id)}>≡</button>
                     <button className="fm-icon-btn fm-icon-btn--dup" title="Duplicate" onClick={() => duplicateNode(node.id)}>⧉</button>
-                    <button className="fm-icon-btn fm-icon-btn--del" title="Delete" onClick={() => removeNode(node.id)}>✕</button>
+                    <button className="fm-icon-btn fm-icon-btn--del" title="Delete" onClick={() => removeNode(node.id)} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
                   </div>
                 </div>
 
@@ -303,7 +316,10 @@ export default function FolderMaker(): JSX.Element {
                 {activeSeqNodeId === node.id && (
                   <div className="fm-inline-seq-form anim-slide-in" style={{ paddingLeft: depth * 28 + 44 }}>
                     <div className="fm-inline-seq-header">
-                      <span className="fm-seq-form-title">🔢 Enter Sequence Counts for Subfolders:</span>
+                      <span className="fm-seq-form-title" style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>
+                        Enter Sequence Counts for Subfolders:
+                      </span>
                     </div>
                     <div className="fm-inline-seq-grid">
                       {['MZ', 'Z', 'Q', 'MQ', 'BQ', 'BZ', 'N', 'AQ', 'ID', 'WAAZ'].map(p => (
@@ -350,8 +366,10 @@ export default function FolderMaker(): JSX.Element {
                           key={code} 
                           className={`fm-photo-chip ${node.photographers.includes(code) ? 'fm-photo-chip--active' : ''}`}
                           onClick={() => togglePhoto(node.id, code)}
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}
                         >
-                          <span>👤</span> {code.split('-')[1]}
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                          <span>{code.split('-')[1]}</span>
                         </button>
                       ))}
                     </div>
@@ -371,7 +389,7 @@ export default function FolderMaker(): JSX.Element {
     <div className="fm-side-col">
       {/* Create Card */}
       <Card className="anim-scale-in">
-        <CardHeader title="🚀 Execution" accent="var(--success)" accentSoft="var(--success-soft)" />
+        <CardHeader title="Execution" accent="var(--success)" accentSoft="var(--success-soft)" />
         <div className="fm-card-body">
           <BrowseRow 
             label="Target Directory" 
@@ -396,8 +414,10 @@ export default function FolderMaker(): JSX.Element {
                     window.open(`filexplorer://${rootPath}`)
                   }
                 }}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}
               >
-                📁 Open in File Manager
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                <span>Open in File Manager</span>
               </GhostButton>
             </div>
           )}
@@ -412,8 +432,18 @@ export default function FolderMaker(): JSX.Element {
             Create Structure
           </Button>
           {result && (
-            <div className={`fm-result-box ${result.success ? 'fm-result--ok' : 'fm-result--err'}`}>
-              {result.success ? '✅ Success! Folders created.' : `✖ Error: ${result.error}`}
+            <div className={`fm-result-box ${result.success ? 'fm-result--ok' : 'fm-result--err'}`} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              {result.success ? (
+                <>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  <span>Success! Folders created.</span>
+                </>
+              ) : (
+                <>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                  <span>Error: {result.error}</span>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -421,7 +451,7 @@ export default function FolderMaker(): JSX.Element {
 
       {/* Presets Card */}
       <Card className="anim-scale-in">
-        <CardHeader title="💾 Presets" accent="var(--info)" accentSoft="var(--info-soft)" />
+        <CardHeader title="Presets" accent="var(--info)" accentSoft="var(--info-soft)" />
         <div className="fm-card-body">
           <div className="fm-preset-save-row">
             <Input placeholder="Preset name..." value={presetName} onChange={e => setPresetName(e.target.value)} />
@@ -433,7 +463,9 @@ export default function FolderMaker(): JSX.Element {
                 <span>{p.name}</span>
                 <div className="fm-preset-btns">
                   <button onClick={() => setStructure(p.structure)}>Load</button>
-                  <button className="fm-del-text" onClick={async () => { await api.folderMaker.deletePreset(p.name); setPresets(x => x.filter(y => y.name !== p.name)) }}>✕</button>
+                  <button className="fm-del-text" onClick={async () => { await api.folderMaker.deletePreset(p.name); setPresets(x => x.filter(y => y.name !== p.name)) }}>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
                 </div>
               </div>
             ))}
@@ -472,7 +504,7 @@ export default function FolderMaker(): JSX.Element {
       {/* Quick Builder Modal */}
       <Modal 
         show={showQuickBuilder} 
-        title="⚡ Quick Folder Builder"
+        title="Quick Folder Builder"
         onClose={() => setShowQuickBuilder(false)}
         onConfirm={runQuickBuilder}
       >

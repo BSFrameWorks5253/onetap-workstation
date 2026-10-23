@@ -5,6 +5,7 @@ import { Button, DangerButton, GhostButton } from '../../components/Button'
 import { BrowseRow, Input } from '../../components/Input'
 import ProgressBar from '../../components/ProgressBar'
 import StatCard, { StatusChip } from '../../components/StatCard'
+import PageIcon from '../../components/PageIcon'
 import './DriveSync.css'
 
 const meta = PAGE_META['drivesync']
@@ -312,7 +313,7 @@ export default function DriveSync(): JSX.Element {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ fontSize: '20px' }}>🔄💾</span>
+              <PageIcon pageKey="drivesync" size={24} color={meta.accent} />
               <div>
                 <div style={{ fontWeight: 700, fontSize: '13px', color: '#fff' }}>
                   Dual-Drive Backup Reconciler (Working D: ➔ 4TB Backup)
@@ -324,11 +325,11 @@ export default function DriveSync(): JSX.Element {
             </div>
             <div style={{ display: 'flex', gap: '8px' }}>
               <Button size="sm" variant="secondary" onClick={handleRunReconcile} disabled={reconciling}>
-                {reconciling ? 'Scanning Drives…' : '🔍 Scan & Reconcile'}
+                {reconciling ? 'Scanning Drives…' : 'Scan & Reconcile'}
               </Button>
               {reconcileResult && reconcileResult.totalMissingItems > 0 && (
                 <Button size="sm" variant="primary" onClick={handleApplyReconcileSync}>
-                  ⚡ Queue {reconcileResult.totalMissingItems} Missing ({reconcileResult.backupDrive})
+                  Queue {reconcileResult.totalMissingItems} Missing ({reconcileResult.backupDrive})
                 </Button>
               )}
             </div>
@@ -402,13 +403,15 @@ export default function DriveSync(): JSX.Element {
           onDragLeave={(e) => { e.preventDefault(); setIsDropActive(false) }}
           onDrop={handleSourceDrop}
         >
-          <div className="ds-dropzone-icon">📁📥</div>
+          <div className="ds-dropzone-icon">
+            <PageIcon pageKey="folder" size={32} color={meta.accent} />
+          </div>
           <div className="ds-dropzone-text">
             <strong>Drag & Drop Multiple Folders Here</strong>
             <span>Drop 1 or more folders at once to queue them for ultra-fast transfer.</span>
           </div>
           <Button size="sm" variant="secondary" onClick={handleAddSourceFolders} style={{ marginLeft: 'auto' }}>
-            ➕ Browse Folders
+            Browse Folders
           </Button>
         </div>
 
@@ -429,7 +432,7 @@ export default function DriveSync(): JSX.Element {
               {sources.map((srcPath, idx) => (
                 <div key={srcPath} className="ds-source-item">
                   <span className="ds-source-index">{idx + 1}.</span>
-                  <span className="ds-source-icon">📁</span>
+                  <span className="ds-source-icon"><PageIcon pageKey="folder" size={15} /></span>
                   <span className="ds-source-path" title={srcPath}>{srcPath}</span>
                   <button 
                     type="button" 
@@ -470,7 +473,12 @@ export default function DriveSync(): JSX.Element {
                   className={`ds-drive-chip ${dest === drive ? 'ds-drive-chip--selected' : ''}`}
                   onClick={() => setDest(drive)}
                 >
-                  💽 {drive}
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '4px' }}>
+                    <rect width="20" height="14" x="2" y="5" rx="2" />
+                    <line x1="6" y1="12" x2="6.01" y2="12" />
+                    <line x1="10" y1="12" x2="10.01" y2="12" />
+                  </svg>
+                  {drive}
                 </button>
               ))}
             </div>
@@ -496,7 +504,8 @@ export default function DriveSync(): JSX.Element {
         }}>
           <div>
             <div style={{ fontWeight: 600, fontSize: '12px', color: '#fff', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span>🔒 Deep Integrity Check (xxHash64)</span>
+              <PageIcon pageKey="password_protect" size={14} color="#10B981" />
+              <span>Deep Integrity Check (xxHash64)</span>
               {verifyHash && <span style={{ fontSize: '10px', padding: '1px 6px', background: '#10B981', color: '#000', borderRadius: '4px', fontWeight: 700 }}>ACTIVE</span>}
             </div>
             <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
@@ -522,12 +531,12 @@ export default function DriveSync(): JSX.Element {
 
         <div className="ds-run-row">
           {running
-            ? <DangerButton size="lg" onClick={cancel} style={{ flex: 1 }}>⛔ Cancel Transfer</DangerButton>
+            ? <DangerButton size="lg" onClick={cancel} style={{ flex: 1 }}>Cancel Transfer</DangerButton>
             : <Button size="lg" variant="primary" accent={meta.accent} accentHv={meta.accentHv}
                 disabled={sources.length === 0 || !dest}
                 onClick={start}
                 style={{ flex: 1 }}
-              >⚡ Start Multi-Folder Transfer</Button>
+              >Start Multi-Folder Transfer</Button>
           }
           {sources.length > 0 && <Button variant="ghost" onClick={() => api.shell.openFolder(sources[0])}>Open First Source</Button>}
           {dest   && <Button variant="ghost" onClick={() => api.shell.openFolder(dest)}>Open Dest</Button>}
@@ -535,27 +544,27 @@ export default function DriveSync(): JSX.Element {
 
         {result && (
           <div className={`ds-result ${result.cancelled ? 'ds-result--warn' : 'ds-result--success'}`}>
-            {result.cancelled ? `⚠ Cancelled after copying ${result.copied} file(s).` : `✅ Transfer Complete! ${result.copied} file(s) copied at ultra-fast speed across ${sources.length} folder(s).`}
+            {result.cancelled ? `Cancelled after copying ${result.copied} file(s).` : `Transfer Complete! ${result.copied} file(s) copied at ultra-fast speed across ${sources.length} folder(s).`}
           </div>
         )}
 
         {lastReportData && (
           <div className="ds-report-card">
             <div className="ds-report-header">
-              <span className="ds-report-title">📊 AUDIT REPORT EXPORTER</span>
+              <span className="ds-report-title">AUDIT REPORT EXPORTER</span>
               <span className="ds-report-sub">Save an official PDF or Excel report of this transfer task</span>
             </div>
             <div className="ds-report-actions">
-              <Button variant="secondary" onClick={handleExportPdf}>📄 Export PDF Report</Button>
-              <Button variant="secondary" onClick={handleExportExcel}>📊 Export Excel (.xlsx)</Button>
-              <Button variant="primary" accent={meta.accent} accentHv={meta.accentHv} onClick={handleExportBoth}>📦 Save Both (PDF & Excel)</Button>
+              <Button variant="secondary" onClick={handleExportPdf}>Export PDF Report</Button>
+              <Button variant="secondary" onClick={handleExportExcel}>Export Excel (.xlsx)</Button>
+              <Button variant="primary" accent={meta.accent} accentHv={meta.accentHv} onClick={handleExportBoth}>Save Both (PDF & Excel)</Button>
             </div>
             {exportStatus && (
               <div className="ds-report-status">
                 <span>{exportStatus}</span>
                 {savedPath && (
                   <GhostButton size="sm" onClick={() => api.shell.openFolder(savedPath)}>
-                    📂 Open Location
+                    Open Location
                   </GhostButton>
                 )}
               </div>

@@ -117,16 +117,14 @@ function prepareCustomMsiTemplate() {
         content = content.replace(/<Publish Dialog="InstallScopeDlg" Control="Next" Event="DoAction" Value="FindRelatedProducts" Order="5">1<\/Publish>\r?\n?/, '')
         modified = true
       }
-      if (!content.includes('WixUIBannerBmp') && content.includes('<UIRef Id="WixUI_InstallDir"/>')) {
-        content = content.replace(
-          '<UIRef Id="WixUI_InstallDir"/>',
-          '{{ if (wixBannerBmp) { }}\n      <WixVariable Id="WixUIBannerBmp" Value="${wixBannerBmp}" Overridable="yes"/>\n      {{ } -}}\n      {{ if (wixDialogBmp) { }}\n      <WixVariable Id="WixUIDialogBmp" Value="${wixDialogBmp}" Overridable="yes"/>\n      {{ } -}}\n      <UIRef Id="WixUI_InstallDir"/>'
-        )
+      if (content.includes('wixBannerBmp')) {
+        content = content.replace(/\{\{\s*if\s*\((?:typeof\s+wixBannerBmp|wixBannerBmp)[^}]*\}\}[\s\S]*?\{\{\s*\}\s*-\}\}\r?\n?/g, '')
+        content = content.replace(/\{\{\s*if\s*\((?:typeof\s+wixDialogBmp|wixDialogBmp)[^}]*\}\}[\s\S]*?\{\{\s*\}\s*-\}\}\r?\n?/g, '')
         modified = true
       }
       if (modified) {
         fs.writeFileSync(tplPath, content, 'utf8')
-        logSuccess('Synchronized professional WiX MSI template (ActionText status bar + custom UI branding).')
+        logSuccess('Synchronized professional WiX MSI template (ActionText status bar).')
       }
     }
   } catch (err) {

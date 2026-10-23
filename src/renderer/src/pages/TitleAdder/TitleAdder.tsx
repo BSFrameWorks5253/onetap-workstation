@@ -2388,6 +2388,7 @@ export default function TitleAdder(): JSX.Element {
 
     const currentStore = titleAdderStore.getState()
     const isCustomMap = overrides && typeof overrides === 'object' && !('customAssignments' in overrides) && !('availableVideos' in overrides) && !('titleImageAssignments' in overrides) && !('videoMuteSelections' in overrides)
+    const opts = (isCustomMap ? { customAssignments: overrides } : (overrides || {})) as any
     const effectiveSources = (opts.batchSources && opts.batchSources.length > 0) ? opts.batchSources : batchSources
     const effectiveSource = opts.batchSource || effectiveSources[0] || currentStore.batchSource || batchSource
     const effectiveThumbMode = opts.thumbnailMode || thumbnailMode
@@ -3055,7 +3056,7 @@ export default function TitleAdder(): JSX.Element {
                       <button
                         type="button"
                         className="ta-add-queue-folder-btn"
-                        onClick={addBatchFolder}
+                        onClick={() => { void addBatchFolder() }}
                         title="Add another source folder to the batch queue"
                       >
                         <span>➕</span> Add Folder to Queue
@@ -4146,11 +4147,17 @@ export default function TitleAdder(): JSX.Element {
             {/* Summary counters */}
             <div className="ta-audio-summary-bar">
               <div className="ta-audio-summary-badge">
-                <span>🎬 Total Videos:</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect width="15" height="14" x="1" y="5" rx="2"/></svg>
+                  Total Videos:
+                </span>
                 <strong>{audioPreviewAssignments.length}</strong>
               </div>
               <div className="ta-audio-summary-badge">
-                <span>🖼️ Custom Titles:</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                  Custom Titles:
+                </span>
                 <strong>
                   {audioPreviewAssignments.filter(item => {
                     const sel = userTitleImageSelections[item.videoPath]
@@ -4159,19 +4166,28 @@ export default function TitleAdder(): JSX.Element {
                 </strong>
               </div>
               <div className="ta-audio-summary-badge">
-                <span>🔇 Muted OG Audio:</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+                  Muted OG Audio:
+                </span>
                 <strong>
                   {audioPreviewAssignments.filter(item => userMuteSelections[item.videoPath] === true).length}
                 </strong>
               </div>
               <div className="ta-audio-summary-badge">
-                <span>💧 Watermarked:</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+                  Watermarked:
+                </span>
                 <strong>
                   {audioPreviewAssignments.filter(item => watermarkedVideos.has(item.videoName)).length}
                 </strong>
               </div>
               <div className="ta-audio-summary-badge">
-                <span>🎵 Unique Audio Tracks:</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                  Unique Audio Tracks:
+                </span>
                 <strong>
                   {new Set(Object.values(userAudioSelections).filter(Boolean)).size}
                 </strong>
@@ -4183,7 +4199,9 @@ export default function TitleAdder(): JSX.Element {
               {/* Option 1: Thumbnail Mode Dropdown (Before the path) */}
               <div className="ta-preflight-col ta-preflight-col--thumb">
                 <div className="ta-preflight-label-row">
-                  <span className="ta-preflight-icon">🖼️</span>
+                  <span className="ta-preflight-icon" style={{ display: 'inline-flex', alignItems: 'center' }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6366F1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                  </span>
                   <span className="ta-preflight-heading">Thumbnail Overlays</span>
                   <span className="ta-preflight-badge-tag">Front & End</span>
                 </div>
@@ -4196,7 +4214,9 @@ export default function TitleAdder(): JSX.Element {
               {/* Option 2: Audio Assignment Logic */}
               <div className="ta-preflight-col ta-preflight-col--audio">
                 <div className="ta-preflight-label-row">
-                  <span className="ta-preflight-icon">🎵</span>
+                  <span className="ta-preflight-icon" style={{ display: 'inline-flex', alignItems: 'center' }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                  </span>
                   <span className="ta-preflight-heading">Audio Assignment</span>
                   <span className="ta-preflight-badge-tag">
                     {audioAssignMode === 'single'
@@ -4251,7 +4271,9 @@ export default function TitleAdder(): JSX.Element {
               {/* Option 3: Output Destination Path Display & Live Status */}
               <div className={`ta-preflight-col ta-preflight-col--path ${outputExists === false ? 'is-error' : outputExists === true ? 'is-valid' : ''}`}>
                 <div className="ta-preflight-label-row">
-                  <span className="ta-preflight-icon">📁</span>
+                  <span className="ta-preflight-icon" style={{ display: 'inline-flex', alignItems: 'center' }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>
+                  </span>
                   <span className="ta-preflight-heading">Output Destination Path</span>
                   {outputExists === true && (
                     <span className="ta-path-status-pill is-ok">✔ Drive & Folder Ready</span>
@@ -4262,7 +4284,9 @@ export default function TitleAdder(): JSX.Element {
                 </div>
                 <div className="ta-preflight-path-bar">
                   <div className="ta-preflight-path-value" title={resolvedOutDir}>
-                    <span className="ta-preflight-path-icon">📂</span>
+                    <span className="ta-preflight-path-icon" style={{ display: 'inline-flex', alignItems: 'center' }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>
+                    </span>
                     <span className="ta-preflight-path-string truncate">{resolvedOutDir || 'No output folder specified'}</span>
                   </div>
                   <button

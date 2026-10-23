@@ -11,15 +11,16 @@ import { useToast } from '../../components/Toast'
 import FileViewerSettingsCard from './FileViewerSettingsCard'
 import CameraTransfer from '../CameraTransfer/CameraTransfer'
 import { LoaderGalleryModal } from '../../components/Loaders'
+import PageIcon from '../../components/PageIcon/PageIcon'
 import './Settings.css'
 
 const api = (window as any).api
 
 const THEMES: Array<{ id: ThemeName; label: string; icon: string; desc: string }> = [
-  { id: 'glass', label: 'Liquid Glass (VisionOS Dark)', icon: '💎', desc: 'Ultra-luxurious frosted obsidian glass, fluid chromatic refractions & specular lighting' },
-  { id: 'beige', label: 'Luxury Beige & Gold (Light)', icon: '🏛️', desc: 'Warm alabaster beige, sand linen & classical brass gold accents' },
-  { id: 'light', label: 'Holographic Aurora (Light)', icon: '✨', desc: 'Vibrant cyber-pastel glass with iridescent rainbow reflections' },
-  { id: 'forest', label: 'Emerald Mint (Light)', icon: '🌿', desc: 'Crisp botanical jade & frosted mint blossom' }
+  { id: 'glass', label: 'Liquid Glass (VisionOS Dark)', icon: 'theme_glass', desc: 'Ultra-luxurious frosted obsidian glass, fluid chromatic refractions & specular lighting' },
+  { id: 'beige', label: 'Luxury Beige & Gold (Light)', icon: 'theme_beige', desc: 'Warm alabaster beige, sand linen & classical brass gold accents' },
+  { id: 'light', label: 'Holographic Aurora (Light)', icon: 'theme_light', desc: 'Vibrant cyber-pastel glass with iridescent rainbow reflections' },
+  { id: 'forest', label: 'Emerald Mint (Light)', icon: 'theme_forest', desc: 'Crisp botanical jade & frosted mint blossom' }
 ]
 
 const ANIM_PRESETS: Array<{ id: AnimPreset; label: string; desc: string }> = [
@@ -80,7 +81,7 @@ export default function Settings(): JSX.Element {
   const [updateInfo, setUpdateInfo] = useState<any>(null)
   const [downloadProgress, setDownloadProgress] = useState({ percent: 0, transferredBytes: 0, totalBytes: 0, speedBytesPerSec: 0 })
   const [autoCheckUpdates, setAutoCheckUpdates] = useState(true)
-  const [appVersion, setAppVersion] = useState('26.10.12')
+  const [appVersion, setAppVersion] = useState('26.10.13')
   const [_updateError, setUpdateError] = useState('')
 
   // Auto-start state
@@ -505,11 +506,12 @@ export default function Settings(): JSX.Element {
         setUpdateStatus('available')
         setUpdateInfo(res)
         playSuccess()
-        showToast({ title: 'Update Found', message: `Version ${res.latestVersion} is now ready for download!`, type: 'info' })
+        const sourceLabel = res.source === 'anything' ? 'Anything Ecosystem' : 'GitHub Releases'
+        showToast({ title: 'Update Found', message: `Version ${res.latestVersion} is ready via ${sourceLabel}!`, type: 'info' })
       } else {
         setUpdateStatus('uptodate')
         playSuccess()
-        showToast({ title: 'Workstation Up to Date', message: `Uni Desk v${appVersion} is on the latest verified release.`, type: 'success' })
+        showToast({ title: 'Workstation Up to Date', message: `One Tap v${appVersion} is on the latest release verified against Anything & GitHub.`, type: 'success' })
       }
     } catch (e) {
       setUpdateStatus('uptodate')
@@ -784,8 +786,8 @@ export default function Settings(): JSX.Element {
         localStorage.setItem('ot_subscriber_name', subName.trim())
         setIsSubscribed(true)
         const msg = res.message === 'already_subscribed'
-          ? '✅ Already subscribed! Your email is registered.'
-          : '✅ Subscribed! You\'ll get update emails for all future releases.'
+          ? 'Already subscribed! Your email is registered.'
+          : "Subscribed! You'll get update emails for all future releases."
         setSubMsg(msg)
         setSubStatus('success')
         playSuccess()
@@ -825,17 +827,18 @@ export default function Settings(): JSX.Element {
             <>
               <div className="st-modal-header">
                 <div className="st-modal-title-row">
-                  <span className="st-modal-icon">🎵</span>
+                  <span className="st-modal-icon"><PageIcon pageKey="music" size={20} color="#8B5CF6" /></span>
                   <div>
                     <h3 className="st-modal-title">Audio Pool & Track Assignments</h3>
                     <p className="st-modal-subtitle">Manage audio tracks, prefix rules, and instrumental libraries</p>
                   </div>
                 </div>
-                <button className="st-modal-close" onClick={() => setActiveModal(null)}>✕</button>
+                <button className="st-modal-close" onClick={() => setActiveModal(null)}><PageIcon pageKey="cross" size={16} /></button>
               </div>
               <div className="st-modal-body">
-                <div className="st-info-box">
-                  📁 <strong>Audio Assets Pool:</strong> {poolInfo}
+                <div className="st-info-box" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <PageIcon pageKey="folder_open" size={16} color="#8B5CF6" />
+                  <span><strong>Audio Assets Pool:</strong> {poolInfo}</span>
                 </div>
 
                 <div className="st-divider" />
@@ -899,13 +902,26 @@ export default function Settings(): JSX.Element {
                         ))}
                       </select>
                       <button className="st-pfx-play" onClick={() => togglePlay(`Audio ${singleIdx}`)}>
-                        {playingAudio === `Audio ${singleIdx}` ? '⏹ Stop' : '▶ Preview'}
+                        {playingAudio === `Audio ${singleIdx}` ? (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><rect width="16" height="16" x="4" y="4" rx="2" /></svg>
+                            Stop
+                          </span>
+                        ) : (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21" /></svg>
+                            Preview
+                          </span>
+                        )}
                       </button>
                     </div>
                   </div>
                 ) : assignMode === 'alternate' ? (
                   <div className="st-mode-panel">
-                    <p className="st-section-label" style={{ color: '#10B981' }}>🔄 Sequential Rotation Sequence</p>
+                    <p className="st-section-label" style={{ color: '#10B981', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <PageIcon pageKey="refresh" size={15} color="#10B981" />
+                      Sequential Rotation Sequence
+                    </p>
                     <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '4px 0 12px 0' }}>
                       Videos in batch render will be assigned tracks sequentially from your audio assets pool in a continuous round-robin loop:
                     </p>
@@ -925,11 +941,15 @@ export default function Settings(): JSX.Element {
                           <span style={{ color: 'var(--accent-adder, #6366F1)', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>#{i + 1}</span>
                           <span>{opt}</span>
                           <button
-                            style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '0 2px', fontSize: '11px', color: 'var(--text-secondary)' }}
+                            style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '0 2px', display: 'inline-flex', alignItems: 'center', color: 'var(--text-secondary)' }}
                             onClick={() => togglePlay(opt)}
                             title="Preview Audio"
                           >
-                            {playingAudio === opt ? '⏹' : '▶'}
+                            {playingAudio === opt ? (
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><rect width="16" height="16" x="4" y="4" rx="2" /></svg>
+                            ) : (
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21" /></svg>
+                            )}
                           </button>
                         </div>
                       ))}
@@ -960,7 +980,11 @@ export default function Settings(): JSX.Element {
                             <ValidationDot valid={isValid} label={isValid ? 'File Ready' : 'Missing Audio'} />
                             <button className={`st-pfx-play ${playingAudio === assigned ? 'st-pfx-play--playing' : ''}`}
                               onClick={() => togglePlay(assigned)}>
-                              {playingAudio === assigned ? '⏹' : '▶'}
+                              {playingAudio === assigned ? (
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><rect width="16" height="16" x="4" y="4" rx="2" /></svg>
+                              ) : (
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21" /></svg>
+                              )}
                             </button>
                           </div>
                         )
@@ -981,9 +1005,9 @@ export default function Settings(): JSX.Element {
                     ) : (
                       instrumentalCollection.map((item, idx) => (
                         <div key={idx} className="st-lib-row">
-                          <span className="st-lib-name" style={{ color: '#8B5CF6' }}>✨ Special {item.name}</span>
+                          <span className="st-lib-name" style={{ color: '#8B5CF6' }}>Special {item.name}</span>
                           <span className="st-lib-path truncate">{item.path}</span>
-                          <button className="st-lib-del" onClick={() => removeInstrumentalFromLibrary(idx)}>✕</button>
+                          <button className="st-lib-del" onClick={() => removeInstrumentalFromLibrary(idx)}><PageIcon pageKey="cross" size={14} /></button>
                         </div>
                       ))
                     )}
@@ -998,7 +1022,7 @@ export default function Settings(): JSX.Element {
                     style={{ marginTop: '12px' }}
                   >
                     <div className="dropzone-content">
-                      <span className="dropzone-icon">📥</span>
+                      <span className="dropzone-icon"><PageIcon pageKey="download" size={28} color="#8B5CF6" /></span>
                       <span className="dropzone-text">
                         Drag & Drop Instrumental Audio Files Here or <strong style={{ color: '#8B5CF6' }}>Browse</strong>
                       </span>
@@ -1008,10 +1032,14 @@ export default function Settings(): JSX.Element {
 
                   {pendingInstrumentals.length > 0 && (
                     <div className="pending-list anim-scale-in" style={{ marginTop: '12px' }}>
-                      <p className="pending-title">⏳ Files Pending Transfer ({pendingInstrumentals.length})</p>
+                      <p className="pending-title" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <PageIcon pageKey="clock" size={15} color="#F59E0B" />
+                        Files Pending Transfer ({pendingInstrumentals.length})
+                      </p>
                       <div className="pending-actions">
                         <Button accent="#8B5CF6" accentHv="#7C3AED" onClick={transferPendingInstrumentals}>
-                          📂 Transfer to Final Titles Folder
+                          <PageIcon pageKey="folder_open" size={15} style={{ marginRight: '6px' }} />
+                          Transfer to Final Titles Folder
                         </Button>
                         <GhostButton onClick={() => setPendingInstrumentals([])}>Clear All</GhostButton>
                       </div>
@@ -1030,13 +1058,13 @@ export default function Settings(): JSX.Element {
             <>
               <div className="st-modal-header">
                 <div className="st-modal-title-row">
-                  <span className="st-modal-icon">📂</span>
+                  <span className="st-modal-icon"><PageIcon pageKey="folder" size={20} color="#3B82F6" /></span>
                   <div>
                     <h3 className="st-modal-title">Default Paths & Settings Storage</h3>
                     <p className="st-modal-subtitle">Configure output directories and workstation storage configuration</p>
                   </div>
                 </div>
-                <button className="st-modal-close" onClick={() => setActiveModal(null)}>✕</button>
+                <button className="st-modal-close" onClick={() => setActiveModal(null)}><PageIcon pageKey="cross" size={16} /></button>
               </div>
               <div className="st-modal-body">
                 <BrowseRow label="Default Final Titles Folder (Title Output)" value={titlesFolder}
@@ -1098,7 +1126,10 @@ export default function Settings(): JSX.Element {
                         await load()
                         setSaved('Settings file loaded: ' + p)
                       }
-                    }}>📂 Choose Custom Settings File</GhostButton>
+                    }}>
+                      <PageIcon pageKey="folder_open" size={15} style={{ marginRight: '6px' }} />
+                      Choose Custom Settings File
+                    </GhostButton>
                   </div>
                 </div>
               </div>
@@ -1113,26 +1144,31 @@ export default function Settings(): JSX.Element {
             <>
               <div className="st-modal-header">
                 <div className="st-modal-title-row">
-                  <span className="st-modal-icon" style={{ background: 'rgba(6, 182, 212, 0.15)', color: '#06B6D4' }}>🗄️</span>
+                  <span className="st-modal-icon" style={{ background: 'rgba(6, 182, 212, 0.15)', color: '#06B6D4' }}>
+                    <PageIcon pageKey="drive" size={20} color="#06B6D4" />
+                  </span>
                   <div>
                     <h3 className="st-modal-title">Task Tracker Drives & Workspaces</h3>
                     <p className="st-modal-subtitle">Connect one or more drives. Standard folders (IN PROCESS, UPLOADED DATA, TO DELETE) are detected automatically.</p>
                   </div>
                 </div>
-                <button className="st-modal-close" onClick={() => setActiveModal(null)}>✕</button>
+                <button className="st-modal-close" onClick={() => setActiveModal(null)}><PageIcon pageKey="cross" size={16} /></button>
               </div>
 
               <div className="st-modal-body">
                 {/* Information Banner */}
-                <div className="st-info-box" style={{ background: 'rgba(6, 182, 212, 0.08)', borderColor: 'rgba(6, 182, 212, 0.25)' }}>
-                  💡 <strong>Automatic Folder Binding:</strong> Simply select your drive letter (e.g. <code>D:\</code>). One Tap immediately discovers your Safar data in <code>IN PROCESS</code>, upload folder in <code>UPLOADED DATA</code>, and cleanup in <code>TO DELETE</code> without needing manual folder browsing.
+                <div className="st-info-box" style={{ background: 'rgba(6, 182, 212, 0.08)', borderColor: 'rgba(6, 182, 212, 0.25)', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                  <PageIcon pageKey="lightbulb" size={16} color="#06B6D4" style={{ flexShrink: 0, marginTop: '2px' }} />
+                  <div>
+                    <strong>Automatic Folder Binding:</strong> Simply select your drive letter (e.g. <code>D:\</code>). One Tap immediately discovers your Safar data in <code>IN PROCESS</code>, upload folder in <code>UPLOADED DATA</code>, and cleanup in <code>TO DELETE</code> without needing manual folder browsing.
+                  </div>
                 </div>
 
                 {/* Quick Add Drive Control */}
                 <div className="st-drive-add-card">
                   <div className="st-drive-add-header">
                     <span style={{ fontWeight: 700, fontSize: '13px', color: 'var(--text-primary)' }}>
-                      ➕ Add Storage Drive to Workspace
+                      Add Storage Drive to Workspace
                     </span>
                     <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
                       Supports internal drives, external USB-C SSDs, and network storage
@@ -1150,7 +1186,7 @@ export default function Settings(): JSX.Element {
                       <option value="" disabled>Select available system drive...</option>
                       {systemDrives.map(d => (
                         <option key={d} value={d}>
-                          💽 Drive {d} {trackerDrives.some(td => td.driveRoot.toLowerCase() === d.toLowerCase()) ? '(Already Added)' : ''}
+                          Drive {d} {trackerDrives.some(td => td.driveRoot.toLowerCase() === d.toLowerCase()) ? '(Already Added)' : ''}
                         </option>
                       ))}
                     </select>
@@ -1162,7 +1198,7 @@ export default function Settings(): JSX.Element {
                       disabled={!selectedAddDrive || isDetectingDrive}
                       onClick={() => handleAddDrive(selectedAddDrive)}
                     >
-                      {isDetectingDrive ? '🔍 Scanning Drive...' : '➕ Add Drive'}
+                      {isDetectingDrive ? 'Scanning Drive...' : 'Add Drive'}
                     </Button>
 
                     <GhostButton
@@ -1170,7 +1206,8 @@ export default function Settings(): JSX.Element {
                       disabled={isDetectingDrive}
                       style={{ whiteSpace: 'nowrap' }}
                     >
-                      📂 Browse Custom Root...
+                      <PageIcon pageKey="folder_open" size={14} style={{ marginRight: '6px' }} />
+                      Browse Custom Root...
                     </GhostButton>
                   </div>
                 </div>
@@ -1179,7 +1216,7 @@ export default function Settings(): JSX.Element {
                 <div className="st-drive-add-card" style={{ background: 'var(--surface-2)', border: '1.5px solid rgba(6, 182, 212, 0.3)', borderRadius: '12px', padding: '14px 18px', marginTop: '12px' }}>
                   <div className="st-drive-add-header" style={{ marginBottom: '10px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '18px' }}>📁</span>
+                      <PageIcon pageKey="folder" size={18} color="#06B6D4" />
                       <strong style={{ fontSize: '13px', color: 'var(--text-primary)' }}>
                         Create Full Safar Folder Structure
                       </strong>
@@ -1207,7 +1244,7 @@ export default function Settings(): JSX.Element {
                       disabled={!newSafarStructureName.trim() || isCreatingStructure}
                       onClick={handleCreateFullSafarStructure}
                     >
-                      {isCreatingStructure ? '⏳ Creating Folders...' : '📁 Create Full Structure'}
+                      {isCreatingStructure ? 'Creating Folders...' : 'Create Full Structure'}
                     </Button>
                   </div>
                 </div>
@@ -1229,7 +1266,7 @@ export default function Settings(): JSX.Element {
 
                   {trackerDrives.length === 0 ? (
                     <div className="st-drive-empty-card">
-                      <span style={{ fontSize: '28px' }}>💽</span>
+                      <PageIcon pageKey="drive" size={32} color="#06B6D4" />
                       <strong style={{ color: 'var(--text-primary)', marginTop: '6px' }}>No Drives Configured Yet</strong>
                       <p style={{ color: 'var(--text-muted)', fontSize: '12px', margin: '4px 0 0 0' }}>
                         Select a system drive above (e.g. <code>D:\</code>) or click Browse to connect your media drive.
@@ -1246,7 +1283,7 @@ export default function Settings(): JSX.Element {
                           <div className="st-drive-item-top">
                             <div className="st-drive-item-info">
                               <div className="st-drive-icon-badge">
-                                💽
+                                <PageIcon pageKey="drive" size={16} color="#06B6D4" />
                               </div>
                               <div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1273,7 +1310,10 @@ export default function Settings(): JSX.Element {
                                 onClick={() => handleReDetectDrive(drive.id)}
                                 disabled={isDetectingDrive}
                               >
-                                🔄 Refresh
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                  <PageIcon pageKey="refresh" size={12} />
+                                  Refresh
+                                </span>
                               </button>
                               <button
                                 className={`st-toggle ${drive.enabled ? 'st-toggle--on' : ''}`}
@@ -1286,7 +1326,7 @@ export default function Settings(): JSX.Element {
                                 title="Remove drive from workspace"
                                 onClick={() => handleRemoveDrive(drive.id)}
                               >
-                                ✕
+                                <PageIcon pageKey="cross" size={13} />
                               </button>
                             </div>
                           </div>
@@ -1296,9 +1336,12 @@ export default function Settings(): JSX.Element {
                             {/* 1. IN PROCESS */}
                             <div className={`st-folder-chip ${drive.status?.inProcessExists ? 'st-folder-chip--found' : 'st-folder-chip--missing'}`}>
                               <div className="st-folder-chip-top">
-                                <span className="st-folder-label">📁 Working Safar (IN PROCESS)</span>
+                                <span className="st-folder-label" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                  <PageIcon pageKey="folder" size={14} color="#38BDF8" />
+                                  Working Safar (IN PROCESS)
+                                </span>
                                 <span className="st-folder-badge">
-                                  {drive.status?.inProcessExists ? `✓ Found (${drive.status?.safarCount ?? 0} Safars)` : '⚠ Missing'}
+                                  {drive.status?.inProcessExists ? `✓ Found (${drive.status?.safarCount ?? 0} Safars)` : 'Missing'}
                                 </span>
                               </div>
                               <div className="st-folder-path" title={drive.inProcessPath}>
@@ -1309,9 +1352,12 @@ export default function Settings(): JSX.Element {
                             {/* 2. UPLOADED DATA / TO UPLOAD */}
                             <div className={`st-folder-chip ${drive.status?.toUploadExists ? 'st-folder-chip--found' : 'st-folder-chip--missing'}`}>
                               <div className="st-folder-chip-top">
-                                <span className="st-folder-label">📤 Uploaded Data (TO UPLOAD)</span>
+                                <span className="st-folder-label" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                  <PageIcon pageKey="upload" size={14} color="#10B981" />
+                                  Uploaded Data (TO UPLOAD)
+                                </span>
                                 <span className="st-folder-badge">
-                                  {drive.status?.toUploadExists ? '✓ Found' : '⚠ Missing'}
+                                  {drive.status?.toUploadExists ? '✓ Found' : 'Missing'}
                                 </span>
                               </div>
                               <div className="st-folder-path" title={drive.toUploadPath}>
@@ -1322,9 +1368,12 @@ export default function Settings(): JSX.Element {
                             {/* 3. TO DELETE */}
                             <div className={`st-folder-chip ${drive.status?.toDeleteExists ? 'st-folder-chip--found' : 'st-folder-chip--missing'}`}>
                               <div className="st-folder-chip-top">
-                                <span className="st-folder-label">🗑️ Cleanup (TO DELETE)</span>
+                                <span className="st-folder-label" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                  <PageIcon pageKey="trash" size={14} color="#EF4444" />
+                                  Cleanup (TO DELETE)
+                                </span>
                                 <span className="st-folder-badge">
-                                  {drive.status?.toDeleteExists ? '✓ Found' : '⚠ Missing'}
+                                  {drive.status?.toDeleteExists ? '✓ Found' : 'Missing'}
                                 </span>
                               </div>
                               <div className="st-folder-path" title={drive.toDeletePath}>
@@ -1336,14 +1385,18 @@ export default function Settings(): JSX.Element {
                           {/* Missing Folders Alert / Create Action */}
                           {hasMissing && (
                             <div className="st-drive-missing-alert">
-                              <span style={{ fontSize: '12px' }}>
-                                ⚠️ One or more standard folders are missing on <code>{drive.driveRoot}</code>.
+                              <span style={{ fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                <PageIcon pageKey="warning" size={14} color="#F59E0B" />
+                                One or more standard folders are missing on <code>{drive.driveRoot}</code>.
                               </span>
                               <button
                                 className="st-btn-create-folders"
                                 onClick={() => handleCreateMissingFolders(drive)}
                               >
-                                ⚡ Create Missing Folders Now
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                  <PageIcon pageKey="bolt" size={14} />
+                                  Create Missing Folders Now
+                                </span>
                               </button>
                             </div>
                           )}
@@ -1418,13 +1471,13 @@ export default function Settings(): JSX.Element {
             <>
               <div className="st-modal-header">
                 <div className="st-modal-title-row">
-                  <span className="st-modal-icon">👁️</span>
+                  <span className="st-modal-icon"><PageIcon pageKey="eye" size={20} color="#10B981" /></span>
                   <div>
                     <h3 className="st-modal-title">Folder Watcher & Auto Convert</h3>
                     <p className="st-modal-subtitle">Configure background directory monitoring for automatic file processing</p>
                   </div>
                 </div>
-                <button className="st-modal-close" onClick={() => setActiveModal(null)}>✕</button>
+                <button className="st-modal-close" onClick={() => setActiveModal(null)}><PageIcon pageKey="cross" size={16} /></button>
               </div>
               <div className="st-modal-body">
                 <div className="st-toggle-row">
@@ -1485,13 +1538,13 @@ export default function Settings(): JSX.Element {
             <>
               <div className="st-modal-header">
                 <div className="st-modal-title-row">
-                  <span className="st-modal-icon">🎨</span>
+                  <span className="st-modal-icon"><PageIcon pageKey="palette" size={20} color="#8B5CF6" /></span>
                   <div>
                     <h3 className="st-modal-title">Theme & Visual Styling</h3>
                     <p className="st-modal-subtitle">Customize application colors, animation presets, and UI aesthetics</p>
                   </div>
                 </div>
-                <button className="st-modal-close" onClick={() => setActiveModal(null)}>✕</button>
+                <button className="st-modal-close" onClick={() => setActiveModal(null)}><PageIcon pageKey="cross" size={16} /></button>
               </div>
               <div className="st-modal-body">
                 <div>
@@ -1505,7 +1558,7 @@ export default function Settings(): JSX.Element {
                           setSaved(`Saved and remembered theme: ${th.label}`)
                           playTick()
                         }}>
-                        <span className="st-theme-icon">{th.icon}</span>
+                        <span className="st-theme-icon"><PageIcon pageKey={th.icon} size={28} /></span>
                         <strong>{th.label}</strong>
                         <p>{th.desc}</p>
                       </button>
@@ -1565,15 +1618,16 @@ export default function Settings(): JSX.Element {
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
                     <p className="st-section-label" style={{ color: '#8B5CF6', margin: 0 }}>
-                      ✨ Workstation Preloader & Boot Loading Screen
+                      Workstation Preloader & Boot Loading Screen
                     </p>
                     <button
                       type="button"
                       className="st-chip st-chip--selected"
                       onClick={() => setShowLoaderModal(true)}
-                      style={{ cursor: 'pointer', background: 'linear-gradient(135deg, #8B5CF6, #6366F1)', color: '#FFF' }}
+                      style={{ cursor: 'pointer', background: 'linear-gradient(135deg, #8B5CF6, #6366F1)', color: '#FFF', display: 'inline-flex', alignItems: 'center' }}
                     >
-                      🚀 Open Loader Template Showcase
+                      <PageIcon pageKey="rocket" size={14} style={{ marginRight: '6px' }} />
+                      Open Loader Template Showcase
                     </button>
                   </div>
                   <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: 0 }}>
@@ -1592,13 +1646,13 @@ export default function Settings(): JSX.Element {
             <>
               <div className="st-modal-header">
                 <div className="st-modal-title-row">
-                  <span className="st-modal-icon">⚡</span>
+                  <span className="st-modal-icon"><PageIcon pageKey="bolt" size={20} color="#F59E0B" /></span>
                   <div>
                     <h3 className="st-modal-title">Performance & Engine Tuning</h3>
                     <p className="st-modal-subtitle">Configure parallel stream worker limits and memory buffer allocations</p>
                   </div>
                 </div>
-                <button className="st-modal-close" onClick={() => setActiveModal(null)}>✕</button>
+                <button className="st-modal-close" onClick={() => setActiveModal(null)}><PageIcon pageKey="cross" size={16} /></button>
               </div>
               <div className="st-modal-body">
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
@@ -1620,8 +1674,11 @@ export default function Settings(): JSX.Element {
 
                 <div className="st-divider" />
 
-                <div className="st-info-box">
-                  💡 <strong>Recommendation:</strong> For high-speed SSD transfers, 8–16 worker threads with a 4 MB buffer offer peak throughput without clogging Windows file I/O.
+                <div className="st-info-box" style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                  <PageIcon pageKey="lightbulb" size={16} color="#F59E0B" style={{ flexShrink: 0, marginTop: '2px' }} />
+                  <div>
+                    <strong>Recommendation:</strong> For high-speed SSD transfers, 8–16 worker threads with a 4 MB buffer offer peak throughput without clogging Windows file I/O.
+                  </div>
                 </div>
               </div>
               <div className="st-modal-footer">
@@ -1635,13 +1692,13 @@ export default function Settings(): JSX.Element {
             <>
               <div className="st-modal-header">
                 <div className="st-modal-title-row">
-                  <span className="st-modal-icon">📄</span>
+                  <span className="st-modal-icon"><PageIcon pageKey="converter" size={20} color="#0EA5E9" /></span>
                   <div>
                     <h3 className="st-modal-title">Document & Media File Viewer Settings</h3>
                     <p className="st-modal-subtitle">Configure preview rendering for PDF, Word, Excel, Markdown, Images, and Videos</p>
                   </div>
                 </div>
-                <button className="st-modal-close" onClick={() => setActiveModal(null)}>✕</button>
+                <button className="st-modal-close" onClick={() => setActiveModal(null)}><PageIcon pageKey="cross" size={16} /></button>
               </div>
               <div className="st-modal-body">
                 <FileViewerSettingsCard />
@@ -1657,13 +1714,13 @@ export default function Settings(): JSX.Element {
             <>
               <div className="st-modal-header">
                 <div className="st-modal-title-row">
-                  <span className="st-modal-icon">📷</span>
+                  <span className="st-modal-icon"><PageIcon pageKey="cameratransfer" size={20} color="#EC4899" /></span>
                   <div>
                     <h3 className="st-modal-title">Camera SD Transfer & Sorting</h3>
                     <p className="st-modal-subtitle">Sort and copy videos from SD card to camera person folders with Hijri naming</p>
                   </div>
                 </div>
-                <button className="st-modal-close" onClick={() => setActiveModal(null)}>✕</button>
+                <button className="st-modal-close" onClick={() => setActiveModal(null)}><PageIcon pageKey="cross" size={16} /></button>
               </div>
               <div className="st-modal-body" style={{ padding: 0 }}>
                 <CameraTransfer />
@@ -1679,7 +1736,7 @@ export default function Settings(): JSX.Element {
             <>
               <div className="st-modal-header" style={{ padding: '22px 24px 18px 24px', background: 'var(--surface-2)', borderBottom: '1px solid var(--border)' }}>
                 <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
-                  <button className="st-modal-close" onClick={() => setActiveModal(null)} style={{ position: 'absolute', top: '-4px', right: 0 }}>✕</button>
+                  <button className="st-modal-close" onClick={() => setActiveModal(null)} style={{ position: 'absolute', top: '-4px', right: 0 }}><PageIcon pageKey="cross" size={16} /></button>
                   
                   {/* Arabic Header Calligraphy */}
                   <div style={{
@@ -1711,10 +1768,10 @@ export default function Settings(): JSX.Element {
               </div>
 
               <div className="st-modal-body" style={{ gap: '16px', maxHeight: '65vh', overflowY: 'auto', padding: '20px 24px' }}>
-                {/* ✨ What's New */}
+                {/* What's New */}
                 <div style={{ background: 'var(--surface-2)', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '16px 18px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-                    <span style={{ fontSize: '18px' }}>✨</span>
+                    <PageIcon pageKey="sparkles" size={18} color="#B8860B" />
                     <strong style={{ fontSize: '14px', color: '#B8860B' }}>What's New in v{appVersion}</strong>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13px', color: 'var(--text-primary)', lineHeight: 1.6 }}>
@@ -1725,10 +1782,10 @@ export default function Settings(): JSX.Element {
                   </div>
                 </div>
 
-                {/* 🛠️ Bugs Fixed & Stability */}
+                {/* Bugs Fixed & Stability */}
                 <div style={{ background: 'var(--surface-2)', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '16px 18px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-                    <span style={{ fontSize: '18px' }}>🛠️</span>
+                    <PageIcon pageKey="utilities" size={18} color="#10B981" />
                     <strong style={{ fontSize: '14px', color: '#10B981' }}>Bugs Fixed & Resolved</strong>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13px', color: 'var(--text-primary)', lineHeight: 1.6 }}>
@@ -1738,10 +1795,10 @@ export default function Settings(): JSX.Element {
                   </div>
                 </div>
 
-                {/* ⚡ Performance & Polish */}
+                {/* Performance & Polish */}
                 <div style={{ background: 'var(--surface-2)', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '16px 18px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-                    <span style={{ fontSize: '18px' }}>⚡</span>
+                    <PageIcon pageKey="bolt" size={18} color="#8B5CF6" />
                     <strong style={{ fontSize: '14px', color: '#8B5CF6' }}>Performance & Navigation Fluidity</strong>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13px', color: 'var(--text-primary)', lineHeight: 1.6 }}>
@@ -1751,10 +1808,10 @@ export default function Settings(): JSX.Element {
                   </div>
                 </div>
 
-                {/* 💻 System Requirements */}
+                {/* System Requirements */}
                 <div style={{ background: 'var(--surface-2)', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '14px 18px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '16px' }}>💻</span>
+                    <PageIcon pageKey="dashboard" size={18} color="var(--text-secondary)" />
                     <strong style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>System Requirements & Runtime</strong>
                   </div>
                   <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.5 }}>
@@ -1785,11 +1842,11 @@ export default function Settings(): JSX.Element {
           </div>
         )}
 
-        {/* 1. 🎵 Audio Configuration & Pool */}
+        {/* 1. Audio Configuration & Pool */}
         <div className="st-compact-card">
           <div className="st-compact-info">
             <div className="st-compact-icon-box" style={{ background: 'rgba(139, 92, 246, 0.12)', color: '#8B5CF6' }}>
-              🎵
+              <PageIcon pageKey="music" size={20} color="#8B5CF6" />
             </div>
             <div className="st-compact-text">
               <span className="st-compact-title">Audio Pool & Track Assignments</span>
@@ -1801,17 +1858,16 @@ export default function Settings(): JSX.Element {
             </div>
           </div>
           <Button variant="primary" accent="#8B5CF6" accentHv="#7C3AED" onClick={() => setActiveModal('audio')}>
-            🎵 Customize Audio Pool
+            <PageIcon pageKey="music" size={14} style={{ marginRight: '6px' }} />
+            Customize Audio Pool
           </Button>
         </div>
 
-
-
-        {/* 1.8 🗄️ Task Tracker Multi-Drive Workspaces */}
+        {/* 1.8 Task Tracker Multi-Drive Workspaces */}
         <div className="st-compact-card">
           <div className="st-compact-info">
             <div className="st-compact-icon-box" style={{ background: 'rgba(6, 182, 212, 0.12)', color: '#06B6D4' }}>
-              🗄️
+              <PageIcon pageKey="drive" size={20} color="#06B6D4" />
             </div>
             <div className="st-compact-text">
               <span className="st-compact-title">Task Tracker Drives & Workspaces</span>
@@ -1831,15 +1887,16 @@ export default function Settings(): JSX.Element {
             </div>
           </div>
           <Button variant="primary" accent="#06B6D4" accentHv="#0891B2" onClick={() => setActiveModal('trackerDrives')}>
-            🗄️ Configure Workspaces
+            <PageIcon pageKey="drive" size={14} style={{ marginRight: '6px' }} />
+            Configure Workspaces
           </Button>
         </div>
 
-        {/* 2. 📂 Default Paths & Storage */}
+        {/* 2. Default Paths & Storage */}
         <div className="st-compact-card">
           <div className="st-compact-info">
             <div className="st-compact-icon-box" style={{ background: 'rgba(59, 130, 246, 0.12)', color: '#3B82F6' }}>
-              📂
+              <PageIcon pageKey="folder" size={20} color="#3B82F6" />
             </div>
             <div className="st-compact-text">
               <span className="st-compact-title">Storage & Default Folder Paths</span>
@@ -1851,15 +1908,16 @@ export default function Settings(): JSX.Element {
             </div>
           </div>
           <Button variant="secondary" onClick={() => setActiveModal('paths')}>
-            📂 Configure Paths
+            <PageIcon pageKey="folder" size={14} style={{ marginRight: '6px' }} />
+            Configure Paths
           </Button>
         </div>
 
-        {/* 3. 👁️ Folder Watcher (Auto Convert) */}
+        {/* 3. Folder Watcher (Auto Convert) */}
         <div className="st-compact-card">
           <div className="st-compact-info">
             <div className="st-compact-icon-box" style={{ background: 'rgba(16, 185, 129, 0.12)', color: '#10B981' }}>
-              👁️
+              <PageIcon pageKey="eye" size={20} color="#10B981" />
             </div>
             <div className="st-compact-text">
               <span className="st-compact-title">Folder Watcher (Auto Convert)</span>
@@ -1872,15 +1930,16 @@ export default function Settings(): JSX.Element {
             </div>
           </div>
           <Button variant="secondary" onClick={() => setActiveModal('watcher')}>
-            👁️ Configure Watcher
+            <PageIcon pageKey="eye" size={14} style={{ marginRight: '6px' }} />
+            Configure Watcher
           </Button>
         </div>
 
-        {/* 4. 🎨 Theme & Visual Styling */}
+        {/* 4. Theme & Visual Styling */}
         <div className="st-compact-card">
           <div className="st-compact-info">
             <div className="st-compact-icon-box" style={{ background: 'rgba(236, 72, 153, 0.12)', color: '#EC4899' }}>
-              🎨
+              <PageIcon pageKey="palette" size={20} color="#EC4899" />
             </div>
             <div className="st-compact-text">
               <span className="st-compact-title">Theme & Visual Styling</span>
@@ -1892,15 +1951,16 @@ export default function Settings(): JSX.Element {
             </div>
           </div>
           <Button variant="secondary" onClick={() => setActiveModal('theme')}>
-            🎨 Customize Theme
+            <PageIcon pageKey="palette" size={14} style={{ marginRight: '6px' }} />
+            Customize Theme
           </Button>
         </div>
 
-        {/* 5. ⚡ Performance & Engine */}
+        {/* 5. Performance & Engine */}
         <div className="st-compact-card">
           <div className="st-compact-info">
             <div className="st-compact-icon-box" style={{ background: 'rgba(245, 158, 11, 0.12)', color: '#F59E0B' }}>
-              ⚡
+              <PageIcon pageKey="bolt" size={20} color="#F59E0B" />
             </div>
             <div className="st-compact-text">
               <span className="st-compact-title">Performance & Engine Tuning</span>
@@ -1908,15 +1968,16 @@ export default function Settings(): JSX.Element {
             </div>
           </div>
           <Button variant="secondary" onClick={() => setActiveModal('perf')}>
-            ⚡ Configure Engine
+            <PageIcon pageKey="bolt" size={14} style={{ marginRight: '6px' }} />
+            Configure Engine
           </Button>
         </div>
 
-        {/* 6. 📄 Document & File Viewer */}
+        {/* 6. Document & File Viewer */}
         <div className="st-compact-card">
           <div className="st-compact-info">
             <div className="st-compact-icon-box" style={{ background: 'rgba(99, 102, 241, 0.12)', color: '#6366F1' }}>
-              📄
+              <PageIcon pageKey="converter" size={20} color="#6366F1" />
             </div>
             <div className="st-compact-text">
               <span className="st-compact-title">Document & Media File Viewer</span>
@@ -1924,15 +1985,16 @@ export default function Settings(): JSX.Element {
             </div>
           </div>
           <Button variant="secondary" onClick={() => setActiveModal('fileViewer')}>
-            📄 Configure Viewer
+            <PageIcon pageKey="converter" size={14} style={{ marginRight: '6px' }} />
+            Configure Viewer
           </Button>
         </div>
 
-        {/* 7. 📷 Camera SD Transfer & Sorting */}
+        {/* 7. Camera SD Transfer & Sorting */}
         <div className="st-compact-card">
           <div className="st-compact-info">
             <div className="st-compact-icon-box" style={{ background: 'rgba(236, 72, 153, 0.12)', color: '#EC4899' }}>
-              📷
+              <PageIcon pageKey="cameratransfer" size={20} color="#EC4899" />
             </div>
             <div className="st-compact-text">
               <span className="st-compact-title">Camera SD Transfer & Sorting</span>
@@ -1943,18 +2005,20 @@ export default function Settings(): JSX.Element {
             </div>
           </div>
           <Button variant="primary" accent="#EC4899" accentHv="#DB2777" onClick={() => setActiveModal('cameraTransfer')}>
-            📷 Open Camera Transfer
+            <PageIcon pageKey="cameratransfer" size={14} style={{ marginRight: '6px' }} />
+            Open Camera Transfer
           </Button>
         </div>
 
-        {/* 🚀 Software Updates Card */}
+        {/* Software Updates Card */}
         <Card className="anim-scale-in">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <CardHeader title="🚀  Software Updates & Platform Release" accent="#8B5CF6" accentSoft="rgba(139, 92, 246, 0.08)" />
+            <CardHeader title="Software Updates & Platform Release" accent="#8B5CF6" accentSoft="rgba(139, 92, 246, 0.08)" />
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-sub)' }}>Uni Desk v{appVersion}</span>
+              <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-sub)' }}>One Tap v{appVersion}</span>
               <Button variant="ghost" accent="#8B5CF6" onClick={() => { setActiveModal('changelog'); playTick() }} style={{ padding: '6px 12px', fontSize: '11px', border: '1px solid rgba(139, 92, 246, 0.3)' }}>
-                📋 View Changelog
+                <PageIcon pageKey="file_text" size={12} style={{ marginRight: '6px' }} />
+                View Changelog
               </Button>
               {updateStatus === 'idle' && (
                 <Button variant="ghost" accent="#8B5CF6" onClick={checkForUpdates} style={{ padding: '6px 14px', fontSize: '12px' }}>
@@ -1965,12 +2029,40 @@ export default function Settings(): JSX.Element {
                 <span style={{ fontSize: '12px', color: 'var(--text-sub)' }}>Checking...</span>
               )}
               {updateStatus === 'uptodate' && (
-                <span style={{ color: '#10B981', fontWeight: 700, fontSize: '12px' }}>✔ Up to date</span>
+                <span style={{ color: '#10B981', fontWeight: 700, fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  <PageIcon pageKey="check" size={12} color="#10B981" />
+                  Up to date
+                </span>
               )}
             </div>
           </div>
 
           <div className="st-card-body" style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            {/* Update Ecosystem Route */}
+            <div style={{ background: 'rgba(139, 92, 246, 0.05)', border: '1px solid rgba(139, 92, 246, 0.2)', borderRadius: '12px', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <PageIcon pageKey="link" size={16} color="#10B981" />
+                </div>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontWeight: 700, fontSize: '13px', color: 'var(--text-primary)' }}>Ecosystem Distribution Route</span>
+                    <span style={{ background: 'rgba(16, 185, 129, 0.12)', color: '#10B981', fontSize: '10px', fontWeight: 700, padding: '2px 8px', borderRadius: '12px', border: '1px solid rgba(16, 185, 129, 0.25)' }}>
+                      Active
+                    </span>
+                  </div>
+                  <p style={{ margin: '3px 0 0', fontSize: '12px', color: 'var(--text-sub)' }}>
+                    Primary: <strong>Anything Hub</strong> (<code>C:\Users\Burhanuddin\OneDrive\Desktop\New folder (2)\Anything</code>) · Mirror: <strong>GitHub Releases</strong>
+                  </p>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Button variant="ghost" accent="#8B5CF6" onClick={checkForUpdates} disabled={updateStatus === 'checking'} style={{ padding: '6px 12px', fontSize: '11px' }}>
+                  <PageIcon pageKey="refresh" size={12} style={{ marginRight: '5px' }} />
+                  {updateStatus === 'checking' ? 'Querying Route...' : 'Sync with Anything'}
+                </Button>
+              </div>
+            </div>
             <div className="st-toggle-row">
               <div>
                 <p className="st-toggle-label">Automatically check for updates on startup</p>
@@ -2010,12 +2102,13 @@ export default function Settings(): JSX.Element {
             <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '18px' }}>📧</span>
+                  <PageIcon pageKey="mail" size={18} color="#8B5CF6" />
                   <span style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '14px' }}>Email Update Notifications</span>
                 </div>
                 {isSubscribed && (
-                  <span style={{ background: 'rgba(16,185,129,0.12)', color: '#10B981', fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '12px', border: '1px solid rgba(16,185,129,0.25)' }}>
-                    ✔ Subscribed
+                  <span style={{ background: 'rgba(16,185,129,0.12)', color: '#10B981', fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '12px', border: '1px solid rgba(16,185,129,0.25)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    <PageIcon pageKey="check" size={11} color="#10B981" />
+                    Subscribed
                   </span>
                 )}
               </div>
@@ -2063,11 +2156,13 @@ export default function Settings(): JSX.Element {
 
                 <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
                   <Button variant="ghost" accent="#8B5CF6" onClick={() => (window as any).openUpdateModal?.(updateInfo)} style={{ flex: 1, padding: '9px 14px', fontSize: '12px' }}>
-                    📜 View Release Notes
+                    <PageIcon pageKey="file_text" size={13} style={{ marginRight: '6px' }} />
+                    View Release Notes
                   </Button>
                   {updateStatus === 'available' && (
                     <Button variant="primary" accent="#8B5CF6" accentHv="#7C3AED" onClick={startDownload} style={{ flex: 1, padding: '9px 14px', fontSize: '12px' }}>
-                      🚀 Download Update
+                      <PageIcon pageKey="download" size={14} style={{ marginRight: '6px' }} />
+                      Download Update
                     </Button>
                   )}
                 </div>
@@ -2086,7 +2181,8 @@ export default function Settings(): JSX.Element {
 
                 {updateStatus === 'ready' && (
                   <Button variant="primary" accent="#10B981" accentHv="#059669" onClick={applyUpdate} style={{ width: '100%', padding: '12px', fontWeight: 700 }}>
-                    ⚡ Restart & Install Update
+                    <PageIcon pageKey="bolt" size={14} style={{ marginRight: '6px' }} />
+                    Restart & Install Update
                   </Button>
                 )}
               </div>
@@ -2094,23 +2190,29 @@ export default function Settings(): JSX.Element {
           </div>
         </Card>
 
-        {/* 🔄 Reset & Restore */}
+        {/* Reset & Restore */}
         <Card className="anim-scale-in">
-          <CardHeader title="🔄  Reset & Restore Defaults" accent="#EF4444" accentSoft="#FFF0F0" />
+          <CardHeader title="Reset & Restore Defaults" accent="#EF4444" accentSoft="#FFF0F0" />
           <div className="st-card-body" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
             <Button variant="danger" onClick={async () => {
               if (!confirm('Reset ALL settings to defaults? This cannot be undone.')) return
               await api.settings.resetAll()
               await load()
               setSaved('All settings reset to defaults')
-            }}>🔄 Reset All Settings to Factory Defaults</Button>
+            }}>
+              <PageIcon pageKey="refresh" size={14} style={{ marginRight: '6px' }} />
+              Reset All Settings to Factory Defaults
+            </Button>
             
             <Button variant="ghost" accent="#EF4444" onClick={() => {
               if (!confirm('Reset all render statistics? This cannot be undone.')) return
               localStorage.removeItem('render_stats')
               localStorage.removeItem('render_stats_start_date')
               setSaved('Render stats reset')
-            }}>📊 Reset Render Stats</Button>
+            }}>
+              <PageIcon pageKey="stats" size={14} style={{ marginRight: '6px' }} />
+              Reset Render Stats
+            </Button>
           </div>
         </Card>
 
@@ -2123,7 +2225,7 @@ export default function Settings(): JSX.Element {
           onClose={() => setShowLoaderModal(false)}
           onSelect={(id) => {
             showToast({
-              title: 'Boot Loader Selected! ✨',
+              title: 'Boot Loader Selected!',
               message: `Active loading screen set to ${id.toUpperCase()}`,
               type: 'success'
             })

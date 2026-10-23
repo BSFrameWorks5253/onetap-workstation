@@ -222,10 +222,11 @@ contextBridge.exposeInMainWorld('api', {
 
   // Updates
   update: {
-    check:              () => ipcRenderer.invoke('update:check'),
+    check:              (preferredSource?: 'anything' | 'github' | 'all') => ipcRenderer.invoke('update:check', preferredSource),
     download:           (url?: string) => ipcRenderer.invoke('update:download', url),
     install:            () => ipcRenderer.invoke('update:install'),
     getCurrentVersion:  () => ipcRenderer.invoke('update:getCurrentVersion'),
+    getUpdateConfig:    () => ipcRenderer.invoke('update:getUpdateConfig'),
     onProgress:         (cb: (d: any) => void) => {
       const sub = (_e: any, d: any): void => cb(d)
       ipcRenderer.on('update:progress', sub)

@@ -1588,6 +1588,7 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
       const videoTitle = path.basename(videoPath, path.extname(videoPath))
       const detectedYear = extractYearFromFileName(videoPath)
       send('titleAdder:log', { jobId: params.jobId, message: `  🏷 Title: "${videoTitle}" · 📅 Year: ${detectedYear || '—'} · © Copyright: "Aljamea-tus-Saifiyah" · Publisher: "AIN" · Author URL: "https://ain53.org/"`, level: 'info' })
+      const totalLength = (skipFront ? 0 : introDuration) + (transDuration > 0 ? transDuration : 0) + info.duration + (skipBack ? 0 : outroDuration)
       send('titleAdder:log', { jobId: params.jobId, message: `  ⏱ Total output length: ${totalLength.toFixed(2)}s (${skipFront ? 'no front thumbnail' : introDuration + 's intro'} + ${transDuration > 0 ? transDuration.toFixed(1) + 's buffer + ' : ''}${info.duration.toFixed(2)}s video + ${skipBack ? 'no back thumbnail' : outroDuration + 's outro'})`, level: 'info' })
 
       await new Promise<void>(resolve => {

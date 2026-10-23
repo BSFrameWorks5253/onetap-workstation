@@ -104,7 +104,10 @@ export const EventSearchSelect: React.FC<EventSearchSelectProps> = ({
         }}
       >
         <span style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
-          <span>🏷️</span>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, opacity: 0.8 }}>
+            <path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z" />
+            <circle cx="7" cy="7" r="1.5" fill="currentColor" />
+          </svg>
           <span className="safar-search-select-trigger-text" style={{ fontWeight: selectedCode ? 700 : 500 }}>
             {displayText}
           </span>
@@ -145,7 +148,12 @@ export const EventSearchSelect: React.FC<EventSearchSelectProps> = ({
         >
           {/* Live Search Input */}
           <div className="safar-search-select-input-box">
-            <span className="safar-search-select-search-icon">🔍</span>
+            <span className="safar-search-select-search-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+            </span>
             <input
               ref={inputRef}
               type="text"

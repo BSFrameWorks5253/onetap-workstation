@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Card } from '../../components/Card'
 import { Button } from '../../components/Button'
 import { PAGE_META, PageKey } from '../../types'
+import { PageIcon } from '../../components/PageIcon'
 import HardwareMonitor from '../../components/HardwareMonitor'
 import { useTheme } from '../../theme/ThemeContext'
 import './Dashboard.css'
@@ -11,8 +12,8 @@ import zenLogo from '../../assets/zen_final_nobg.png'
 
 /** Circular SVG progress ring */
 function TaskRing({
-  progress, label, icon, color
-}: { progress: number; label: string; icon: string; color: string }) {
+  progress, label, pageKey, color
+}: { progress: number; label: string; pageKey: PageKey; color: string }) {
   const r = 26
   const circ = 2 * Math.PI * r
   const dash = (progress / 100) * circ
@@ -33,8 +34,12 @@ function TaskRing({
           strokeDashoffset={circ / 4} /* start from top */
           style={{ filter: `drop-shadow(0 0 6px ${color})`, transition: 'stroke-dasharray 0.4s ease' }}
         />
-        <text x="34" y="30" textAnchor="middle" fontSize="16" dominantBaseline="middle">{icon}</text>
-        <text x="34" y="46" textAnchor="middle" fontSize="9" fill="var(--text-primary)" fontWeight="700" opacity="0.9">
+        <foreignObject x="25" y="14" width="18" height="18">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
+            <PageIcon pageKey={pageKey} size={16} color={color} />
+          </div>
+        </foreignObject>
+        <text x="34" y="47" textAnchor="middle" fontSize="9" fill="var(--text-primary)" fontWeight="700" opacity="0.9">
           {Math.round(progress)}%
         </text>
       </svg>
@@ -131,14 +136,25 @@ export default function Dashboard(): JSX.Element {
         </div>
         <div className="db-quick-stats-col">
           <div className="db-quick-stat-card">
-            <span className="db-quick-stat-icon">📊</span>
+            <span className="db-quick-stat-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 3v18h18" />
+                <path d="M18 17V9" />
+                <path d="M13 17V5" />
+                <path d="M8 17v-3" />
+              </svg>
+            </span>
             <div className="db-quick-stat-info">
               <span className="db-quick-stat-val">{statsCount}</span>
               <span className="db-quick-stat-lbl">Total Renders</span>
             </div>
           </div>
           <div className="db-quick-stat-card">
-            <span className="db-quick-stat-icon">⚡</span>
+            <span className="db-quick-stat-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+              </svg>
+            </span>
             <div className="db-quick-stat-info">
               <span className="db-quick-stat-val">{rendersToday}</span>
               <span className="db-quick-stat-lbl">Processed Today</span>
@@ -172,11 +188,7 @@ export default function Dashboard(): JSX.Element {
                 } as React.CSSProperties}
               >
                 <div className="db-card-icon">
-                  {typeof p.icon === 'string' && (p.icon.startsWith('data:') || p.icon.includes('/') || p.icon.includes('.png') || p.icon.includes('.svg') || p.icon.includes('assets')) ? (
-                    <img src={p.icon} alt={p.label} style={{ width: '28px', height: '28px', objectFit: 'contain' }} />
-                  ) : (
-                    p.icon
-                  )}
+                  <PageIcon pageKey={p.key} size={28} color={p.accent} />
                 </div>
                 <div className="db-card-content">
                   <h3>{p.label}</h3>
@@ -231,7 +243,7 @@ export default function Dashboard(): JSX.Element {
                   size="sm"
                   variant="primary"
                   onClick={() => navigate('adder')}
-                  icon={<span>🎬</span>}
+                  icon={<PageIcon pageKey="adder" size={16} color="currentColor" />}
                 >
                   Open Title Adder
                 </Button>
@@ -240,7 +252,7 @@ export default function Dashboard(): JSX.Element {
                   size="sm"
                   variant="secondary"
                   onClick={() => navigate('converter')}
-                  icon={<span>🔄</span>}
+                  icon={<PageIcon pageKey="converter" size={16} color="currentColor" />}
                 >
                   Video Converter
                 </Button>
@@ -249,7 +261,7 @@ export default function Dashboard(): JSX.Element {
                   size="sm"
                   variant="secondary"
                   onClick={() => navigate('tracker')}
-                  icon={<span>📋</span>}
+                  icon={<PageIcon pageKey="tracker" size={16} color="currentColor" />}
                 >
                   Task Tracker
                 </Button>
@@ -259,10 +271,10 @@ export default function Dashboard(): JSX.Element {
               {hasActiveTasks && (
                 <div className="db-task-rings-row">
                   {adderProgress !== null && (
-                    <TaskRing progress={adderProgress} label="Title Adder" icon="🎬" color="#A78BFA" />
+                    <TaskRing progress={adderProgress} label="Title Adder" pageKey="adder" color="#A78BFA" />
                   )}
                   {syncProgress !== null && (
-                    <TaskRing progress={syncProgress} label="Drive Sync" icon="☁️" color="#34D399" />
+                    <TaskRing progress={syncProgress} label="Drive Sync" pageKey="drivesync" color="#34D399" />
                   )}
                 </div>
               )}

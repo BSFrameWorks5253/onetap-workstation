@@ -108,7 +108,17 @@ export default function Cleaner(): JSX.Element {
           onChange={setRootPath}
         />
         <Button variant="primary" accent="var(--danger)" onClick={scan} disabled={scanning || !rootPath}>
-          {scanning ? '🔄 Scanning...' : '🔍 Scan for Junk'}
+          {scanning ? (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="spin-slow"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 10 10"/></svg>
+              Scanning...
+            </span>
+          ) : (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              Scan for Junk
+            </span>
+          )}
         </Button>
       </div>
 
@@ -137,7 +147,9 @@ export default function Cleaner(): JSX.Element {
               <div className="cl-list">
                 {items.length === 0 ? (
                   <div className="cl-empty">
-                    <div className="cl-empty-icon">🍃</div>
+                    <div className="cl-empty-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5 }}><path d="m2 22 1-1h3l9-9"/><path d="M3 21v-3l9-9"/><path d="m15 6 3.4-3.4a2.1 2.1 0 1 1 3 3L18 9l.4.4a2.1 2.1 0 1 1-3 3l-3.8-3.8"/><path d="M19 15v6"/><path d="M22 18h-6"/></svg>
+                    </div>
                     <p>{scanning ? 'Scanning project folders...' : 'No junk detected or folder not scanned.'}</p>
                   </div>
                 ) : (
@@ -172,8 +184,9 @@ export default function Cleaner(): JSX.Element {
                   <span className="cl-stat-label">Space Reclaimable</span>
                   <span className="cl-stat-value cl-stat-value--highlight">{formattedSize}</span>
                 </div>
-                <p className="cl-warning-text">
-                  ⚠ This will delete Auto-Saves, Previews, and Proxies. Ensure your projects are safely closed.
+                <p className="cl-warning-text" style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: '2px' }}><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                  <span>This will delete Auto-Saves, Previews, and Proxies. Ensure your projects are safely closed.</span>
                 </p>
                 <Button 
                   variant="primary" 
@@ -183,7 +196,17 @@ export default function Cleaner(): JSX.Element {
                   onClick={cleanAll}
                   style={{ width: '100%', marginTop: 'auto' }}
                 >
-                  {cleaning ? '🧹 Cleaning...' : '🚀 Clean All Junk'}
+                  {cleaning ? (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="spin-slow"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 10 10"/></svg>
+                      Cleaning...
+                    </span>
+                  ) : (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                      Clean All Junk
+                    </span>
+                  )}
                 </Button>
               </div>
             </Card>
@@ -201,8 +224,9 @@ export default function Cleaner(): JSX.Element {
                   <span className="cl-stat-label">Space Reclaimable</span>
                   <span className="cl-stat-value cl-stat-value--highlight">{formattedSize}</span>
                 </div>
-                <p className="cl-warning-text">
-                  ⚠ This will delete Auto-Saves, Previews, and Proxies. Ensure your projects are safely closed.
+                <p className="cl-warning-text" style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: '2px' }}><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                  <span>This will delete Auto-Saves, Previews, and Proxies. Ensure your projects are safely closed.</span>
                 </p>
                 <Button 
                   variant="primary" 
@@ -212,7 +236,17 @@ export default function Cleaner(): JSX.Element {
                   onClick={cleanAll}
                   style={{ width: '100%', marginTop: 'auto' }}
                 >
-                  {cleaning ? '🧹 Cleaning...' : '🚀 Clean All Junk'}
+                  {cleaning ? (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="spin-slow"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 10 10"/></svg>
+                      Cleaning...
+                    </span>
+                  ) : (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                      Clean All Junk
+                    </span>
+                  )}
                 </Button>
               </div>
             </Card>

@@ -49,7 +49,7 @@ const PRESETS: StickyItem[] = [
   {
     id: 'p1',
     type: 'note',
-    title: '🎬 Final Quality Checklist',
+    title: 'Final Quality Checklist',
     color: '#EF5350', // Red
     date: Date.now() - 3600000,
     body: 'Items to verify before transferring output videos to the converter page.',
@@ -62,7 +62,7 @@ const PRESETS: StickyItem[] = [
   {
     id: 'p2',
     type: 'link',
-    title: '🌐 Sharaf Media Portal',
+    title: 'Sharaf Media Portal',
     color: '#26A69A', // Teal
     date: Date.now() - 7200000,
     category: 'drive',
@@ -71,7 +71,7 @@ const PRESETS: StickyItem[] = [
   {
     id: 'p3',
     type: 'link',
-    title: '⚙️ Automated Apps Script Link',
+    title: 'Automated Apps Script Link',
     color: '#AB47BC', // Purple
     date: Date.now() - 10800000,
     category: 'script',
@@ -80,7 +80,7 @@ const PRESETS: StickyItem[] = [
   {
     id: 'p4',
     type: 'link',
-    title: '📂 Workstation Output Folder',
+    title: 'Workstation Output Folder',
     color: '#FF7043', // Orange
     date: Date.now() - 14400000,
     category: 'folder',
@@ -89,7 +89,7 @@ const PRESETS: StickyItem[] = [
   {
     id: 'p5',
     type: 'note',
-    title: '💡 Quick Automation Ideas',
+    title: 'Quick Automation Ideas',
     color: '#5C6BC0', // Blue
     date: Date.now() - 18000000,
     body: 'Explore deeper IPC hooks for Adobe Premiere integration, add more folder structure presets, and keep the user interface looking premium.',
@@ -521,14 +521,49 @@ export default function StickyNotes(): JSX.Element {
       {/* Modern Filter pills & Inline Create Button */}
       <div className="sh-filters anim-scale-in" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', maxWidth: '100%', gap: '16px', flexWrap: 'wrap' }}>
         <div className="sh-filter-pills" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          <button className={filter === 'all' ? 'active' : ''} onClick={() => { setFilter('all'); playTick() }}>🗂️ All</button>
-          <button className={filter === 'notes' ? 'active' : ''} onClick={() => { setFilter('notes'); playTick() }}>📝 Notes</button>
-          <button className={filter === 'links' ? 'active' : ''} onClick={() => { setFilter('links'); playTick() }}>🔗 Links</button>
+          <button className={filter === 'all' ? 'active' : ''} onClick={() => { setFilter('all'); playTick() }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+              All
+            </span>
+          </button>
+          <button className={filter === 'notes' ? 'active' : ''} onClick={() => { setFilter('notes'); playTick() }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+              Notes
+            </span>
+          </button>
+          <button className={filter === 'links' ? 'active' : ''} onClick={() => { setFilter('links'); playTick() }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+              Links
+            </span>
+          </button>
           <div className="sh-filter-divider" />
-          <button className={filter === 'drive' ? 'active' : ''} onClick={() => { setFilter('drive'); playTick() }}>🌐 Sharaf Media</button>
-          <button className={filter === 'script' ? 'active' : ''} onClick={() => { setFilter('script'); playTick() }}>⚙️ Apps Script</button>
-          <button className={filter === 'folder' ? 'active' : ''} onClick={() => { setFilter('folder'); playTick() }}>📁 Directories</button>
-          <button className={filter === 'web' ? 'active' : ''} onClick={() => { setFilter('web'); playTick() }}>🌐 Web links</button>
+          <button className={filter === 'drive' ? 'active' : ''} onClick={() => { setFilter('drive'); playTick() }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+              Sharaf Media
+            </span>
+          </button>
+          <button className={filter === 'script' ? 'active' : ''} onClick={() => { setFilter('script'); playTick() }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              Apps Script
+            </span>
+          </button>
+          <button className={filter === 'folder' ? 'active' : ''} onClick={() => { setFilter('folder'); playTick() }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              Directories
+            </span>
+          </button>
+          <button className={filter === 'web' ? 'active' : ''} onClick={() => { setFilter('web'); playTick() }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+              Web links
+            </span>
+          </button>
         </div>
         
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
@@ -538,22 +573,25 @@ export default function StickyNotes(): JSX.Element {
               type="button"
               className={layoutMode === 'grid' ? 'active' : ''} 
               onClick={() => { setLayoutMode('grid'); localStorage.setItem('ot_sticky_layout', 'grid'); playTick() }}
-              style={{ fontSize: '11px', padding: '5px 10px', borderRadius: '6px', border: 'none', background: layoutMode === 'grid' ? 'var(--accent-notes)' : 'transparent', color: layoutMode === 'grid' ? 'white' : 'var(--text-secondary)', fontWeight: 700, cursor: 'pointer' }}
+              style={{ fontSize: '11px', padding: '5px 10px', borderRadius: '6px', border: 'none', background: layoutMode === 'grid' ? 'var(--accent-notes)' : 'transparent', color: layoutMode === 'grid' ? 'white' : 'var(--text-secondary)', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
             >
-              📊 Grid
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+              Grid
             </button>
             <button 
               type="button"
               className={layoutMode === 'canvas' ? 'active' : ''} 
               onClick={() => { setLayoutMode('canvas'); localStorage.setItem('ot_sticky_layout', 'canvas'); playTick() }}
-              style={{ fontSize: '11px', padding: '5px 10px', borderRadius: '6px', border: 'none', background: layoutMode === 'canvas' ? 'var(--accent-notes)' : 'transparent', color: layoutMode === 'canvas' ? 'white' : 'var(--text-secondary)', fontWeight: 700, cursor: 'pointer' }}
+              style={{ fontSize: '11px', padding: '5px 10px', borderRadius: '6px', border: 'none', background: layoutMode === 'canvas' ? 'var(--accent-notes)' : 'transparent', color: layoutMode === 'canvas' ? 'white' : 'var(--text-secondary)', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
             >
-              📍 Canvas
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="m12 8 4 4-4 4M8 12h8"/></svg>
+              Canvas
             </button>
           </div>
 
-          <Button variant="primary" onClick={() => { setShowModal(true); playTick() }} style={{ padding: '8px 18px', borderRadius: '10px', height: '38px' }}>
-            ⚡ Create Card
+          <Button variant="primary" onClick={() => { setShowModal(true); playTick() }} style={{ padding: '8px 18px', borderRadius: '10px', height: '38px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <span>Create Card</span>
           </Button>
         </div>
       </div>
@@ -562,7 +600,9 @@ export default function StickyNotes(): JSX.Element {
       <div className={`sh-grid ${layoutMode === 'canvas' ? 'sh-grid--canvas' : ''}`}>
         {filteredItems.length === 0 ? (
           <div className="sh-empty anim-fade-in">
-            <div className="sh-empty-icon">🗂️</div>
+            <div className="sh-empty-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5 }}><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            </div>
             <p>No notes or links match the active filter criteria.</p>
             <GhostButton onClick={() => { setFilter('all'); playTick() }}>Clear Filters</GhostButton>
           </div>
@@ -603,8 +643,18 @@ export default function StickyNotes(): JSX.Element {
                 <div className="sh-card-glow" style={{ background: item.color }} />
                 
                 <div className="sh-card-top">
-                  <span className="sh-card-category" style={{ color: item.color, backgroundColor: `${item.color}15` }}>
-                    {item.type === 'note' ? '📝 Note' : `🔗 ${item.category?.toUpperCase()}`}
+                  <span className="sh-card-category" style={{ color: item.color, backgroundColor: `${item.color}15`, display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                    {item.type === 'note' ? (
+                      <>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                        <span>Note</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                        <span>{item.category?.toUpperCase()}</span>
+                      </>
+                    )}
                   </span>
                   <span className="sh-card-date">{formatDate(item.date)}</span>
                 </div>
@@ -670,14 +720,27 @@ export default function StickyNotes(): JSX.Element {
                         variant="primary" 
                         accent={item.color}
                         onClick={() => handleLaunchItem(item)}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}
                       >
-                        {item.category === 'folder' ? '📁 Open Path' : '🚀 Launch'}
+                        {item.category === 'folder' ? (
+                          <>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                            <span>Open Path</span>
+                          </>
+                        ) : (
+                          <>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                            <span>Launch</span>
+                          </>
+                        )}
                       </Button>
                       <GhostButton 
                         size="sm" 
                         onClick={() => handleCopyUrl(item.url ?? '')}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}
                       >
-                        📋 Copy
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        <span>Copy</span>
                       </GhostButton>
                     </div>
                   </div>
@@ -687,22 +750,25 @@ export default function StickyNotes(): JSX.Element {
                   className="sh-card-copy-btn" 
                   onClick={(e) => item.type === 'note' ? handleCopyNoteText(item, e) : handleCopyUrl(item.url ?? '')}
                   title={item.type === 'note' ? 'Copy Note Text' : 'Copy Link URL'}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 >
-                  📋
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                 </button>
                 <button 
                   className="sh-card-edit-btn" 
                   onClick={() => handleStartEdit(item)}
                   title="Edit Card"
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 >
-                  ✏
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
                 </button>
                 <button 
                   className="sh-card-delete-btn" 
                   onClick={() => handleDeleteItem(item.id, item.title)}
                   title="Delete Card"
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 >
-                  ✕
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
               </Card>
             );
@@ -716,7 +782,9 @@ export default function StickyNotes(): JSX.Element {
           <div className="sh-modal-content anim-scale-in" onClick={e => e.stopPropagation()}>
             <div className="sh-modal-header">
               <h3>{editingItem ? 'Edit Hub Card' : 'Create Hub Card'}</h3>
-              <button className="sh-modal-close" onClick={handleCloseModal}>✕</button>
+              <button className="sh-modal-close" onClick={handleCloseModal} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
             </div>
 
             {/* Selector between Note and Link */}
@@ -726,18 +794,20 @@ export default function StickyNotes(): JSX.Element {
                 className={`sh-modal-tab ${modalTab === 'note' ? 'active' : ''}`} 
                 onClick={() => { setModalTab('note'); playTick() }}
                 disabled={!!editingItem}
-                style={editingItem ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
+                style={editingItem ? { opacity: 0.5, cursor: 'not-allowed', display: 'inline-flex', alignItems: 'center', gap: '6px' } : { display: 'inline-flex', alignItems: 'center', gap: '6px' }}
               >
-                📝 Interactive Note
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                <span>Interactive Note</span>
               </button>
               <button 
                 type="button"
                 className={`sh-modal-tab ${modalTab === 'link' ? 'active' : ''}`} 
                 onClick={() => { setModalTab('link'); playTick() }}
                 disabled={!!editingItem}
-                style={editingItem ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
+                style={editingItem ? { opacity: 0.5, cursor: 'not-allowed', display: 'inline-flex', alignItems: 'center', gap: '6px' } : { display: 'inline-flex', alignItems: 'center', gap: '6px' }}
               >
-                🔗 Native Launch Link
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                <span>Native Launch Link</span>
               </button>
             </div>
 
@@ -795,7 +865,9 @@ export default function StickyNotes(): JSX.Element {
                         {formTodoList.map((todo, idx) => (
                           <div key={idx} className="sh-form-todo-pill">
                             <span>{todo}</span>
-                            <button type="button" onClick={() => handleRemoveTodoItem(idx)}>✕</button>
+                            <button type="button" onClick={() => handleRemoveTodoItem(idx)}>
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            </button>
                           </div>
                         ))}
                       </div>
@@ -817,10 +889,10 @@ export default function StickyNotes(): JSX.Element {
                         playTick()
                       }}
                     >
-                      <option value="drive">🌐 Sharaf Media portal</option>
-                      <option value="script">⚙️ Google Apps Script url</option>
-                      <option value="folder">📁 Local Folder path</option>
-                      <option value="web">🌐 Standard Web link</option>
+                      <option value="drive">Sharaf Media Portal</option>
+                      <option value="script">Google Apps Script URL</option>
+                      <option value="folder">Local Folder Path</option>
+                      <option value="web">Standard Web Link</option>
                     </select>
                   </div>
 
@@ -842,8 +914,10 @@ export default function StickyNotes(): JSX.Element {
                           type="button"
                           className="sh-form-browse-btn"
                           onClick={handleBrowseLocalFolder}
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}
                         >
-                          📂 Browse
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                          <span>Browse</span>
                         </button>
                       )}
                     </div>
@@ -876,8 +950,18 @@ export default function StickyNotes(): JSX.Element {
 
               <div className="sh-modal-actions">
                 <GhostButton type="button" onClick={handleCloseModal}>Cancel</GhostButton>
-                <Button type="submit" variant="primary" accent={formColor}>
-                  {editingItem ? '💾 Save Changes' : '✅ Add Card'}
+                <Button type="submit" variant="primary" accent={formColor} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                  {editingItem ? (
+                    <>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                      <span>Save Changes</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                      <span>Add Card</span>
+                    </>
+                  )}
                 </Button>
               </div>
             </form>

@@ -15,8 +15,9 @@ import crypto from 'crypto'
 import { URL } from 'url'
 import { get } from '../core/settingsManager'
 
-// Target GitHub Repository
+// Target GitHub Repository & Default Anything Ecosystem Directory
 const GITHUB_REPO = process.env.GITHUB_REPO || 'BSFrameWorks5253/onetap-workstation'
+export const DEFAULT_ANYTHING_PATH = 'C:\\Users\\Burhanuddin\\OneDrive\\Desktop\\New folder (2)\\Anything'
 
 export interface UpdateManifest {
   updateAvailable: boolean
@@ -29,6 +30,10 @@ export interface UpdateManifest {
   releaseNotes: string
   checksum?: string
   htmlUrl?: string
+  source?: 'anything' | 'github'
+  isLocalFile?: boolean
+  anythingPath?: string
+  error?: string
 }
 
 // Cache for update manifest details
@@ -45,7 +50,7 @@ export function getWorkstationVersion(): string {
     }
   } catch {}
   try {
-    return (app.getVersion() || '26.10.12').trim()
+    return (app.getVersion() || '26.10.13').trim()
   } catch {
     return '26.10.5'
   }
@@ -100,6 +105,199 @@ export function compareVersions(vA: string, vB: string): number {
     if (a < b) return -1
   }
   return 0
+}
+
+/**
+ * Query Anything Ecosystem directory for local child app releases and catalog entries
+ */
+export async function checkAnythingUpdate(customPath?: string): Promise<UpdateManifest | null> {
+  const anythingDir = customPath || (get('anything_app_path') as string) || DEFAULT_ANYTHING_PATH
+  if (!fs.existsSync(anythingDir)) {
+    console.log(`[Updater] Anything path does not exist on disk: ${anythingDir}`)
+    return null
+  }
+
+  const currentVer = getWorkstationVersion().trim()
+  let bestVersion = ''
+  let bestReleaseRecord: any = null
+  let bestExePath: string = ''
+  let bestExeSize: number = 0
+
+  // 1. Scan published-apps/catalog.json
+  const catalogPath = path.join(anythingDir, 'published-apps', 'catalog.json')
+  if (fs.existsSync(catalogPath)) {
+    try {
+      const catalog = JSON.parse(fs.readFileSync(catalogPath, 'utf8'))
+      if (Array.isArray(catalog)) {
+        const entry = catalog.find((a: any) => {
+          const id = (a.id || '').toLowerCase().replace(/^app-/, '')
+          const name = (a.name || '').toLowerCase()
+          return id === 'one-tap' || id === 'onetap' || name === 'one tap' || (a.githubRepo && String(a.githubRepo).toLowerCase().includes('onetap-workstation'))
+        })
+
+        if (entry) {
+          if (entry.version) {
+            bestVersion = entry.version
+            bestReleaseRecord = entry.releaseInfo || {
+              tagline: `${entry.name || 'One Tap'} v${entry.version}`,
+              summary: entry.description,
+              newFeatures: entry.changelog || [],
+              releaseDate: entry.publishedAt ? new Date(entry.publishedAt).toISOString().split('T')[0] : ''
+            }
+            if (entry.localPackagePath && fs.existsSync(entry.localPackagePath)) {
+              bestExePath = entry.localPackagePath
+              try { bestExeSize = fs.statSync(bestExePath).size } catch {}
+            }
+          }
+
+          if (Array.isArray(entry.history)) {
+            for (const h of entry.history) {
+              if (h.version && (!bestVersion || compareVersions(h.version, bestVersion) > 0)) {
+                bestVersion = h.version
+                bestReleaseRecord = h
+                if (h.downloadUrl && fs.existsSync(h.downloadUrl)) {
+                  bestExePath = h.downloadUrl
+                  try { bestExeSize = fs.statSync(bestExePath).size } catch {}
+                }
+              }
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[Updater] Error reading Anything catalog.json:', e)
+    }
+  }
+
+  // 2. Scan release and releases folders in Anything
+  const releaseFolders = [
+    path.join(anythingDir, 'release', 'One Tap'),
+    path.join(anythingDir, 'releases', 'One Tap'),
+    path.join(anythingDir, 'release', 'one-tap'),
+    path.join(anythingDir, 'releases', 'one-tap'),
+    path.join(anythingDir, 'published-apps', 'one-tap'),
+    path.join(anythingDir, 'published-apps', 'One Tap')
+  ]
+
+  for (const folder of releaseFolders) {
+    if (!fs.existsSync(folder)) continue
+
+    // Check app.json in this folder
+    const appJsonPath = path.join(folder, 'app.json')
+    if (fs.existsSync(appJsonPath)) {
+      try {
+        const appJson = JSON.parse(fs.readFileSync(appJsonPath, 'utf8'))
+        if (appJson?.version && (!bestVersion || compareVersions(appJson.version, bestVersion) > 0)) {
+          bestVersion = appJson.version
+        }
+      } catch {}
+    }
+
+    // Inspect subdirectories (e.g. V-26.10.13, V-26.10.13)
+    try {
+      const items = fs.readdirSync(folder, { withFileTypes: true })
+      for (const item of items) {
+        if (item.isDirectory()) {
+          const vMatch = item.name.match(/^V-?([0-9.]+)/i)
+          if (vMatch) {
+            const ver = vMatch[1]
+            const verDir = path.join(folder, item.name)
+
+            let relJson: any = null
+            const relJsonPath = path.join(verDir, 'release.json')
+            if (fs.existsSync(relJsonPath)) {
+              try { relJson = JSON.parse(fs.readFileSync(relJsonPath, 'utf8')) } catch {}
+            }
+
+            let foundExe = ''
+            let foundExeSize = 0
+            const dirFiles = fs.readdirSync(verDir)
+            const exeCandidate = dirFiles.find(f => f.endsWith('.exe'))
+            if (exeCandidate) {
+              foundExe = path.join(verDir, exeCandidate)
+              try { foundExeSize = fs.statSync(foundExe).size } catch {}
+            }
+
+            if (!bestVersion || compareVersions(ver, bestVersion) >= 0) {
+              bestVersion = ver
+              bestReleaseRecord = relJson || bestReleaseRecord
+              if (foundExe) {
+                bestExePath = foundExe
+                bestExeSize = foundExeSize
+              }
+            }
+          }
+        } else if (item.isFile() && item.name.endsWith('.exe')) {
+          const vMatch = item.name.match(/([0-9]+\.[0-9]+\.[0-9]+)/)
+          if (vMatch) {
+            const ver = vMatch[1]
+            if (!bestVersion || compareVersions(ver, bestVersion) >= 0) {
+              bestVersion = ver
+              bestExePath = path.join(folder, item.name)
+              try { bestExeSize = fs.statSync(bestExePath).size } catch {}
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.warn(`[Updater] Error inspecting folder ${folder}:`, e)
+    }
+  }
+
+  if (!bestVersion) {
+    return null
+  }
+
+  const isNew = compareVersions(bestVersion, currentVer) > 0
+  console.log(`[Updater] Anything ecosystem check: found v${bestVersion} | current: v${currentVer} | updateAvailable: ${isNew}`)
+
+  const sizeStr = bestExeSize > 0
+    ? (bestExeSize > 1024 * 1024 * 1024
+      ? (bestExeSize / (1024 * 1024 * 1024)).toFixed(1) + ' GB'
+      : (bestExeSize / (1024 * 1024)).toFixed(1) + ' MB')
+    : '78.5 MB'
+
+  // Format release notes from release record
+  let notes = ''
+  if (bestReleaseRecord) {
+    const lines: string[] = []
+    if (bestReleaseRecord.summary) lines.push(bestReleaseRecord.summary)
+    if (Array.isArray(bestReleaseRecord.newFeatures) && bestReleaseRecord.newFeatures.length > 0) {
+      lines.push('\nNew Features:')
+      bestReleaseRecord.newFeatures.forEach((f: string) => lines.push(`• ${f}`))
+    }
+    if (Array.isArray(bestReleaseRecord.improvements) && bestReleaseRecord.improvements.length > 0) {
+      lines.push('\nImprovements:')
+      bestReleaseRecord.improvements.forEach((i: string) => lines.push(`• ${i}`))
+    }
+    if (Array.isArray(bestReleaseRecord.fixes) && bestReleaseRecord.fixes.length > 0) {
+      lines.push('\nFixes:')
+      bestReleaseRecord.fixes.forEach((x: string) => lines.push(`• ${x}`))
+    }
+    notes = lines.join('\n')
+  }
+  if (!notes) {
+    notes = `New One Tap update v${bestVersion} published in Anything ecosystem.`
+  }
+
+  const fallbackExe = path.join(anythingDir, 'release', 'One Tap', `V-${bestVersion}`, `OneTap-V-${bestVersion}.exe`)
+  const targetDownloadUrl = bestExePath || fallbackExe
+
+  const manifest: UpdateManifest = {
+    updateAvailable: isNew,
+    currentVersion: currentVer,
+    latestVersion: bestVersion,
+    releaseName: bestReleaseRecord?.tagline || `One Tap v${bestVersion} (Anything Ecosystem)`,
+    releaseDate: bestReleaseRecord?.releaseDate || new Date().toISOString().split('T')[0],
+    downloadUrl: targetDownloadUrl,
+    size: sizeStr,
+    releaseNotes: notes,
+    source: 'anything',
+    isLocalFile: Boolean(targetDownloadUrl && fs.existsSync(targetDownloadUrl)),
+    anythingPath: anythingDir
+  }
+
+  return manifest
 }
 
 /**
@@ -170,11 +368,66 @@ export async function checkGitHubUpdate(): Promise<UpdateManifest> {
     size: sizeStr,
     releaseNotes: release.body || 'Performance enhancements and bug fixes included in this release.',
     checksum: '',
-    htmlUrl: release.html_url || `https://github.com/${repoName}/releases/latest`
+    htmlUrl: release.html_url || `https://github.com/${repoName}/releases/latest`,
+    source: 'github',
+    isLocalFile: false
   }
 
   cachedUpdateManifest = manifest
   return manifest
+}
+
+/**
+ * Unified update checker: Prioritizes Anything ecosystem, falls back to GitHub Releases
+ */
+export async function checkForUpdates(preferredSource?: 'anything' | 'github' | 'all'): Promise<UpdateManifest> {
+  const currentVer = getWorkstationVersion().trim()
+
+  // 1. Check Anything Ecosystem first if allowed
+  if (preferredSource !== 'github') {
+    try {
+      const anythingManifest = await checkAnythingUpdate()
+      if (anythingManifest && anythingManifest.updateAvailable) {
+        cachedUpdateManifest = anythingManifest
+        return anythingManifest
+      }
+      if (anythingManifest && preferredSource === 'anything') {
+        cachedUpdateManifest = anythingManifest
+        return anythingManifest
+      }
+    } catch (e) {
+      console.warn('[Updater] Anything check error (non-fatal):', e)
+    }
+  }
+
+  // 2. Check GitHub Releases
+  try {
+    const githubManifest = await checkGitHubUpdate()
+    if (githubManifest && githubManifest.updateAvailable) {
+      cachedUpdateManifest = githubManifest
+      return githubManifest
+    }
+    cachedUpdateManifest = githubManifest
+    return githubManifest
+  } catch (err) {
+    console.warn('[Updater] GitHub check error (non-fatal):', err)
+  }
+
+  // 3. Up-to-date fallback manifest
+  const fallback: UpdateManifest = {
+    updateAvailable: false,
+    currentVersion: currentVer,
+    latestVersion: currentVer,
+    releaseName: `One Tap v${currentVer}`,
+    releaseDate: new Date().toISOString().split('T')[0],
+    downloadUrl: '',
+    size: '',
+    releaseNotes: `Workstation verified. Current release: v${currentVer}. Sourced from Anything & GitHub.`,
+    source: 'anything',
+    isLocalFile: false
+  }
+  cachedUpdateManifest = fallback
+  return fallback
 }
 
 /**
@@ -190,10 +443,10 @@ export function triggerSilentStartupCheck(mainWindowGetter: () => BrowserWindow 
 
   setTimeout(async () => {
     try {
-      console.log('[Updater] Running silent startup update check via GitHub Releases...')
-      const manifest = await checkGitHubUpdate()
+      console.log('[Updater] Running silent startup update check via Anything & GitHub Releases...')
+      const manifest = await checkForUpdates()
       if (manifest.updateAvailable) {
-        console.log(`[Updater] New version available on GitHub: v${manifest.latestVersion}. Pushing notification event.`)
+        console.log(`[Updater] New version available from ${manifest.source}: v${manifest.latestVersion}. Pushing notification event.`)
         const win = mainWindowGetter()
         if (win && !win.isDestroyed()) {
           win.webContents.send('update:available', manifest)
@@ -217,13 +470,13 @@ export function registerUpdateIPC(mainWindowGetter: () => BrowserWindow | null):
     return getWorkstationVersion()
   })
 
-  // 2. Check for Updates API (GitHub Releases Only)
-  ipcMain.handle('update:check', async () => {
+  // 2. Check for Updates API (Unified Anything & GitHub)
+  ipcMain.handle('update:check', async (_, preferredSource?: 'anything' | 'github' | 'all') => {
     try {
-      const manifest = await checkGitHubUpdate()
+      const manifest = await checkForUpdates(preferredSource)
       return manifest
     } catch (err) {
-      console.error('[Updater] GitHub check failed:', err)
+      console.error('[Updater] Update check failed:', err)
       return {
         updateAvailable: false,
         currentVersion: getWorkstationVersion(),
@@ -232,31 +485,122 @@ export function registerUpdateIPC(mainWindowGetter: () => BrowserWindow | null):
         releaseDate: '',
         downloadUrl: '',
         size: '',
-        releaseNotes: 'Unable to connect to GitHub Releases API. ' + (err instanceof Error ? err.message : String(err)),
+        releaseNotes: 'Unable to check for updates. ' + (err instanceof Error ? err.message : String(err)),
         error: String(err)
       }
     }
   })
 
-  // 3. Streaming Downloader Engine from GitHub Assets
+  // 2.1 Get / Set Update Routing Config
+  ipcMain.handle('update:getUpdateConfig', () => {
+    return {
+      anythingPath: (get('anything_app_path') as string) || DEFAULT_ANYTHING_PATH,
+      autoCheckUpdates: get('auto_check_updates') !== false,
+      currentVersion: getWorkstationVersion()
+    }
+  })
+
+  // 3. Streaming Downloader Engine (Supports local Anything files & remote GitHub URLs)
   ipcMain.handle('update:download', async (_, customUrl?: string) => {
     let manifest = cachedUpdateManifest
     if (!manifest || !manifest.downloadUrl || manifest.downloadUrl.endsWith('/latest')) {
       try {
-        manifest = await checkGitHubUpdate()
+        manifest = await checkForUpdates()
       } catch (err) {
         console.warn('[Updater] Pre-download check failed:', err)
       }
     }
     const targetUrl = customUrl || (manifest ? manifest.downloadUrl : '')
-    if (!targetUrl) throw new Error('No valid GitHub download target URL provided.')
+    if (!targetUrl) throw new Error('No valid download target URL or path provided.')
 
     const tempFolder = app.getPath('temp')
     // Use platform-appropriate installer extension
     const installerExt = process.platform === 'linux' ? '.AppImage' : '.exe'
-    const finalInstallerPath = path.join(tempFolder, `unidesk_setup_latest${installerExt}`)
+    const finalInstallerPath = path.join(tempFolder, `onetap_setup_latest${installerExt}`)
     const partInstallerPath = finalInstallerPath + '.part'
 
+    // CASE A: Local file from Anything ecosystem
+    if (fs.existsSync(targetUrl)) {
+      console.log(`[Updater] Copying local installer from Anything: ${targetUrl} -> ${finalInstallerPath}`)
+      const stats = fs.statSync(targetUrl)
+      const totalBytes = stats.size
+
+      return new Promise((resolve, reject) => {
+        const readStream = fs.createReadStream(targetUrl)
+        const writeStream = fs.createWriteStream(partInstallerPath)
+        let transferred = 0
+        let lastTime = Date.now()
+        let lastTransferred = 0
+
+        readStream.on('data', (chunk) => {
+          transferred += chunk.length
+          const now = Date.now()
+          if (now - lastTime >= 100) {
+            const timeDiff = (now - lastTime) / 1000
+            const speed = timeDiff > 0 ? Math.round((transferred - lastTransferred) / timeDiff) : 40000000
+            const percent = totalBytes > 0 ? Math.round((transferred / totalBytes) * 100) : 50
+
+            lastTime = now
+            lastTransferred = transferred
+
+            const win = mainWindowGetter()
+            if (win && !win.isDestroyed()) {
+              win.webContents.send('update:progress', {
+                percent,
+                transferredBytes: transferred,
+                totalBytes,
+                speedBytesPerSec: speed
+              })
+            }
+          }
+        })
+
+        writeStream.on('finish', () => {
+          try {
+            if (fs.existsSync(finalInstallerPath)) fs.unlinkSync(finalInstallerPath)
+            fs.renameSync(partInstallerPath, finalInstallerPath)
+
+            if (process.platform === 'win32') {
+              try {
+                exec(`powershell -Command "Unblock-File -Path '${finalInstallerPath}'"`, { windowsHide: true })
+              } catch (uErr) {
+                console.warn('[Updater] Powershell Unblock-File non-fatal warning:', uErr)
+              }
+            }
+
+            const win = mainWindowGetter()
+            if (win && !win.isDestroyed()) {
+              win.webContents.send('update:progress', {
+                percent: 100,
+                transferredBytes: totalBytes,
+                totalBytes,
+                speedBytesPerSec: 0
+              })
+            }
+
+            lastDownloadedInstallerPath = finalInstallerPath
+            console.log(`[Updater] Local installer ready at: ${finalInstallerPath}`)
+            resolve({ success: true, filePath: finalInstallerPath })
+          } catch (err) {
+            reject(err)
+          }
+        })
+
+        readStream.on('error', (err) => {
+          if (fs.existsSync(partInstallerPath)) fs.unlinkSync(partInstallerPath)
+          reject(err)
+        })
+
+        writeStream.on('error', (err) => {
+          if (fs.existsSync(partInstallerPath)) fs.unlinkSync(partInstallerPath)
+          reject(err)
+        })
+
+        readStream.pipe(writeStream)
+      })
+    }
+
+    // CASE B: Remote stream download from GitHub
     console.log(`[Updater] Initiating stream download from GitHub: ${targetUrl} -> ${finalInstallerPath}`)
 
     let response: http.IncomingMessage
