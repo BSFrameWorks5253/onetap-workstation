@@ -1,0 +1,49 @@
+name: Release One Tap Workstation
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build & Publish Release to GitHub
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Dependencies
+        run: |
+          npm ci
+          python -m pip install --upgrade pip pillow
+
+      - name: Generate One Tap Logo & Icons
+        run: python scripts/generate_app_logo_assets.py
+
+      - name: Build Web & Electron Bundles
+        run: npm run build
+
+      - name: Package & Publish to GitHub Releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          npx electron-builder --win nsis portable zip --publish always

@@ -1,0 +1,125 @@
+/* Walbi Audio-Reactive Equalizer Intro Loader */
+.walbi-loader-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  user-select: none;
+  font-family: var(--font-display, sans-serif);
+}
+
+.walbi-equalizer-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px 24px;
+}
+
+.walbi-ambient-pulse {
+  position: absolute;
+  width: 140px;
+  height: 60px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(184, 134, 11, 0.25) 0%, transparent 70%);
+  filter: blur(14px);
+  animation: walbiPulseGlow 2.5s ease-in-out infinite;
+}
+
+.walbi-bars {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 54px;
+}
+
+.walbi-bar {
+  width: 4px;
+  min-height: 10px;
+  background: linear-gradient(180deg, #E0A96D 0%, #B8860B 60%, #8A6520 100%);
+  border-radius: 4px;
+  animation: walbiBarWave 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes walbiBarWave {
+  0% {
+    transform: scaleY(0.25);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scaleY(1.3);
+    opacity: 1;
+    filter: drop-shadow(0 0 6px rgba(184, 134, 11, 0.5));
+  }
+}
+
+@keyframes walbiPulseGlow {
+  0%, 100% { transform: scale(0.9); opacity: 0.6; }
+  50% { transform: scale(1.15); opacity: 0.95; }
+}
+
+.walbi-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.walbi-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: var(--surface-3, rgba(0, 0, 0, 0.05));
+  border: 1px solid var(--border, rgba(0, 0, 0, 0.1));
+  border-radius: 20px;
+}
+
+.walbi-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10B981;
+}
+
+.walbi-title {
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary, #3D352D);
+}
+
+.walbi-progress-text {
+  font-family: var(--font-mono, monospace);
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--theme-accent, #B8860B);
+}
+
+[data-theme="dark"] .walbi-ambient-pulse,
+.walbi-loader-container.theme-dark .walbi-ambient-pulse {
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.35) 0%, transparent 70%);
+}
+
+[data-theme="dark"] .walbi-bar,
+.walbi-loader-container.theme-dark .walbi-bar {
+  background: linear-gradient(180deg, #A855F7 0%, #6366F1 60%, #38BDF8 100%);
+}
+
+[data-theme="dark"] .walbi-pill,
+.walbi-loader-container.theme-dark .walbi-pill {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+[data-theme="dark"] .walbi-title,
+.walbi-loader-container.theme-dark .walbi-title {
+  color: #CBD5E1;
+}
+
+[data-theme="dark"] .walbi-progress-text,
+.walbi-loader-container.theme-dark .walbi-progress-text {
+  color: #818CF8;
+}

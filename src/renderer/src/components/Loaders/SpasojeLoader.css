@@ -1,0 +1,82 @@
+/* Spasoje Perovic Minimalist Typographic Ticker */
+.spasoje-loader-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 440px;
+  margin: 0 auto;
+  user-select: none;
+  font-family: var(--font-display, 'Outfit', 'Inter', sans-serif);
+}
+
+.spasoje-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  color: var(--text-muted, #685B4E);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.spasoje-number-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  line-height: 0.85;
+  margin-bottom: 14px;
+}
+
+.spasoje-huge-number {
+  font-size: 72px;
+  font-weight: 900;
+  color: var(--text-primary, #1A1613);
+  letter-spacing: -0.06em;
+  font-variant-numeric: tabular-nums;
+}
+
+.spasoje-number-symbol {
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--theme-accent, #B8860B);
+}
+
+.spasoje-hairline-track {
+  width: 100%;
+  height: 2px;
+  background: var(--surface-3, rgba(0, 0, 0, 0.08));
+  position: relative;
+  margin-bottom: 12px;
+}
+
+.spasoje-hairline-fill {
+  height: 100%;
+  background: var(--text-primary, #1A1613);
+  transition: width 0.1s linear;
+}
+
+.spasoje-footer {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: var(--text-secondary, #3D352D);
+  text-transform: uppercase;
+}
+
+[data-theme="dark"] .spasoje-huge-number,
+.spasoje-loader-container.theme-dark .spasoje-huge-number {
+  color: #F8FAFC;
+}
+
+[data-theme="dark"] .spasoje-hairline-fill,
+.spasoje-loader-container.theme-dark .spasoje-hairline-fill {
+  background: #F8FAFC;
+}
+
+[data-theme="dark"] .spasoje-number-symbol,
+.spasoje-loader-container.theme-dark .spasoje-number-symbol {
+  color: #818CF8;
+}

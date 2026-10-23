@@ -1,0 +1,2150 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UniDesk · Video & Photo Match Transfer</title>
+  
+  <!-- Modern Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Canvas Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+
+  <style>
+    :root[data-theme="light"] {
+      --bg: #F1F5F9;
+      --bg-gradient: radial-gradient(circle at 10% 10%, rgba(99, 102, 241, 0.08) 0%, transparent 45%),
+                     radial-gradient(circle at 90% 90%, rgba(16, 185, 129, 0.06) 0%, transparent 45%),
+                     radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.04) 0%, transparent 60%);
+      --card-bg: rgba(255, 255, 255, 0.95);
+      --card-border: rgba(226, 232, 240, 0.9);
+      --card-border-hover: rgba(99, 102, 241, 0.4);
+      --accent: #4F46E5;
+      --accent-gradient: linear-gradient(135deg, #6366F1, #4F46E5);
+      --accent-hover: #4338CA;
+      --accent-glow: rgba(99, 102, 241, 0.2);
+      --success-bg: #ECFDF5;
+      --success-border: #A7F3D0;
+      --success-text: #047857;
+      --success-badge: #10B981;
+      --danger-bg: #FEF2F2;
+      --danger-border: #FCA5A5;
+      --danger-text: #DC2626;
+      --warning: #D97706;
+      --warning-bg: #FFFBEB;
+      --warning-border: #FDE68A;
+      --text-primary: #0F172A;
+      --text-secondary: #475569;
+      --text-muted: #64748B;
+      --surface: #F8FAFC;
+      --surface-2: #F1F5F9;
+      --surface-3: #E2E8F0;
+      --input-bg: #FFFFFF;
+      --radius-lg: 20px;
+      --radius: 14px;
+      --radius-sm: 10px;
+      --shadow-lg: 0 20px 40px -15px rgba(15, 23, 42, 0.08), 0 4px 12px rgba(0, 0, 0, 0.03);
+      --shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05), 0 1px 3px rgba(0, 0, 0, 0.02);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, sans-serif; }
+
+    body {
+      background: var(--bg);
+      background-image: var(--bg-gradient);
+      color: var(--text-primary);
+      min-height: 100vh;
+      padding: 28px 20px 100px 20px;
+      transition: all 0.3s ease;
+    }
+
+    .app-container {
+      max-width: 1240px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+    }
+
+    /* ── Animated Brand Header ── */
+    .header-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-lg);
+      padding: 24px 30px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      box-shadow: var(--shadow-lg);
+      position: relative;
+      overflow: hidden;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .header-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 4px;
+      background: linear-gradient(90deg, #6366F1, #8B5CF6, #3B82F6, #10B981, #F59E0B);
+      background-size: 200% 100%;
+      animation: gradientShift 4s ease infinite;
+    }
+
+    @keyframes gradientShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    .brand-group { display: flex; align-items: center; gap: 18px; }
+
+    .brand-logo-container {
+      position: relative;
+      width: 56px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .brand-logo-ring {
+      position: absolute;
+      inset: 0;
+      border-radius: 18px;
+      background: linear-gradient(135deg, #6366F1, #8B5CF6, #10B981);
+      padding: 2px;
+      animation: spinRing 8s linear infinite;
+    }
+
+    @keyframes spinRing {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .brand-logo-inner {
+      width: 100%;
+      height: 100%;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      font-weight: 900;
+      color: #FFF;
+      background: linear-gradient(135deg, #6366F1, #4F46E5);
+      box-shadow: 0 8px 20px rgba(99, 102, 241, 0.35);
+      letter-spacing: -0.5px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .brand-logo-sparkle {
+      position: absolute;
+      top: -3px; right: -3px;
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      background: #10B981;
+      box-shadow: 0 0 10px #10B981;
+      animation: sparklePulse 1.5s ease-in-out infinite alternate;
+    }
+
+    @keyframes sparklePulse {
+      0% { transform: scale(0.8); opacity: 0.7; }
+      100% { transform: scale(1.4); opacity: 1; }
+    }
+
+    .brand-text h1 {
+      font-size: 24px;
+      font-weight: 900;
+      color: var(--text-primary);
+      letter-spacing: -0.6px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-text p {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 3px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .zen-tag {
+      background: rgba(99, 102, 241, 0.08);
+      border: 1px solid rgba(99, 102, 241, 0.25);
+      padding: 8px 18px;
+      border-radius: 99px;
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.08);
+    }
+
+    .zen-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 10px var(--accent);
+      animation: pulseDot 2s infinite ease-in-out;
+    }
+
+    @keyframes pulseDot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(1.3); }
+    }
+
+    /* ── Workflow Stepper ── */
+    .stepper-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 18px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      gap: 16px;
+      backdrop-filter: blur(16px);
+      box-shadow: var(--shadow);
+    }
+
+    .step-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      opacity: 0.5;
+      transition: all 0.3s ease;
+    }
+
+    .step-item.active {
+      opacity: 1;
+    }
+
+    .step-num {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--surface-3);
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 14px;
+      transition: all 0.3s ease;
+    }
+
+    .step-item.active .step-num {
+      background: var(--accent-gradient);
+      color: #FFF;
+      box-shadow: 0 4px 14px var(--accent-glow);
+    }
+
+    .step-title {
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--text-primary);
+    }
+
+    .step-divider {
+      flex: 1;
+      height: 3px;
+      background: var(--surface-3);
+      max-width: 100px;
+      border-radius: 99px;
+    }
+
+    /* ── Main Input Panel ── */
+    .panel-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-lg);
+      padding: 28px 32px;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      box-shadow: var(--shadow-lg);
+      transition: all 0.25s ease;
+    }
+
+    .panel-card:hover {
+      border-color: var(--card-border-hover);
+    }
+
+    .panel-header {
+      font-size: 17px;
+      font-weight: 800;
+      color: var(--text-primary);
+      margin-bottom: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      letter-spacing: -0.3px;
+      flex-wrap: wrap;
+      gap: 14px;
+    }
+
+    /* Mode Switcher Tabs */
+    .mode-switch-group {
+      display: flex;
+      align-items: center;
+      background: var(--surface-2);
+      padding: 4px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--card-border);
+    }
+
+    .mode-tab {
+      padding: 7px 16px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .mode-tab.active {
+      background: var(--accent-gradient);
+      color: #FFF;
+      box-shadow: 0 4px 12px var(--accent-glow);
+    }
+
+    /* Drive Picker Toolbar */
+    .drive-picker-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+
+    .picker-btn {
+      background: linear-gradient(135deg, #3B82F6, #2563EB);
+      color: white;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 11px 20px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 14px rgba(59, 130, 246, 0.25);
+      transition: all 0.2s ease;
+    }
+
+    .picker-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(59, 130, 246, 0.35);
+    }
+
+    .search-wrap {
+      position: relative;
+      flex: 1;
+      min-width: 260px;
+    }
+
+    .live-search-input {
+      width: 100%;
+      background: var(--input-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-sm);
+      padding: 11px 16px 11px 40px;
+      color: var(--text-primary);
+      font-size: 13px;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    .live-search-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    .search-results-dropdown {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0; right: 0;
+      background: #FFFFFF;
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-sm);
+      box-shadow: var(--shadow-lg);
+      z-index: 100;
+      max-height: 240px;
+      overflow-y: auto;
+      display: none;
+    }
+
+    .search-result-item {
+      padding: 11px 16px;
+      font-size: 13px;
+      color: var(--text-primary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--surface-2);
+    }
+
+    .search-result-item:hover { background: var(--surface); }
+
+    /* Quick Presets Row */
+    .recent-chips-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      margin-bottom: 20px;
+    }
+
+    .recent-chip {
+      background: var(--surface);
+      border: 1px solid var(--card-border);
+      color: var(--text-secondary);
+      padding: 6px 14px;
+      border-radius: 99px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .recent-chip:hover {
+      background: #FFFFFF;
+      color: var(--accent);
+      border-color: var(--accent);
+      box-shadow: 0 2px 8px var(--accent-glow);
+    }
+
+    .inputs-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 22px;
+      margin-bottom: 22px;
+    }
+
+    @media (max-width: 768px) {
+      .inputs-grid { grid-template-columns: 1fr; }
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .input-label-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .input-label {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .input-field-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-field {
+      width: 100%;
+      background: var(--input-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-sm);
+      padding: 14px 44px 14px 16px;
+      color: var(--text-primary);
+      font-size: 13px;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    .input-field:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .input-action-btn {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: var(--surface-2);
+      border: 1px solid var(--card-border);
+      color: var(--text-secondary);
+      padding: 5px 11px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .input-action-btn:hover {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+      transform: translateY(-50%) scale(1.04);
+      box-shadow: 0 2px 8px var(--accent-glow);
+    }
+
+    .input-action-btn:active {
+      transform: translateY(-50%) scale(0.95);
+    }
+
+    .action-bar {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-top: 24px;
+    }
+
+    .btn {
+      background: var(--accent-gradient);
+      color: white;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 13px 26px;
+      font-weight: 800;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      box-shadow: 0 4px 14px var(--accent-glow);
+      position: relative;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(99, 102, 241, 0.35);
+      filter: brightness(1.04);
+    }
+
+    .btn:active {
+      transform: translateY(0) scale(0.98);
+      box-shadow: 0 2px 8px var(--accent-glow);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none !important;
+      box-shadow: none !important;
+    }
+
+    .btn-secondary {
+      background: #FFFFFF;
+      color: var(--text-primary);
+      border: 1px solid var(--card-border);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+    }
+
+    .btn-secondary:hover {
+      background: var(--surface);
+      border-color: var(--accent);
+      color: var(--accent);
+      box-shadow: 0 4px 14px rgba(99, 102, 241, 0.12);
+    }
+
+    .btn-success {
+      background: linear-gradient(135deg, #10B981, #059669);
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.28);
+    }
+
+    .btn-success:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(16, 185, 129, 0.4);
+      filter: brightness(1.04);
+    }
+
+    /* ── Dynamic Stats Grid ── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 18px;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 768px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    .stat-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 20px 22px;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      box-shadow: var(--shadow);
+      transition: all 0.25s ease;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-3px);
+      border-color: var(--card-border-hover);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .stat-icon-box {
+      width: 50px;
+      height: 50px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      flex-shrink: 0;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    }
+
+    .stat-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .stat-val {
+      font-size: 26px;
+      font-weight: 900;
+      color: var(--text-primary);
+      line-height: 1.1;
+      letter-spacing: -0.5px;
+    }
+
+    .stat-lbl {
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-weight: 700;
+    }
+
+    /* ── Hero Banners ── */
+    .approved-banner {
+      background: var(--success-bg);
+      border: 1px solid var(--success-border);
+      border-radius: var(--radius-lg);
+      padding: 24px 30px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 10px 30px rgba(16, 185, 129, 0.12);
+      animation: slideDown 0.35s ease;
+      margin-bottom: 22px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .approved-title-group { display: flex; align-items: center; gap: 16px; }
+
+    .approved-icon-ring {
+      width: 50px; height: 50px; border-radius: 50%;
+      background: var(--success-badge); color: #FFF;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px; font-weight: 900;
+      box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+    }
+
+    .approved-title { font-size: 18px; font-weight: 900; color: var(--success-text); letter-spacing: -0.4px; }
+    .approved-sub { font-size: 13px; color: var(--success-text); opacity: 0.95; margin-top: 2px; font-weight: 600; }
+
+    /* ── Drag & Drop Mismatch Resolution Panel ── */
+    .mismatch-panel {
+      background: var(--danger-bg);
+      border: 1px solid var(--danger-border);
+      border-radius: var(--radius-lg);
+      padding: 24px 30px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      box-shadow: 0 10px 30px rgba(239, 68, 68, 0.1);
+      animation: slideDown 0.35s ease;
+      margin-bottom: 22px;
+    }
+
+    .mismatch-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+    .mismatch-title { font-size: 16px; font-weight: 800; color: var(--danger-text); display: flex; align-items: center; gap: 10px; }
+
+    .drag-drop-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+
+    @media (max-width: 768px) {
+      .drag-drop-grid { grid-template-columns: 1fr; }
+    }
+
+    .draggable-card {
+      background: #FFFFFF;
+      border: 1px dashed var(--danger-border);
+      border-radius: var(--radius-sm);
+      padding: 14px 18px;
+      cursor: grab;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+    }
+
+    .draggable-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px var(--accent-glow);
+    }
+
+    .dropzone-card {
+      background: #FFFFFF;
+      border: 2px dashed var(--card-border);
+      border-radius: var(--radius-sm);
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.2s ease;
+    }
+
+    .dropzone-card.drag-over {
+      background: rgba(99, 102, 241, 0.12);
+      border-color: var(--accent);
+      transform: scale(1.02);
+    }
+
+    .ctrl-btn {
+      padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 800;
+      border: 1px solid var(--card-border); background: #FFFFFF; color: var(--text-primary);
+      cursor: pointer; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+      display: inline-flex; align-items: center; gap: 6px; user-select: none;
+    }
+    .ctrl-btn:hover { background: #F8FAFC; border-color: var(--accent); color: var(--accent); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(99, 102, 241, 0.12); }
+    .ctrl-btn:active { transform: translateY(0) scale(0.97); }
+    .ctrl-danger { background: #FEF2F2; border-color: var(--danger-border); color: var(--danger-text); }
+    .ctrl-danger:hover { background: #FEE2E2; border-color: #F87171; color: #DC2626; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.18); }
+
+    /* ── Table & Cards Display ── */
+    .table-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+
+    .view-switcher-group {
+      display: flex;
+      align-items: center;
+      background: var(--surface-2);
+      padding: 3px;
+      border-radius: 8px;
+      border: 1px solid var(--card-border);
+      gap: 4px;
+    }
+
+    .view-btn {
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--text-secondary);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .view-btn.active {
+      background: #FFFFFF;
+      color: var(--accent);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+    }
+
+    .search-table-input {
+      background: var(--input-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-sm);
+      padding: 10px 16px;
+      color: var(--text-primary);
+      font-size: 13px;
+      font-weight: 600;
+      outline: none;
+      width: 260px;
+      transition: all 0.2s ease;
+    }
+
+    .search-table-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .table-container {
+      overflow-x: auto;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--card-border);
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #FFFFFF;
+    }
+
+    .data-table th, .data-table td {
+      padding: 14px 20px;
+      text-align: left;
+      font-size: 13px;
+      border-bottom: 1px solid var(--surface-2);
+    }
+
+    .data-table th {
+      background: var(--surface);
+      color: var(--text-secondary);
+      font-weight: 800;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+
+    .data-table tbody tr:hover { background: var(--surface); }
+
+    .seq-tag {
+      background: rgba(99, 102, 241, 0.1);
+      color: var(--accent);
+      border: 1px solid rgba(99, 102, 241, 0.25);
+      padding: 3px 9px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 800;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .size-badge {
+      background: var(--surface-2);
+      color: var(--text-secondary);
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .status-pill {
+      background: var(--success-bg);
+      color: var(--success-text);
+      border: 1px solid var(--success-border);
+      padding: 4px 10px;
+      border-radius: 99px;
+      font-size: 11px;
+      font-weight: 800;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Cards Grid Display */
+    .pair-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 18px;
+    }
+
+    .pair-card {
+      background: #FFFFFF;
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      box-shadow: var(--shadow);
+      transition: all 0.25s ease;
+    }
+
+    .pair-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--card-border-hover);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .pair-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--surface-2);
+      padding-bottom: 12px;
+    }
+
+    .pair-card-body {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background: var(--surface);
+      padding: 14px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--card-border);
+    }
+
+    .pair-file-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      max-width: 45%;
+    }
+
+    .pair-file-name {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--text-primary);
+      word-break: break-all;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .pair-arrow {
+      font-size: 18px;
+      color: var(--accent);
+      font-weight: 900;
+    }
+
+    /* Floating Dock */
+    .floating-dock {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: #FFFFFF;
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-lg);
+      padding: 14px 24px;
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      z-index: 1000;
+      transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      backdrop-filter: blur(20px);
+    }
+
+    .floating-dock.active {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .dock-meta { display: flex; align-items: center; gap: 12px; }
+
+    .dock-count-badge {
+      background: var(--accent-gradient);
+      color: white;
+      padding: 4px 12px;
+      border-radius: 99px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .dock-payload { font-size: 13px; font-weight: 800; color: var(--text-primary); font-family: 'JetBrains Mono', monospace; }
+
+    .dock-actions { display: flex; align-items: center; gap: 10px; }
+
+    /* Modal Overlay */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.5);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+
+    .modal-overlay.active { opacity: 1; pointer-events: auto; }
+
+    .modal-card {
+      background: #FFFFFF;
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-lg);
+      width: 90%;
+      max-width: 580px;
+      padding: 26px;
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      transform: scale(0.95);
+      transition: transform 0.25s ease;
+    }
+
+    .modal-overlay.active .modal-card { transform: scale(1); }
+
+    .modal-header { display: flex; align-items: center; justify-content: space-between; }
+    .modal-title { font-size: 18px; font-weight: 900; color: var(--text-primary); }
+    .modal-close { background: none; border: none; font-size: 22px; color: var(--text-muted); cursor: pointer; }
+
+    .folder-browser-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      overflow-y: auto;
+      max-height: 340px;
+      padding-right: 4px;
+    }
+
+    .folder-browser-item {
+      background: var(--surface);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .folder-browser-item:hover {
+      background: #FFFFFF;
+      border-color: var(--accent);
+      box-shadow: 0 4px 12px var(--accent-glow);
+    }
+
+    .toast-container {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 10000;
+    }
+
+    .toast {
+      background: #FFFFFF;
+      border: 1px solid var(--card-border);
+      border-left: 4px solid var(--accent);
+      border-radius: var(--radius-sm);
+      padding: 14px 20px;
+      color: var(--text-primary);
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 13px;
+      font-weight: 700;
+      animation: slideInRight 0.3s ease;
+    }
+
+    @keyframes slideInRight {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-container">
+
+    <!-- Animated Brand Header -->
+    <div class="header-card">
+      <div class="brand-group">
+        <div class="brand-logo-container">
+          <div class="brand-logo-ring"></div>
+          <div class="brand-logo-inner">UD</div>
+          <div class="brand-logo-sparkle"></div>
+        </div>
+        <div class="brand-text">
+          <h1>UniDesk Match & Transfer</h1>
+          <p><span>🎬</span> Auto-Match Video Clips to Photo Folders in Google Drive</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <div class="zen-tag">
+          <div class="zen-dot"></div>
+          <span>Powered by ZenInfosys</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stepper Progress Bar -->
+    <div class="stepper-card">
+      <div class="step-item active" id="step1Item">
+        <div class="step-num">1</div>
+        <div class="step-title">Select Folders</div>
+      </div>
+      <div class="step-divider"></div>
+      <div class="step-item" id="step2Item">
+        <div class="step-num">2</div>
+        <div class="step-title">Scan & Match</div>
+      </div>
+      <div class="step-divider"></div>
+      <div class="step-item" id="step3Item">
+        <div class="step-num">3</div>
+        <div class="step-title">Transfer & Done</div>
+      </div>
+    </div>
+
+    <!-- Main Folder Input Panel -->
+    <div class="panel-card">
+      <div class="panel-header">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span>📂</span>
+          <span>Google Drive Folder Selector</span>
+        </div>
+        <div class="mode-switch-group">
+          <div class="mode-tab active" id="tabDual" onclick="setMode('dual')">Dual Folders Mode</div>
+          <div class="mode-tab" id="tabSingle" onclick="setMode('single')">Single Master Mode</div>
+        </div>
+      </div>
+
+      <!-- Drive Interactive Picker & Search Toolbar -->
+      <div class="drive-picker-toolbar">
+        <button class="picker-btn" onclick="openDrivePickerModal()">
+          <span>📁</span>
+          <span>Browse My Google Drive</span>
+        </button>
+        <div class="search-wrap">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="liveSearchInput" class="live-search-input" placeholder="Search Google Drive folders by name..." oninput="handleLiveSearch(this.value)">
+          <div class="search-results-dropdown" id="searchResultsDropdown"></div>
+        </div>
+      </div>
+
+      <!-- Quick Recent Folder Chips -->
+      <div>
+        <div style="font-size:11px; font-weight:800; color:var(--text-muted); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">Recent Google Drive Folders:</div>
+        <div class="recent-chips-row" id="recentChipsRow">
+          <span style="font-size:12px; color:var(--text-muted);">Loading recent folders...</span>
+        </div>
+      </div>
+
+      <!-- Dual Folders Input Mode -->
+      <div class="inputs-grid" id="dualInputsGrid">
+        <div class="input-group">
+          <div class="input-label-row">
+            <label class="input-label"><span>🎬</span> Video Main Folder (Date Subfolders / Clips)</label>
+          </div>
+          <div class="input-field-wrap">
+            <input type="text" id="videoFolderInput" class="input-field" placeholder="Paste Video Folder ID or URL...">
+            <button class="input-action-btn" onclick="clearInput('videoFolderInput')">Clear</button>
+          </div>
+        </div>
+
+        <div class="input-group">
+          <div class="input-label-row">
+            <label class="input-label"><span>📷</span> Photo Main Folder (Date Subfolders / Photo Folders)</label>
+          </div>
+          <div class="input-field-wrap">
+            <input type="text" id="photoFolderInput" class="input-field" placeholder="Paste Photo Folder ID or URL...">
+            <button class="input-action-btn" onclick="clearInput('photoFolderInput')">Clear</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Single Master Folder Input Mode -->
+      <div class="inputs-grid" id="singleInputGrid" style="display:none;">
+        <div class="input-group" style="grid-column: 1 / -1;">
+          <div class="input-label-row">
+            <label class="input-label"><span>🌟</span> Master Event Folder (Contains 'Video' & 'Photo' Subfolders)</label>
+          </div>
+          <div class="input-field-wrap">
+            <input type="text" id="masterFolderInput" class="input-field" placeholder="Paste Master Event Folder ID or URL...">
+            <button class="input-action-btn" onclick="clearInput('masterFolderInput')">Clear</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Master Google Sheets Audit Logging (Managed in Backend) -->
+      <div style="margin-top: 18px; padding: 16px 20px; background: rgba(16, 185, 129, 0.06); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <span style="font-size: 20px;">🟢</span>
+          <div>
+            <div style="font-size: 13px; font-weight: 800; color: var(--success-text);">Master Google Sheets Audit Logging Active</div>
+            <div style="font-size: 11px; color: var(--text-secondary); font-weight: 600; margin-top: 2px;">All video transfers automatically append clean audit report entries to the backend Master Google Sheet.</div>
+          </div>
+        </div>
+        <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer; color: var(--text-secondary); font-weight: 700;">
+          <input type="checkbox" id="enableSheetLogCheckbox" checked />
+          Enable Audit Log
+        </label>
+      </div>
+
+      <div class="action-bar">
+        <button class="btn" id="scanBtn" onclick="runScan()">
+          <span>🔍</span>
+          <span>Scan & Pair Date Subdirectories</span>
+        </button>
+        <button class="btn btn-secondary" onclick="resetForm()">Reset All</button>
+      </div>
+    </div>
+
+    <!-- Results Area (Hidden until scan is run) -->
+    <div id="resultsArea" style="display:none;">
+
+      <!-- Dynamic Stats Grid -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon-box" style="background:rgba(99,102,241,0.12); color:var(--accent);">📁</div>
+          <div class="stat-meta">
+            <div class="stat-val" id="statDateCount">0</div>
+            <div class="stat-lbl">Date Folders</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon-box" style="background:rgba(16,185,129,0.12); color:var(--success-badge);">✓</div>
+          <div class="stat-meta">
+            <div class="stat-val" id="statMatchedCount">0</div>
+            <div class="stat-lbl">Matched Pairs</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon-box" style="background:rgba(59,130,246,0.12); color:#2563EB;">📷</div>
+          <div class="stat-meta">
+            <div class="stat-val" id="statPhotoCount">0</div>
+            <div class="stat-lbl">Photo Folders</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon-box" style="background:rgba(239,68,68,0.12); color:var(--danger-text);">⚠️</div>
+          <div class="stat-meta">
+            <div class="stat-val" id="statMismatchCount">0</div>
+            <div class="stat-lbl">Mismatches</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Approved Banner -->
+      <div class="approved-banner" id="approvedBanner" style="display:none;">
+        <div class="approved-title-group">
+          <div class="approved-icon-ring">✓</div>
+          <div>
+            <div class="approved-title">PERFECT MATCH! 100% Sequence Alignment Approved</div>
+            <div class="approved-sub">All video clips have corresponding photo folders across date subdirectories. Ready for instant copy!</div>
+          </div>
+        </div>
+        <button class="btn btn-success" id="transferBtn" onclick="runTransfer()">
+          <span>📂</span>
+          <span>Copy Videos to Photo Folders</span>
+        </button>
+      </div>
+
+      <!-- Drag & Drop Mismatch Remapper Panel -->
+      <div class="mismatch-panel" id="mismatchSection" style="display:none;">
+        <div class="mismatch-header">
+          <div class="mismatch-title">
+            <span>🔴</span>
+            <span>Mismatches (<span id="mismatchCountText">0</span>) — Drag Video Clip to Photo Dropzone to Remap!</span>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <button class="ctrl-btn" onclick="ignoreAllMismatches()">Ignore All</button>
+            <button class="ctrl-btn ctrl-danger" onclick="removeAllMismatches()">Remove All</button>
+          </div>
+        </div>
+        <div class="drag-drop-grid" id="mismatchDragGrid"></div>
+      </div>
+
+      <!-- Matched Pairs Dashboard Panel -->
+      <div class="panel-card">
+        <div class="table-controls">
+          <div style="display:flex; align-items:center; gap:14px;">
+            <div style="font-size:16px; font-weight:900; color:var(--text-primary);">Matched Sequence Pairs</div>
+            <div class="view-switcher-group">
+              <button class="view-btn active" id="viewTableBtn" onclick="switchDisplayView('table')">☰ Table</button>
+              <button class="view-btn" id="viewGridBtn" onclick="switchDisplayView('grid')">⊞ Cards Grid</button>
+            </div>
+          </div>
+          <input type="text" id="tableSearchInput" class="search-table-input" placeholder="Filter matched pairs..." oninput="filterTable()">
+        </div>
+
+        <!-- Table Display Container -->
+        <div class="table-container" id="tableViewContainer">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width:40px;"><input type="checkbox" id="selectAllCheckbox" checked onclick="toggleSelectAll(this)" /></th>
+                <th>Date Folder</th>
+                <th>Seq ID</th>
+                <th>Video Clip Name</th>
+                <th>File Size</th>
+                <th>Photo Target Folder</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="matchedTableBody"></tbody>
+          </table>
+        </div>
+
+        <!-- Visual Cards Grid Display Container -->
+        <div class="pair-cards-grid" id="gridViewContainer" style="display:none;"></div>
+
+        <div class="action-bar" style="margin-top:22px;">
+          <button class="btn btn-success" id="transferBtnSecondary" onclick="runTransfer()">
+            <span>🚀</span>
+            <span>Transfer Selected Video Files</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Batch Transfer Live Progress HUD -->
+      <div id="transferProgressHud" style="display:none; margin-bottom:20px; padding:22px 28px; background:var(--card-bg); border:1px solid var(--accent); border-radius:var(--radius-lg); box-shadow:var(--shadow-lg); backdrop-filter:blur(16px);">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <div class="loading-spinner" style="width:22px; height:22px; border-width:3px;"></div>
+            <div>
+              <div id="batchHudTitle" style="font-size:15px; font-weight:800; color:var(--text-primary);">Copying Video Clips... (Batch 1 of 5)</div>
+              <div id="batchHudSubtitle" style="font-size:12px; color:var(--text-secondary); margin-top:2px;">Processing clips 1 - 10 of 45...</div>
+            </div>
+          </div>
+          <div id="batchHudPercent" style="font-size:22px; font-weight:900; color:var(--accent);">0%</div>
+        </div>
+        <div style="width:100%; height:10px; background:var(--surface-3); border-radius:99px; overflow:hidden; position:relative;">
+          <div id="batchProgressBarFill" style="width:0%; height:100%; background:var(--accent-gradient); border-radius:99px; transition:width 0.4s cubic-bezier(0.16, 1, 0.3, 1);"></div>
+        </div>
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-top:10px; font-size:11px; color:var(--text-muted); font-weight:700;">
+          <span id="batchHudCount">0 / 45 clips completed</span>
+          <span>⚡ Google Apps Script Batch Timeout Protection Active</span>
+        </div>
+      </div>
+
+      <!-- Transferred Results List -->
+      <div class="approved-banner" id="transferredSection" style="display:none; flex-direction:column; align-items:flex-start;">
+        <div style="display:flex; align-items:center; justify-content:space-between; width:100%; margin-bottom:16px;">
+          <div class="approved-title-group">
+            <div class="approved-icon-ring">✔</div>
+            <div>
+              <div class="approved-title">Transfer Complete! Files Copied Successfully</div>
+              <div class="approved-sub">All matched video clips have been copied into target photo folders and logged.</div>
+            </div>
+          </div>
+          <button class="header-btn" onclick="exportTransferLog()">Download Log (.txt)</button>
+        </div>
+        <div id="transferredList" style="font-size:13px; font-family:'JetBrains Mono', monospace; line-height:1.6;"></div>
+      </div>
+
+    </div>
+
+    <!-- App Footer with Niche Branding & Developer Info -->
+    <div class="app-footer" style="margin-top:30px; padding:20px 24px; background:var(--card-bg); border:1px solid var(--card-border); border-radius:var(--radius-lg); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px; box-shadow: var(--shadow);">
+      <div style="display:flex; align-items:center; gap:14px;">
+        <div style="width:42px; height:42px; border-radius:12px; background:linear-gradient(135deg, #6366F1, #4F46E5); display:flex; align-items:center; justify-content:center; color:#FFF; font-weight:900; font-size:18px; box-shadow:0 4px 14px rgba(99,102,241,0.35);">
+          UD
+        </div>
+        <div>
+          <div style="font-size:15px; font-weight:900; color:var(--text-primary);">UniDesk Match & Transfer</div>
+          <div style="font-size:12px; color:var(--text-secondary); font-weight:600;">Powered by <strong style="color:var(--accent);">ZenInfosys</strong></div>
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap; font-size:12px; color:var(--text-secondary);">
+        <div style="display:flex; align-items:center; gap:6px; background:var(--surface); padding:8px 16px; border-radius:99px; border:1px solid var(--card-border);">
+          <span>👨‍💻 Developer:</span>
+          <strong style="color:var(--text-primary); font-weight:800;">Burhanuddin</strong>
+        </div>
+        <div style="display:flex; align-items:center; gap:6px; background:var(--surface); padding:8px 16px; border-radius:99px; border:1px solid var(--card-border);">
+          <span>📞 Contact:</span>
+          <a href="tel:8369811201" style="color:var(--accent); text-decoration:none; font-weight:800;">8369811201</a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Floating Selected Action Dock -->
+  <div class="floating-dock" id="floatingDock">
+    <div class="dock-meta">
+      <span class="dock-count-badge" id="dockCountText">0 Selected</span>
+      <span class="dock-payload" id="dockPayloadText">Payload: 0 MB</span>
+    </div>
+    <div class="dock-actions">
+      <button class="ctrl-btn" onclick="selectAllItems(true)">Select All</button>
+      <button class="ctrl-btn" onclick="selectAllItems(false)">Deselect All</button>
+      <button class="ctrl-btn" onclick="exportCSVLog()">Export CSV</button>
+      <button class="btn btn-success" style="padding:8px 18px; font-size:13px;" onclick="runTransfer()">
+        <span>🚀</span>
+        <span>Start Copy</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Google Drive Folder Picker Modal -->
+  <div class="modal-overlay" id="drivePickerModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">📁 Select Google Drive Folder</div>
+        <button class="modal-close" onclick="closeDrivePickerModal()">✕</button>
+      </div>
+      <div style="font-size:12px; color:var(--text-secondary);" id="modalBreadcrumb">Current: Root Drive</div>
+      <div class="folder-browser-list" id="modalFolderList"></div>
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:10px;">
+        <button class="ctrl-btn" onclick="closeDrivePickerModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script>
+    var currentMode = 'dual';
+    var currentDisplayView = 'table';
+    var currentScanData = null;
+    var selectedItemIds = new Set();
+    var draggedMismatchVideo = null;
+
+    function playSound(type) {
+      try {
+        var ctx = new (window.AudioContext || window.webkitAudioContext)();
+        var osc = ctx.createOscillator();
+        var gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        if (type === 'click') {
+          osc.frequency.setValueAtTime(600, ctx.currentTime);
+          gain.gain.setValueAtTime(0.05, ctx.currentTime);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.04);
+        } else if (type === 'success') {
+          osc.frequency.setValueAtTime(523.25, ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(659.25, ctx.currentTime + 0.15);
+          gain.gain.setValueAtTime(0.08, ctx.currentTime);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.2);
+        }
+      } catch(e) {}
+    }
+
+    function showToast(msg, type) {
+      var container = document.getElementById('toastContainer');
+      var toast = document.createElement('div');
+      toast.className = 'toast';
+      if (type === 'error') toast.style.borderLeftColor = 'var(--danger-text)';
+      else if (type === 'success') toast.style.borderLeftColor = 'var(--success-text)';
+      toast.innerHTML = (type === 'error' ? '❌ ' : type === 'success' ? '✅ ' : 'ℹ️ ') + msg;
+      container.appendChild(toast);
+      setTimeout(function() { toast.remove(); }, 4000);
+    }
+
+    function setMode(mode) {
+      currentMode = mode;
+      document.getElementById('tabDual').classList.toggle('active', mode === 'dual');
+      document.getElementById('tabSingle').classList.toggle('active', mode === 'single');
+      document.getElementById('dualInputsGrid').style.display = mode === 'dual' ? 'grid' : 'none';
+      document.getElementById('singleInputGrid').style.display = mode === 'single' ? 'grid' : 'none';
+    }
+
+    function switchDisplayView(view) {
+      currentDisplayView = view;
+      document.getElementById('viewTableBtn').classList.toggle('active', view === 'table');
+      document.getElementById('viewGridBtn').classList.toggle('active', view === 'grid');
+      document.getElementById('tableViewContainer').style.display = view === 'table' ? 'block' : 'none';
+      document.getElementById('gridViewContainer').style.display = view === 'grid' ? 'grid' : 'none';
+      filterTable();
+    }
+
+    function clearInput(id) { document.getElementById(id).value = ''; }
+
+    function resetForm() {
+      document.getElementById('videoFolderInput').value = '';
+      document.getElementById('photoFolderInput').value = '';
+      document.getElementById('masterFolderInput').value = '';
+      document.getElementById('resultsArea').style.display = 'none';
+      currentScanData = null;
+      selectedItemIds.clear();
+      updateFloatingDock();
+      showToast('Form reset', 'info');
+    }
+
+    function saveMasterSheetUrl(val) {
+      try {
+        if (val) localStorage.setItem('uniDeskMasterSheetUrl', val.trim());
+      } catch(e) {}
+    }
+
+    window.addEventListener('DOMContentLoaded', function() {
+      try {
+        var savedSheetUrl = localStorage.getItem('uniDeskMasterSheetUrl');
+        if (savedSheetUrl) {
+          var input = document.getElementById('sheetUrlInput');
+          if (input) input.value = savedSheetUrl;
+        }
+      } catch(e) {}
+
+      google.script.run
+        .withSuccessHandler(renderRecentChips)
+        .getUserRecentFolders();
+    });
+
+    function renderRecentChips(res) {
+      var row = document.getElementById('recentChipsRow');
+      if (!res.success || !res.folders || res.folders.length === 0) {
+        row.innerHTML = '<span style="font-size:12px; color:var(--text-muted);">No recent Drive folders found</span>';
+        return;
+      }
+      row.innerHTML = '';
+      res.folders.forEach(function(f) {
+        var chip = document.createElement('div');
+        chip.className = 'recent-chip';
+        chip.innerHTML = '📁 ' + f.name;
+        chip.onclick = function() {
+          if (currentMode === 'single') {
+            document.getElementById('masterFolderInput').value = f.id;
+          } else {
+            if (!document.getElementById('videoFolderInput').value) {
+              document.getElementById('videoFolderInput').value = f.id;
+              showToast('Set Video Folder: ' + f.name, 'success');
+            } else {
+              document.getElementById('photoFolderInput').value = f.id;
+              showToast('Set Photo Folder: ' + f.name, 'success');
+            }
+          }
+        };
+        row.appendChild(chip);
+      });
+    }
+
+    var searchTimeout;
+    function handleLiveSearch(query) {
+      clearTimeout(searchTimeout);
+      var dropdown = document.getElementById('searchResultsDropdown');
+      if (!query || query.trim().length === 0) {
+        dropdown.style.display = 'none';
+        return;
+      }
+      searchTimeout = setTimeout(function() {
+        google.script.run
+          .withSuccessHandler(function(res) {
+            if (!res.success || !res.folders || res.folders.length === 0) {
+              dropdown.innerHTML = '<div class="search-result-item" style="color:var(--text-muted);">No matching Drive folders</div>';
+            } else {
+              dropdown.innerHTML = '';
+              res.folders.forEach(function(f) {
+                var item = document.createElement('div');
+                item.className = 'search-result-item';
+                item.innerHTML = '<span>📁 <strong>' + f.name + '</strong></span><span style="font-size:11px; color:var(--text-muted);">' + f.updated + '</span>';
+                item.onclick = function() {
+                  if (currentMode === 'single') {
+                    document.getElementById('masterFolderInput').value = f.id;
+                  } else {
+                    if (!document.getElementById('videoFolderInput').value) {
+                      document.getElementById('videoFolderInput').value = f.id;
+                    } else {
+                      document.getElementById('photoFolderInput').value = f.id;
+                    }
+                  }
+                  dropdown.style.display = 'none';
+                  showToast('Selected: ' + f.name, 'success');
+                };
+                dropdown.appendChild(item);
+              });
+            }
+            dropdown.style.display = 'block';
+          })
+          .searchFoldersByName(query);
+      }, 300);
+    }
+
+    function openDrivePickerModal() {
+      document.getElementById('drivePickerModal').classList.add('active');
+      loadModalFolder('root');
+    }
+
+    function closeDrivePickerModal() {
+      document.getElementById('drivePickerModal').classList.remove('active');
+    }
+
+    function loadModalFolder(folderId) {
+      var list = document.getElementById('modalFolderList');
+      list.innerHTML = '<div style="font-size:13px; color:var(--text-muted); text-align:center; padding:20px;"><span class="loading-spinner"></span> Loading Drive contents...</div>';
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (!res.success) {
+            list.innerHTML = '<div style="font-size:13px; color:var(--danger-text); text-align:center; padding:20px;">Error: ' + res.error + '</div>';
+            return;
+          }
+          document.getElementById('modalBreadcrumb').innerText = 'Current: ' + res.current.name;
+          list.innerHTML = '';
+          if (res.subfolders.length === 0) {
+            list.innerHTML = '<div style="font-size:13px; color:var(--text-muted); text-align:center; padding:20px;">No subfolders found inside "' + res.current.name + '"</div>';
+          } else {
+            res.subfolders.forEach(function(sf) {
+              var item = document.createElement('div');
+              item.className = 'folder-browser-item';
+              item.innerHTML = 
+                '<div style="display:flex; align-items:center; gap:12px;">' +
+                  '<span style="font-size:18px;">📁</span>' +
+                  '<div><div style="font-size:13px; font-weight:800;">' + sf.name + '</div><div style="font-size:11px; color:var(--text-muted);">' + sf.updated + '</div></div>' +
+                '</div>' +
+                '<div style="display:flex; gap:6px;">' +
+                  '<button class="ctrl-btn" onclick="event.stopPropagation(); loadModalFolder(\'' + sf.id + '\')">Open</button>' +
+                  '<button class="ctrl-btn" style="background:var(--accent); color:#FFF;" onclick="event.stopPropagation(); selectModalFolder(\'' + sf.id + '\', \'' + sf.name + '\')">Select</button>' +
+                '</div>';
+              item.onclick = function() { loadModalFolder(sf.id); };
+              list.appendChild(item);
+            });
+          }
+        })
+        .getFolderSubfolders(folderId);
+    }
+
+    function selectModalFolder(id, name) {
+      if (currentMode === 'single') {
+        document.getElementById('masterFolderInput').value = id;
+      } else {
+        if (!document.getElementById('videoFolderInput').value) {
+          document.getElementById('videoFolderInput').value = id;
+        } else {
+          document.getElementById('photoFolderInput').value = id;
+        }
+      }
+      closeDrivePickerModal();
+      showToast('Selected folder: ' + name, 'success');
+    }
+
+    function runScan() {
+      var btn = document.getElementById('scanBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="loading-spinner"></span> Scanning & Matching Subdirectories...';
+      playSound('click');
+
+      document.getElementById('step1Item').classList.remove('active');
+      document.getElementById('step2Item').classList.add('active');
+
+      if (currentMode === 'single') {
+        var mInput = document.getElementById('masterFolderInput').value;
+        if (!mInput) {
+          showToast('Please select a Master Event Folder', 'error');
+          btn.disabled = false;
+          btn.innerHTML = '<span>🔍</span><span>Scan & Pair Date Subdirectories</span>';
+          return;
+        }
+        google.script.run
+          .withSuccessHandler(onScanSuccess)
+          .withFailureHandler(onScanError)
+          .scanSingleMasterFolder(mInput);
+      } else {
+        var vInput = document.getElementById('videoFolderInput').value;
+        var pInput = document.getElementById('photoFolderInput').value;
+
+        if (!vInput || !pInput) {
+          showToast('Please select both Video and Photo folders', 'error');
+          btn.disabled = false;
+          btn.innerHTML = '<span>🔍</span><span>Scan & Pair Date Subdirectories</span>';
+          return;
+        }
+        google.script.run
+          .withSuccessHandler(onScanSuccess)
+          .withFailureHandler(onScanError)
+          .scanTwoFolders(vInput, pInput);
+      }
+    }
+
+    function onScanSuccess(data) {
+      var btn = document.getElementById('scanBtn');
+      btn.disabled = false;
+      btn.innerHTML = '<span>🔍</span><span>Scan & Pair Date Subdirectories</span>';
+
+      if (!data.success) {
+        showToast('Scan failed: ' + data.error, 'error');
+        return;
+      }
+
+      currentScanData = data;
+      playSound('success');
+      showToast('Scan completed! ' + (data.matched ? data.matched.length : 0) + ' items paired', 'success');
+      renderScanResults(data);
+    }
+
+    function onScanError(err) {
+      var btn = document.getElementById('scanBtn');
+      btn.disabled = false;
+      btn.innerHTML = '<span>🔍</span><span>Scan & Pair Date Subdirectories</span>';
+      showToast('Scan error: ' + err.toString(), 'error');
+    }
+
+    function renderScanResults(data) {
+      document.getElementById('resultsArea').style.display = 'block';
+
+      document.getElementById('statDateCount').innerText = data.dateFolders ? data.dateFolders.length : 0;
+      document.getElementById('statMatchedCount').innerText = data.matched ? data.matched.length : 0;
+      document.getElementById('statPhotoCount').innerText = data.totalPhotoFolders || (data.matched ? data.matched.length : 0);
+      document.getElementById('statMismatchCount').innerText = data.unmatched ? data.unmatched.length : 0;
+
+      document.getElementById('approvedBanner').style.display = data.isApproved ? 'flex' : 'none';
+
+      var misSection = document.getElementById('mismatchSection');
+      var misGrid = document.getElementById('mismatchDragGrid');
+      misGrid.innerHTML = '';
+
+      if (data.unmatched && data.unmatched.length > 0) {
+        misSection.style.display = 'flex';
+        document.getElementById('mismatchCountText').innerText = data.unmatched.length;
+
+        var unmatchedVids = data.unmatched.filter(function(u) { return u.videoId && !u.photoFolderId; });
+        var unmatchedPhotos = data.unmatched.filter(function(u) { return u.photoFolderId && !u.videoId; });
+
+        var vCol = document.createElement('div');
+        vCol.innerHTML = '<div style="font-size:12px; font-weight:800; color:var(--danger-text); margin-bottom:8px;">Unmatched Video Clips (Drag from here)</div>';
+        if (unmatchedVids.length > 0) {
+          unmatchedVids.forEach(function(item) {
+            var card = document.createElement('div');
+            card.className = 'draggable-card';
+            card.setAttribute('draggable', 'true');
+            card.innerHTML = 
+              '<div>' +
+                '<div style="font-size:13px; font-weight:800; font-family:\'JetBrains Mono\', monospace;">🎬 ' + item.videoName + '</div>' +
+                '<div style="font-size:11px; color:var(--text-secondary);">Subfolder: ' + (item.dateFolderName || 'Root') + '</div>' +
+              '</div>' +
+              '<span style="font-size:12px; color:var(--accent); font-weight:800;">⋮⋮ Drag</span>';
+
+            card.ondragstart = function(e) {
+              draggedMismatchVideo = item;
+              e.dataTransfer.setData('text/plain', item.id);
+            };
+            vCol.appendChild(card);
+          });
+        } else {
+          vCol.innerHTML += '<div style="font-size:12px; color:var(--text-muted); padding:10px;">No unmatched video clips</div>';
+        }
+
+        var pCol = document.createElement('div');
+        pCol.innerHTML = '<div style="font-size:12px; font-weight:800; color:var(--success-text); margin-bottom:8px;">Unmatched Photo Target Folders (Drop onto here)</div>';
+        if (unmatchedPhotos.length > 0) {
+          unmatchedPhotos.forEach(function(photoItem) {
+            var card = document.createElement('div');
+            card.className = 'dropzone-card';
+            card.innerHTML = 
+              '<div>' +
+                '<div style="font-size:13px; font-weight:800;">📷 ' + photoItem.photoFolderName + '</div>' +
+                '<div style="font-size:11px; color:var(--text-secondary);">Subfolder: ' + (photoItem.dateFolderName || 'Root') + '</div>' +
+              '</div>' +
+              '<span style="font-size:11px; background:var(--surface-2); padding:4px 8px; border-radius:6px; font-weight:700;">Drop clip here</span>';
+
+            card.ondragover = function(e) { e.preventDefault(); card.classList.add('drag-over'); };
+            card.ondragleave = function() { card.classList.remove('drag-over'); };
+            card.ondrop = function(e) {
+              e.preventDefault();
+              card.classList.remove('drag-over');
+              if (draggedMismatchVideo) {
+                remapMismatchPair(draggedMismatchVideo, photoItem);
+              }
+            };
+            pCol.appendChild(card);
+          });
+        } else {
+          pCol.innerHTML += '<div style="font-size:12px; color:var(--text-muted); padding:10px;">No unmatched photo target folders</div>';
+        }
+
+        misGrid.appendChild(vCol);
+        misGrid.appendChild(pCol);
+      } else {
+        misSection.style.display = 'none';
+      }
+
+      selectAllItems(true);
+    }
+
+    function remapMismatchPair(vidItem, photoItem) {
+      if (!currentScanData) return;
+
+      currentScanData.unmatched = currentScanData.unmatched.filter(function(u) {
+        return u.id !== vidItem.id && u.id !== photoItem.id;
+      });
+
+      var newMatch = {
+        id: vidItem.videoId + '_' + photoItem.photoFolderId,
+        videoId: vidItem.videoId,
+        videoName: vidItem.videoName,
+        photoFolderId: photoItem.photoFolderId,
+        photoFolderName: photoItem.photoFolderName,
+        dateFolderName: vidItem.dateFolderName || photoItem.dateFolderName,
+        sequence: vidItem.sequence || photoItem.sequence,
+        fileSizeMb: vidItem.fileSizeMb || 25,
+        status: 'APPROVED',
+        isMatched: true
+      };
+
+      currentScanData.matched.push(newMatch);
+      currentScanData.isApproved = currentScanData.unmatched.length === 0 && currentScanData.matched.length > 0;
+      
+      draggedMismatchVideo = null;
+      playSound('success');
+      showToast('Remapped clip "' + vidItem.videoName + '" to photo folder "' + photoItem.photoFolderName + '"', 'success');
+      renderScanResults(currentScanData);
+    }
+
+    function toggleSelectAll(master) { selectAllItems(master.checked); }
+
+    function selectAllItems(select) {
+      selectedItemIds.clear();
+      if (select && currentScanData && currentScanData.matched) {
+        currentScanData.matched.forEach(function(m) { selectedItemIds.add(m.id); });
+      }
+      var master = document.getElementById('selectAllCheckbox');
+      if (master) master.checked = select;
+      filterTable();
+    }
+
+    function toggleItemSelect(id, checked) {
+      if (checked) selectedItemIds.add(id);
+      else selectedItemIds.delete(id);
+      updateFloatingDock();
+    }
+
+    function updateFloatingDock() {
+      var dock = document.getElementById('floatingDock');
+      var count = selectedItemIds.size;
+      if (count > 0 && currentScanData && currentScanData.matched) {
+        dock.classList.add('active');
+        document.getElementById('dockCountText').innerText = count + ' Selected';
+
+        var totalMb = 0;
+        currentScanData.matched.forEach(function(m) {
+          if (selectedItemIds.has(m.id)) {
+            totalMb += (m.fileSizeMb || 0);
+          }
+        });
+
+        var payloadStr = totalMb >= 1000 
+          ? (totalMb / 1024).toFixed(2) + ' GB' 
+          : Math.round(totalMb) + ' MB';
+
+        document.getElementById('dockPayloadText').innerText = 'Payload: ' + payloadStr;
+      } else {
+        dock.classList.remove('active');
+      }
+    }
+
+    function filterTable() {
+      if (!currentScanData || !currentScanData.matched) return;
+      var q = (document.getElementById('tableSearchInput').value || '').toLowerCase();
+      var tbody = document.getElementById('matchedTableBody');
+      var grid = document.getElementById('gridViewContainer');
+      tbody.innerHTML = '';
+      grid.innerHTML = '';
+
+      var filtered = currentScanData.matched.filter(function(m) {
+        return (m.dateFolderName || '').toLowerCase().includes(q) ||
+               (m.videoName || '').toLowerCase().includes(q) ||
+               (m.photoFolderName || '').toLowerCase().includes(q) ||
+               (m.sequence || '').toLowerCase().includes(q);
+      });
+
+      if (filtered.length > 0) {
+        filtered.forEach(function(m) {
+          var isChecked = selectedItemIds.has(m.id);
+
+          var tr = document.createElement('tr');
+          tr.innerHTML = 
+            '<td><input type="checkbox" class="item-checkbox" value="' + m.id + '" ' + (isChecked ? 'checked' : '') + ' onclick="toggleItemSelect(\'' + m.id + '\', this.checked)" /></td>' +
+            '<td style="font-weight:800;">📁 ' + m.dateFolderName + '</td>' +
+            '<td><span class="seq-tag">' + (m.sequence || '—') + '</span></td>' +
+            '<td style="font-family:\'JetBrains Mono\', monospace; font-weight:700;">🎬 ' + m.videoName + '</td>' +
+            '<td><span class="size-badge">' + (m.fileSizeMb ? m.fileSizeMb + ' MB' : '—') + '</span></td>' +
+            '<td style="font-family:\'JetBrains Mono\', monospace; font-weight:700;">📷 ' + m.photoFolderName + '</td>' +
+            '<td><span class="status-pill"><span>✓</span> APPROVED</span></td>';
+          tbody.appendChild(tr);
+
+          var card = document.createElement('div');
+          card.className = 'pair-card';
+          card.innerHTML = 
+            '<div class="pair-card-header">' +
+              '<div style="display:flex; align-items:center; gap:8px;">' +
+                '<input type="checkbox" value="' + m.id + '" ' + (isChecked ? 'checked' : '') + ' onclick="toggleItemSelect(\'' + m.id + '\', this.checked)" />' +
+                '<span style="font-size:12px; font-weight:800; color:var(--text-secondary);">📁 ' + m.dateFolderName + '</span>' +
+              '</div>' +
+              '<span class="seq-tag">' + (m.sequence || '—') + '</span>' +
+            '</div>' +
+            '<div class="pair-card-body">' +
+              '<div class="pair-file-info">' +
+                '<div style="font-size:11px; color:var(--text-muted); font-weight:700;">VIDEO CLIP</div>' +
+                '<div class="pair-file-name">🎬 ' + m.videoName + '</div>' +
+                '<span class="size-badge">' + (m.fileSizeMb ? m.fileSizeMb + ' MB' : '—') + '</span>' +
+              '</div>' +
+              '<div class="pair-arrow">➔</div>' +
+              '<div class="pair-file-info" style="text-align:right;">' +
+                '<div style="font-size:11px; color:var(--text-muted); font-weight:700;">TARGET PHOTO FOLDER</div>' +
+                '<div class="pair-file-name">📷 ' + m.photoFolderName + '</div>' +
+                '<div><span class="status-pill" style="font-size:10px; padding:2px 8px;">✓ OK</span></div>' +
+              '</div>' +
+            '</div>';
+          grid.appendChild(card);
+        });
+      } else {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:30px;">No matched pairs matching search criteria.</td></tr>';
+        grid.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:var(--text-muted); padding:30px;">No matched cards found.</div>';
+      }
+
+      updateFloatingDock();
+    }
+
+    function ignoreSingle(idx) {
+      if (currentScanData && currentScanData.unmatched) {
+        currentScanData.unmatched.splice(idx, 1);
+        currentScanData.isApproved = currentScanData.unmatched.length === 0 && currentScanData.matched.length > 0;
+        renderScanResults(currentScanData);
+      }
+    }
+
+    function ignoreAllMismatches() {
+      if (currentScanData) {
+        currentScanData.unmatched = [];
+        currentScanData.isApproved = currentScanData.matched.length > 0;
+        renderScanResults(currentScanData);
+      }
+    }
+
+    function toggleSheetLogInputs(enabled) {
+      var fields = document.getElementById('sheetLogFields');
+      if (fields) fields.style.opacity = enabled ? '1' : '0.4';
+    }
+
+    function removeAllMismatches() { ignoreAllMismatches(); }
+
+    function runTransfer() {
+      if (!currentScanData || !currentScanData.matched || currentScanData.matched.length === 0) {
+        showToast('No matched items ready for transfer', 'error');
+        return;
+      }
+
+      var itemsToTransfer = currentScanData.matched.filter(function(m) { return selectedItemIds.has(m.id); });
+      if (itemsToTransfer.length === 0) {
+        showToast('Please select at least one item to transfer', 'error');
+        return;
+      }
+
+      var enableLog = document.getElementById('enableSheetLogCheckbox') ? document.getElementById('enableSheetLogCheckbox').checked : true;
+      var sheetUrlOrId = enableLog ? 'DEFAULT_BACKEND_SHEET' : '';
+      var createNewSheet = false;
+      var eventName = currentScanData ? (currentScanData.videoMainName || 'Event') : 'Event';
+
+      // Batch Settings (10 items per batch to prevent Google Apps Script 6-min timeout)
+      var BATCH_SIZE = 10;
+      var batches = [];
+      for (var i = 0; i < itemsToTransfer.length; i += BATCH_SIZE) {
+        batches.push(itemsToTransfer.slice(i, i + BATCH_SIZE));
+      }
+
+      var totalItems = itemsToTransfer.length;
+      var completedItemsCount = 0;
+      var accumulatedItems = [];
+      var accumulatedErrors = [];
+      var finalSheetResult = null;
+
+      // Show Progress HUD & Update Stepper
+      var hud = document.getElementById('transferProgressHud');
+      if (hud) hud.style.display = 'block';
+
+      var tBtn = document.getElementById('transferBtn');
+      var tBtn2 = document.getElementById('transferBtnSecondary');
+      if (tBtn) { tBtn.disabled = true; tBtn.innerHTML = '<span class="loading-spinner"></span> Copying Files in Batches...'; }
+      if (tBtn2) { tBtn2.disabled = true; }
+
+      document.getElementById('step2Item').classList.remove('active');
+      document.getElementById('step3Item').classList.add('active');
+      playSound('click');
+
+      function updateBatchHud(batchNum, totalBatches, countDone, totalAll, currentBatchItemName) {
+        var pct = Math.min(100, Math.round((countDone / totalAll) * 100));
+        var titleEl = document.getElementById('batchHudTitle');
+        var subEl = document.getElementById('batchHudSubtitle');
+        var pctEl = document.getElementById('batchHudPercent');
+        var countEl = document.getElementById('batchHudCount');
+        var fillEl = document.getElementById('batchProgressBarFill');
+
+        if (titleEl) titleEl.innerText = 'Copying Video Clips... (Batch ' + batchNum + ' of ' + totalBatches + ')';
+        if (subEl) subEl.innerText = currentBatchItemName ? 'Processing: ' + currentBatchItemName : 'Copying batch ' + batchNum + '...';
+        if (pctEl) pctEl.innerText = pct + '%';
+        if (countEl) countEl.innerText = countDone + ' / ' + totalAll + ' clips completed';
+        if (fillEl) fillEl.style.width = pct + '%';
+      }
+
+      function executeBatchIndex(idx) {
+        if (idx >= batches.length) {
+          // All batches completed
+          if (hud) hud.style.display = 'none';
+          onTransferSuccess({
+            success: true,
+            transferredCount: completedItemsCount,
+            transferredItems: accumulatedItems,
+            errors: accumulatedErrors,
+            sheetLogResult: finalSheetResult
+          });
+          return;
+        }
+
+        var currentBatch = batches[idx];
+        var startNum = (idx * BATCH_SIZE) + 1;
+        var endNum = Math.min(totalItems, (idx + 1) * BATCH_SIZE);
+        updateBatchHud(idx + 1, batches.length, completedItemsCount, totalItems, 'Clips ' + startNum + ' to ' + endNum);
+
+        google.script.run
+          .withSuccessHandler(function(res) {
+            if (res && res.success) {
+              completedItemsCount += (res.transferredCount || 0);
+              if (res.transferredItems) {
+                accumulatedItems = accumulatedItems.concat(res.transferredItems);
+              }
+              if (res.errors) {
+                accumulatedErrors = accumulatedErrors.concat(res.errors);
+              }
+              if (res.sheetLogResult) {
+                finalSheetResult = res.sheetLogResult;
+              }
+            } else if (res && res.error) {
+              accumulatedErrors.push('Batch ' + (idx + 1) + ' error: ' + res.error);
+            }
+
+            var nextDone = completedItemsCount;
+            updateBatchHud(idx + 1, batches.length, nextDone, totalItems, 'Completed Batch ' + (idx + 1));
+            
+            // Execute next batch chunk
+            executeBatchIndex(idx + 1);
+          })
+          .withFailureHandler(function(err) {
+            accumulatedErrors.push('Batch ' + (idx + 1) + ' failed: ' + err.toString());
+            executeBatchIndex(idx + 1);
+          })
+          .executeVideoTransfer(currentBatch, sheetUrlOrId, createNewSheet, eventName);
+      }
+
+      // Launch Batch 1!
+      executeBatchIndex(0);
+    }
+
+    function onTransferSuccess(res) {
+      var tBtn = document.getElementById('transferBtn');
+      var tBtn2 = document.getElementById('transferBtnSecondary');
+      if (tBtn) { tBtn.disabled = false; tBtn.innerHTML = '<span>📂 Copy Videos to Photo Folders</span>'; }
+      if (tBtn2) { tBtn2.disabled = false; }
+
+      if (!res.success) {
+        showToast('Transfer failed: ' + res.error, 'error');
+        return;
+      }
+
+      playSound('success');
+      try { confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } }); } catch(e) {}
+
+      var section = document.getElementById('transferredSection');
+      var list = document.getElementById('transferredList');
+      section.style.display = 'block';
+      
+      var html = '<p style="margin-bottom:10px; font-weight:700; color:var(--text-primary);">Successfully transferred ' + res.transferredCount + ' video file(s):</p><ul style="list-style:none;">';
+      res.transferredItems.forEach(function(item) {
+        html += '<li style="padding:4px 0; border-bottom:1px dashed var(--card-border);">✔ <strong>' + item.videoName + '</strong> ➔ 📷 <em>' + item.photoFolderName + '</em> (' + item.transferredAt + ')</li>';
+      });
+      html += '</ul>';
+
+      if (res.sheetLogResult && res.sheetLogResult.success && res.sheetLogResult.sheetUrl) {
+        var sheetHtml = '<div style="margin-bottom:16px; padding:14px 18px; background:rgba(16,185,129,0.14); border:1px solid rgba(16,185,129,0.4); border-radius:var(--radius-sm); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">' +
+          '<div style="display:flex; align-items:center; gap:10px;">' +
+            '<span style="font-size:22px;">📊</span>' +
+            '<div>' +
+              '<div style="font-weight:800; color:var(--success-text); font-size:14px;">Google Sheets Audit Log Generated!</div>' +
+              '<div style="font-size:12px; color:var(--text-secondary);">' + res.sheetLogResult.loggedCount + ' item(s) recorded in "' + (res.sheetLogResult.sheetName || 'Audit Log') + '"</div>' +
+            '</div>' +
+          '</div>' +
+          '<a href="' + res.sheetLogResult.sheetUrl + '" target="_blank" class="btn" style="padding:8px 18px; font-size:12px; font-weight:700; text-decoration:none; background:linear-gradient(135deg, #10B981, #059669); color:#FFF; box-shadow:0 4px 14px rgba(16,185,129,0.35);">🟢 Open Google Sheet Audit Report ➔</a>' +
+        '</div>';
+        list.innerHTML = sheetHtml + html;
+      } else {
+        list.innerHTML = html;
+      }
+
+      showToast('Successfully copied ' + res.transferredCount + ' video file(s)!', 'success');
+    }
+
+    function onTransferError(err) {
+      var tBtn = document.getElementById('transferBtn');
+      var tBtn2 = document.getElementById('transferBtnSecondary');
+      if (tBtn) { tBtn.disabled = false; tBtn.innerHTML = '<span>📂 Copy Videos to Photo Folders</span>'; }
+      if (tBtn2) { tBtn2.disabled = false; }
+      showToast('Transfer error: ' + err.toString(), 'error');
+    }
+
+    function exportTransferLog() {
+      var list = document.getElementById('transferredList').innerText;
+      if (!list) return;
+      var blob = new Blob([list], { type: 'text/plain;charset=utf-8' });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'Transfer_Log_' + new Date().toISOString().slice(0,10) + '.txt';
+      a.click();
+    }
+
+    function exportCSVLog() {
+      if (!currentScanData || !currentScanData.matched) return;
+      var csv = 'Date Folder,Sequence ID,Video Name,Size (MB),Photo Target Folder\n';
+      currentScanData.matched.forEach(function(m) {
+        if (selectedItemIds.has(m.id)) {
+          csv += '"' + (m.dateFolderName||'') + '","' + (m.sequence||'') + '","' + (m.videoName||'') + '","' + (m.fileSizeMb||'') + '","' + (m.photoFolderName||'') + '"\n';
+        }
+      });
+      var blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'Matched_Pairs_' + new Date().toISOString().slice(0,10) + '.csv';
+      a.click();
+    }
+  </script>
+</body>
+</html>

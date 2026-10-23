@@ -1,0 +1,113 @@
+/* StatCard.css — Modern Precision Bento Stat Cards */
+
+.stat-card {
+  background: var(--surface);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 14px 16px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 
+    var(--shadow-card),
+    inset 0 1px 0 0 var(--specular-highlight);
+  animation: scaleIn var(--dur-normal) var(--ease-spring) both;
+  transition: border-color var(--dur-normal) ease, box-shadow var(--dur-normal) ease, transform var(--dur-normal) var(--ease-spring);
+}
+
+.stat-card:hover {
+  border-color: color-mix(in srgb, var(--theme-accent) 45%, var(--border));
+  box-shadow: 
+    var(--shadow-card-hover),
+    inset 0 1px 0 0 var(--specular-highlight);
+  transform: translateY(-2px);
+}
+
+.stat-card-accent-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg, 
+    var(--theme-accent), 
+    color-mix(in srgb, var(--theme-accent) 60%, #FFFFFF), 
+    var(--theme-accent)
+  );
+  background-size: 200% 100%;
+  animation: shimmerSweep 5s linear infinite;
+}
+
+.stat-card-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  position: relative;
+  z-index: 1;
+}
+
+.stat-card-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  flex-shrink: 0;
+  background: color-mix(in srgb, var(--theme-accent) 14%, var(--surface-2));
+  border: 1px solid color-mix(in srgb, var(--theme-accent) 30%, var(--border));
+  color: var(--theme-accent);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--theme-accent) 16%, transparent);
+}
+
+.stat-card-label {
+  font-size: var(--text-xs);
+  font-weight: 800;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  position: relative;
+  z-index: 1;
+}
+
+.stat-card-value {
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-display);
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Status chip ─────────────────────────────── */
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: var(--radius-chip);
+  font-size: var(--text-xs);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  border: 1.5px solid transparent;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+}
+
+/* ── Validation dot ──────────────────────────── */
+.validation-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 8px currentColor;
+  transition: background var(--dur-fast);
+}

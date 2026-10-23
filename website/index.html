@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Uni Desk — Professional Workstation & Media Automation Toolkit</title>
+  
+  <!-- SEO & Social Meta Tags -->
+  <meta name="description" content="Download the latest version of Uni Desk for Windows and Linux. Professional workstation automation for Adobe Premiere Pro, Media Encoder, batch file processing, and studio archiving. Available as direct EXE and on Microsoft Store.">
+  <meta name="keywords" content="Uni Desk, BS Framework, Media Automation, Premiere Pro automation, Video editing workstation, Nikah ceremony detector, Title Adder, Converter, Microsoft Store">
+  <meta name="author" content="BS Framework">
+  <meta property="og:title" content="Uni Desk — Next-Gen Media Automation Workstation">
+  <meta property="og:description" content="Streamline video post-production, auto-chain render pipelines, and organize archives with Uni Desk. Download the latest installer or get it on Microsoft Store.">
+  <meta property="og:image" content="assets/installer_banner.png">
+  <meta property="og:type" content="website">
+  <meta name="theme-color" content="#0d1117">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/x-icon" href="assets/icon.ico">
+  <link rel="apple-touch-icon" href="assets/logo.png">
+
+  <!-- Google Fonts: Inter & Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="styles.css">
+
+  <!-- Schema.org SoftwareApplication JSON-LD -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Uni Desk",
+    "operatingSystem": "Windows 10, Windows 11, Linux",
+    "applicationCategory": "MultimediaApplication",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "author": {
+      "@type": "Organization",
+      "name": "BS.Framework",
+      "url": "https://bsframework.com"
+    },
+    "softwareVersion": "26.10.2"
+  }
+  </script>
+</head>
+<body>
+
+  <!-- Background Ambient Glows -->
+  <div class="ambient-glow glow-top-left"></div>
+  <div class="ambient-glow glow-top-right"></div>
+  <div class="ambient-glow glow-bottom-center"></div>
+
+  <!-- Announcement Bar -->
+  <div class="announcement-bar">
+    <div class="container announcement-content">
+      <span class="badge-pulse"></span>
+      <span class="announcement-text">
+        <strong>New Release:</strong> Uni Desk <span id="announce-version">v26.10.2</span> is now live with Cross-Platform Release Studio & Domino Automation!
+      </span>
+      <a href="#changelog" class="announcement-link">See Changelog &rarr;</a>
+    </div>
+  </div>
+
+  <!-- Main Navigation -->
+  <header class="site-header">
+    <div class="container nav-wrapper">
+      <a href="#" class="brand-identity">
+        <div class="brand-logo-glow">
+          <img src="assets/logo.png" alt="Uni Desk Logo" class="brand-logo" onerror="this.src='assets/zen_logo.png'">
+        </div>
+        <div class="brand-text">
+          <span class="brand-name">Uni Desk</span>
+          <span class="brand-badge">PRO WORKSTATION</span>
+        </div>
+      </a>
+
+      <nav class="nav-links">
+        <a href="#features" class="nav-link">Features</a>
+        <a href="#modules" class="nav-link">Toolkit Modules</a>
+        <a href="#download" class="nav-link">Download</a>
+        <a href="#store" class="nav-link">Microsoft Store</a>
+        <a href="#changelog" class="nav-link">Changelog</a>
+        <a href="#specs" class="nav-link">Requirements</a>
+      </nav>
+
+      <div class="nav-actions">
+        <a href="https://github.com/BSFrameWorks5253/onetap-workstation" target="_blank" rel="noopener noreferrer" class="btn-store-nav" title="View GitHub Repository" style="display: inline-flex; align-items: center; gap: 8px;">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+          </svg>
+          <span>GitHub</span>
+        </a>
+        <a href="#store" class="btn-store-nav" title="View in Microsoft Store">
+          <svg class="ms-icon-nav" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M1 1h10.4v10.4H1V1zm11.6 0H23v10.4H12.6V1zM1 12.6h10.4V23H1V12.6zm11.6 0H23V23H12.6V12.6z"/>
+          </svg>
+          <span>Store</span>
+        </a>
+        <a href="#download" class="btn-primary-nav">
+          <svg class="icon-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+          </svg>
+          <span>Download .EXE</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <main>
+    <section class="hero-section">
+      <div class="container hero-container">
+        
+        <div class="hero-badge-wrapper">
+          <div class="hero-pill">
+            <span class="pill-dot"></span>
+            <span class="pill-text">Latest Production Build &bull; Windows 11 / 10 Ready</span>
+            <span class="pill-tag" id="hero-version-tag">v26.10.2</span>
+          </div>
+        </div>
+
+        <h1 class="hero-title">
+          Master Your Production Pipeline in <span class="gradient-text">One Tap</span>
+        </h1>
+        
+        <p class="hero-subtitle">
+          The ultimate automation studio built for high-throughput video editors, wedding studios, and media teams. Chain Adobe Premiere Pro &amp; Media Encoder into automated rendering, instant XML sequence mapping, smart ceremony detection, and fail-safe archiving.
+        </p>
+
+        <!-- Main CTAs -->
+        <div class="hero-cta-group">
+          <a href="#download" class="btn-hero-primary" id="btn-hero-direct-dl">
+            <div class="btn-icon-wrapper">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+              </svg>
+            </div>
+            <div class="btn-content">
+              <span class="btn-title">Download Uni Desk for Windows</span>
+              <span class="btn-meta"><span id="hero-dl-filename">Uni_Desk_Setup_V26.10.2.exe</span> &bull; 64-bit (~91 MB)</span>
+            </div>
+          </a>
+
+          <a href="#store" class="btn-hero-store" id="btn-hero-store-link">
+            <div class="store-badge-inner">
+              <svg class="ms-logo-svg" viewBox="0 0 24 24">
+                <path fill="#f25022" d="M1 1h10v10H1z"/>
+                <path fill="#00a4ef" d="M13 1h10v10H13z"/>
+                <path fill="#7fba00" d="M1 13h10v10H1z"/>
+                <path fill="#ffb900" d="M13 13h10v10H13z"/>
+              </svg>
+              <div class="store-text">
+                <span class="store-label">GET IT FROM</span>
+                <span class="store-brand">Microsoft Store</span>
+              </div>
+            </div>
+          </a>
+        </div>
+
+        <!-- Quick Platform Options & Badges -->
+        <div class="hero-security-badges">
+          <div class="sec-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              <path d="m9 12 2 2 4-4"/>
+            </svg>
+            <span>SHA-256 Verified</span>
+          </div>
+          <div class="sec-divider"></div>
+          <div class="sec-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="m9 12 2 2 4-4"/>
+            </svg>
+            <span>No Malware / Adware</span>
+          </div>
+          <div class="sec-divider"></div>
+          <div class="sec-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+              <line x1="8" y1="21" x2="16" y2="21"/>
+              <line x1="12" y1="17" x2="12" y2="21"/>
+            </svg>
+            <span>Native x64 Desktop Engine</span>
+          </div>
+          <div class="sec-divider"></div>
+          <div class="sec-item">
+            <a href="#more-platforms" class="sec-link">All formats: Portable (.zip) &bull; Linux (.AppImage) &darr;</a>
+          </div>
+        </div>
+
+        <!-- Interactive Workstation Showcase Banner -->
+        <div class="hero-visual-card">
+          <div class="window-header">
+            <div class="window-controls">
+              <span class="control-dot close"></span>
+              <span class="control-dot min"></span>
+              <span class="control-dot max"></span>
+            </div>
+            <div class="window-title">Uni Desk Studio &mdash; Live Production Automation Center</div>
+            <div class="window-badge">v26.10.0 RELEASE ENGINE</div>
+          </div>
+          <div class="window-preview-content">
+            <img src="assets/installer_banner.png" alt="Uni Desk Workstation Interface" class="app-screenshot" onerror="this.parentElement.classList.add('no-banner')">
+            <div class="visual-overlay-stats">
+              <div class="stat-pill">
+                <span class="stat-dot pulse-green"></span>
+                <span class="stat-val">100% Zero-Click</span>
+                <span class="stat-lbl">Domino Pipeline</span>
+              </div>
+              <div class="stat-pill">
+                <span class="stat-dot pulse-gold"></span>
+                <span class="stat-val">&lt; 1ms</span>
+                <span class="stat-lbl">XML Locator</span>
+              </div>
+              <div class="stat-pill">
+                <span class="stat-dot pulse-blue"></span>
+                <span class="stat-val">4-Tone Chime</span>
+                <span class="stat-lbl">Native Alert</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Download & Lead Form Section -->
+    <section class="download-portal-section" id="download">
+      <div class="container">
+        
+        <div class="section-header text-center">
+          <span class="section-tag">DOWNLOAD CENTER</span>
+          <h2 class="section-title">Get the Latest Official Uni Desk Executable</h2>
+          <p class="section-desc">
+            Download the official high-performance installer instantly, or register your studio email to receive future update releases and exclusive enterprise utility scripts.
+          </p>
+        </div>
+
+        <div class="download-grid">
+          
+          <!-- Direct Quick Download Card -->
+          <div class="download-card direct-card">
+            <div class="card-glow"></div>
+            <div class="card-tag">RECOMMENDED FOR ALL USERS</div>
+            
+            <div class="card-icon-header">
+              <div class="platform-icon windows-icon">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M1 1h10.4v10.4H1V1zm11.6 0H23v10.4H12.6V1zM1 12.6h10.4V23H1V12.6zm11.6 0H23V23H12.6V12.6z"/>
+                </svg>
+              </div>
+              <div>
+                <h3 class="card-title">Windows Installer (.EXE)</h3>
+                <p class="card-sub">Standard NSIS Setup with Auto-Update & Shell Integration</p>
+              </div>
+            </div>
+
+            <div class="release-specs-box">
+              <div class="spec-row">
+                <span class="spec-label">Version</span>
+                <span class="spec-value" id="dl-card-version">26.10.0</span>
+              </div>
+              <div class="spec-row">
+                <span class="spec-label">Architecture</span>
+                <span class="spec-value">64-bit (x64)</span>
+              </div>
+              <div class="spec-row">
+                <span class="spec-label">File Size</span>
+                <span class="spec-value" id="dl-card-size">~91.3 MB</span>
+              </div>
+              <div class="spec-row">
+                <span class="spec-label">Release Date</span>
+                <span class="spec-value" id="dl-card-date">October 2026</span>
+              </div>
+              <div class="spec-row">
+                <span class="spec-label">Operating System</span>
+                <span class="spec-value">Windows 11 / Windows 10 (1809+)</span>
+              </div>
+            </div>
+
+            <!-- Download Button -->
+            <button class="btn-download-primary" id="btn-direct-download" onclick="UniDeskApp.triggerDownload('installer')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+              </svg>
+              <div class="btn-text-block">
+                <span class="main-text">Download Latest Setup (.exe)</span>
+                <span class="sub-text">Direct high-speed download &bull; No registration needed</span>
+              </div>
+            </button>
+
+            <!-- SHA-256 Box -->
+            <div class="checksum-container">
+              <div class="checksum-header">
+                <span>SHA-256 Checksum:</span>
+                <button class="btn-copy-hash" id="btn-copy-sha256" title="Copy SHA-256 to clipboard" onclick="UniDeskApp.copyChecksum()">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                  </svg>
+                  <span id="copy-status-text">Copy Hash</span>
+                </button>
+              </div>
+              <code class="checksum-code" id="checksum-display">6522e60b652e9555eb8fdfba5b93d22f57fadb2ea42fb05fd57a1d23ac324504</code>
+            </div>
+
+          </div>
+
+          <!-- Form / User Capture Download Option -->
+          <div class="download-card form-card">
+            <div class="card-glow"></div>
+            <div class="card-tag gold-tag">STUDIO & ENTERPRISE PORTAL</div>
+
+            <div class="card-icon-header">
+              <div class="platform-icon mail-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                  <polyline points="22,6 12,13 2,6"/>
+                </svg>
+              </div>
+              <div>
+                <h3 class="card-title">Download &amp; Stay Updated</h3>
+                <p class="card-sub">Get direct delivery to your inbox &amp; changelog release alerts</p>
+              </div>
+            </div>
+
+            <!-- Interactive Form -->
+            <form id="download-form" class="custom-form" onsubmit="UniDeskApp.handleFormSubmit(event)">
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="user-name">Your Full Name *</label>
+                  <input type="text" id="user-name" placeholder="e.g. Alex Morgan" required>
+                </div>
+                <div class="form-group">
+                  <label for="user-email">Email Address *</label>
+                  <input type="email" id="user-email" placeholder="alex@studio.com" required>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="user-studio">Studio / Organization</label>
+                  <input type="text" id="user-studio" placeholder="e.g. Zenith Media Works">
+                </div>
+                <div class="form-group">
+                  <label for="user-usage">Primary Workstation Use</label>
+                  <select id="user-usage">
+                    <option value="premiere">Adobe Premiere Pro & CEP</option>
+                    <option value="wedding">Wedding / Ceremony Automation</option>
+                    <option value="transcoding">Batch Media Transcoding</option>
+                    <option value="archiving">Studio Archive & Safar Backups</option>
+                    <option value="enterprise">Full Studio Production</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-checkbox-group">
+                <label class="checkbox-container">
+                  <input type="checkbox" id="user-optin-updates" checked>
+                  <span class="checkmark"></span>
+                  <span class="checkbox-label">Notify me via email when new builds (<span class="accent-text">v26.11+</span>) are released</span>
+                </label>
+                <label class="checkbox-container">
+                  <input type="checkbox" id="user-send-link" checked>
+                  <span class="checkmark"></span>
+                  <span class="checkbox-label">Send permanent cloud mirror &amp; backup link to my inbox</span>
+                </label>
+              </div>
+
+              <button type="submit" class="btn-submit-form" id="btn-form-download">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                  <polyline points="22 4 12 14.01 9 11.01"/>
+                </svg>
+                <span>Submit &amp; Download Installer Instantly</span>
+              </button>
+            </form>
+
+            <div id="form-success-banner" class="form-success-alert" style="display: none;">
+              <div class="alert-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+              </div>
+              <div class="alert-text">
+                <strong>Thank you!</strong> Your download is starting automatically. We've logged your preferences and you'll receive upcoming release broadcasts.
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- Additional Platforms Bar -->
+        <div class="more-formats-box" id="more-platforms">
+          <h4 class="more-formats-title">Alternative Formats &amp; Developer Builds</h4>
+          <div class="formats-list">
+            
+            <div class="format-pill">
+              <div class="pill-left">
+                <span class="format-type">PORTABLE .EXE</span>
+                <span class="format-desc">Standalone zero-install executable</span>
+              </div>
+              <a href="#" class="btn-pill-dl" onclick="UniDeskApp.triggerDownload('portable')">
+                <span>Download .exe (90 MB)</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 10l5 5 5-5M12 15V3"/></svg>
+              </a>
+            </div>
+
+            <div class="format-pill">
+              <div class="pill-left">
+                <span class="format-type">PORTABLE ZIP</span>
+                <span class="format-desc">Complete standalone zip archive</span>
+              </div>
+              <a href="#" class="btn-pill-dl" onclick="UniDeskApp.triggerDownload('zip')">
+                <span>Download .zip (124 MB)</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 10l5 5 5-5M12 15V3"/></svg>
+              </a>
+            </div>
+
+            <div class="format-pill">
+              <div class="pill-left">
+                <span class="format-type">LINUX .APPIMAGE</span>
+                <span class="format-desc">For Ubuntu, Debian, Fedora &amp; Arch</span>
+              </div>
+              <a href="#" class="btn-pill-dl" onclick="UniDeskApp.triggerDownload('linux')">
+                <span>Download AppImage (125 MB)</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 10l5 5 5-5M12 15V3"/></svg>
+              </a>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Microsoft Store Showcase Section -->
+    <section class="ms-store-section" id="store">
+      <div class="container">
+        
+        <div class="store-banner-card">
+          <div class="store-grid">
+            
+            <div class="store-info-col">
+              <div class="store-badge-header">
+                <svg class="ms-logo-large" viewBox="0 0 24 24">
+                  <path fill="#f25022" d="M1 1h10v10H1z"/>
+                  <path fill="#00a4ef" d="M13 1h10v10H13z"/>
+                  <path fill="#7fba00" d="M1 13h10v10H1z"/>
+                  <path fill="#ffb900" d="M13 13h10v10H13z"/>
+                </svg>
+                <span>OFFICIAL MICROSOFT STORE INTEGRATION</span>
+              </div>
+
+              <h2 class="store-title">
+                Get Uni Desk on the <span class="gradient-ms">Microsoft Store</span>
+              </h2>
+
+              <p class="store-description">
+                Experience frictionless updates, automatic background installs, and enterprise-grade sandbox validation directly through Windows. Perfect for multi-seat studio deployments and managed workstations.
+              </p>
+
+              <div class="store-perks-list">
+                <div class="perk-item">
+                  <div class="perk-icon">✓</div>
+                  <span><strong>Automatic Silent Updates:</strong> Always stay on the latest build without manual .exe downloads</span>
+                </div>
+                <div class="perk-item">
+                  <div class="perk-icon">✓</div>
+                  <span><strong>Microsoft Safety Certified:</strong> Rigorously scanned for malware and performance compliance</span>
+                </div>
+                <div class="perk-item">
+                  <div class="perk-icon">✓</div>
+                  <span><strong>Single-Click Installation:</strong> No UAC warnings or manual directory configuration</span>
+                </div>
+              </div>
+
+              <!-- Store Action Buttons -->
+              <div class="store-button-group">
+                <a href="#" class="btn-official-store" id="btn-open-ms-store" onclick="UniDeskApp.openMicrosoftStore(event)">
+                  <svg class="ms-badge-svg" viewBox="0 0 24 24">
+                    <path fill="#f25022" d="M1 1h10v10H1z"/>
+                    <path fill="#00a4ef" d="M13 1h10v10H13z"/>
+                    <path fill="#7fba00" d="M1 13h10v10H1z"/>
+                    <path fill="#ffb900" d="M13 13h10v10H13z"/>
+                  </svg>
+                  <div class="badge-copy">
+                    <span class="badge-lead">GET IT FROM</span>
+                    <span class="badge-name">Microsoft Store</span>
+                  </div>
+                </a>
+
+                <button class="btn-store-details" onclick="UniDeskApp.openStoreGuideModal()">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="16" x2="12" y2="12"/>
+                    <line x1="12" y1="8" x2="12.01" y2="8"/>
+                  </svg>
+                  <span>Publisher Store Info</span>
+                </button>
+              </div>
+
+              <div class="store-deep-link-hint">
+                <span>Tip: Clicking opens the Microsoft Store application directly on Windows 10/11</span>
+              </div>
+            </div>
+
+            <div class="store-preview-col">
+              <div class="store-mockup-card">
+                <div class="store-mockup-header">
+                  <div class="mockup-brand">
+                    <img src="assets/logo.png" alt="App Icon" class="mockup-icon" onerror="this.src='assets/zen_logo.png'">
+                    <div>
+                      <div class="mockup-app-name">Uni Desk</div>
+                      <div class="mockup-publisher">BS Framework</div>
+                    </div>
+                  </div>
+                  <span class="mockup-price">Free</span>
+                </div>
+
+                <div class="store-rating-bar">
+                  <div class="stars">★★★★★</div>
+                  <span class="rating-text">5.0 &bull; Productivity &bull; Media Toolkit</span>
+                </div>
+
+                <div class="store-compat-tags">
+                  <span class="compat-tag">Windows 11</span>
+                  <span class="compat-tag">Windows 10</span>
+                  <span class="compat-tag">x64 Native</span>
+                  <span class="compat-tag">Adobe CEP Ready</span>
+                </div>
+
+                <div class="store-quote">
+                  "Uni Desk transforms Adobe Premiere Pro &amp; Media Encoder into a seamless hands-free batch powerhouse."
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Core Features Section -->
+    <section class="features-section" id="features">
+      <div class="container">
+        
+        <div class="section-header text-center">
+          <span class="section-tag">ENGINEERED FOR SPEED</span>
+          <h2 class="section-title">Built for High-Stakes Media Workflows</h2>
+          <p class="section-desc">
+            Designed specifically to eliminate repetitive manual clicks, file browsing bottlenecks, and overnight render crashes.
+          </p>
+        </div>
+
+        <div class="features-grid">
+          
+          <div class="feature-card">
+            <div class="feature-icon-wrapper gold-accent">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+              </svg>
+            </div>
+            <h3 class="feature-title">Zero-Click Domino Pipeline</h3>
+            <p class="feature-text">
+              Hands-free chaining from Media Encoder to Title Adder and Converter. Once batch rendering finishes, videos and photos automatically rename and relocate without a single user click.
+            </p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon-wrapper cyan-accent">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"/>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+            </div>
+            <h3 class="feature-title">Sub-Millisecond XML Locator</h3>
+            <p class="feature-text">
+              Traverses multi-terabyte project bins and active date folders in under 1ms with shared caching across all Adobe Premiere Pro CEP extensions, eliminating manual browsing forever.
+            </p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon-wrapper purple-accent">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+              </svg>
+            </div>
+            <h3 class="feature-title">Smart Ceremony Detection</h3>
+            <p class="feature-text">
+              Autonomous Nikah and ceremony marker recognition with intelligent ripple placement. Inserts group photos and titles across multiple audio/video tracks with zero footage cut.
+            </p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon-wrapper green-accent">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+                <line x1="12" y1="22.08" x2="12" y2="12"/>
+              </svg>
+            </div>
+            <h3 class="feature-title">Archive Vault &amp; Safar Backups</h3>
+            <p class="feature-text">
+              Root-level drive scanning, SHA-256 integrity reconciliation, and automated archive validation to ensure event footage and client deliverables are permanently secured.
+            </p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon-wrapper blue-accent">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+              </svg>
+            </div>
+            <h3 class="feature-title">4-Tone Chimes &amp; Native Alerts</h3>
+            <p class="feature-text">
+              Stay in the loop even when your workstation is locked or running overnight batches. Uni Desk plays high-fidelity completion chords and dispatches native Windows notifications.
+            </p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon-wrapper red-accent">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="2" width="20" height="8" rx="2" ry="2"/>
+                <rect x="2" y="14" width="20" height="8" rx="2" ry="2"/>
+                <line x1="6" y1="6" x2="6.01" y2="6"/>
+                <line x1="6" y1="18" x2="6.01" y2="18"/>
+              </svg>
+            </div>
+            <h3 class="feature-title">Resilient EBUSY Lock Suppression</h3>
+            <p class="feature-text">
+              Zero crash guarantee against transient Windows and OneDrive file locks during log tailing, featuring exponential backoff retries and non-blocking background threads.
+            </p>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Toolkit Modules Showcase Section -->
+    <section class="modules-section" id="modules">
+      <div class="container">
+        
+        <div class="section-header text-center">
+          <span class="section-tag">ALL-IN-ONE WORKSTATION</span>
+          <h2 class="section-title">Explore Built-In Power Modules</h2>
+          <p class="section-desc">
+            Everything your studio needs from camera ingestion to post-event cloud sync.
+          </p>
+        </div>
+
+        <div class="modules-grid">
+          
+          <div class="module-card">
+            <div class="module-badge">VIDEO AUTOMATION</div>
+            <h4 class="module-name">Title Adder</h4>
+            <p class="module-desc">Batch inject customizable lower-thirds, title cards, and animated opening sequences into Premiere projects.</p>
+          </div>
+
+          <div class="module-card">
+            <div class="module-badge">CONVERTER</div>
+            <h4 class="module-name">Media Converter &amp; Renamer</h4>
+            <p class="module-desc">Blazing fast format transcoding, audio silence-fill, and systematic naming conventions with metadata preservation.</p>
+          </div>
+
+          <div class="module-card">
+            <div class="module-badge">PREMIERE PRO</div>
+            <h4 class="module-name">Prproj Generator</h4>
+            <p class="module-desc">Autonomous Premiere project generation with predefined bin hierarchies, timeline settings, and marker templates.</p>
+          </div>
+
+          <div class="module-card">
+            <div class="module-badge">INGESTION</div>
+            <h4 class="module-name">Camera &amp; Video Transfer</h4>
+            <p class="module-desc">High-bandwidth multi-card offloading with bit-for-bit checksum verification and automated directory structure creation.</p>
+          </div>
+
+          <div class="module-card">
+            <div class="module-badge">STORAGE</div>
+            <h4 class="module-name">DriveSync &amp; Cloud Portal</h4>
+            <p class="module-desc">Synchronize project packages directly with Google Drive and enterprise network storage with background queuing.</p>
+          </div>
+
+          <div class="module-card">
+            <div class="module-badge">ORGANIZATION</div>
+            <h4 class="module-name">Archive Vault</h4>
+            <p class="module-desc">Deep cataloging of past seasons, ceremony types, client contact sheets, and historical storage metrics.</p>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Dynamic Changelog Section -->
+    <section class="changelog-section" id="changelog">
+      <div class="container">
+        
+        <div class="section-header text-center">
+          <span class="section-tag">LIVE RELEASE STREAM</span>
+          <h2 class="section-title">Changelog &amp; Release History</h2>
+          <p class="section-desc">
+            Live updates fetched directly from our build manifest. See what's new in every production release.
+          </p>
+        </div>
+
+        <!-- Release Container populated by app.js -->
+        <div class="changelog-wrapper">
+          
+          <div class="changelog-controls">
+            <div class="changelog-tabs">
+              <button class="cl-tab active" data-filter="all" onclick="UniDeskApp.filterChangelog('all', this)">Latest Release</button>
+              <button class="cl-tab" data-filter="whats_new" onclick="UniDeskApp.filterChangelog('whats_new', this)">What's New</button>
+              <button class="cl-tab" data-filter="bugs_fixed" onclick="UniDeskApp.filterChangelog('bugs_fixed', this)">Bug Fixes</button>
+              <button class="cl-tab" data-filter="improvements" onclick="UniDeskApp.filterChangelog('improvements', this)">Improvements</button>
+              <button class="cl-tab" data-filter="history" onclick="UniDeskApp.filterChangelog('history', this)">Past Releases</button>
+            </div>
+            
+            <div class="changelog-search">
+              <input type="text" id="cl-search-input" placeholder="Search fixes, features..." oninput="UniDeskApp.searchChangelog(this.value)">
+            </div>
+          </div>
+
+          <div id="changelog-content" class="changelog-card">
+            <div class="loading-spinner">
+              <div class="spinner"></div>
+              <span>Fetching live release notes...</span>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- System Requirements Section -->
+    <section class="specs-section" id="specs">
+      <div class="container">
+        
+        <div class="section-header text-center">
+          <span class="section-tag">COMPATIBILITY</span>
+          <h2 class="section-title">System Requirements</h2>
+          <p class="section-desc">
+            Engineered to run efficiently on standard editing laptops up to multi-GPU studio workstations.
+          </p>
+        </div>
+
+        <div class="specs-table-wrapper">
+          <table class="specs-table">
+            <thead>
+              <tr>
+                <th>Component</th>
+                <th>Minimum Requirement</th>
+                <th>Recommended Studio Setup</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Operating System</strong></td>
+                <td>Windows 10 64-bit (Build 1809+) or Linux (x64)</td>
+                <td>Windows 11 Pro 64-bit (Latest Update)</td>
+              </tr>
+              <tr>
+                <td><strong>Processor</strong></td>
+                <td>Intel Core i5 (8th Gen) or AMD Ryzen 5</td>
+                <td>Intel Core i7/i9 (12th Gen+) or AMD Ryzen 7/9</td>
+              </tr>
+              <tr>
+                <td><strong>Memory (RAM)</strong></td>
+                <td>8 GB System RAM</td>
+                <td>32 GB+ High-Speed RAM</td>
+              </tr>
+              <tr>
+                <td><strong>Storage</strong></td>
+                <td>1 GB free disk space for application files</td>
+                <td>Fast NVMe SSD for active project cache</td>
+              </tr>
+              <tr>
+                <td><strong>Adobe Integration</strong></td>
+                <td>Adobe Premiere Pro 2021+ &amp; Media Encoder</td>
+                <td>Adobe Creative Cloud 2024 / 2025 with CEP support</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="faq-section">
+      <div class="container">
+        <div class="section-header text-center">
+          <span class="section-tag">ANSWERS</span>
+          <h2 class="section-title">Frequently Asked Questions</h2>
+        </div>
+
+        <div class="faq-accordion">
+          
+          <div class="faq-item" onclick="UniDeskApp.toggleFaq(this)">
+            <div class="faq-question">
+              <span>How do I install the downloaded .exe installer?</span>
+              <span class="faq-chevron">+</span>
+            </div>
+            <div class="faq-answer">
+              <p>Once you click the download button, run <code>Uni Desk_Setup_V26.10.0.exe</code>. The NSIS installer will guide you through directory setup and automatically configure desktop shortcuts and background auto-update hooks. No complex prerequisites are needed.</p>
+            </div>
+          </div>
+
+          <div class="faq-item" onclick="UniDeskApp.toggleFaq(this)">
+            <div class="faq-question">
+              <span>Is Uni Desk available on the Microsoft Store?</span>
+              <span class="faq-chevron">+</span>
+            </div>
+            <div class="faq-answer">
+              <p>Yes! Uni Desk is packaged for the Microsoft Store. You can install it with a single click directly from the Store app or via our website's Store badge. Store builds receive background updates seamlessly without triggering Windows UAC prompts.</p>
+            </div>
+          </div>
+
+          <div class="faq-item" onclick="UniDeskApp.toggleFaq(this)">
+            <div class="faq-question">
+              <span>Can I use Uni Desk alongside my existing Premiere Pro workflows?</span>
+              <span class="faq-chevron">+</span>
+            </div>
+            <div class="faq-answer">
+              <p>Uni Desk operates non-destructively alongside Adobe Premiere Pro and Media Encoder via native CEP extensions and lightweight file watchers. Your raw sequence files, color grades, and audio tracks remain 100% untouched.</p>
+            </div>
+          </div>
+
+          <div class="faq-item" onclick="UniDeskApp.toggleFaq(this)">
+            <div class="faq-question">
+              <span>How do I verify the integrity of the downloaded file?</span>
+              <span class="faq-chevron">+</span>
+            </div>
+            <div class="faq-answer">
+              <p>Open PowerShell and run: <code>Get-FileHash ".\Uni Desk_Setup_V26.10.0.exe" -Algorithm SHA256</code>. Compare the output string against the SHA-256 checksum displayed on our download card.</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Publisher / Store Guide Modal -->
+  <div class="modal-overlay" id="store-guide-modal" onclick="UniDeskApp.handleModalBackdrop(event)">
+    <div class="modal-window">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <svg class="ms-modal-icon" viewBox="0 0 24 24">
+            <path fill="#f25022" d="M1 1h10v10H1z"/>
+            <path fill="#00a4ef" d="M13 1h10v10H13z"/>
+            <path fill="#7fba00" d="M1 13h10v10H1z"/>
+            <path fill="#ffb900" d="M13 13h10v10H13z"/>
+          </svg>
+          <div>
+            <h3>Microsoft Store Integration &amp; Publishing Guide</h3>
+            <span class="modal-sub">How this app is configured for Microsoft Partner Center</span>
+          </div>
+        </div>
+        <button class="btn-close-modal" onclick="UniDeskApp.closeStoreGuideModal()">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <p>Uni Desk supports two publication pathways on the Microsoft Store:</p>
+        
+        <div class="guide-step">
+          <div class="step-num">1</div>
+          <div class="step-details">
+            <h4>Direct Win32 (.EXE) URL Submission (Recommended)</h4>
+            <p>Microsoft Partner Center allows submitting traditional desktop .exe installers hosted directly on your website HTTPS URL. When users install via Microsoft Store, Windows automatically downloads this latest executable and runs silent installation using <code>/S</code> flag.</p>
+            <div class="code-snippet">
+              <code>Installer URL: https://bsframework.com/onetap/downloads/Uni_Desk_Setup_V26.10.0.exe<br>Silent Switch: /S</code>
+            </div>
+          </div>
+        </div>
+
+        <div class="guide-step">
+          <div class="step-num">2</div>
+          <div class="step-details">
+            <h4>Native MSIX Package Store Submission</h4>
+            <p>Alternatively, the application can be built into a signed <code>.msix</code> container using <code>electron-builder --win appx</code> or the Windows MSIX Packaging Tool for standard sandboxed distribution.</p>
+          </div>
+        </div>
+
+        <div class="guide-step">
+          <div class="step-num">3</div>
+          <div class="step-details">
+            <h4>Microsoft Store Product ID Configuration</h4>
+            <p>Once approved in Microsoft Partner Center, update <code>CONFIG.msStoreId</code> in <code>website/app.js</code> with your assigned Product ID (e.g., <code>9NXXXXXXXXXX</code>) to enable automatic 1-click deep-linking.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-modal-action" onclick="UniDeskApp.closeStoreGuideModal()">Got It</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Site Footer -->
+  <footer class="site-footer">
+    <div class="container footer-content">
+      
+      <div class="footer-brand-col">
+        <div class="brand-identity">
+          <img src="assets/logo.png" alt="Uni Desk Logo" class="brand-logo" onerror="this.src='assets/zen_logo.png'">
+          <span class="brand-name">Uni Desk</span>
+        </div>
+        <p class="footer-tagline">
+          Professional Workstation &amp; Media Automation Toolkit engineered by BS Framework.
+        </p>
+        <p class="footer-contact">
+          Technical Support: <a href="mailto:support@bsframework.com">support@bsframework.com</a>
+        </p>
+      </div>
+
+      <div class="footer-links-col">
+        <h5 class="footer-heading">Product</h5>
+        <ul class="footer-list">
+          <li><a href="#features">Features</a></li>
+          <li><a href="#modules">Toolkit Modules</a></li>
+          <li><a href="#download">Download Latest .EXE</a></li>
+          <li><a href="#store">Microsoft Store</a></li>
+          <li><a href="#changelog">Full Changelog</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-links-col">
+        <h5 class="footer-heading">Platform</h5>
+        <ul class="footer-list">
+          <li><a href="#specs">Windows Requirements</a></li>
+          <li><a href="#more-platforms">Portable Edition</a></li>
+          <li><a href="#more-platforms">Linux AppImage</a></li>
+          <li><a href="javascript:void(0)" onclick="UniDeskApp.openStoreGuideModal()">Store Submission Guide</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-links-col">
+        <h5 class="footer-heading">About BS Framework</h5>
+        <p class="footer-desc">
+          High-performance production utilities designed for editors, post-houses, and ceremony studios worldwide.
+        </p>
+        <div class="footer-badge">
+          <span>Copyright &copy; 2026 BS Framework. All rights reserved.</span>
+        </div>
+      </div>
+
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

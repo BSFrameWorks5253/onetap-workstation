@@ -1,0 +1,139 @@
+/* Astral Frontier Geometric Preloader */
+.astral-preloader-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  user-select: none;
+  font-family: var(--font-mono, monospace);
+}
+
+.astral-core-wrapper {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.astral-orbit {
+  position: absolute;
+  border-radius: 50%;
+  border: 1.5px dashed var(--theme-accent, #B8860B);
+  opacity: 0.45;
+}
+
+.astral-orbit-outer {
+  width: 130px;
+  height: 130px;
+  animation: astralSpinCW 16s linear infinite;
+  border-style: dotted;
+  border-color: rgba(184, 134, 11, 0.4);
+}
+
+.astral-orbit-middle {
+  width: 100px;
+  height: 100px;
+  animation: astralSpinCCW 10s linear infinite;
+  border: 1px solid rgba(184, 134, 11, 0.6);
+  border-left-color: transparent;
+  border-bottom-color: transparent;
+}
+
+.astral-orbit-inner {
+  width: 74px;
+  height: 74px;
+  animation: astralSpinCW 6s linear infinite;
+  border: 2px solid var(--theme-accent, #B8860B);
+  border-right-color: transparent;
+}
+
+.astral-polyhedron {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  transform: rotate(45deg);
+  border: 1.5px solid var(--theme-accent, #B8860B);
+  animation: astralPolyPulse 3s ease-in-out infinite;
+}
+
+.astral-node {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: var(--theme-accent, #B8860B);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--theme-accent, #B8860B);
+}
+
+.astral-node-1 { top: -3px; left: -3px; }
+.astral-node-2 { bottom: -3px; right: -3px; }
+.astral-node-3 { top: -3px; right: -3px; }
+
+.astral-center-percent {
+  position: relative;
+  z-index: 2;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text-primary, #1A1613);
+  letter-spacing: -0.02em;
+}
+
+.astral-telemetry {
+  display: flex;
+  gap: 16px;
+  font-size: 10px;
+  color: var(--text-muted, #685B4E);
+  letter-spacing: 0.12em;
+}
+
+@keyframes astralSpinCW {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes astralSpinCCW {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(-360deg); }
+}
+
+@keyframes astralPolyPulse {
+  0%, 100% { transform: rotate(45deg) scale(0.95); opacity: 0.8; }
+  50% { transform: rotate(135deg) scale(1.08); opacity: 1; }
+}
+
+[data-theme="dark"] .astral-orbit-outer,
+.astral-preloader-container.theme-dark .astral-orbit-outer {
+  border-color: rgba(129, 140, 248, 0.4);
+}
+
+[data-theme="dark"] .astral-orbit-middle,
+.astral-preloader-container.theme-dark .astral-orbit-middle {
+  border-color: rgba(129, 140, 248, 0.6);
+  border-left-color: transparent;
+  border-bottom-color: transparent;
+}
+
+[data-theme="dark"] .astral-orbit-inner,
+.astral-preloader-container.theme-dark .astral-orbit-inner {
+  border-color: #818CF8;
+  border-right-color: transparent;
+}
+
+[data-theme="dark"] .astral-polyhedron,
+.astral-preloader-container.theme-dark .astral-polyhedron {
+  border-color: #818CF8;
+}
+
+[data-theme="dark"] .astral-node,
+.astral-preloader-container.theme-dark .astral-node {
+  background: #818CF8;
+  box-shadow: 0 0 10px #818CF8;
+}
+
+[data-theme="dark"] .astral-center-percent,
+.astral-preloader-container.theme-dark .astral-center-percent {
+  color: #F8FAFC;
+}

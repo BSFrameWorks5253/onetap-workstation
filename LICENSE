@@ -1,0 +1,130 @@
+# SOFTWARE LICENSE AGREEMENT & END USER LICENSE AGREEMENT (EULA)
+**UNIDESK STUDIO™ // ONE TAP WORKSTATION**  
+**Version:** 26.10  
+**Effective Date:** October 15, 2026  
+**Copyright © 2024-2026 BS Framework (BSFrameWorks5253). All rights reserved.**
+
+---
+
+### IMPORTANT — READ CAREFULLY BEFORE INSTALLING OR USING THIS SOFTWARE
+THIS SOFTWARE LICENSE AGREEMENT ("AGREEMENT") IS A LEGALLY BINDING AGREEMENT BETWEEN YOU (EITHER AN INDIVIDUAL OR A SINGLE LEGAL ENTITY, HEREINAFTER REFERRED TO AS "LICENSEE", "YOU", OR "YOUR") AND **BS FRAMEWORK** (HEREINAFTER REFERRED TO AS "LICENSOR", "BS FRAMEWORK", "WE", "US", OR "OUR"). 
+
+BY DOWNLOADING, INSTALLING, COPYING, ACCESSING, OR OTHERWISE USING THE **UNIDESK STUDIO** SOFTWARE, ITS ACCOMPANYING LIBRARIES, DOCUMENTATION, PLUGINS, EXTENSIONS, OR ASSETS (COLLECTIVELY, THE "SOFTWARE"), YOU AGREE TO BE UNCONDITIONALLY BOUND BY THE TERMS AND CONDITIONS OF THIS AGREEMENT. 
+
+IF YOU DO NOT AGREE TO THE TERMS OF THIS AGREEMENT, DO NOT DOWNLOAD, INSTALL, COPY, OR USE THE SOFTWARE.
+
+---
+
+### 1. DEFINITIONS
+
+- **"Software"** means the UniDesk Studio application (formerly known as One Tap Workstation), including but not limited to the compiled executable binaries, Electron main and renderer modules, CEP extensions, ExtendScript automation scripts, user interface designs, themes, icons, preloader animations, and accompanying digital documentation.
+- **"Output Deliverables"** means any digital media, including rendered video sequences, MP4/MKV files, transcode deliverables, renamed photographs, metadata indices, Excel spreadsheets, and project directories generated or processed by Licensee using the Software.
+- **"Workstation"** means a single physical or virtual computing machine (desktop, laptop, or edit bay) running Windows 10, Windows 11, or supported Linux distributions on which the Software is executed.
+- **"Commercial Use"** means utilizing the Software within a commercial video production studio, broadcast facility, freelance post-production operation, wedding event studio, agency, or corporate enterprise environment for revenue-generating activities.
+
+---
+
+### 2. GRANT OF LICENSE
+
+#### 2.1 Commercial & Personal Studio License Grant
+Subject to the terms and conditions of this Agreement, Licensor hereby grants Licensee a non-exclusive, non-transferable, revocable license to install, execute, and utilize the Software on authorized Workstations for both personal creative endeavors and professional commercial production operations.
+
+#### 2.2 Output Deliverables Ownership (100% Unrestricted)
+**Licensor claims zero ownership, royalties, or copyright interest in any Output Deliverables generated through the Software.**  
+Licensee retains exclusive, 100% unrestricted ownership, copyright, and distribution rights to all videos, sequences, photos, audio tracks, and client projects edited, automated, or exported through UniDesk Studio. You are free to commercially license, broadcast, monetize, and distribute your output files without royalty payments or attribution obligations to Licensor.
+
+---
+
+### 3. PROPRIETARY RIGHTS & INTELLECTUAL PROPERTY
+
+#### 3.1 Ownership of Software
+The Software is licensed, not sold. Licensor retains all right, title, interest, and intellectual property rights in and to the Software, including but not limited to all source code, algorithms, hardware acceleration abstractions, user interface designs, audio compositions (completion chimes), trademark designs, and documentation. All rights not expressly granted to Licensee under this Agreement are strictly reserved by Licensor.
+
+#### 3.2 Trademarks
+"UniDesk", "UniDesk Studio", "One Tap", "Domino Automation", and related brand logos, iconography, and wordmarks are proprietary trademarks of BS Framework. This Agreement does not grant Licensee any rights to use Licensor's trademarks or service marks except as necessary for ordinary descriptive attribution of the Software.
+
+---
+
+### 4. RESTRICTIONS & ACCEPTABLE USE
+
+Licensee agrees NOT to:
+1. **Decompile or Reverse Engineer**: Reverse engineer, decompile, disassemble, unpack, decrypt, or otherwise attempt to derive source code from any compiled binary (`.exe`, `.dll`, or packaged node archive) of the Software, except to the extent that such activity cannot be restricted by applicable governing law.
+2. **Redistribute & Sublicense**: Rent, lease, loan, sell, sublicense, distribute, host as a cloud-based Software-as-a-Service (SaaS), or provide time-sharing access to the Software to any third party without explicit prior written authorization from Licensor.
+3. **White-Labeling & Resale**: Repackage, rebrand, or market the Software as an independent product or commercial derivative under an altered product name.
+4. **Circumvent Security Controls**: Modify, disable, or tamper with application integrity checks, cryptographic hashes, or license validation systems embedded within the Software.
+5. **Unlawful Exploitation**: Use the Software in violation of any applicable local, national, or international copyright, privacy, or export control laws.
+
+---
+
+### 5. PRIVACY & LOCAL DATA PROCESSING GUARANTEE
+
+#### 5.1 Strictly On-Premise Operation
+**Your media stays on your machine.**  
+Licensor recognizes that video production and wedding event archives contain sensitive, confidential, and high-value private client footage. The Software executes all video rendering, title insertion, photo renaming, and directory manipulation **100% locally on Licensee's Workstation**.
+
+#### 5.2 Zero Remote Media Transmission
+The Software **does not** transmit, upload, or mirror Licensee's video files, camera JPEGs, project XMLs, or event folders to external servers or third-party cloud infrastructure. All local knowledge bases (`.code-analysis/`), token cache indices, and SQLite state databases remain solely on Licensee's local storage drives.
+
+---
+
+### 6. THIRD-PARTY & OPEN-SOURCE SOFTWARE ATTRIBUTIONS
+
+The Software utilizes and interfaces with certain third-party libraries, toolkits, and open-source frameworks. Nothing in this Agreement restricts or overrides Licensee's rights under the respective open-source licenses governing those components.
+
+| Component / Framework | Author / Maintainer | License | Primary Function |
+| :--- | :--- | :---: | :--- |
+| **Electron** | OpenJS Foundation / Contributors | MIT | Native Desktop Application Runtime |
+| **React &amp; React DOM** | Meta Platforms, Inc. | MIT | Declarative Component User Interface |
+| **TypeScript** | Microsoft Corporation | Apache 2.0 | Static Type Verification & Compiler |
+| **FFmpeg** | FFmpeg Developers | LGPL v2.1+ / GPL v3 | Hardware Accelerated Video Encoding (NVENC/QSV) |
+| **Vite &amp; electron-vite** | Evan You &amp; Contributors | MIT | Next-Gen Bundler & Build Tooling |
+| **Zustand** | Paul Henschel &amp; Contributors | MIT | Lightweight Workstation State Management |
+| **marked** | Christopher Jeffrey | MIT | Markdown Parsing & Documentation Rendering |
+| **Lucide Icons** | Lucide Contributors | ISC | Workstation System & Control Iconography |
+
+---
+
+### 7. DISCLAIMER OF WARRANTIES
+
+THE SOFTWARE IS PROVIDED ON AN **"AS IS"** AND **"AS AVAILABLE"** BASIS, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, STATUTORY OR OTHERWISE. 
+
+TO THE MAXIMUM EXTENT PERMITTED UNDER APPLICABLE LAW, LICENSOR EXPRESSLY DISCLAIMS ALL WARRANTIES, INCLUDING BUT NOT LIMITED TO:
+1. IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
+2. WARRANTIES THAT THE SOFTWARE WILL FUNCTION ERROR-FREE, UNINTERRUPTED, OR COMPATIBLE WITH EVERY HARDWARE CONFIGURATION, GPU DRIVER VERSION, OR THIRD-PARTY NLE EXTENSION.
+3. WARRANTIES REGARDING TIMELINESS, ACCURACY, OR RELIABILITY OF ESTIMATED REMAINING RENDER TIMES OR DIRECTORY MONITOR TELEMETRY.
+
+LICENSEE ASSUMES FULL RESPONSIBILITY FOR SELECTING THE SOFTWARE TO ACHIEVE DESIRED RESULTS AND FOR VERIFYING THE INTEGRITY AND BACKUP OF SOURCE FOOTAGE AND EVENT ASSETS PRIOR TO BATCH PROCESSING.
+
+---
+
+### 8. LIMITATION OF LIABILITY
+
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT SHALL LICENSOR, ITS DIRECTORS, EMPLOYEES, AFFILIATES, OR LICENSORS BE LIABLE TO LICENSEE OR ANY THIRD PARTY FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, EXEMPLARY, OR PUNITIVE DAMAGES (INCLUDING BUT NOT LIMITED TO LOSS OF PROFITS, LOSS OF REVENUE, LOSS OF FOOTAGE OR DATA, SYSTEM DOWNTIME, OR MISSED PRODUCTION BROADCAST DEADLINES) ARISING OUT OF OR IN CONNECTION WITH THE USE OR INABILITY TO USE THE SOFTWARE, REGARDLESS OF THE THEORY OF LIABILITY (CONTRACT, TORT, NEGLIGENCE, STRICT LIABILITY, OR OTHERWISE), EVEN IF LICENSOR HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+
+IN NO EVENT SHALL LICENSOR’S AGGREGATE CUMULATIVE LIABILITY UNDER THIS AGREEMENT EXCEED THE TOTAL AMOUNT ACTUALLY PAID BY LICENSEE FOR THE SOFTWARE LICENSE DURING THE TWELVE (12) MONTHS PRECEDING THE CLAIM, OR ONE HUNDRED UNITED STATES DOLLARS ($100.00 USD), WHICHEVER IS GREATER.
+
+---
+
+### 9. TERM & TERMINATION
+
+This Agreement remains in effect until terminated. 
+- Licensee may terminate this Agreement at any time by ceasing all use and destroying all copies of the Software in Licensee's possession or control.
+- Licensor may terminate this Agreement immediately without notice if Licensee breaches any material provision of this Agreement, including but not limited to the restrictions in Section 4.
+- Upon termination, Licensee must immediately remove and uninstall all copies of the Software from all Workstations. Sections 3, 4, 7, 8, and 10 shall survive any termination of this Agreement.
+
+---
+
+### 10. GOVERNING LAW & JURISDICTION
+
+This Agreement shall be governed by, construed, and enforced in accordance with the substantive laws of the applicable jurisdiction of Licensor, without giving effect to any conflict of law principles that would result in the application of the laws of another jurisdiction. The United Nations Convention on Contracts for the International Sale of Goods (CISG) shall not apply to this Agreement.
+
+---
+
+### 11. CONTACT & INQUIRIES
+
+For enterprise licensing inquiries, multi-seat studio deployment agreements, custom Premiere Pro workflow extensions, or technical support, please contact:
+
+**BS Framework**  
+- **Email:** `bs.framework5253@gmail.com`  
+- **Support & Portal:** [https://github.com/BSFrameWorks5253/onetap-workstation](https://github.com/BSFrameWorks5253/onetap-workstation)  
+- **Official Publisher:** BS Framework Studios  

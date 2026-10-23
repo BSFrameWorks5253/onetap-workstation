@@ -1,0 +1,47 @@
+I want a mine extention on the windhawk for that make a seperate full folder sturtcure 
+its features are in file exproper when the user slectes to show the properties of a folder it will show all proiperties and addistionally show from D:\ON_GOING PROJECT\One Tap_V20.6.5\Docs\safars\1448-10-Istefada ilmiyah\FOLDER_NAMING_SAMPLES.md and eeg 1448-03-13 _01M-02-01N-30338708
+  1448-02-29 _01M-01-N-
+   1448-03-13 _01M-02-01AQ-30338708
+    1448-03-13 _01M-01AQ-
+    1448-02-29 _01M-01-Z-
+numbers can varyy and 01M which is morning  can be 02E which is evening 
+main this in AQ Z N in replace ment of that anything from this D:\ON_GOING PROJECT\One Tap_V20.6.5\resources\Event List.xlsx abrevations 
+
+from that there should be a list for sharf as well how ,many mz in a folder how many N and soo on 
+also how many folder in the safar (how many days ka )  which is one step inside the main fodler 
+and everything properly if i select a date folder it shouldd show how many mints the timeline of the adobe will be (by adding all the videos time ) 
+also show how many total events and the segregates of it event-wise from this D:\ON_GOING PROJECT\One Tap_V20.6.5\resources\Event List.xlsx. It should show the abbreviations only (e.g. Q, N, Z, AQ, BM, BZ, MZ, ZO), and there should be a toggle/button to view full official event names.
+
+15: When viewing the Safar/Date folder properties in Windows File Explorer:
+    a) Level 1 (Safar Root Folder, e.g. "1448-10-Istefada ilmiyah"):
+       - Total Days count (number of date subfolders: e.g. "1448-04-05 _02E", "1448-04-18 _01M")
+       - Total Events count across the entire Safar
+       - Complete Event Breakdown list by abbreviation (count of Q, N, Z, MZ, ZO, AQ, etc.) with a toggle to view Full Names
+       - Total Video Clips count and Estimated Total Adobe Premiere Timeline Duration (sum of all raw video MP4/MOV durations formatted as HH:MM:SS)
+       - Total Disk Size and Average session duration
+
+    b) Level 2 (Date/Session Folder, e.g. "1448-04-18 _01M"):
+       - Session Type: Morning (_01M) vs Evening (_02E)
+       - Total Items/Events in this session
+       - Estimated Premiere Pro Timeline Duration (total run time of all raw video files inside the item folders)
+       - Detailed Event Distribution badge list (e.g. "12 Q | 4 N | 8 Z | 2 AQ") with click-to-expand details
+       - Presence of Final rendered outputs / Project files (.prproj) status
+
+    c) Level 3 (Individual Event/Item Folder, e.g. "1448-03-13 _01M-02-01N-30338708"):
+       - Date & Session: 1448-03-13 Session 01 Morning
+       - Item Sequence: Item 02
+       - Event Code: N (Nikah)
+       - Occurrence: 01N (1st Nikah of session)
+       - ITS Number: 30338708
+       - Raw Video Clips count & clip duration
+       - Person subfolder name (if present)
+
+16: Dedicated Folder Structure:
+    - Put everything in a clean, self-contained directory: `extensions/windhawk-safar-inspector/`
+    - Include:
+      1. `safar-folder-inspector.wh.cpp`: Complete Windhawk mod source code (C++) with Explorer Property Sheet injection / Shell extension hook.
+      2. `events_definition.h`: C++ lookup header containing all 34 official events and abbreviations from Event List.xlsx.
+      3. `safar_parser.h` & `video_duration.h`: Fast parser for folder naming conventions and MP4/MOV header duration extraction.
+      4. `mod.json` & `README.md`: Windhawk mod metadata, compiler configuration, installation instructions, and testing guide.
+      5. `test_harness.py`: Standalone CLI testing script to verify the parsing logic against real folders without needing Windhawk installed.s there no 0 counts should be shown 
+also tell what else u recommend in this 

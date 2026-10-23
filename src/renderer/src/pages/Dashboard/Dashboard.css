@@ -1,0 +1,424 @@
+/* Dashboard.css — High-End Expressive Studio Command Center */
+
+.db-page {
+  padding: var(--pad-v) var(--pad-h);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 100%;
+  position: relative;
+}
+
+.db-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 14px;
+}
+
+.db-top-section {
+  display: grid;
+  grid-template-columns: 1.35fr 0.65fr;
+  gap: 14px;
+  max-width: 100%;
+  margin-bottom: 2px;
+}
+
+@media (max-width: 1080px) {
+  .db-top-section {
+    grid-template-columns: 1fr;
+  }
+}
+
+.db-monitor-col {
+  width: 100%;
+}
+
+.db-quick-stats-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+/* ── Deluxe Quick Stat Cards ── */
+.db-quick-stat-card {
+  background: var(--surface) !important;
+  backdrop-filter: var(--glass-blur, blur(20px)) !important;
+  -webkit-backdrop-filter: var(--glass-blur, blur(20px)) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-card);
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 
+    var(--shadow-card),
+    inset 0 1px 0 0 var(--specular-highlight);
+  height: calc(50% - 6px);
+  position: relative;
+  overflow: hidden;
+  transition: transform var(--dur-normal) var(--ease-spring), border-color var(--dur-normal) ease, box-shadow var(--dur-normal) ease !important;
+}
+
+.db-quick-stat-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--theme-accent, #6366F1), transparent);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.db-quick-stat-card:hover {
+  transform: translateY(-3px) !important;
+  border-color: color-mix(in srgb, var(--theme-accent) 55%, var(--border)) !important;
+  box-shadow: 
+    0 12px 30px -6px color-mix(in srgb, var(--theme-accent) 26%, transparent),
+    inset 0 1px 0 0 var(--specular-highlight) !important;
+}
+
+.db-quick-stat-card:hover::after {
+  opacity: 1;
+}
+
+.db-quick-stat-icon {
+  font-size: 18px;
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--theme-accent) 22%, var(--surface-2)) 0%,
+    color-mix(in srgb, var(--theme-accent) 10%, var(--surface)) 100%
+  );
+  border: 1px solid color-mix(in srgb, var(--theme-accent) 35%, var(--border));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--theme-accent);
+  flex-shrink: 0;
+  box-shadow: 
+    0 4px 14px color-mix(in srgb, var(--theme-accent) 24%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  transition: transform var(--dur-normal) var(--ease-spring);
+}
+
+.db-quick-stat-card:hover .db-quick-stat-icon {
+  transform: scale(1.08) rotate(3deg);
+}
+
+.db-quick-stat-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.db-quick-stat-val {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 850;
+  color: var(--text-primary);
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.db-quick-stat-lbl {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-top: 3px;
+}
+
+.db-card-wrap {
+  cursor: pointer;
+}
+
+/* ── Deluxe Studio Action Cards ── */
+.db-action-card {
+  position: relative;
+  height: 108px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+  background: var(--surface) !important;
+  backdrop-filter: var(--glass-blur, blur(24px)) !important;
+  -webkit-backdrop-filter: var(--glass-blur, blur(24px)) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  box-shadow: 
+    var(--shadow-card),
+    inset 0 1px 0 0 var(--specular-highlight);
+  transition: transform var(--dur-normal) var(--ease-spring), border-color var(--dur-normal) ease, box-shadow var(--dur-normal) ease !important;
+}
+
+.db-action-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(
+    180deg,
+    var(--card-accent, var(--theme-accent)) 0%,
+    color-mix(in srgb, var(--card-accent, var(--theme-accent)) 70%, #A855F7) 100%
+  );
+  border-radius: 0 4px 4px 0;
+}
+
+/* Vibrant soft ambient bloom on hover */
+.db-action-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at 20% 50%,
+    color-mix(in srgb, var(--card-accent, var(--theme-accent)) 12%, transparent) 0%,
+    transparent 70%
+  );
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+}
+
+.db-action-card:hover {
+  transform: translateY(-4px) !important;
+  border-color: color-mix(in srgb, var(--card-accent, var(--theme-accent)) 55%, var(--border)) !important;
+  box-shadow: 
+    0 16px 36px -8px color-mix(in srgb, var(--card-accent, var(--theme-accent)) 28%, transparent),
+    inset 0 1px 0 0 var(--specular-highlight) !important;
+}
+
+.db-action-card:hover::after {
+  opacity: 1;
+}
+
+.db-card-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--card-accent, var(--theme-accent)) 18%, var(--surface-2)) 0%,
+    color-mix(in srgb, var(--card-accent, var(--theme-accent)) 8%, var(--surface)) 100%
+  );
+  border: 1px solid color-mix(in srgb, var(--card-accent, var(--theme-accent)) 35%, var(--border));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  flex-shrink: 0;
+  z-index: 1;
+  box-shadow: 
+    0 6px 16px color-mix(in srgb, var(--card-accent, var(--theme-accent)) 20%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  transition: transform var(--dur-normal) var(--ease-spring), box-shadow var(--dur-normal) ease;
+}
+
+.db-action-card:hover .db-card-icon {
+  transform: scale(1.1) translateY(-1px);
+  box-shadow: 
+    0 10px 24px color-mix(in srgb, var(--card-accent, var(--theme-accent)) 34%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.db-card-content {
+  flex: 1;
+  z-index: 1;
+  min-width: 0;
+}
+
+.db-card-content h3 {
+  margin: 0 0 4px;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.015em;
+  transition: color var(--dur-normal) ease;
+}
+
+.db-action-card:hover .db-card-content h3 {
+  color: color-mix(in srgb, var(--card-accent, var(--theme-accent)) 70%, var(--text-primary));
+}
+
+.db-card-content p {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.db-card-arrow {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-muted);
+  opacity: 0.45;
+  z-index: 1;
+  flex-shrink: 0;
+  transition: all 0.22s var(--ease-spring);
+}
+
+.db-action-card:hover .db-card-arrow {
+  opacity: 1;
+  transform: translateX(5px);
+  color: var(--card-accent, var(--theme-accent));
+}
+
+/* ── Workstation Command Center Hero Card ── */
+.db-welcome-card {
+  grid-column: 1 / -1;
+  padding: 24px 28px;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--theme-accent, #6366F1) 8%, var(--surface)) 0%,
+    var(--surface) 60%,
+    color-mix(in srgb, #A855F7 8%, var(--surface-2)) 100%
+  ) !important;
+  backdrop-filter: var(--glass-blur, blur(28px)) !important;
+  -webkit-backdrop-filter: var(--glass-blur, blur(28px)) !important;
+  border: 1px solid color-mix(in srgb, var(--theme-accent, #6366F1) 25%, var(--border)) !important;
+  border-radius: var(--radius-xl, 18px);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 
+    0 16px 40px -10px color-mix(in srgb, var(--theme-accent, #6366F1) 18%, transparent),
+    var(--shadow-lg),
+    inset 0 1px 0 0 var(--specular-highlight) !important;
+  transform: none !important;
+}
+
+.db-welcome-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    var(--theme-accent, #6366F1) 0%,
+    #A855F7 50%,
+    #06B6D4 100%
+  );
+  z-index: 2;
+}
+
+.db-welcome-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+  position: relative;
+  z-index: 1;
+}
+
+.db-welcome-text h2 {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 850;
+  margin: 0 0 6px;
+  color: var(--text-primary) !important;
+  letter-spacing: -0.025em;
+  line-height: 1.25;
+}
+
+.db-welcome-text p {
+  font-size: 13px;
+  max-width: 660px;
+  margin: 0;
+  color: var(--text-secondary) !important;
+  line-height: 1.5;
+  font-weight: 500;
+}
+
+.db-welcome-logo {
+  font-size: 38px;
+  font-weight: 900;
+  letter-spacing: -1.5px;
+  color: var(--theme-accent);
+  transition: transform var(--dur-normal) var(--ease-spring);
+}
+
+.db-welcome-card:hover .db-welcome-logo {
+  transform: scale(1.05) rotate(2deg);
+}
+
+/* ── Hotkey Hint Capsule ── */
+.db-hotkey-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 18px;
+  padding: 6px 14px 6px 12px;
+  background: color-mix(in srgb, var(--theme-accent, #6366F1) 6%, var(--surface-2)) !important;
+  border: 1px solid color-mix(in srgb, var(--theme-accent, #6366F1) 22%, var(--border)) !important;
+  border-radius: var(--radius-chip);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-primary) !important;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.22s var(--ease-spring) !important;
+  user-select: none;
+}
+
+.db-hotkey-hint:hover {
+  transform: translateY(-2px) !important;
+  border-color: var(--theme-accent) !important;
+  color: var(--theme-accent) !important;
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--theme-accent) 26%, transparent) !important;
+}
+
+.db-hotkey-hint kbd {
+  background: color-mix(in srgb, var(--theme-accent) 15%, var(--surface-3)) !important;
+  border: 1px solid color-mix(in srgb, var(--theme-accent) 30%, var(--border)) !important;
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--theme-accent) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+/* ── Task Rings Row ── */
+.db-task-rings-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.db-task-ring {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.db-task-ring-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+}

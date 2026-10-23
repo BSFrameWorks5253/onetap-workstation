@@ -1,0 +1,337 @@
+/* ==========================================================================
+   Adobe CC Master Studio Splash Screen & Loader for One Tap
+   Inspired by Anything Ecosystem and Adobe Creative Cloud Studio standards
+   ========================================================================== */
+
+.adobe-splash-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  background-color: rgba(14, 14, 17, 0.96);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1), transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.adobe-splash-backdrop.fade-out {
+  opacity: 0;
+  transform: scale(0.985);
+  pointer-events: none;
+}
+
+/* 740px Studio Container */
+.adobe-splash-card {
+  width: 740px;
+  max-width: 94vw;
+  border-radius: 20px;
+  overflow: hidden;
+  background: #18181B;
+  border: 1px solid #2B2B30;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  box-shadow: 0 32px 96px -12px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  animation: adobeSplashPop 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes adobeSplashPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.96) translateY(12px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Artwork Canvas Top Section */
+.adobe-splash-artwork {
+  position: relative;
+  height: 350px;
+  width: 100%;
+  overflow: hidden;
+  background: #09090b;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 28px;
+  box-sizing: border-box;
+}
+
+.adobe-splash-art-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(0.85) contrast(1.1);
+  transform: scale(1.02);
+  transition: transform 3s ease;
+}
+
+.adobe-splash-art-gradient {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 80% 20%, rgba(225, 29, 72, 0.28) 0%, transparent 60%),
+              radial-gradient(circle at 15% 85%, rgba(159, 18, 57, 0.35) 0%, transparent 55%),
+              linear-gradient(180deg, rgba(0, 0, 0, 0.45) 0%, rgba(24, 24, 27, 0.85) 85%, #18181B 100%);
+  pointer-events: none;
+}
+
+.adobe-splash-top-bar {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.adobe-splash-brand-wrap {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.adobe-splash-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.adobe-splash-title {
+  font-size: 26px;
+  font-weight: 900;
+  color: #FFFFFF;
+  margin: 0;
+  letter-spacing: -0.03em;
+  font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+}
+
+.adobe-splash-version-pill {
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.12);
+  color: #FFFFFF;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(8px);
+}
+
+.adobe-splash-tagline {
+  font-size: 12px;
+  color: rgba(228, 228, 231, 0.92);
+  font-weight: 500;
+  margin-top: 4px;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
+}
+
+.adobe-splash-skip-btn {
+  font-size: 11px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.75);
+  padding: 5px 14px;
+  border-radius: 9999px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(8px);
+}
+
+.adobe-splash-skip-btn:hover {
+  background: rgba(225, 29, 72, 0.4);
+  color: #FFFFFF;
+  border-color: rgba(255, 255, 255, 0.4);
+  transform: translateY(-1px);
+}
+
+/* Artist Capsule */
+.adobe-splash-artist-capsule {
+  position: relative;
+  z-index: 10;
+  align-self: flex-end;
+  padding: 8px 14px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.adobe-splash-capsule-badge {
+  font-size: 9px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #fda4af;
+  font-weight: 800;
+}
+
+.adobe-splash-capsule-name {
+  font-size: 12px;
+  font-weight: 800;
+  color: #FFFFFF;
+  margin-top: 2px;
+}
+
+.adobe-splash-capsule-subtitle {
+  font-size: 10px;
+  color: rgba(212, 212, 216, 0.9);
+  font-style: italic;
+  font-weight: 500;
+}
+
+/* Lower Diagnostic & Progress Canvas */
+.adobe-splash-lower {
+  padding: 24px 28px;
+  background: #18181B;
+  color: #F4F4F5;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  border-top: 1px solid rgba(63, 63, 70, 0.6);
+}
+
+.adobe-splash-diag-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.adobe-splash-diag-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.adobe-splash-spinner {
+  width: 14px;
+  height: 14px;
+  animation: adobeSpin 0.9s linear infinite;
+  color: #F43F5E;
+  flex-shrink: 0;
+}
+
+@keyframes adobeSpin {
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.adobe-splash-diag-text {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+  font-size: 11px;
+  font-weight: 500;
+  color: #E4E4E7;
+  letter-spacing: 0.02em;
+}
+
+.adobe-splash-diag-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+}
+
+.adobe-splash-pct {
+  color: #FB7185;
+  font-weight: 800;
+}
+
+/* Glowing Loader Bar with Shimmer Beam */
+.adobe-splash-bar-track {
+  width: 100%;
+  height: 8px;
+  border-radius: 9999px;
+  background: #09090B;
+  border: 1px solid rgba(63, 63, 70, 0.7);
+  overflow: hidden;
+  position: relative;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.6);
+}
+
+.adobe-splash-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #E11D48 0%, #F43F5E 50%, #F59E0B 100%);
+  border-radius: 9999px;
+  transition: width 0.08s linear;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 0 16px rgba(225, 29, 72, 0.65);
+}
+
+.adobe-splash-shimmer-beam {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.45) 50%, transparent 100%);
+  animation: adobeShimmer 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes adobeShimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Footer Metadata */
+.adobe-splash-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 10px;
+  border-top: 1px solid rgba(63, 63, 70, 0.4);
+  font-size: 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: #71717A;
+}
+
+.adobe-splash-footer-left {
+  color: #A1A1AA;
+}
+
+.adobe-splash-footer-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #A1A1AA;
+}
+
+.adobe-splash-led {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #34D399;
+  box-shadow: 0 0 8px #34D399;
+  animation: adobePulse 1.8s ease-in-out infinite;
+}
+
+@keyframes adobePulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.85);
+  }
+}

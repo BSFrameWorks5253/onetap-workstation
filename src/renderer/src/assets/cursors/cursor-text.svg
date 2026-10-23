@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="12" height="15" viewBox="0 0 12 15" fill="none">
+  <!-- macOS Text I-Beam Cursor with Contrast Halo (Compact 12x15) -->
+  <path d="M 3 1.5 L 9 1.5 M 6 1.5 L 6 13.5 M 3 13.5 L 9 13.5" 
+        stroke="#FFFFFF" 
+        stroke-width="2.6" 
+        stroke-linecap="round"/>
+  <path d="M 3.4 1.5 L 8.6 1.5 M 6 1.5 L 6 13.5 M 3.4 13.5 L 8.6 13.5" 
+        stroke="#000000" 
+        stroke-width="1.2" 
+        stroke-linecap="round"/>
+</svg>

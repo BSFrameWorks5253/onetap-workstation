@@ -1,0 +1,78 @@
+/* PageLoader.css */
+.page-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 80px 32px 32px;
+  height: 100%;
+  gap: 28px;
+  animation: fadeIn 0.2s ease both;
+  background: var(--bg);
+}
+
+.page-loader-inner {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.page-loader-logo-wrap {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  opacity: 0.15;
+  filter: grayscale(1);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.page-loader-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.page-loader-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 4px solid var(--border);
+  border-top-color: var(--loader-color, var(--accent-adder));
+  animation: spin 1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.page-loader-icon {
+  font-size: 32px;
+  z-index: 1;
+  animation: scaleIn 0.4s var(--ease-spring) both;
+}
+
+.page-loader-text-wrap {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.page-loader-label {
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.page-loader-sub {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.page-loader-skeletons {
+  width: 100%;
+  max-width: 640px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 20px;
+}

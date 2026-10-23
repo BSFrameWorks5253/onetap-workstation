@@ -1,0 +1,261 @@
+/* ====================================================================
+   PV SEPARATOR PAGE — ONE TAP WORKSTATION DESIGN SYSTEM
+   Clean spacing, static cards (no card hover transform), button-only hover effects
+   ==================================================================== */
+
+.pvs-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px;
+  max-width: 1240px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Strictly disable card hover elevation/transforms — hover effects applied ONLY to buttons */
+.pvs-page .card:hover {
+  transform: none !important;
+  box-shadow: var(--shadow-sm) !important;
+  border-color: var(--glass-border) !important;
+}
+
+/* 2-Column Split Layout */
+.pvs-grid {
+  display: grid;
+  grid-template-columns: 460px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.pvs-col-left,
+.pvs-col-right {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.pvs-card-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Folder Pickers List */
+.pvs-folders-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.pvs-mode-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pvs-section-label {
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+/* Mode Selection Pills */
+.pvs-mode-pills {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  background: var(--surface-2);
+  padding: 5px;
+  border-radius: var(--radius-sm, 10px);
+  border: 1px solid var(--border-subtle);
+}
+
+.pvs-mode-pill {
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.83rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--dur-fast) ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.pvs-mode-pill:hover {
+  color: var(--text-primary);
+  background: var(--surface-3);
+}
+
+.pvs-mode-pill.active {
+  background: var(--theme-accent, #6366F1);
+  color: #FFFFFF;
+  border-color: var(--theme-accent, #6366F1);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--theme-accent, #6366F1) 35%, transparent);
+}
+
+.pvs-main-action-area {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+/* Main Start Photo Extraction Button */
+.pvs-start-btn {
+  width: 100% !important;
+  height: 48px !important;
+  font-size: 0.98rem !important;
+  font-weight: 700 !important;
+  background: var(--theme-accent, #6366f1) !important;
+  border-color: var(--theme-accent, #6366f1) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35), 0 2px 6px rgba(0, 0, 0, 0.1) !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  border-radius: var(--radius-md, 10px) !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.pvs-start-btn:hover:not(:disabled) {
+  background: #4f46e5 !important;
+  border-color: #4f46e5 !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.55), 0 4px 10px rgba(0, 0, 0, 0.15) !important;
+  color: #ffffff !important;
+}
+
+.pvs-start-btn:active:not(:disabled) {
+  transform: translateY(0px) scale(0.98) !important;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4) !important;
+}
+
+.pvs-start-btn:disabled {
+  opacity: 0.55 !important;
+  box-shadow: none !important;
+  transform: none !important;
+  cursor: not-allowed !important;
+}
+
+.pvs-status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Empty HUD State */
+.pvs-empty-hud {
+  padding: 48px 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.pvs-empty-icon {
+  font-size: 44px;
+  opacity: 0.7;
+}
+
+.pvs-empty-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.pvs-empty-desc {
+  font-size: 0.83rem;
+  color: var(--text-secondary);
+  max-width: 380px;
+  line-height: 1.5;
+}
+
+/* HUD Stat Cards Grid */
+.pvs-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+/* Extension Category Cards */
+.pvs-ext-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.pvs-ext-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.pvs-ext-body {
+  padding: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 80px;
+  max-height: 140px;
+  overflow-y: auto;
+}
+
+.pvs-tag-pill {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 6px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pvs-tag-pill-count {
+  opacity: 0.65;
+  font-size: 0.72rem;
+}
+
+.pvs-tags-empty {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 6px;
+}
+
+/* Execution Action Row */
+.pvs-action-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 18px;
+}
+
+.pvs-progress-flex {
+  flex: 1;
+}
+
+/* Responsive Grid */
+@media (max-width: 1020px) {
+  .pvs-grid {
+    grid-template-columns: 1fr;
+  }
+  .pvs-stats-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .pvs-ext-grid {
+    grid-template-columns: 1fr;
+  }
+}

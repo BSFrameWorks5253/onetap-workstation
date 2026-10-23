@@ -1,0 +1,193 @@
+/* Card.css — Stable Clean Expressive Glass Cards */
+
+/* ── Base Card ──────────────────────────────── */
+.card {
+  background: var(--surface);
+  backdrop-filter: var(--glass-blur, blur(24px));
+  -webkit-backdrop-filter: var(--glass-blur, blur(24px));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card, 16px);
+  overflow: hidden;
+  position: relative;
+  box-shadow: 
+    var(--shadow-card),
+    inset 0 1px 0 0 var(--specular-highlight);
+  transition: border-color var(--dur-normal) ease, box-shadow var(--dur-normal) ease, transform var(--dur-normal) var(--ease-spring);
+}
+
+.card:hover {
+  border-color: color-mix(in srgb, var(--card-accent, var(--theme-accent)) 50%, var(--border));
+  box-shadow: 
+    var(--shadow-card-hover),
+    inset 0 1px 0 0 var(--specular-highlight);
+}
+
+/* Subtle top gradient accent line */
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent 0%, var(--card-accent, var(--theme-accent, #6366F1)) 50%, transparent 100%);
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0.85;
+}
+
+/* Dropzone drop target pulse & micro-interactions when dragging files */
+@keyframes dropzonePulse {
+  0% { 
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--theme-accent) 45%, transparent); 
+    border-color: var(--theme-accent); 
+  }
+  50% { 
+    box-shadow: 0 0 28px 10px color-mix(in srgb, var(--theme-accent) 30%, transparent); 
+    border-color: var(--theme-accent-hv); 
+  }
+  100% { 
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--theme-accent) 45%, transparent); 
+    border-color: var(--theme-accent); 
+  }
+}
+
+.dropzone-active,
+.card--dragover {
+  animation: dropzonePulse 1.5s infinite cubic-bezier(0.4, 0, 0.2, 1);
+  transform: scale(1.01) !important;
+  background: color-mix(in srgb, var(--theme-accent) 10%, var(--surface)) !important;
+  border-color: var(--theme-accent) !important;
+}
+
+/* ── Card Header ────────────────────────────── */
+.card-header {
+  display: flex;
+  align-items: center;
+  height: 48px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+  z-index: 1;
+}
+
+/* Left accent stripe */
+.card-header-stripe {
+  width: 4px;
+  align-self: stretch;
+  flex-shrink: 0;
+  background: var(--card-accent, var(--theme-accent));
+  border-radius: 0 4px 4px 0;
+}
+
+.card-header-title {
+  font-family: var(--font-display);
+  font-size: var(--text-sm, 13px);
+  font-weight: 850;
+  padding: 0 16px;
+  flex: 1;
+  position: relative;
+  z-index: 1;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+.card-header-right {
+  padding-right: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Page Hero Banner ─────────────────────── */
+.page-hero {
+  background: var(--surface);
+  backdrop-filter: var(--glass-blur, blur(28px));
+  -webkit-backdrop-filter: var(--glass-blur, blur(28px));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card, 16px);
+  overflow: hidden;
+  flex-shrink: 0;
+  margin: 0;
+  box-shadow: 
+    var(--shadow-card),
+    inset 0 1px 0 0 var(--specular-highlight);
+  position: relative;
+}
+
+.page-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 85% 50%, color-mix(in srgb, var(--theme-accent) 14%, transparent) 0%, transparent 65%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.page-hero-stripe {
+  height: 4px;
+  position: relative;
+  z-index: 1;
+  background: linear-gradient(90deg, var(--theme-accent), #EC4899, #F59E0B, #06B6D4, var(--theme-accent));
+  background-size: 300% 100%;
+  animation: shimmerSweep 6s linear infinite;
+}
+
+.page-hero-inner {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 18px var(--pad-h, 18px);
+  position: relative;
+  z-index: 1;
+}
+
+.page-hero-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 26px;
+  background: linear-gradient(135deg, var(--theme-accent), var(--theme-accent-hv, var(--theme-accent)));
+  color: #FFFFFF;
+  box-shadow: 
+    0 8px 24px color-mix(in srgb, var(--theme-accent) 35%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.page-hero-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.page-hero-title {
+  font-family: var(--font-display);
+  font-size: var(--text-xl, 22px);
+  font-weight: 850;
+  color: var(--text-primary);
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+  margin: 0;
+}
+
+.page-hero-subtitle {
+  font-size: var(--text-sm, 12.5px);
+  color: var(--text-secondary);
+  margin-top: 4px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.page-hero-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}

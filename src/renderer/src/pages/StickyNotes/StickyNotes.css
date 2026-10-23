@@ -1,0 +1,798 @@
+/* ============================================================
+   STICKY HUB (NOTES & LINKS) - PREMIUM WORKSPACE STYLES
+   ============================================================ */
+
+.sh-page {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: pageEnter var(--dur-slow) var(--ease-out);
+  height: 100%;
+  overflow-y: auto;
+}
+
+.sh-header-compact {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 16px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+}
+
+.sh-header-compact h2 {
+  font-size: 18px;
+  font-weight: 800;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+/* ── MODERN FILTERS PILLS ─────────────────────────────────── */
+.sh-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-card);
+  width: 100%;
+  max-width: 100%;
+}
+
+.sh-filters button {
+  background: transparent;
+  color: var(--text-secondary);
+  border: none;
+  padding: 8px 16px;
+  font-size: var(--text-sm);
+  font-family: var(--font-display);
+  font-weight: 600;
+  border-radius: var(--radius-btn);
+  cursor: pointer;
+  transition: all var(--dur-fast) var(--ease-out);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sh-filters button:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.sh-filters button.active {
+  color: var(--text-on-accent);
+  background: linear-gradient(135deg, var(--accent-notes), var(--accent-folder));
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--accent-notes) 35%, transparent);
+}
+
+.sh-filter-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--glass-border);
+  margin: 0 4px;
+}
+
+/* ── GRID LAYOUT ─────────────────────────────────────────── */
+.sh-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+  padding-bottom: 40px;
+}
+
+/* ── GLASSMORPHIC CARDS ───────────────────────────────────── */
+.sh-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 22px;
+  min-height: 180px;
+  border-radius: var(--radius-card);
+  transition: all var(--dur-normal) var(--ease-spring);
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+  animation: slideUpFade var(--dur-slow) var(--ease-spring) both;
+}
+
+.sh-card:hover {
+  transform: translateY(-6px) scale(1.013);
+  box-shadow: 0 16px 40px var(--shadow-glow), 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Glass background overlay glow */
+.sh-card-glow {
+  position: absolute;
+  top: -100px;
+  right: -100px;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.22;
+  pointer-events: none;
+  transition: opacity var(--dur-normal) ease;
+}
+
+/* Second complementary glow blob */
+.sh-card-glow-2 {
+  position: absolute;
+  bottom: -80px;
+  left: -80px;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.12;
+  pointer-events: none;
+  transition: opacity var(--dur-normal) ease;
+}
+
+.sh-card:hover .sh-card-glow { opacity: 0.32; }
+.sh-card:hover .sh-card-glow-2 { opacity: 0.2; }
+
+.sh-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sh-card-category {
+  font-size: var(--text-xs);
+  font-family: var(--font-display);
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--radius-chip);
+  letter-spacing: 0.5px;
+}
+
+.sh-card-date {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  opacity: 0.8;
+}
+
+.sh-card-title {
+  font-size: var(--text-lg);
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+  padding-right: 76px; /* avoid control btns */
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  cursor: text;
+}
+
+/* ── NOTES FIELD STYLES ──────────────────────────────────── */
+.sh-card-note-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
+
+.sh-card-body {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 0;
+  white-space: pre-wrap;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  cursor: text;
+}
+
+/* Interactive custom checklists */
+.sh-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+  border-top: 1px dashed var(--glass-border);
+  padding-top: 12px;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
+
+.sh-checklist-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  cursor: default;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  transition: all var(--dur-fast) ease;
+}
+
+.sh-checklist-text {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  cursor: text;
+}
+
+.sh-checklist-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--accent-notes);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.02);
+}
+
+.sh-checklist-item--checked .sh-checklist-text {
+  text-decoration: line-through;
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
+/* Hide native checkbox */
+.sh-checklist-item input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+/* Custom checkbox graphic */
+.sh-checkbox-custom {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--text-muted);
+  border-radius: 5px;
+  position: relative;
+  transition: all var(--dur-fast) var(--ease-out);
+  margin-top: 1px;
+}
+
+.sh-checklist-item:hover .sh-checkbox-custom {
+  border-color: var(--check-color);
+  box-shadow: 0 0 6px rgba(0,0,0,0.05);
+}
+
+.sh-checklist-item input:checked ~ .sh-checkbox-custom {
+  background-color: var(--check-color);
+  border-color: var(--check-color);
+  box-shadow: 0 2px 8px var(--shadow-glow);
+}
+
+/* Custom checkmark indicator */
+.sh-checkbox-custom::after {
+  content: "";
+  position: absolute;
+  display: none;
+  left: 5px;
+  top: 1px;
+  width: 4px;
+  height: 8px;
+  border: solid var(--text-on-accent);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.sh-checklist-item input:checked ~ .sh-checkbox-custom::after {
+  display: block;
+}
+
+/* ── LINKS CARD STYLES ───────────────────────────────────── */
+.sh-card-link-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.sh-card-url-bar {
+  background: rgba(0, 0, 0, 0.03);
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  border: 1px solid var(--glass-border);
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  cursor: text;
+}
+
+[data-theme="dark"] .sh-card-url-bar,
+[data-theme="midnight"] .sh-card-url-bar {
+  background: var(--surface-2);
+}
+
+.sh-card-link-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Copy Card Button */
+.sh-card-copy-btn {
+  position: absolute;
+  top: 12px;
+  right: 64px;
+  background: transparent;
+  color: var(--text-muted);
+  border: none;
+  font-size: 12px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: all var(--dur-fast) ease;
+}
+
+.sh-card:hover .sh-card-copy-btn {
+  opacity: 0.6;
+}
+
+.sh-card-copy-btn:hover {
+  opacity: 1 !important;
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--theme-accent);
+  transform: scale(1.15);
+}
+
+/* Edit Card Button */
+.sh-card-edit-btn {
+  position: absolute;
+  top: 12px;
+  right: 38px;
+  background: transparent;
+  color: var(--text-muted);
+  border: none;
+  font-size: 11px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: all var(--dur-fast) ease;
+}
+
+.sh-card:hover .sh-card-edit-btn {
+  opacity: 0.6;
+}
+
+.sh-card-edit-btn:hover {
+  opacity: 1 !important;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+}
+
+/* Delete Card Button */
+.sh-card-delete-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: transparent;
+  color: var(--text-muted);
+  border: none;
+  font-size: 13px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: all var(--dur-fast) ease;
+}
+
+.sh-card:hover .sh-card-delete-btn {
+  opacity: 0.6;
+}
+
+.sh-card-delete-btn:hover {
+  opacity: 1 !important;
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+/* ── EMPTY STATES ────────────────────────────────────────── */
+.sh-empty {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  gap: 16px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-card);
+  text-align: center;
+}
+
+.sh-empty-icon {
+  font-size: 48px;
+  opacity: 0.7;
+  animation: float 4s ease-in-out infinite;
+}
+
+.sh-empty p {
+  color: var(--text-secondary);
+  font-size: var(--text-md);
+  margin: 0;
+}
+
+/* ── GLASSMORPHIC MODAL OVERLAY ──────────────────────────── */
+.sh-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  -webkit-app-region: no-drag;
+}
+
+[data-theme="midnight"] .sh-modal-overlay {
+  background: rgba(15, 23, 42, 0.2);
+}
+
+.sh-modal-content {
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 20px;
+  width: 100%;
+  max-width: 520px;
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  -webkit-app-region: no-drag;
+}
+
+.sh-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sh-modal-header h3 {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 700;
+  margin: 0;
+}
+
+.sh-modal-close {
+  background: transparent;
+  border: none;
+  font-size: 18px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color var(--dur-fast) ease;
+}
+
+.sh-modal-close:hover {
+  color: var(--text-primary);
+}
+
+/* Creator Tabs Selection */
+.sh-modal-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+.sh-modal-tab {
+  flex: 1;
+  background: transparent;
+  border: none;
+  padding: 14px;
+  font-size: var(--text-sm);
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--dur-fast) ease;
+  text-align: center;
+  border-bottom: 2px solid transparent;
+}
+
+.sh-modal-tab:hover {
+  color: var(--text-primary);
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.sh-modal-tab.active {
+  color: var(--text-primary);
+  background: var(--surface);
+  border-bottom-color: var(--accent-notes);
+}
+
+/* Form Styles */
+.sh-modal-form {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.sh-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.textarea-field {
+  resize: vertical;
+  min-height: 80px;
+  line-height: 1.5;
+  font-family: var(--font-main);
+  padding: 12px;
+}
+
+.select-field {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  padding-right: 36px;
+}
+
+/* Checklist builder inside form */
+.sh-form-checklist-builder {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sh-checklist-input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.sh-checklist-input-row input {
+  flex: 1;
+}
+
+.sh-checklist-add-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-btn);
+  border: none;
+  color: var(--text-on-accent);
+  font-weight: 700;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity var(--dur-fast) ease;
+}
+
+.sh-checklist-add-btn:hover {
+  opacity: 0.9;
+}
+
+.sh-form-todo-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  background: var(--surface-2);
+  padding: 10px;
+  border-radius: var(--radius-input);
+  border: 1px solid var(--border);
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.sh-form-todo-pill {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  padding: 4px 10px;
+  font-size: var(--text-xs);
+  border-radius: var(--radius-chip);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sh-form-todo-pill button {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 10px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sh-form-todo-pill button:hover {
+  color: var(--danger);
+}
+
+/* URL and local directory browse row */
+.sh-url-row {
+  display: flex;
+  gap: 8px;
+}
+
+.sh-form-browse-btn {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-btn);
+  padding: 0 16px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: all var(--dur-fast) ease;
+}
+
+.sh-form-browse-btn:hover {
+  color: var(--text-primary);
+  background: var(--surface-2);
+  border-color: var(--text-muted);
+}
+
+/* Dynamic Color Hue Picker */
+.sh-color-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sh-color-circles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 4px 0;
+}
+
+.sh-color-circle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all var(--dur-normal) var(--ease-spring);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  position: relative;
+}
+
+.sh-color-circle:hover {
+  transform: scale(1.15);
+  box-shadow: 0 4px 12px var(--shadow-glow);
+}
+
+.sh-color-circle.active {
+  border-color: var(--text-primary);
+  transform: scale(1.15);
+  box-shadow: 0 4px 14px var(--shadow-glow);
+  animation: spin 3s linear infinite;
+}
+
+.sh-color-circle.active::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-primary);
+}
+
+.sh-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  border-top: 1px solid var(--border);
+  padding: 16px 0 0;
+  margin-top: 10px;
+}
+
+/* ── Drag & Drop Canvas Layout overrides ── */
+.sh-grid--canvas {
+  display: block !important;
+  position: relative;
+  min-height: 850px;
+  width: 100%;
+  background-image: radial-gradient(rgba(15, 23, 42, 0.05) 1px, transparent 1px);
+  background-size: 20px 20px;
+  border-radius: var(--radius-card);
+  border: 1.5px dashed var(--border);
+  padding: 24px;
+  overflow: visible;
+}
+
+[data-theme="dark"] .sh-grid--canvas,
+[data-theme="midnight"] .sh-grid--canvas {
+  background-image: radial-gradient(rgba(99, 102, 241, 0.08) 1px, transparent 1px);
+  border-color: var(--border);
+}
+
+.sh-grid--canvas .sh-card {
+  cursor: default;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
+
+.sh-grid--canvas .sh-card .sh-card-top {
+  cursor: grab;
+}
+
+.sh-grid--canvas .sh-card .sh-card-top:active {
+  cursor: grabbing;
+}
+
+.sh-card--dragging {
+  opacity: 0.45;
+  transform: scale(0.96);
+  border: 2px dashed var(--theme-accent) !important;
+  box-shadow: none !important;
+}
+
+/* ── RESPONSIVE DESIGN ── */
+@media (max-width: 768px) {
+  .sh-grid {
+    grid-template-columns: 1fr;
+  }
+  .sh-filters {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .sh-grid--canvas {
+    display: flex !important;
+    flex-direction: column;
+    gap: 16px;
+    min-height: auto;
+    background-image: none;
+    border: none;
+    padding: 0;
+  }
+  .sh-grid--canvas .sh-card {
+    position: static !important;
+    width: 100% !important;
+    cursor: default;
+  }
+}

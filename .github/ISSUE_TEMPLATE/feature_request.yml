@@ -1,0 +1,39 @@
+name: 💡 Feature Request
+description: Propose a new feature, workflow improvement, or renderer optimization
+title: "[FEATURE]: "
+labels: ["enhancement", "feature-request"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        We love hearing ideas to make UniDesk Studio faster, smarter, and more powerful for production teams!
+  - type: textarea
+    id: problem
+    attributes:
+      label: Is your feature request related to a problem?
+      description: A clear and concise description of what the problem is.
+      placeholder: I'm always frustrated when...
+  - type: textarea
+    id: solution
+    attributes:
+      label: Describe the solution you'd like
+      description: A clear and concise description of what you want to happen.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Describe alternatives you've considered
+      description: Any alternative solutions or workarounds you've thought of.
+  - type: dropdown
+    id: module
+    attributes:
+      label: Affected Module / Page
+      options:
+        - Title Adder (Batch Queue)
+        - Video Transfer & Photo Renamer
+        - Converter & Preset Engine
+        - Archive Vault & Excel Generator
+        - Task Tracker & Workflows
+        - Preloaders & UI Themes
+        - Other / Global

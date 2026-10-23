@@ -1,0 +1,278 @@
+/* =======================================================
+   Sidebar.css — "Frosted Lens" High-End Workstation Nav
+   Circular icons · Luminous bloom · Neon Lens Reveal
+   Ultra-clean luxury glassmorphic aesthetic
+======================================================= */
+
+/* -- Base Sidebar Shell -------------------------------- */
+.sidebar {
+  width: var(--sidebar-width, 214px);
+  min-width: var(--sidebar-width, 214px);
+  height: calc(100% - 16px);
+  margin: 8px 6px 8px 8px;
+  flex-shrink: 0;
+  background: var(--sidebar-bg);
+  backdrop-filter: var(--glass-blur, blur(28px));
+  -webkit-backdrop-filter: var(--glass-blur, blur(28px));
+  border-radius: var(--radius-card, 16px);
+  border: 1px solid var(--sidebar-border);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 10px 8px 8px;
+  overflow: hidden;
+  z-index: 100;
+  box-shadow:
+    var(--shadow-md),
+    inset 0 1px 0 var(--specular-highlight);
+  transition:
+    width 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+    min-width 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+    margin 0.28s ease,
+    border-radius 0.28s ease;
+}
+
+/* -- Collapsed State ----------------------------------- */
+.sidebar--collapsed {
+  width: 62px !important;
+  min-width: 62px !important;
+  padding: 10px 5px 8px;
+  border-radius: var(--radius-card, 16px);
+}
+
+.sidebar--collapsed .sidebar-brand {
+  justify-content: center;
+  padding: 8px 0;
+}
+
+.sidebar--collapsed .sidebar-section-label {
+  justify-content: center;
+  padding: 4px 0;
+}
+
+.sidebar--collapsed .nav-item-label,
+.sidebar--collapsed .nav-item-arrow,
+.sidebar--collapsed .nav-item-badge {
+  display: none;
+}
+
+.sidebar--collapsed .nav-item {
+  justify-content: center;
+  padding: 0 6px !important;
+}
+
+.sidebar--collapsed .nav-item--active::after {
+  display: none;
+}
+
+/* Sleek floating tooltip in collapsed mode */
+.sidebar--collapsed .nav-item:hover::after {
+  content: attr(title);
+  position: absolute;
+  left: calc(100% + 14px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--surface);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  padding: 6px 14px;
+  border-radius: var(--radius-sm, 8px);
+  font-size: 12px;
+  font-weight: 750;
+  white-space: nowrap;
+  box-shadow: 
+    0 10px 25px -4px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 var(--specular-highlight);
+  z-index: 9999;
+  pointer-events: none;
+  animation: fadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  letter-spacing: 0.01em;
+}
+
+/* -- Top Shimmer Strip --------------------------------- */
+.sidebar-glow-strip {
+  height: 2px;
+  border-radius: 99px;
+  background: linear-gradient(90deg, transparent, var(--theme-accent, #6366F1), transparent);
+  margin-bottom: 12px;
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+/* -- Brand Card ---------------------------------------- */
+.sidebar-brand {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 12px);
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm), inset 0 1px 0 var(--specular-highlight);
+  transition: all 0.22s var(--ease-spring);
+  cursor: pointer;
+}
+
+.sidebar-brand::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    135deg, 
+    color-mix(in srgb, var(--theme-accent, #6366F1) 12%, transparent) 0%, 
+    transparent 75%
+  );
+  pointer-events: none;
+}
+
+.sidebar-brand:hover {
+  background: var(--surface-hover);
+  border-color: color-mix(in srgb, var(--theme-accent, #6366F1) 45%, var(--border));
+  box-shadow: 
+    0 6px 20px color-mix(in srgb, var(--theme-accent, #6366F1) 16%, transparent),
+    inset 0 1px 0 var(--specular-highlight);
+  transform: translateY(-1.5px);
+}
+
+/* -- Section Label ------------------------------------- */
+.sidebar-section-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px 10px;
+  flex-shrink: 0;
+}
+
+.sidebar-section-stripe {
+  flex: 1;
+  height: 1.5px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--theme-accent, #6366F1) 50%, transparent), transparent);
+  border-radius: 99px;
+}
+
+.sidebar-section-label span {
+  font-family: var(--font-display);
+  font-size: 9.5px;
+  font-weight: 850;
+  color: var(--sidebar-section-lbl);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+/* -- Nav Panel: minimal container, items float freely -- */
+.sidebar-nav-panel {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+  position: relative;
+  padding: 0 2px;
+}
+
+.sidebar-nav-indicator {
+  display: none;
+}
+
+/* -- Nav List ------------------------------------------ */
+.sidebar-nav {
+  padding: 2px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.sidebar-nav::-webkit-scrollbar { width: 3px; }
+.sidebar-nav::-webkit-scrollbar-track { background: transparent; }
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--border) 60%, transparent);
+  border-radius: 99px;
+}
+.sidebar-nav::-webkit-scrollbar-thumb:hover { 
+  background: var(--theme-accent); 
+}
+
+/* -- Separator: elegant ruled line with fade ends ------ */
+.sidebar-sep {
+  height: 1px;
+  margin: 6px 10px;
+  flex-shrink: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--border) 20%,
+    var(--border) 80%,
+    transparent 100%
+  );
+  opacity: 0.7;
+}
+
+/* -- Bottom Nav ---------------------------------------- */
+.sidebar-bottom-nav {
+  padding: 3px 0;
+  flex-shrink: 0;
+}
+
+/* -- Toggle Button ------------------------------------- */
+.sidebar-toggle-wrap {
+  padding: 8px 0 4px;
+  display: flex;
+  justify-content: center;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.sidebar-toggle-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.22s var(--ease-spring);
+}
+
+.sidebar-toggle-btn:hover {
+  background: color-mix(in srgb, var(--theme-accent) 15%, var(--surface));
+  color: var(--theme-accent);
+  border-color: color-mix(in srgb, var(--theme-accent) 45%, var(--border));
+  transform: scale(1.10);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--theme-accent) 25%, transparent);
+}
+
+/* -- Footer -------------------------------------------- */
+.sidebar-footer {
+  padding: 8px 4px 0;
+  flex-shrink: 0;
+  text-align: center;
+}
+
+.sidebar-footer span {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  opacity: 0.65;
+}

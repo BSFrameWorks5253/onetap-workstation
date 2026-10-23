@@ -1,0 +1,257 @@
+/* ==============================================================================
+   Uni Desk — Arabic & Lisan-ud-Dawat Welcome Screen (WelcomeScreen.css)
+   Teardrop Banner + Stable Pattern + Centered Arabic Typewriter Reveal
+   ============================================================================== */
+
+.welcome-screen-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 100% !important;
+  min-height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  z-index: 99999999 !important;
+  background-color: #F4EFE6 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  user-select: none !important;
+  overflow: hidden !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+  transform: none !important;
+  transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), transform 0.5s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  cursor: pointer !important;
+}
+
+.welcome-screen-overlay.welcome-fade-out {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: scale(1.02) !important;
+}
+
+/* Background Pattern Layer — Completely Stable & Stationary */
+.welcome-pattern-bg {
+  position: absolute !important;
+  inset: 0 !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 100% !important;
+  min-height: 100% !important;
+  background-repeat: repeat !important;
+  background-size: 260px 260px !important;
+  opacity: 0.35 !important;
+  z-index: 1 !important;
+  pointer-events: none !important;
+  transform: none !important;
+  animation: none !important;
+}
+
+/* Ambient Center Radial Glow — Stable & Stationary Warmth */
+.welcome-ambient-glow {
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  width: clamp(450px, 50vw, 750px) !important;
+  height: clamp(450px, 50vw, 750px) !important;
+  transform: translate(-50%, -50%) !important;
+  background: radial-gradient(circle, rgba(212, 163, 71, 0.26) 0%, rgba(244, 239, 230, 0) 70%) !important;
+  border-radius: 50% !important;
+  z-index: 2 !important;
+  pointer-events: none !important;
+  animation: none !important;
+}
+
+/* Responsive Teardrops Header Container */
+.welcome-teardrops-banner {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  display: flex !important;
+  justify-content: space-evenly !important;
+  align-items: flex-start !important;
+  padding: 0 18px !important;
+  z-index: 10 !important;
+  pointer-events: none !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+/* Individual Teardrop Drop styling — Upside-Down Gravity Drop from Top */
+.welcome-teardrop-item {
+  display: inline-block !important;
+  transform-origin: top center !important;
+  animation: welcomeDropSlideDown 0.75s cubic-bezier(0.34, 1.56, 0.64, 1) both !important;
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.16)) !important;
+}
+
+@keyframes welcomeDropSlideDown {
+  0% {
+    transform: translateY(-140%) scaleY(0.7);
+    opacity: 0;
+  }
+  65% {
+    transform: translateY(8%) scaleY(1.06);
+    opacity: 1;
+  }
+  85% {
+    transform: translateY(-3%) scaleY(0.98);
+  }
+  100% {
+    transform: translateY(0) scaleY(1);
+    opacity: 1;
+  }
+}
+
+.welcome-teardrop-svg {
+  display: block !important;
+  user-select: none !important;
+  pointer-events: none !important;
+}
+
+.welcome-teardrop-maroon {
+  fill: #6B0D14 !important;
+}
+
+.welcome-teardrop-gold {
+  fill: #C89637 !important;
+}
+
+/* Center Content Card — Dead-Center of Viewport, Completely Stable */
+.welcome-content-card {
+  position: relative !important;
+  z-index: 15 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: auto 0 !important;
+  padding: 0 24px !important;
+  animation: none !important;
+  transform: none !important;
+}
+
+/* Arabic Calligraphy: Greeting Wrapper */
+.welcome-greeting-wrapper {
+  margin: 0 !important;
+  display: inline-flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  position: relative !important;
+  cursor: pointer !important;
+  user-select: none !important;
+}
+
+/* Arabic Calligraphy Text Element — Smooth Right-To-Left Wipe Animation */
+.welcome-greeting-text {
+  font-family: 'Amiri', 'Traditional Arabic', 'Scheherazade New', serif !important;
+  font-size: clamp(64px, 8.8vw, 116px) !important;
+  font-weight: 700 !important;
+  color: #B8860B !important;
+  direction: rtl !important;
+  text-shadow: 0 4px 22px rgba(184, 134, 11, 0.38), 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+  display: inline-block !important;
+  white-space: nowrap !important;
+  letter-spacing: 0 !important;
+  font-feature-settings: "liga" 1, "calt" 1, "dlig" 1, "rlig" 1, "clig" 1 !important;
+  text-rendering: optimizeLegibility !important;
+  line-height: 1.8 !important;
+  padding: 24px 44px !important;
+  overflow: visible !important;
+  clip-path: inset(-150px 0% -150px 0%);
+  animation: welcomeArabicWipeRTL 1.25s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both !important;
+}
+
+.welcome-greeting-text.mode-marhaban {
+  font-size: clamp(58px, 8vw, 106px) !important;
+  animation: welcomeArabicWipeRTL 1.05s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both !important;
+}
+
+/* Fluid Right-To-Left Linear Wipe (Reveals from Right to Left: أَهْلًا -> وَ -> سَهْلًا) */
+@keyframes welcomeArabicWipeRTL {
+  0% {
+    clip-path: inset(-150px 0% -150px 100%);
+    opacity: 0.85;
+  }
+  100% {
+    clip-path: inset(-150px 0% -150px 0%);
+    opacity: 1;
+  }
+}
+
+/* Tranquil Golden Breathing Glow after Wipe Completes */
+@keyframes welcomeArabicGlowPulse {
+  0% {
+    text-shadow: 0 4px 22px rgba(184, 134, 11, 0.35), 0 1px 3px rgba(0, 0, 0, 0.08);
+  }
+  50% {
+    text-shadow: 0 8px 34px rgba(212, 163, 71, 0.55), 0 0 24px rgba(184, 134, 11, 0.32);
+  }
+  100% {
+    text-shadow: 0 4px 22px rgba(184, 134, 11, 0.35), 0 1px 3px rgba(0, 0, 0, 0.08);
+  }
+}
+
+/* Decorative Gold Underline Accent — Fades In after Wipe */
+.welcome-greeting-accent {
+  width: clamp(140px, 16vw, 240px) !important;
+  height: clamp(3px, 0.4vw, 4px) !important;
+  background: linear-gradient(90deg, transparent, #B8860B, transparent) !important;
+  margin: 10px auto 0 auto !important;
+  border-radius: 2px !important;
+  opacity: 0 !important;
+  animation: welcomeAccentFadeIn 0.6s ease 1.05s forwards !important;
+}
+
+@keyframes welcomeAccentFadeIn {
+  0% {
+    opacity: 0;
+    transform: scaleX(0.3);
+  }
+  100% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+/* Pinned Screen Bottom Preloader Container */
+.welcome-loader-bottom-wrapper {
+  position: fixed !important;
+  bottom: 34px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  width: clamp(340px, 42vw, 560px) !important;
+  z-index: 50 !important;
+  opacity: 0;
+  animation: welcomeLoaderFadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.35s forwards;
+}
+
+@keyframes welcomeLoaderFadeUp {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) translateX(-50%);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) translateX(-50%);
+  }
+}
+

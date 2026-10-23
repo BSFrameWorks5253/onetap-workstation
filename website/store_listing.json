@@ -1,0 +1,30 @@
+{
+  "Description": "Uni Desk is a professional workstation and media automation studio engineered specifically for high-throughput video editors, wedding studios, and digital post-production facilities.\n\nBuilt to streamline heavy Adobe Premiere Pro and Media Encoder workflows, Uni Desk eliminates repetitive manual tasks, file browsing bottlenecks, and overnight render crashes.\n\nKEY HIGHLIGHTS:\n• Zero-Click Domino Pipeline: Chain Media Encoder rendering directly into Title Adder and Converter. Batch-rendered video sequences and photos automatically rename and organize into destination folders without requiring a single click.\n• Sub-Millisecond XML Sequence Locator: Instantly resolve Premiere Pro sequence XMLs across multi-terabyte project bins and recent project caches in under 1 millisecond.\n• Intelligent Ceremony & Nikah Detection: Smart ceremony recognition in Premiere Pro CEP extensions identifies marker naming formats and executes multi-track downstream ripple insertion with zero footage cut.\n• Archive Vault & Safar Reconciliation: Root-level drive scanning, multi-tier project backup, and SHA-256 bit-for-bit integrity validation to safeguard valuable event footage.\n• Native Completion Chimes & Desktop Alerts: Receive distinct 4-tone celebration shimmer chimes and native Windows notifications when overnight batch jobs finish.\n• Resilient File Handling: Exponential backoff retries and non-blocking background workers permanently prevent transient Windows and OneDrive EBUSY lock crashes.",
+  "ReleaseNotes": "• Cross-Platform Release Studio: Automated production engine supporting high-speed NSIS packaging.\n• Live Obsidian Build Terminal: Real-time high-contrast build console with syntax highlighting.\n• Enhanced Nikah Ceremony Detection: Multi-track ripple placement for complex marker formats.\n• Sub-millisecond XML Sequence Locator across all Premiere Pro CEP extensions.\n• Fixed startup update prompt semver checks and suppressed transient EBUSY file locks.",
+  "Features": [
+    "Zero-Click Domino Pipeline chaining Adobe Media Encoder into Title Adder and Converter",
+    "Sub-millisecond Premiere Pro sequence XML locator across multi-terabyte project bins",
+    "Intelligent Nikah and ceremony marker recognition with downstream ripple placement",
+    "Archive Vault with root-level drive scanning and SHA-256 bit-for-bit integrity verification",
+    "Automated camera and video card transfer with organized folder structuring",
+    "4-tone celebration completion chime and native Windows 11/10 desktop notifications",
+    "Resilient EBUSY file-lock suppression for uninterrupted overnight batch rendering",
+    "Cloud synchronization portal integrated with Google Drive and enterprise network storage"
+  ],
+  "SearchTerms": [
+    "video editing",
+    "premiere pro",
+    "media automation",
+    "video converter",
+    "workflow automation",
+    "media encoder",
+    "file renamer"
+  ],
+  "ShortDescription": "Professional workstation and media automation toolkit for Adobe Premiere Pro and studio video production.",
+  "CopyrightAndTrademarkInfo": "Copyright © 2026 BS Framework. All rights reserved.",
+  "AdditionalLicenseTerms": "Proprietary software licensed by BS Framework. For enterprise licensing and multi-seat studio deployments, contact support@bsframework.com.",
+  "PrivacyPolicyUrl": "https://bsframework.com/privacy",
+  "SupportContactUrl": "https://bsframework.com/onetap",
+  "SupportEmail": "support@bsframework.com",
+  "Website": "https://bsframework.com"
+}

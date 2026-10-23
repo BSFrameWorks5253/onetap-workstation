@@ -1,0 +1,291 @@
+/* PowerHubModal.css — Crazy Holographic Light Power Hub */
+
+.phub-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(15, 23, 42, 0.2);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.phub-modal {
+  background: #FFFFFF;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-card);
+  width: 100%;
+  max-width: 800px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 
+    0 32px 80px rgba(99, 102, 241, 0.25),
+    0 8px 24px rgba(0, 0, 0, 0.05),
+    0 0 0 1px rgba(255, 255, 255, 0.9) inset;
+  overflow: hidden;
+  animation: scaleInCenter 0.25s var(--ease-spring);
+  position: relative;
+}
+
+.phub-header {
+  padding: 20px 24px;
+  background: linear-gradient(180deg, #FFFFFF 0%, var(--surface-2) 100%);
+  border-bottom: 1.5px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.phub-header-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.phub-header-icon {
+  font-size: 28px;
+  background: linear-gradient(135deg, #6366F1, #EC4899);
+  border-radius: 14px;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 18px rgba(99, 102, 241, 0.35);
+  color: #FFFFFF;
+}
+
+.phub-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+
+.phub-subtitle {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  font-weight: 600;
+}
+
+.phub-close-btn {
+  background: var(--surface-2);
+  border: 1.5px solid var(--border);
+  color: var(--text-secondary);
+  border-radius: 12px;
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  transition: all 0.2s var(--ease-spring);
+}
+
+.phub-close-btn:hover {
+  background: var(--danger);
+  color: #FFFFFF;
+  border-color: var(--danger);
+  transform: scale(1.1) rotate(90deg);
+  box-shadow: 0 4px 14px rgba(244, 63, 94, 0.4);
+}
+
+.phub-nav-tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 24px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+}
+
+.phub-tab-btn {
+  background: #FFFFFF;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  padding: 8px 16px;
+  border-radius: var(--radius-chip);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  transition: all 0.2s var(--ease-spring);
+}
+
+.phub-tab-btn:hover {
+  background: var(--surface-3);
+  color: var(--text-primary);
+  border-color: var(--theme-accent);
+  transform: translateY(-1px);
+}
+
+.phub-tab-btn.active {
+  background: linear-gradient(135deg, #6366F1, #8B5CF6);
+  color: #FFFFFF;
+  border-color: #6366F1;
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+}
+
+.phub-body {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  background: #FAFAFD;
+}
+
+.phub-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.phub-section-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.phub-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.phub-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.phub-card {
+  background: #FFFFFF;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  transition: all 0.2s var(--ease-spring);
+}
+
+.phub-card:hover {
+  border-color: var(--theme-accent);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px var(--theme-glow);
+}
+
+.phub-card-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.phub-card-value {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-primary);
+  font-family: var(--font-display);
+}
+
+.phub-theme-pill {
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--border);
+  background: #FFFFFF;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+  transition: all 0.2s var(--ease-spring);
+}
+
+.phub-theme-pill:hover {
+  border-color: var(--theme-accent);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px var(--theme-glow);
+}
+
+.phub-theme-pill.active {
+  border-color: var(--theme-accent);
+  background: color-mix(in srgb, var(--theme-accent) 10%, white);
+  box-shadow: 0 0 16px var(--theme-glow);
+  color: var(--theme-accent);
+}
+
+.phub-sound-btn {
+  padding: 10px 16px;
+  background: #FFFFFF;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-btn);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+  transition: all 0.2s var(--ease-spring);
+}
+
+.phub-sound-btn:hover {
+  background: var(--surface-2);
+  border-color: var(--theme-accent);
+  color: var(--theme-accent);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px var(--theme-glow);
+}
+
+.phub-hotkey-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #FFFFFF;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--border);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+}
+
+.phub-hotkey-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.phub-footer {
+  padding: 14px 24px;
+  background: var(--surface-2);
+  border-top: 1.5px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}

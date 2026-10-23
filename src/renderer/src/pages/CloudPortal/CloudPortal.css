@@ -1,0 +1,566 @@
+/* ============================================================
+   CLOUD PORTAL STYLESHEET (Premium Glassmorphic v18.7)
+   ============================================================ */
+
+.cp-page {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.cp-header-compact {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 16px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+}
+
+.cp-header-compact h2 {
+  font-size: 18px;
+  font-weight: 800;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+/* Onboarding view setup */
+.cp-onboarding {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 0;
+  width: 100%;
+}
+
+.cp-card {
+  position: relative;
+  width: 100%;
+  max-width: 620px;
+  padding: 32px;
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: var(--shadow-lg), 0 0 40px rgba(14, 165, 233, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.cp-card-glow {
+  position: absolute;
+  top: -80px;
+  right: -80px;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(14, 165, 233, 0.25) 0%, rgba(14, 165, 233, 0) 70%);
+  pointer-events: none;
+  filter: blur(20px);
+}
+
+.cp-card-title {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+
+.cp-card-desc {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Step-by-step wizard guide */
+.cp-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 8px 0;
+}
+
+.cp-step {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border);
+  padding: 14px 18px;
+  border-radius: var(--radius-card);
+  transition: transform var(--dur-fast) var(--ease-spring), border-color var(--dur-fast), background var(--dur-fast);
+}
+
+.cp-step:hover {
+  transform: translateX(4px);
+  border-color: rgba(14, 165, 233, 0.4);
+  background: rgba(14, 165, 233, 0.02);
+}
+
+.cp-step-num {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--accent-cloud-soft);
+  color: var(--accent-cloud);
+  font-weight: 700;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid rgba(14, 165, 233, 0.15);
+  transition: background var(--dur-fast), box-shadow var(--dur-fast);
+}
+
+.cp-step:hover .cp-step-num {
+  background: linear-gradient(135deg, var(--accent-cloud), color-mix(in srgb, var(--accent-cloud) 70%, white));
+  color: white;
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--accent-cloud) 30%, transparent);
+}
+
+.cp-step-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.cp-step-text code {
+  font-family: var(--font-mono);
+  background: var(--surface-3);
+  color: var(--text-primary);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+}
+
+.cp-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+/* Stateful connected browser wrapper */
+.cp-viewport-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+  min-height: 0; /* Critical: allows flex child to shrink below content size */
+}
+
+/* Premium Address Bar Toolbar */
+.cp-address-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+  box-sizing: border-box;
+}
+
+.cp-nav-buttons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cp-nav-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-primary);
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--dur-fast) var(--ease-spring);
+  outline: none;
+}
+
+.cp-nav-btn:hover {
+  background: var(--sidebar-hover);
+  border-color: var(--border-strong);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+}
+
+.cp-nav-btn:active {
+  transform: scale(0.86) translateY(1px);
+}
+
+.cp-refresh-btn {
+  font-size: 13px;
+}
+
+/* Middle address panel capsule */
+.cp-address-input-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-chip);
+  padding: 2px 14px;
+  height: 34px;
+  gap: 8px;
+  overflow: hidden;
+  box-sizing: border-box;
+  transition: border-color var(--dur-fast), box-shadow var(--dur-fast);
+}
+
+.cp-address-input-wrap:focus-within {
+  border-color: var(--accent-cloud);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-cloud) 15%, transparent);
+}
+
+.cp-secure-badge {
+  display: flex;
+  align-items: center;
+  font-size: 11px;
+  color: var(--success);
+  font-weight: 600;
+  gap: 4px;
+  flex-shrink: 0;
+  background: var(--success-soft);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.cp-secure-text {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.cp-address-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+  outline: none;
+  width: 100%;
+}
+
+.cp-host-badge {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent-cloud);
+  background: var(--accent-cloud-soft);
+  padding: 2px 8px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+/* Action button configurations */
+.cp-action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cp-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 14px;
+  height: 34px;
+  border-radius: var(--radius-btn);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--dur-fast) var(--ease-spring);
+  border: 1px solid transparent;
+  outline: none;
+}
+
+.cp-chrome-btn {
+  background: var(--accent-cloud-soft);
+  color: var(--accent-cloud);
+  border-color: rgba(14, 165, 233, 0.15);
+}
+
+.cp-chrome-btn:hover {
+  background: var(--accent-cloud);
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.2);
+}
+
+.cp-disconnect-btn {
+  background: var(--danger-soft);
+  color: var(--danger);
+  border-color: rgba(239, 68, 68, 0.15);
+}
+
+.cp-disconnect-btn:hover {
+  background: var(--danger);
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
+}
+
+/* Sandbox Iframe Wrapper */
+.cp-iframe-wrapper {
+  flex: 1;
+  position: relative;
+  background: white; /* Clean background for Google sheets viewport */
+  display: flex;
+  flex-direction: column;
+}
+
+.cp-iframe {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  border: none;
+  outline: none;
+}
+
+/* Glassmorphic synchronizing load overlay */
+.cp-iframe-loader-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(8, 12, 24, 0.82);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  gap: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.cp-spinner {
+  width: 48px;
+  height: 48px;
+  position: relative;
+  margin-bottom: 8px;
+}
+
+.cp-spinner::before,
+.cp-spinner::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  border: 3.5px solid transparent;
+}
+
+.cp-spinner::before {
+  inset: 0;
+  border-top-color: #3B82F6;
+  border-right-color: #8B5CF6;
+  animation: cp-spin 1s cubic-bezier(0.55, 0.085, 0.68, 0.53) infinite;
+  filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.6));
+}
+
+.cp-spinner::after {
+  inset: 8px;
+  border-bottom-color: #EC4899;
+  border-left-color: #3B82F6;
+  animation: cp-spin 0.65s cubic-bezier(0.55, 0.085, 0.68, 0.53) infinite reverse;
+  filter: drop-shadow(0 0 6px rgba(59, 130, 246, 0.5));
+}
+
+.cp-loader-text {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #FFFFFF 30%, #A5C2FF 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: 0.5px;
+  margin: 0;
+}
+
+.cp-loader-subtext {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: rgba(143, 168, 204, 0.6);
+  margin: 0;
+  letter-spacing: 0.02em;
+}
+
+@keyframes cp-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Tab Strip controls (Standard onboarding view) ── */
+.cp-tab-strip {
+  display: flex;
+  background: var(--bg);
+  padding: 4px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  gap: 4px;
+}
+
+.cp-tab-btn {
+  padding: 8px 16px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  outline: none;
+}
+
+.cp-tab-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.cp-tab-btn.active {
+  background: var(--surface);
+  color: var(--accent-cloud);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ── Integrated Toolbar Tabs (Fullscreen Live View) ── */
+.cp-toolbar-tabs {
+  display: flex;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 2px;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.cp-toolbar-tab {
+  padding: 6px 12px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  outline: none;
+  white-space: nowrap;
+}
+
+.cp-toolbar-tab:hover {
+  color: var(--text-primary);
+}
+
+.cp-toolbar-tab.active {
+  background: var(--surface);
+  color: var(--accent-cloud);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ── Bookmarks Toolbar ── */
+.cp-bookmarks-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.005);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.cp-bookmarks-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-right: 6px;
+}
+
+.cp-bookmark-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cp-bookmark-btn:hover {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: var(--border);
+  color: var(--text-primary);
+}
+
+/* Custom colors for Drive elements */
+.cp-host-drive {
+  color: #10B981 !important;
+  background: rgba(16, 185, 129, 0.1) !important;
+}
+
+.cp-iframe-wrapper--drive {
+  background: #121212 !important; /* Drive page has a clean dark backing */
+}
+
+.cp-iframe--drive {
+  background: #121212 !important;
+}
+
+/* ── Full-screen viewport expansion overrides ── */
+.cp-page--fullscreen {
+  padding: 0 !important;
+  gap: 0 !important;
+}
+
+.cp-page--fullscreen .cp-viewport-container {
+  border-radius: 0 !important;
+  border: none !important;
+}
+
+.page-wrapper[data-page="cloud"] {
+  width: 100% !important;
+  height: 100% !important;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden !important;
+}
+
+/* Tighten bottom padding so webview reaches the window edge */
+.page-wrapper[data-page="cloud"] .cp-page {
+  width: 100% !important;
+  height: 100% !important;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 0 !important;
+}

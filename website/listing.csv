@@ -1,0 +1,70 @@
+﻿Field,ID,Type,default,en-us,en-in
+Description,1,Text,"Uni Desk is a professional workstation and media automation studio engineered specifically for high-throughput video editors, wedding studios, and digital post-production facilities.
+
+Built to streamline heavy Adobe Premiere Pro and Media Encoder workflows, Uni Desk eliminates repetitive manual tasks, file browsing bottlenecks, and overnight render crashes.
+
+KEY HIGHLIGHTS:
+• Zero-Click Domino Pipeline: Chain Media Encoder rendering directly into Title Adder and Converter. Batch-rendered video sequences and photos automatically rename and organize into destination folders without requiring a single click.
+• Sub-Millisecond XML Sequence Locator: Instantly resolve Premiere Pro sequence XMLs across multi-terabyte project bins and recent project caches in under 1 millisecond.
+• Intelligent Ceremony & Nikah Detection: Smart ceremony recognition in Premiere Pro CEP extensions identifies marker naming formats and executes multi-track downstream ripple insertion with zero footage cut.
+• Archive Vault & Safar Reconciliation: Root-level drive scanning, multi-tier project backup, and SHA-256 bit-for-bit integrity validation to safeguard valuable event footage.
+• Native Completion Chimes & Desktop Alerts: Receive distinct 4-tone celebration shimmer chimes and native Windows notifications when overnight batch jobs finish.
+• Resilient File Handling: Exponential backoff retries and non-blocking background workers permanently prevent transient Windows and OneDrive EBUSY lock crashes.","Uni Desk is a professional workstation and media automation studio engineered specifically for high-throughput video editors, wedding studios, and digital post-production facilities.
+
+Built to streamline heavy Adobe Premiere Pro and Media Encoder workflows, Uni Desk eliminates repetitive manual tasks, file browsing bottlenecks, and overnight render crashes.
+
+KEY HIGHLIGHTS:
+• Zero-Click Domino Pipeline: Chain Media Encoder rendering directly into Title Adder and Converter. Batch-rendered video sequences and photos automatically rename and organize into destination folders without requiring a single click.
+• Sub-Millisecond XML Sequence Locator: Instantly resolve Premiere Pro sequence XMLs across multi-terabyte project bins and recent project caches in under 1 millisecond.
+• Intelligent Ceremony & Nikah Detection: Smart ceremony recognition in Premiere Pro CEP extensions identifies marker naming formats and executes multi-track downstream ripple insertion with zero footage cut.
+• Archive Vault & Safar Reconciliation: Root-level drive scanning, multi-tier project backup, and SHA-256 bit-for-bit integrity validation to safeguard valuable event footage.
+• Native Completion Chimes & Desktop Alerts: Receive distinct 4-tone celebration shimmer chimes and native Windows notifications when overnight batch jobs finish.
+• Resilient File Handling: Exponential backoff retries and non-blocking background workers permanently prevent transient Windows and OneDrive EBUSY lock crashes.","Uni Desk is a professional workstation and media automation studio engineered specifically for high-throughput video editors, wedding studios, and digital post-production facilities.
+
+Built to streamline heavy Adobe Premiere Pro and Media Encoder workflows, Uni Desk eliminates repetitive manual tasks, file browsing bottlenecks, and overnight render crashes.
+
+KEY HIGHLIGHTS:
+• Zero-Click Domino Pipeline: Chain Media Encoder rendering directly into Title Adder and Converter. Batch-rendered video sequences and photos automatically rename and organize into destination folders without requiring a single click.
+• Sub-Millisecond XML Sequence Locator: Instantly resolve Premiere Pro sequence XMLs across multi-terabyte project bins and recent project caches in under 1 millisecond.
+• Intelligent Ceremony & Nikah Detection: Smart ceremony recognition in Premiere Pro CEP extensions identifies marker naming formats and executes multi-track downstream ripple insertion with zero footage cut.
+• Archive Vault & Safar Reconciliation: Root-level drive scanning, multi-tier project backup, and SHA-256 bit-for-bit integrity validation to safeguard valuable event footage.
+• Native Completion Chimes & Desktop Alerts: Receive distinct 4-tone celebration shimmer chimes and native Windows notifications when overnight batch jobs finish.
+• Resilient File Handling: Exponential backoff retries and non-blocking background workers permanently prevent transient Windows and OneDrive EBUSY lock crashes."
+ReleaseNotes,2,Text,"• Cross-Platform Release Studio: Automated production engine supporting high-speed NSIS packaging.
+• Live Obsidian Build Terminal: Real-time high-contrast build console with syntax highlighting.
+• Enhanced Nikah Ceremony Detection: Multi-track ripple placement for complex marker formats.
+• Sub-millisecond XML Sequence Locator across all Premiere Pro CEP extensions.
+• Fixed startup update prompt semver checks and suppressed transient EBUSY file locks.","• Cross-Platform Release Studio: Automated production engine supporting high-speed NSIS packaging.
+• Live Obsidian Build Terminal: Real-time high-contrast build console with syntax highlighting.
+• Enhanced Nikah Ceremony Detection: Multi-track ripple placement for complex marker formats.
+• Sub-millisecond XML Sequence Locator across all Premiere Pro CEP extensions.
+• Fixed startup update prompt semver checks and suppressed transient EBUSY file locks.","• Cross-Platform Release Studio: Automated production engine supporting high-speed NSIS packaging.
+• Live Obsidian Build Terminal: Real-time high-contrast build console with syntax highlighting.
+• Enhanced Nikah Ceremony Detection: Multi-track ripple placement for complex marker formats.
+• Sub-millisecond XML Sequence Locator across all Premiere Pro CEP extensions.
+• Fixed startup update prompt semver checks and suppressed transient EBUSY file locks."
+ShortDescription,3,Text,Professional workstation and media automation toolkit for Adobe Premiere Pro and studio video production.,Professional workstation and media automation toolkit for Adobe Premiere Pro and studio video production.,Professional workstation and media automation toolkit for Adobe Premiere Pro and studio video production.
+Feature1,11,Text,Zero-Click Domino Pipeline chaining Adobe Media Encoder into Title Adder and Converter,Zero-Click Domino Pipeline chaining Adobe Media Encoder into Title Adder and Converter,Zero-Click Domino Pipeline chaining Adobe Media Encoder into Title Adder and Converter
+Feature2,12,Text,Sub-millisecond Premiere Pro sequence XML locator across multi-terabyte project bins,Sub-millisecond Premiere Pro sequence XML locator across multi-terabyte project bins,Sub-millisecond Premiere Pro sequence XML locator across multi-terabyte project bins
+Feature3,13,Text,Intelligent Nikah and ceremony marker recognition with downstream ripple placement,Intelligent Nikah and ceremony marker recognition with downstream ripple placement,Intelligent Nikah and ceremony marker recognition with downstream ripple placement
+Feature4,14,Text,Archive Vault with root-level drive scanning and SHA-256 bit-for-bit integrity verification,Archive Vault with root-level drive scanning and SHA-256 bit-for-bit integrity verification,Archive Vault with root-level drive scanning and SHA-256 bit-for-bit integrity verification
+Feature5,15,Text,Automated camera and video card transfer with organized folder structuring,Automated camera and video card transfer with organized folder structuring,Automated camera and video card transfer with organized folder structuring
+Feature6,16,Text,4-tone celebration completion chime and native Windows 11/10 desktop notifications,4-tone celebration completion chime and native Windows 11/10 desktop notifications,4-tone celebration completion chime and native Windows 11/10 desktop notifications
+Feature7,17,Text,Resilient EBUSY file-lock suppression for uninterrupted overnight batch rendering,Resilient EBUSY file-lock suppression for uninterrupted overnight batch rendering,Resilient EBUSY file-lock suppression for uninterrupted overnight batch rendering
+Feature8,18,Text,Cloud synchronization portal integrated with Google Drive and enterprise network storage,Cloud synchronization portal integrated with Google Drive and enterprise network storage,Cloud synchronization portal integrated with Google Drive and enterprise network storage
+SearchTerm1,41,Text,video editing,video editing,video editing
+SearchTerm2,42,Text,premiere pro,premiere pro,premiere pro
+SearchTerm3,43,Text,media automation,media automation,media automation
+SearchTerm4,44,Text,video converter,video converter,video converter
+SearchTerm5,45,Text,workflow automation,workflow automation,workflow automation
+SearchTerm6,46,Text,media encoder,media encoder,media encoder
+SearchTerm7,47,Text,file renamer,file renamer,file renamer
+CopyrightAndTrademarkInfo,70,Text,Copyright © 2026 BS Framework. All rights reserved.,Copyright © 2026 BS Framework. All rights reserved.,Copyright © 2026 BS Framework. All rights reserved.
+AdditionalLicenseTerms,71,Text,"Proprietary software licensed by BS Framework. For enterprise licensing, contact support@bsframework.com.","Proprietary software licensed by BS Framework. For enterprise licensing, contact support@bsframework.com.","Proprietary software licensed by BS Framework. For enterprise licensing, contact support@bsframework.com."
+PrivacyPolicyUrl,72,Text,https://bsframework.com/privacy,https://bsframework.com/privacy,https://bsframework.com/privacy
+Website,73,Text,https://bsframework.com,https://bsframework.com,https://bsframework.com
+SupportContactInfo,74,Text,support@bsframework.com,support@bsframework.com,support@bsframework.com
+StoreLogo300x300,80,Relative path,store_logo_300x300.png,store_logo_300x300.png,store_logo_300x300.png
+DesktopScreenshot1,81,Relative path,store_screenshot_1920x1080.png,store_screenshot_1920x1080.png,store_screenshot_1920x1080.png
+DesktopScreenshot2,82,Relative path,store_screenshot_2_converter.png,store_screenshot_2_converter.png,store_screenshot_2_converter.png
+DesktopScreenshot3,83,Relative path,store_screenshot_3_vault.png,store_screenshot_3_vault.png,store_screenshot_3_vault.png

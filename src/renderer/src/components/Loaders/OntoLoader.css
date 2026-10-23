@@ -1,0 +1,423 @@
+/* ==============================================================================
+   OntoLoader.css
+   Authentic 5-Stage Mechanical Kinetic Preloader (Nelson Noa / Awwwards "ONTO")
+   ============================================================================== */
+
+.onto-loader-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  user-select: none;
+  font-family: var(--font-display, 'Outfit', 'Montserrat', sans-serif);
+}
+
+.onto-loader-inner {
+  width: 100%;
+  padding: 24px 28px;
+  background: var(--surface, rgba(250, 246, 238, 0.96));
+  border: 1px solid var(--border, rgba(221, 209, 188, 0.85));
+  border-radius: var(--radius-xl, 18px);
+  box-shadow: 0 16px 42px -10px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.03);
+  backdrop-filter: blur(20px);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Telemetry Header */
+.onto-meta-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.onto-tag-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.onto-tag {
+  font-family: var(--font-mono, monospace);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: var(--text-muted, #685B4E);
+  text-transform: uppercase;
+}
+
+.onto-wordmark-toggle {
+  background: rgba(184, 134, 11, 0.1);
+  border: 1px solid rgba(184, 134, 11, 0.3);
+  color: var(--theme-accent, #B8860B);
+  font-family: var(--font-mono, monospace);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 2px 7px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.onto-wordmark-toggle:hover {
+  background: rgba(184, 134, 11, 0.22);
+  border-color: #B8860B;
+}
+
+.onto-counter {
+  font-family: var(--font-mono, monospace);
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--theme-accent, #B8860B);
+}
+
+/* Stage Viewport */
+.onto-stage-viewport {
+  position: relative;
+  width: 100%;
+  height: 62px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+  padding: 4px 0;
+}
+
+/* Authentic ONTO Wordmark Stage */
+.onto-wordmark-stage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 100%;
+  width: 290px;
+}
+
+.onto-glyph-wrapper {
+  position: relative;
+  width: 64px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #1A1613;
+  will-change: transform, opacity, clip-path;
+}
+
+.onto-glyph-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Exact 5-Stage ONTO Mechanical Choreography */
+.onto-o1 {
+  animation: ontoStageO1 3.2s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+}
+
+.onto-n {
+  animation: ontoStageN 3.2s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+}
+
+.onto-t {
+  animation: ontoStageT 3.2s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+}
+
+.onto-o2 {
+  animation: ontoStageO2 3.2s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+}
+
+/* Stage 1: Rising Blocks -> Stage 2: Hold -> Stage 3: Inward Squeeze -> Stage 4: Chain Merger */
+@keyframes ontoStageO1 {
+  0% {
+    transform: translateY(115%) scaleY(0.7);
+    opacity: 0;
+    clip-path: inset(100% 0 0 0);
+  }
+  16% {
+    transform: translateY(0) scaleY(1);
+    opacity: 1;
+    clip-path: inset(0% 0 0 0);
+  }
+  38% {
+    transform: translateY(0) translateX(0);
+    opacity: 1;
+  }
+  50% {
+    transform: translateX(44px) scale(0.96);
+    opacity: 1;
+  }
+  64% {
+    transform: translateX(64px) scale(0.94);
+    opacity: 0.95;
+    filter: drop-shadow(0 0 14px rgba(184, 134, 11, 0.5));
+  }
+  74% {
+    transform: translateX(72px) scale(0.85);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 0;
+  }
+}
+
+@keyframes ontoStageN {
+  0%, 4% {
+    transform: translateY(115%) scaleY(0.7);
+    opacity: 0;
+    clip-path: inset(100% 0 0 0);
+  }
+  20% {
+    transform: translateY(0) scaleY(1);
+    opacity: 1;
+    clip-path: inset(0% 0 0 0);
+  }
+  38% {
+    transform: translateY(0) translateX(0) scaleX(1);
+    opacity: 1;
+  }
+  48% {
+    transform: translateX(16px) scaleX(0.2);
+    opacity: 0.35;
+  }
+  54% {
+    transform: translateX(24px) scaleX(0);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0) scaleX(0);
+    opacity: 0;
+  }
+}
+
+@keyframes ontoStageT {
+  0%, 8% {
+    transform: translateY(115%) scaleY(0.7);
+    opacity: 0;
+    clip-path: inset(100% 0 0 0);
+  }
+  24% {
+    transform: translateY(0) scaleY(1);
+    opacity: 1;
+    clip-path: inset(0% 0 0 0);
+  }
+  38% {
+    transform: translateY(0) translateX(0) scaleX(1);
+    opacity: 1;
+  }
+  48% {
+    transform: translateX(-16px) scaleX(0.2);
+    opacity: 0.35;
+  }
+  54% {
+    transform: translateX(-24px) scaleX(0);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0) scaleX(0);
+    opacity: 0;
+  }
+}
+
+@keyframes ontoStageO2 {
+  0%, 12% {
+    transform: translateY(115%) scaleY(0.7);
+    opacity: 0;
+    clip-path: inset(100% 0 0 0);
+  }
+  28% {
+    transform: translateY(0) scaleY(1);
+    opacity: 1;
+    clip-path: inset(0% 0 0 0);
+  }
+  38% {
+    transform: translateY(0) translateX(0);
+    opacity: 1;
+  }
+  50% {
+    transform: translateX(-44px) scale(0.96);
+    opacity: 1;
+  }
+  64% {
+    transform: translateX(-64px) scale(0.94);
+    opacity: 0.95;
+    filter: drop-shadow(0 0 14px rgba(184, 134, 11, 0.5));
+  }
+  74% {
+    transform: translateX(-72px) scale(0.85);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 0;
+  }
+}
+
+/* Stage 5: Central Fused Expansion Portal */
+.onto-portal-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 68px;
+  height: 50px;
+  color: var(--theme-accent, #B8860B);
+  pointer-events: none;
+  animation: ontoPortalFuse 3.2s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+}
+
+.onto-portal-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+@keyframes ontoPortalFuse {
+  0%, 64% {
+    transform: translate(-50%, -50%) scale(0.75);
+    opacity: 0;
+  }
+  68% {
+    transform: translate(-50%, -50%) scale(0.95);
+    opacity: 1;
+    filter: drop-shadow(0 0 20px rgba(212, 163, 71, 0.75));
+  }
+  80% {
+    transform: translate(-50%, -50%) scale(1.35);
+    opacity: 0.85;
+    filter: drop-shadow(0 0 35px rgba(212, 163, 71, 0.95));
+  }
+  92% {
+    transform: translate(-50%, -50%) scale(2.4);
+    opacity: 0;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(0.75);
+    opacity: 0;
+  }
+}
+
+/* UNIDESK Stage */
+.onto-unidesk-stage {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 3px;
+  letter-spacing: 0.08em;
+}
+
+.onto-uni-letter {
+  display: inline-block;
+  font-size: 34px;
+  font-weight: 900;
+  color: #1A1613;
+  text-transform: uppercase;
+  animation: ontoUniLetterBounce 2.4s infinite cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-origin: bottom center;
+}
+
+.onto-brand {
+  color: var(--theme-accent, #B8860B);
+  text-shadow: 0 0 20px rgba(184, 134, 11, 0.25);
+}
+
+.onto-u { animation-delay: 0.0s; }
+.onto-n { animation-delay: 0.06s; }
+.onto-i { animation-delay: 0.12s; }
+.onto-d { animation-delay: 0.18s; }
+.onto-e { animation-delay: 0.24s; }
+.onto-s { animation-delay: 0.30s; }
+.onto-k { animation-delay: 0.36s; }
+
+@keyframes ontoUniLetterBounce {
+  0%, 100% {
+    transform: translateY(0) scaleY(1);
+    opacity: 0.95;
+  }
+  30% {
+    transform: translateY(-8px) scaleY(1.08);
+    opacity: 1;
+    filter: drop-shadow(0 6px 12px rgba(184, 134, 11, 0.3));
+  }
+  60% {
+    transform: translateY(0) scaleY(0.98);
+  }
+}
+
+/* Precision Progress Track */
+.onto-track {
+  width: 100%;
+  height: 4px;
+  background: var(--surface-3, rgba(0, 0, 0, 0.08));
+  border-radius: 4px;
+  position: relative;
+  overflow: visible;
+}
+
+.onto-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #D4AF37 0%, #B8860B 50%, #E0A96D 100%);
+  border-radius: 4px;
+  transition: width 0.12s linear;
+  box-shadow: 0 0 12px rgba(184, 134, 11, 0.45);
+}
+
+.onto-glow-head {
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #FFF;
+  border: 2px solid #B8860B;
+  box-shadow: 0 0 10px #B8860B, 0 0 20px #D4AF37;
+  transform: translate(-50%, -50%);
+  transition: left 0.12s linear;
+}
+
+.onto-meta-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+}
+
+.onto-subtext {
+  font-size: 11px;
+  color: var(--text-secondary, #3D352D);
+  font-weight: 500;
+}
+
+.onto-status {
+  font-family: var(--font-mono, monospace);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-muted, #685B4E);
+}
+
+/* Dark Mode Overrides */
+[data-theme="dark"] .onto-loader-inner,
+.onto-loader-container.theme-dark .onto-loader-inner {
+  background: rgba(25, 27, 36, 0.94);
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45), 0 0 25px rgba(99, 102, 241, 0.12);
+}
+
+[data-theme="dark"] .onto-glyph-wrapper,
+.onto-loader-container.theme-dark .onto-glyph-wrapper,
+[data-theme="dark"] .onto-uni-letter,
+.onto-loader-container.theme-dark .onto-uni-letter {
+  color: #F8FAFC;
+}

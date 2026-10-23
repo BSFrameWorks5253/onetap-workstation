@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 15 15" fill="none">
+  <defs>
+    <filter id="fistShadow" x="-20%" y="-20%" width="150%" height="150%">
+      <feDropShadow dx="0.4" dy="0.8" stdDeviation="0.5" flood-color="#000000" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  <!-- Adobe Acrobat Closed Fist Grabbing Hand (Compact 15px) -->
+  <path d="M 4.1 4.5 C 3.4 4.5 2.9 5.1 2.9 5.8 L 2.9 8.4 C 2.9 10.9 4.9 12.4 7.5 12.4 C 10.1 12.4 11.6 10.9 11.6 8.4 L 11.6 5.8 C 11.6 5.1 11.1 4.5 10.4 4.5 C 9.8 4.5 9.4 4.9 9.2 5.3 C 9.0 4.9 8.5 4.5 7.9 4.5 C 7.4 4.5 6.9 4.9 6.8 5.3 C 6.6 4.9 6.1 4.5 5.5 4.5 C 5.0 4.5 4.5 4.9 4.4 5.3 C 4.1 4.8 3.6 4.5 3.0 4.5 L 4.1 4.5 Z"
+        fill="#FFFFFF"
+        stroke="#000000"
+        stroke-width="1.1"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        filter="url(#fistShadow)"/>
+  <path d="M 4.5 6.4 C 4.5 7.6 6.0 7.6 6.0 6.4" stroke="#000000" stroke-width="0.9" stroke-linecap="round"/>
+  <path d="M 6.4 6.4 C 6.4 7.6 7.9 7.6 7.9 6.4" stroke="#000000" stroke-width="0.9" stroke-linecap="round"/>
+  <path d="M 8.3 6.4 C 8.3 7.6 9.8 7.6 9.8 6.4" stroke="#000000" stroke-width="0.9" stroke-linecap="round"/>
+  <path d="M 2.9 7.5 C 3.4 6.9 4.9 6.8 6.4 7.9" stroke="#000000" stroke-width="0.9" stroke-linecap="round"/>
+</svg>
