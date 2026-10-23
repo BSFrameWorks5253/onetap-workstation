@@ -212,6 +212,7 @@ contextBridge.exposeInMainWorld('api', {
     getDriveSpace: (drivePath?: string) => ipcRenderer.invoke('system:getDriveSpace', drivePath),
     getAutoLaunch: () => ipcRenderer.invoke('system:getAutoLaunch'),
     setAutoLaunch: (enabled: boolean) => ipcRenderer.invoke('system:setAutoLaunch', enabled),
+    getLaunchInfo: () => ipcRenderer.invoke('system:getLaunchInfo'),
     onAmeRenderComplete: (cb: (data: any) => void) => {
       const sub = (_e: any, d: any): void => cb(d)
       ipcRenderer.on('ame:render-complete', sub)

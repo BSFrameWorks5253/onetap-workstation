@@ -12,7 +12,15 @@ interface ToolbarProps {
 
 export default function Toolbar({ activePage, onOpenCmdPalette }: ToolbarProps): JSX.Element {
   const [clock, setClock] = useState('')
+  const [launchInfo, setLaunchInfo] = useState<{ isDemo?: boolean; isTrial?: boolean } | null>(null)
   const meta = PAGE_META[activePage]
+
+  useEffect(() => {
+    const api = (window as any).api
+    if (api?.system?.getLaunchInfo) {
+      api.system.getLaunchInfo().then((info: any) => setLaunchInfo(info)).catch(() => {})
+    }
+  }, [])
 
   useEffect(() => {
     function tick(): void {
@@ -76,6 +84,30 @@ export default function Toolbar({ activePage, onOpenCmdPalette }: ToolbarProps):
         {/* Quick controls + clock */}
         <div className="toolbar-right">
           <div className="toolbar-controls">
+            {/* Creative Cloud Demo / Trial Badge */}
+            {(launchInfo?.isTrial || launchInfo?.isDemo) && (
+              <span
+                style={{
+                  padding: '3px 9px',
+                  borderRadius: '9999px',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  background: 'linear-gradient(135deg, rgba(225,29,72,0.18), rgba(245,158,11,0.18))',
+                  border: '1px solid rgba(244,63,94,0.4)',
+                  color: '#fb7185',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  letterSpacing: '0.02em',
+                  boxShadow: '0 0 10px rgba(225,29,72,0.15)'
+                }}
+                title="Creative Cloud Interactive Sandbox Trial Active"
+              >
+                <span>⚡</span>
+                <span>{launchInfo.isTrial ? '7-Day Free Trial' : 'Creative Cloud Demo'}</span>
+              </span>
+            )}
+
             {/* Quick Spotlight Launcher */}
             {onOpenCmdPalette && (
               <button className="toolbar-btn-pill" onClick={onOpenCmdPalette} title="Open Spotlight Launcher (Ctrl+K)">

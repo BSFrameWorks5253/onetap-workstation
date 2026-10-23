@@ -206,5 +206,38 @@ export function registerSystemIPC(): void {
     }
     return results
   })
+
+  // Anything Ecosystem & Creative Cloud Demo / Trial & Live Loader Config
+  ipcMain.handle('system:getLaunchInfo', () => {
+    const isDemo = process.argv.includes('--demo')
+    const isTrial = process.argv.includes('--trial')
+    let loaderConfigPath: string | null = null
+    const loaderArg = process.argv.find((a) => a.startsWith('--loader-config='))
+    if (loaderArg) {
+      loaderConfigPath = loaderArg.split('=')[1]?.replace(/^["']|["']$/g, '') || null
+    }
+
+    let loaderConfig: any = null
+    if (loaderConfigPath) {
+      try {
+        const resolvedPath = path.isAbsolute(loaderConfigPath)
+          ? loaderConfigPath
+          : path.resolve(process.cwd(), loaderConfigPath)
+        if (fs.existsSync(resolvedPath)) {
+          loaderConfig = JSON.parse(fs.readFileSync(resolvedPath, 'utf-8'))
+        }
+      } catch (err) {
+        console.warn('[System] Failed to parse custom loaderConfig:', err)
+      }
+    }
+
+    return {
+      isDemo,
+      isTrial,
+      loaderConfig,
+      argv: process.argv,
+      version: app.getVersion()
+    }
+  })
 }
 
