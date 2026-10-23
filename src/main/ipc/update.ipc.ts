@@ -50,7 +50,7 @@ export function getWorkstationVersion(): string {
     }
   } catch {}
   try {
-    return (app.getVersion() || '26.10.20').trim()
+    return (app.getVersion() || '26.10.21').trim()
   } catch {
     return '26.10.5'
   }
@@ -193,7 +193,7 @@ export async function checkAnythingUpdate(customPath?: string): Promise<UpdateMa
       } catch {}
     }
 
-    // Inspect subdirectories (e.g. V-26.10.20, V-26.10.20)
+    // Inspect subdirectories (e.g. V-26.10.21, V-26.10.21)
     try {
       const items = fs.readdirSync(folder, { withFileTypes: true })
       for (const item of items) {
