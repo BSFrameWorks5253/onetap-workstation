@@ -13,7 +13,7 @@ export default function MorphingBrand({
   logoSize = 36,
   fontSize = 15,
   compact = false,
-  version = 'v26.10.13',
+  version = 'v26.10.20',
   onClick
 }: MorphingBrandProps): JSX.Element {
   return (

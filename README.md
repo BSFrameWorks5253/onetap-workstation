@@ -19,14 +19,14 @@
 <!-- ========================================== -->
 <!-- 💻 LIVE CONSOLE TERMINAL SIMULATOR SVG      -->
 <!-- ========================================== -->
-<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=700&size=20&duration=2600&pause=900&color=38BDF8&center=true&vCenter=true&width=820&lines=%E2%96%B6%20SYSTEM%20READY%3A%20UNIDESK%20STUDIO%20V26.10.13%20ONLINE;%E2%96%B6%20NVENC%20CUDA%20%2B%20INTEL%20QSV%20HARDWARE%20ACCELERATION%20%5BACTIVE%5D;%E2%96%B6%20SEQUENTIAL%20MULTI-BATCH%20QUEUE%20%5B1..N%5D%20ARMED;%E2%96%B6%20DYNAMIC%20PHOTO%20PAIRING%2C%20RENAME%20%26%20MOVE%20%5BSYNCHRONIZED%5D;%E2%96%B6%20SHA-256%20TOKEN%20CACHE%3A%20~891%2C818%20AI%20TOKENS%20SAVED!;%E2%96%B6%20WINDOWS%20TASKBAR-STYLE%20LIVE%20HOVER%20PREVIEWS%20%5BENGAGED%5D;%E2%96%B6%205%20AWWWARDS-GRADE%20KINETIC%20PRELOADERS%20%26%20WIPE%20FX%20LOADED" alt="Console Shell Output" />
+<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=700&size=20&duration=2600&pause=900&color=38BDF8&center=true&vCenter=true&width=820&lines=%E2%96%B6%20SYSTEM%20READY%3A%20UNIDESK%20STUDIO%20V26.10.20%20ONLINE;%E2%96%B6%20NVENC%20CUDA%20%2B%20INTEL%20QSV%20HARDWARE%20ACCELERATION%20%5BACTIVE%5D;%E2%96%B6%20SEQUENTIAL%20MULTI-BATCH%20QUEUE%20%5B1..N%5D%20ARMED;%E2%96%B6%20DYNAMIC%20PHOTO%20PAIRING%2C%20RENAME%20%26%20MOVE%20%5BSYNCHRONIZED%5D;%E2%96%B6%20SHA-256%20TOKEN%20CACHE%3A%20~891%2C818%20AI%20TOKENS%20SAVED!;%E2%96%B6%20WINDOWS%20TASKBAR-STYLE%20LIVE%20HOVER%20PREVIEWS%20%5BENGAGED%5D;%E2%96%B6%205%20AWWWARDS-GRADE%20KINETIC%20PRELOADERS%20%26%20WIPE%20FX%20LOADED" alt="Console Shell Output" />
 
 <br/><br/>
 
 <!-- ========================================== -->
 <!-- 🛡️ STATUS & TECHNOLOGY SHIELDS MATRIX     -->
 <!-- ========================================== -->
-[![Release](https://img.shields.io/badge/Release-v26.10.13-6366F1?style=for-the-badge&logo=electron&logoColor=white)](https://github.com/BSFrameWorks5253/onetap-workstation/releases)
+[![Release](https://img.shields.io/badge/Release-v26.10.20-6366F1?style=for-the-badge&logo=electron&logoColor=white)](https://github.com/BSFrameWorks5253/onetap-workstation/releases)
 [![Build Status](https://img.shields.io/badge/Build-Passing%20(100%25)-10B981?style=for-the-badge&logo=githubactions&logoColor=white)](https://github.com/BSFrameWorks5253/onetap-workstation)
 [![Electron](https://img.shields.io/badge/Electron-30.0.0-475569?style=for-the-badge&logo=electron&logoColor=white)](https://electronjs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.5.4-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://typescriptlang.org)
