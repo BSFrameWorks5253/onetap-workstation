@@ -1,78 +1,367 @@
-/* PageLoader.css */
+/* ==========================================================================
+   PageLoader.css - One Tap Pro Workstation
+   Liquid Glass Page Skeleton & Dynamic Island Transition HUD
+   ========================================================================== */
+
 .page-loader {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   justify-content: flex-start;
-  padding: 80px 32px 32px;
+  padding: 20px 32px 36px;
   height: 100%;
-  gap: 28px;
-  animation: fadeIn 0.2s ease both;
-  background: var(--bg);
+  min-height: 100%;
+  gap: 20px;
+  background: transparent;
+  animation: pageLoaderEnter 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+  box-sizing: border-box;
+  overflow: hidden auto;
+  user-select: none;
 }
 
-.page-loader-inner {
+@keyframes pageLoaderEnter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ==========================================================================
+   Top Floating Glass Island HUD Loader
+   ========================================================================== */
+.page-loader-hud {
+  align-self: center;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  width: 100%;
+  max-width: 860px;
+  padding: 12px 20px;
+  background: var(--surface-2, rgba(255, 255, 255, 0.75));
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  border: 1px solid var(--border, rgba(0, 0, 0, 0.08));
+  border-radius: 9999px;
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.08), 0 0 0 1px var(--specular-highlight, rgba(255, 255, 255, 0.6));
+  transition: all 0.25s ease;
+}
+
+.page-loader-hud-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.page-loader-conic-spinner {
   position: relative;
-  width: 100px;
-  height: 100px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.page-loader-spinner-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  animation: pageSpinnerRotate 1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes pageSpinnerRotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.spinner-track {
+  stroke: rgba(150, 150, 150, 0.14);
+}
+
+.spinner-arc {
+  filter: drop-shadow(0 0 6px var(--accent-glow, rgba(225, 29, 72, 0.4)));
+}
+
+.page-loader-center-icon {
+  position: relative;
+  z-index: 2;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.page-loader-logo-wrap {
-  position: absolute;
-  width: 60px;
-  height: 60px;
-  opacity: 0.15;
-  filter: grayscale(1);
-  animation: pulse 2s ease-in-out infinite;
-}
-
-.page-loader-logo {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
-.page-loader-ring {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  border: 4px solid var(--border);
-  border-top-color: var(--loader-color, var(--accent-adder));
-  animation: spin 1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-}
-
-.page-loader-icon {
-  font-size: 32px;
-  z-index: 1;
-  animation: scaleIn 0.4s var(--ease-spring) both;
-}
-
-.page-loader-text-wrap {
-  text-align: center;
+.page-loader-info {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
-.page-loader-label {
-  font-size: var(--text-lg);
+.page-loader-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.page-loader-page-icon {
+  font-size: 15px;
+}
+
+.page-loader-title {
+  font-size: 13.5px;
   font-weight: 700;
-  color: var(--text-primary);
+  color: var(--text-primary, #1C1917);
+  letter-spacing: -0.01em;
+  font-family: var(--font-display, "Outfit", sans-serif);
+}
+
+.page-loader-dots {
+  display: inline-flex;
+  font-weight: 700;
+  color: var(--text-primary, #1C1917);
+  letter-spacing: 1px;
+}
+
+.page-loader-dots .dot {
+  animation: pageDotPulse 1.4s infinite;
+  opacity: 0.3;
+}
+.page-loader-dots .dot-1 { animation-delay: 0s; }
+.page-loader-dots .dot-2 { animation-delay: 0.2s; }
+.page-loader-dots .dot-3 { animation-delay: 0.4s; }
+
+@keyframes pageDotPulse {
+  0%, 100% { opacity: 0.3; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-1px); }
 }
 
 .page-loader-sub {
-  font-size: var(--text-sm);
-  color: var(--text-muted);
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-muted, #78716C);
+  max-width: 480px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.page-loader-skeletons {
+.page-loader-hud-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  background: var(--surface, rgba(0, 0, 0, 0.04));
+  border: 1px solid var(--border, rgba(0, 0, 0, 0.06));
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted, #78716C);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.page-loader-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10B981;
+  box-shadow: 0 0 8px #10B981;
+  animation: pagePulseDot 1.5s ease-in-out infinite;
+}
+
+@keyframes pagePulseDot {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.4); opacity: 0.6; }
+}
+
+/* ==========================================================================
+   Contextual Skeleton Body & Shimmer Pipeline
+   ========================================================================== */
+.page-loader-body {
   width: 100%;
-  max-width: 640px;
+  max-width: 1180px;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  margin-top: 20px;
+  flex: 1;
+}
+
+.page-loader-skeleton-group {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+/* Skeleton Atomic Primitives */
+.page-skeleton-pill,
+.page-skeleton-btn,
+.page-skeleton-line,
+.page-skeleton-card,
+.page-skeleton-dropzone,
+.page-skeleton-icon-box,
+.chart-bar-col {
+  position: relative;
+  overflow: hidden;
+  background: var(--skeleton-bg, rgba(140, 140, 140, 0.08));
+  border-radius: 8px;
+}
+
+.page-skeleton-pill::after,
+.page-skeleton-btn::after,
+.page-skeleton-line::after,
+.page-skeleton-card::after,
+.page-skeleton-dropzone::after,
+.page-skeleton-icon-box::after,
+.chart-bar-col::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--skeleton-sheen, rgba(255, 255, 255, 0.12)) 50%,
+    transparent 100%
+  );
+  animation: pageShimmerSweep 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  pointer-events: none;
+}
+
+@keyframes pageShimmerSweep {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.page-skeleton-pill {
+  height: 32px;
+  border-radius: 9999px;
+}
+
+.page-skeleton-btn {
+  height: 36px;
+  border-radius: 10px;
+}
+
+.page-skeleton-icon-box {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+}
+
+.skeleton-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.page-skeleton-grid {
+  display: grid;
+  gap: 16px;
+  width: 100%;
+}
+.page-skeleton-grid.cols-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.page-skeleton-grid.cols-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+@media (max-width: 900px) {
+  .page-skeleton-grid.cols-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.page-skeleton-card {
+  padding: 20px;
+  background: var(--surface, rgba(255, 255, 255, 0.6));
+  border: 1px solid var(--border, rgba(0, 0, 0, 0.08));
+  border-radius: var(--radius-card, 20px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.skeleton-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+/* Dropzone Skeleton (Title Adder, Converter) */
+.page-skeleton-dropzone {
+  min-height: 240px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  border-radius: var(--radius-card, 20px);
+  border: 2px dashed var(--border, rgba(0, 0, 0, 0.12));
+  background: var(--surface, rgba(255, 255, 255, 0.4));
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+
+.dropzone-shimmer-ring {
+  padding: 10px;
+  border-radius: 20px;
+  background: var(--surface-2, rgba(255, 255, 255, 0.5));
+  border: 1px solid var(--border, rgba(0, 0, 0, 0.06));
+}
+
+/* Chart Mock Bars Skeleton */
+.chart-card {
+  min-height: 240px;
+}
+
+.chart-mock-bars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  height: 180px;
+  padding: 16px 8px 4px;
+  border-bottom: 2px solid var(--border, rgba(0, 0, 0, 0.08));
+}
+
+.chart-bar-col {
+  flex: 1;
+  min-width: 14px;
+  border-radius: 6px 6px 2px 2px;
+  background: var(--skeleton-bg, rgba(140, 140, 140, 0.12));
+}
+
+/* Table Skeleton */
+.table-skeleton-card {
+  padding: 16px;
+  gap: 8px;
+}
+
+.table-header-row,
+.table-data-row {
+  display: grid;
+  grid-template-columns: 40px 2fr 1.2fr 1fr 1fr 100px;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px;
+  border-radius: 10px;
+}
+
+.table-header-row {
+  background: var(--surface-2, rgba(0, 0, 0, 0.03));
+  border-bottom: 1px solid var(--border, rgba(0, 0, 0, 0.06));
+}
+
+.table-data-row {
+  border-bottom: 1px solid var(--border, rgba(0, 0, 0, 0.04));
 }

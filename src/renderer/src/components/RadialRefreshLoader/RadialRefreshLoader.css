@@ -10,9 +10,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--surface, #FAF9F4);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: var(--overlay-backdrop, rgba(12, 10, 16, 0.72));
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
   user-select: none;
   transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -28,11 +28,11 @@
   flex-direction: column;
   align-items: center;
   gap: 16px;
-  padding: 32px 40px;
+  padding: 32px 42px;
   border-radius: 24px;
-  background: var(--surface-2, rgba(255, 255, 255, 0.85));
-  border: 1px solid var(--border, rgba(0, 0, 0, 0.08));
-  box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.12), 0 0 0 1px var(--specular-highlight, rgba(255, 255, 255, 0.7));
+  background: var(--surface-2, rgba(24, 21, 28, 0.88));
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+  box-shadow: 0 24px 60px -10px rgba(0, 0, 0, 0.35), 0 0 0 1px var(--specular-highlight, rgba(255, 255, 255, 0.15));
   animation: radialPopIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
@@ -74,7 +74,7 @@
 }
 
 .radial-track {
-  stroke: rgba(225, 29, 72, 0.12);
+  stroke: rgba(225, 29, 72, 0.15);
 }
 
 .radial-arc {
@@ -113,7 +113,7 @@
 .radial-loader-title {
   font-size: 14px;
   font-weight: 800;
-  color: var(--text-primary, #1C1917);
+  color: var(--text-primary, #FFFFFF);
   font-family: var(--font-display, "Outfit", "Plus Jakarta Sans", sans-serif);
   letter-spacing: -0.01em;
   margin: 0;
@@ -122,7 +122,7 @@
 .radial-loader-sub {
   font-size: 11px;
   font-weight: 600;
-  color: var(--text-muted, #78716C);
+  color: var(--text-muted, #A1A1AA);
   font-family: var(--font-mono, ui-monospace, monospace);
   letter-spacing: 0.02em;
   margin: 0;
