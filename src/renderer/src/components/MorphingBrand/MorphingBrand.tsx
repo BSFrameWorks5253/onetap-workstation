@@ -40,17 +40,17 @@ export default function MorphingBrand({
             height: `${logoSize}px`,
             position: 'relative',
             userSelect: 'none',
-            gap: '2px'
+            gap: '3px'
           }}
         >
           <div
             style={{
               fontSize: `${fontSize}px`,
-              fontWeight: 900,
-              fontFamily: '"Outfit", "Plus Jakarta Sans", system-ui, sans-serif',
+              fontWeight: 800,
+              fontFamily: 'var(--font-display, "Outfit", "Plus Jakarta Sans", system-ui, sans-serif)',
               letterSpacing: '-0.02em',
-              lineHeight: 1.1,
-              color: '#FFFFFF'
+              lineHeight: 1.15,
+              color: 'var(--text-primary, #1C1917)'
             }}
           >
             One Tap
@@ -59,11 +59,11 @@ export default function MorphingBrand({
           {version && (
             <div
               style={{
-                fontSize: `${Math.max(9, fontSize * 0.65)}px`,
+                fontSize: `${Math.max(10, Math.round(fontSize * 0.72))}px`,
                 fontWeight: 650,
-                fontFamily: '"Outfit", "Plus Jakarta Sans", system-ui, sans-serif',
-                color: 'rgba(244, 63, 94, 0.95)',
-                letterSpacing: '0.03em',
+                fontFamily: 'var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace)',
+                color: 'var(--text-muted, #78716C)',
+                letterSpacing: '0.02em',
                 lineHeight: 1.1
               }}
             >

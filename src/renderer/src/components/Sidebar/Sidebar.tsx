@@ -115,8 +115,14 @@ export default function Sidebar({ activePage, onNavigate, busyPages, adderProgre
       {/* Brand card */}
       <div 
         className="sidebar-brand" 
-        onClick={openZenInfoWebsite} 
-        title="Visit Zen Infosys (https://www.zeninfo.in/)"
+        onClick={() => {
+          if (typeof (window as any).showAdobeSplashScreen === 'function') {
+            (window as any).showAdobeSplashScreen()
+          } else if (typeof (window as any).showWelcomeScreen === 'function') {
+            (window as any).showWelcomeScreen()
+          }
+        }} 
+        title="One Tap Workstation"
         style={{ cursor: 'pointer', padding: '6px' }}
       >
         <MorphingBrand logoSize={34} fontSize={15} compact={collapsed} version={`v${version}`} />

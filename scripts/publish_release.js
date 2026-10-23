@@ -258,19 +258,19 @@ function pushGitTag(version) {
       execSync('git push origin main', {
         stdio: 'inherit',
         cwd: ROOT_DIR,
-        timeout: 15000,
+        timeout: 6000,
         env: { ...process.env, GIT_TERMINAL_PROMPT: '0' }
       })
       execSync(`git push origin ${tagName} --force`, {
         stdio: 'inherit',
         cwd: ROOT_DIR,
-        timeout: 15000,
+        timeout: 6000,
         env: { ...process.env, GIT_TERMINAL_PROMPT: '0' }
       })
       logSuccess(`Successfully pushed commit & tag ${tagName} to GitHub!`)
       logSuccess(`GitHub Actions workflow is now triggered at https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/actions`)
     } catch (pushErr) {
-      logWarn(`Git push noticed: ${pushErr.message}`)
+      logWarn(`Git push noticed (if GitHub credentials are not cached): ${pushErr.message}`)
     }
   } catch (err) {
     logWarn(`Git tagging notice: ${err.message}`)

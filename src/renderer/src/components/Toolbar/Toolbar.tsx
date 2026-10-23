@@ -51,8 +51,12 @@ export default function Toolbar({ activePage, onOpenCmdPalette }: ToolbarProps):
         <div className="toolbar-breadcrumb">
           <span 
             className="toolbar-crumb-root" 
-            onClick={openZenInfoWebsite} 
-            title="Visit Zen Infosys (https://www.zeninfo.in/)"
+            onClick={() => {
+              if (typeof (window as any).showAdobeSplashScreen === 'function') {
+                (window as any).showAdobeSplashScreen()
+              }
+            }} 
+            title="One Tap Workstation"
             style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center' }}
           >
             <MorphingBrand logoSize={20} fontSize={13} />

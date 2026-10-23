@@ -1,5 +1,5 @@
 import React from 'react'
-import logo from '../../assets/zen_final_nobg.png'
+import OneTapLogo from '../OneTapLogo'
 import type { PageKey } from '../../types'
 import { PAGE_META } from '../../types'
 import './PageLoader.css'
@@ -21,7 +21,7 @@ export default function PageLoader({ pageKey }: PageLoaderProps): JSX.Element {
       <div className="page-loader-inner">
         {/* Logo with pulse/spin effect */}
         <div className="page-loader-logo-wrap">
-          <img src={logo} alt="Logo" className="page-loader-logo" />
+          <OneTapLogo size={42} glow={false} />
         </div>
         
         {/* Accent-colored spinner ring */}

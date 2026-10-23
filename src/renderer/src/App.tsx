@@ -3,6 +3,7 @@ import { ThemeProvider, useTheme } from './theme/ThemeContext'
 import { SoundProvider, useSound } from './components/SoundProvider'
 import WelcomeScreen from './components/WelcomeScreen'
 import AdobeSplashScreen from './components/AdobeSplashScreen'
+import RadialRefreshLoader from './components/RadialRefreshLoader'
 import SetupWizard from './components/SetupWizard'
 import Sidebar from './components/Sidebar'
 import Toolbar from './components/Toolbar'
@@ -90,16 +91,33 @@ function AppInner(): JSX.Element {
   const { showToast } = useToast()
   const { playSuccess } = useSound()
   const [appVersion, setAppVersion] = useState<string>('26.10.12')
+
+  // Detect if this session previously showed the splash, or if the page was refreshed (F5 / Ctrl+R)
+  const isReload = useRef((() => {
+    try {
+      const navEntries = performance.getEntriesByType('navigation')
+      if (navEntries.length > 0 && (navEntries[0] as PerformanceNavigationTiming).type === 'reload') {
+        return true
+      }
+    } catch {}
+    return sessionStorage.getItem('ot_boot_splash_shown') === 'true'
+  })()).current
+
   const [showSplash, setShowSplash] = useState<boolean>(() => {
     const params = new URLSearchParams(window.location.search)
     if (params.get('view') === 'splash') return true
+    // On refresh, do not show the heavy rectangular splash!
+    if (isReload) return false
     const bootSplash = sessionStorage.getItem('ot_boot_splash_shown')
     return !bootSplash
   })
-  const [showWelcome, setShowWelcome] = useState<boolean>(() => {
-    const lastWelcomed = localStorage.getItem('last_welcomed_version')
-    return !lastWelcomed
+
+  // Dedicated radial loader for in-app refresh
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(() => {
+    return isReload
   })
+
+  const [showWelcome, setShowWelcome] = useState<boolean>(false)
   const [setupDone, setSetupDone] = useState<boolean>(true)
 
   // Dynamic application zoom state (supports standard browser Ctrl +, Ctrl -, Ctrl 0)
@@ -940,22 +958,36 @@ function AppInner(): JSX.Element {
           isOpen={showSplash}
           onComplete={() => {
             sessionStorage.setItem('ot_boot_splash_shown', 'true')
+            localStorage.setItem('last_welcomed_version', appVersion)
             setShowSplash(false)
+            setShowWelcome(false)
+            setActivePage('adder')
           }}
         />
       )}
 
-      {showWelcome && !showSplash && (
+      {isRefreshing && (
+        <RadialRefreshLoader
+          isOpen={isRefreshing}
+          onComplete={() => {
+            setIsRefreshing(false)
+            setActivePage('adder')
+          }}
+        />
+      )}
+
+      {showWelcome && !showSplash && !isRefreshing && (
         <WelcomeScreen
           version={appVersion}
           onDone={() => {
             localStorage.setItem('last_welcomed_version', appVersion)
             setShowWelcome(false)
+            setActivePage('adder')
           }}
         />
       )}
 
-      {!setupDone && !showWelcome && !showSplash && (
+      {!setupDone && !showWelcome && !showSplash && !isRefreshing && (
         <SetupWizard onDone={() => setSetupDone(true)} />
       )}
 
@@ -963,9 +995,9 @@ function AppInner(): JSX.Element {
         className="app-shell"
         data-page={activePage}
         style={{
-          opacity: !showSplash && !showWelcome && setupDone ? 1 : 0,
-          transition: 'opacity 0.4s ease',
-          pointerEvents: !showSplash && !showWelcome && setupDone ? 'auto' : 'none'
+          opacity: !showSplash && !isRefreshing && !showWelcome && setupDone ? 1 : 0,
+          transition: 'opacity 0.35s ease',
+          pointerEvents: !showSplash && !isRefreshing && !showWelcome && setupDone ? 'auto' : 'none'
         }}
       >
         {/* Liquid Glass chromatic refraction background mesh */}
