@@ -254,26 +254,35 @@ function pushGitTag(version) {
     execSync(`git tag -a ${tagName} -m "Release v${version}" -f`, { stdio: 'inherit', cwd: ROOT_DIR })
     logSuccess(`Created git release tag: ${tagName}`)
 
+    const token = getGithubToken()
+    const pushRemote = token
+      ? `https://${token}@github.com/${GITHUB_OWNER}/${GITHUB_REPO}.git`
+      : 'origin'
+
     try {
-      execSync('git push origin main', {
+      execSync(`git push ${pushRemote} main`, {
         stdio: 'inherit',
         cwd: ROOT_DIR,
-        timeout: 6000,
+        timeout: 30000,
         env: { ...process.env, GIT_TERMINAL_PROMPT: '0' }
       })
-      execSync(`git push origin ${tagName} --force`, {
+      execSync(`git push ${pushRemote} ${tagName} --force`, {
         stdio: 'inherit',
         cwd: ROOT_DIR,
-        timeout: 6000,
+        timeout: 30000,
         env: { ...process.env, GIT_TERMINAL_PROMPT: '0' }
       })
       logSuccess(`Successfully pushed commit & tag ${tagName} to GitHub!`)
       logSuccess(`GitHub Actions workflow is now triggered at https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/actions`)
+      return true
     } catch (pushErr) {
-      logWarn(`Git push noticed (if GitHub credentials are not cached): ${pushErr.message}`)
+      logWarn(`Git push to GitHub skipped/failed: ${pushErr.message}`)
+      logWarn(`To enable automatic git pushing, save your GitHub token in .env as GITHUB_TOKEN="ghp_..."`)
+      return false
     }
   } catch (err) {
     logWarn(`Git tagging notice: ${err.message}`)
+    return false
   }
 }
 
@@ -379,20 +388,27 @@ async function publishRelease(options = {}) {
   syncToAnythingEcosystem(version, versionDir)
 
   // 4. Push directly to GitHub Releases via REST API
+  let githubApiUploaded = false
   if (fs.existsSync(targetExePath)) {
-    await publishToGitHubReleases(version, targetExePath, releaseNotes)
+    githubApiUploaded = await publishToGitHubReleases(version, targetExePath, releaseNotes)
   }
 
   // 5. Push Git Tag & Commit to trigger GitHub Actions release pipeline
-  pushGitTag(version)
+  const gitPushed = pushGitTag(version)
 
   console.log('\n============================================================')
-  console.log(`🎉 RELEASE v${version} PIPELINE COMPLETED!`)
+  if (githubApiUploaded || gitPushed) {
+    console.log(`🎉 RELEASE v${version} PUBLISHED TO GITHUB!`)
+    console.log(`🌐 GitHub URL    : https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/tag/v${version}`)
+  } else {
+    console.log(`⚠️  LOCAL RELEASE V-${version} PACKAGED (GITHUB UPLOAD SKIPPED)`)
+    console.log(`▲ Note: No GITHUB_TOKEN configured. The files are packaged locally, but not yet uploaded to GitHub Releases.`)
+    console.log(`▲ To publish to GitHub, add GITHUB_TOKEN="ghp_..." in .env and run: node scripts/publish_release.js`)
+  }
   console.log(`📁 Version Folder: release/One Tap/V-${version}/`)
   if (fs.existsSync(targetExePath)) {
     console.log(`📦 Executable    : ${targetExePath}`)
   }
-  console.log(`🌐 GitHub URL    : https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/tag/v${version}`)
   console.log('============================================================\n')
 }
 

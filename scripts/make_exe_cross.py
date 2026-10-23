@@ -2133,12 +2133,15 @@ class UniDeskStudio(ctk.CTk):
                 assets.append(fp)
 
         # 9. Publish to GitHub Releases
+        github_uploaded = False
         if self.opt_publish_git.get():
             self._set_status('Step 9/9: Publishing to GitHub Releases...', C_AMBER)
             if assets:
                 body = generate_github_markdown(target, wn, bf, imp, rn)
                 pub_ok = upload_to_github(target, assets, body, self._log_fn)
-                if not pub_ok:
+                if pub_ok:
+                    github_uploaded = True
+                else:
                     self._log('[WARNING] GitHub release incomplete -- verify GITHUB_TOKEN.', 'yellow')
             else:
                 self._log(f'[WARNING] No artifacts found for v{target} -- skipping GitHub publish.', 'yellow')
@@ -2167,9 +2170,9 @@ class UniDeskStudio(ctk.CTk):
         elapsed = round(time.time() - t0, 1)
         self._log(f'\n✔ Pipeline successfully completed for v{target} in {elapsed}s!\n', 'green')
         self._set_status(f'v{target} complete ({elapsed}s)', C_GREEN)
-        self._finish(True, target)
+        self._finish(True, target, github_uploaded=github_uploaded)
 
-    def _finish(self, success: bool, version: str):
+    def _finish(self, success: bool, version: str, github_uploaded: bool = False):
         def _reset():
             self.is_building = False
             self.prog_bar.stop()
@@ -2181,7 +2184,19 @@ class UniDeskStudio(ctk.CTk):
             if hasattr(self, 'lbl_target_pill'):
                 self.lbl_target_pill.configure(text=f'🎯 Target: v{self.ver_entry.get().strip()}')
             if success:
-                messagebox.showinfo('Build Complete', f'Uni Desk release v{version} successfully built and published!')
+                if self.opt_publish_git.get() and not github_uploaded:
+                    messagebox.showwarning(
+                        'Build Complete (GitHub Upload Skipped)',
+                        f'Uni Desk release v{version} was built and packaged locally!\n\n'
+                        f'⚠️ GitHub Release was NOT uploaded because GITHUB_TOKEN is not configured in .env.\n\n'
+                        f'To upload to GitHub:\n'
+                        f'1. Go to Settings / Preflight tab\n'
+                        f'2. Enter your GitHub Personal Access Token\n'
+                        f'3. Click "Save Token to .env"\n'
+                        f'4. Re-run or publish to GitHub.'
+                    )
+                else:
+                    messagebox.showinfo('Build Complete', f'Uni Desk release v{version} successfully built and published!')
         self.after(0, _reset)
 
 
