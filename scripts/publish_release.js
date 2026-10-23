@@ -255,8 +255,18 @@ function pushGitTag(version) {
     logSuccess(`Created git release tag: ${tagName}`)
 
     try {
-      execSync('git push origin main', { stdio: 'inherit', cwd: ROOT_DIR })
-      execSync(`git push origin ${tagName} --force`, { stdio: 'inherit', cwd: ROOT_DIR })
+      execSync('git push origin main', {
+        stdio: 'inherit',
+        cwd: ROOT_DIR,
+        timeout: 15000,
+        env: { ...process.env, GIT_TERMINAL_PROMPT: '0' }
+      })
+      execSync(`git push origin ${tagName} --force`, {
+        stdio: 'inherit',
+        cwd: ROOT_DIR,
+        timeout: 15000,
+        env: { ...process.env, GIT_TERMINAL_PROMPT: '0' }
+      })
       logSuccess(`Successfully pushed commit & tag ${tagName} to GitHub!`)
       logSuccess(`GitHub Actions workflow is now triggered at https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/actions`)
     } catch (pushErr) {
