@@ -759,10 +759,24 @@ function getSpecial1AudioPath(titlesFolder: string): string | null {
   return null
 }
 
-// Returns true if the prefix is WAAZ or ID (case-insensitive)
+// Returns true if the identifier (prefix, thumbnail path/name, video name) represents WAAZ or ID
+export function isSpecialWaazOrId(identifier?: string | null): boolean {
+  if (!identifier || typeof identifier !== 'string') return false
+  const clean = identifier.replace(/\.(tmp|temp)$/i, '').trim()
+  const base = clean.split(/[\\/]/).pop() || clean
+  const stem = base.replace(/\.[^/.]+$/, '').trim()
+  const upperStem = stem.toUpperCase()
+
+  if (upperStem === 'ID' || upperStem === 'WAAZ' || upperStem === 'IDAARA' || upperStem === 'IDARAAT') {
+    return true
+  }
+
+  const waazOrIdPattern = /(?:^|[\s_.-])(?:ID|WAAZ|IDAARA|IDARAAT)(?:[\s_.-]|$)/i
+  return waazOrIdPattern.test(stem)
+}
+
 function isSpecialPrefix(prefix: string): boolean {
-  const up = prefix.toUpperCase().trim()
-  return up === 'WAAZ' || up === 'ID'
+  return isSpecialWaazOrId(prefix)
 }
 
 // ── Safar Final Output Path Resolver ─────────────────────────────
@@ -1039,8 +1053,9 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
       const cleanBase = path.basename(videoPath).replace(/\.(tmp|temp)$/i, '')
       const stem = cleanBase.replace(/\.[^/.]+$/, '')
       const prefix = getPrefix(cleanBase)
+      const defaultImg = findTitleImageForVideo(titlesFolder, prefix, videoPath, availableTitleImages)
       const isNikah = prefix.toUpperCase() === 'N'
-      const isWaazId = isSpecialPrefix(prefix)
+      const isWaazId = isSpecialWaazOrId(prefix) || isSpecialWaazOrId(defaultImg) || isSpecialWaazOrId(cleanBase)
 
       let assignedPath: string | null = null
       if (isNikah) {
@@ -1054,7 +1069,6 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
       }
 
       const assignedName = assignedPath ? path.basename(assignedPath) : 'None'
-      const defaultImg = findTitleImageForVideo(titlesFolder, prefix, videoPath, availableTitleImages)
 
       assignments.push({
         videoPath,
@@ -1407,8 +1421,12 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
         }
       }
 
+      let shouldMute: boolean
       if (typeof explicitMute === 'boolean') {
         shouldMute = explicitMute
+      } else {
+        // Thumbnails and videos that are NOT ID or WAAZ MUST be muted automatically!
+        shouldMute = !isWaazId
       }
 
       const isWatermarkExcluded = params.watermarkExceptions?.some(ex => {
@@ -1422,7 +1440,7 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
 
       // N prefix default is dedicated Nikah audio unless explicitly assigned by user
       const isNikah = prefix.toUpperCase() === 'N'
-      const isWaazId = isSpecialPrefix(prefix)
+      const isWaazId = isSpecialWaazOrId(prefix) || isSpecialWaazOrId(titleImg) || isSpecialWaazOrId(cleanBase)
       let primary: string | null = null
       let isUserSelectedAudio = false
 
@@ -1610,7 +1628,7 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
           vidDuration: info.duration,
           muteOriginal: isWaazId ? false : shouldMute,
           addWatermark: shouldAddWatermark,
-          isWaazId: isWaazId || !shouldMute,
+          isWaazId: isWaazId,
           hasAudio,
           skipFront,
           skipBack,

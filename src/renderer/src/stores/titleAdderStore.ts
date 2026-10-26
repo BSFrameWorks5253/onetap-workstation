@@ -39,6 +39,21 @@ export interface TitleAdderState {
   predefinedRenames: Record<string, string>
 }
 
+export function isSpecialWaazOrId(identifier?: string | null): boolean {
+  if (!identifier || typeof identifier !== 'string') return false
+  const clean = identifier.replace(/\.(tmp|temp)$/i, '').trim()
+  const base = clean.split(/[\\/]/).pop() || clean
+  const stem = base.replace(/\.[^/.]+$/, '').trim()
+  const upperStem = stem.toUpperCase()
+
+  if (upperStem === 'ID' || upperStem === 'WAAZ' || upperStem === 'IDAARA' || upperStem === 'IDARAAT') {
+    return true
+  }
+
+  const waazOrIdPattern = /(?:^|[\s_.-])(?:ID|WAAZ|IDAARA|IDARAAT)(?:[\s_.-]|$)/i
+  return waazOrIdPattern.test(stem)
+}
+
 function isGroupPhotoVideo(filenameOrPath: any): boolean {
   if (!filenameOrPath || typeof filenameOrPath !== 'string') return false
   const base = filenameOrPath.split(/[\\/]/).pop() || ''
@@ -220,6 +235,8 @@ class TitleAdderStoreManager {
                 const lowerF = f.toLowerCase()
                 const dotIdx = lowerF.lastIndexOf('.')
                 const stemF = dotIdx > 0 ? lowerF.substring(0, dotIdx) : lowerF
+                // ID and WAAZ videos default to keeping original audio (not muted)
+                if (isSpecialWaazOrId(f)) return false
                 return !exceptionsSet.has(lowerF) && !exceptionsSet.has(stemF)
               })
             } else {

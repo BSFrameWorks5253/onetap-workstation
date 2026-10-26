@@ -47,6 +47,32 @@ export function extractDateFolderFromSource(sourcePath: string): string {
   return base
 }
 
+export function isSpecialWaazOrId(identifier?: string | null): boolean {
+  if (!identifier || typeof identifier !== 'string') return false
+  const clean = identifier.replace(/\.(tmp|temp)$/i, '').trim()
+  const base = clean.split(/[\\/]/).pop() || clean
+  const stem = base.replace(/\.[^/.]+$/, '').trim()
+  const upperStem = stem.toUpperCase()
+
+  if (upperStem === 'ID' || upperStem === 'WAAZ' || upperStem === 'IDAARA' || upperStem === 'IDARAAT') {
+    return true
+  }
+
+  const waazOrIdPattern = /(?:^|[\s_.-])(?:ID|WAAZ|IDAARA|IDARAAT)(?:[\s_.-]|$)/i
+  return waazOrIdPattern.test(stem)
+}
+
+export function isItemSpecialWaazId(
+  item: { videoName?: string; prefix?: string; defaultTitleImagePath?: string },
+  selectedThumb?: string
+): boolean {
+  const thumb = selectedThumb || item.defaultTitleImagePath || ''
+  if (isSpecialWaazOrId(thumb)) return true
+  if (isSpecialWaazOrId(item.prefix)) return true
+  if (isSpecialWaazOrId(item.videoName)) return true
+  return false
+}
+
 export function isGroupPhotoVideo(filenameOrPath: any): boolean {
   if (!filenameOrPath) return false
   const str = String(filenameOrPath).trim()
@@ -1434,22 +1460,29 @@ export default function TitleAdder(): JSX.Element {
     // 2. Check passed exceptions from Premiere extension
     if (exceptions && exceptions.length > 0) {
       const isEx = exceptions.some(e => {
-        const lowerE = e.toLowerCase()
+        const lowerE = e.toLowerCase().trim()
         const dotE = lowerE.lastIndexOf('.')
         const stemE = dotE > 0 ? lowerE.substring(0, dotE) : lowerE
         const canonicalE = getCanonicalStem(e)
-        return lower === lowerE || stem === stemE || canonical === canonicalE || stem.includes(stemE) || lowerE.includes(stem)
+        return lower === lowerE || stem === stemE || canonical === canonicalE
       })
       if (isEx) return true
     }
 
-    // 3. Check keywords that always keep OG audio (e.g. WAAZ, ID, SPEECH, BAYAAN)
-    const keywords = storeState.alwaysKeepOgAudioKeywords || []
+    // 3. Check if filename or canonical stem represents ID or WAAZ
+    if (isSpecialWaazOrId(cleanBase) || isSpecialWaazOrId(stem) || isSpecialWaazOrId(canonical)) {
+      return true
+    }
+
+    // 4. Check keywords that always keep OG audio (e.g. WAAZ, ID, SPEECH, BAYAAN)
+    // IMPORTANT: Use word boundary regex so generic substrings (like 'video.mp4') NEVER false-positive on 'id'!
+    const keywords = storeState.alwaysKeepOgAudioKeywords || ['WAAZ', 'ID', 'SPEECH', 'BAYAAN']
     for (const kw of keywords) {
-      const k = kw.toLowerCase().trim()
+      const k = kw.trim()
       if (!k) continue
-      const reg = new RegExp(`(?:^|[^a-z0-9])${k}(?:[^a-z0-9]|$)`, 'i')
-      if (reg.test(lower) || lower.includes(k) || stem.includes(k) || canonical.includes(k)) {
+      const escaped = k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      const reg = new RegExp(`(?:^|[\\s_.-])${escaped}(?:[\\s_.-]|$)`, 'i')
+      if (reg.test(cleanBase) || reg.test(stem) || reg.test(canonical)) {
         return true
       }
     }
@@ -1686,8 +1719,11 @@ export default function TitleAdder(): JSX.Element {
           if (!initImageMap[item.videoPath] && item.defaultTitleImagePath) {
             initImageMap[item.videoPath] = item.defaultTitleImagePath
           }
+          const resolvedImg = initImageMap[item.videoPath] || item.defaultTitleImagePath
+          const isSpecial = isItemSpecialWaazId(item, resolvedImg)
+          item.isSpecialWaazId = isSpecial
           if (initMuteMap[item.videoPath] === undefined) {
-            initMuteMap[item.videoPath] = item.isSpecialWaazId ? false : nextMuted.has(item.videoName)
+            initMuteMap[item.videoPath] = !isSpecial
           }
         })
 
@@ -2338,7 +2374,11 @@ export default function TitleAdder(): JSX.Element {
 
         const customImg = stemLookup(userTitleImageSelections, item.videoPath, item.videoName, canonical)
           ?? stemLookup(storeState.predefinedTitleImages, item.videoPath, item.videoName, canonical)
-        initImageMap[item.videoPath] = customImg || item.defaultTitleImagePath
+        const resolvedImg = customImg || item.defaultTitleImagePath
+        initImageMap[item.videoPath] = resolvedImg
+
+        const isSpecial = isItemSpecialWaazId(item, resolvedImg)
+        item.isSpecialWaazId = isSpecial
 
         const customMute = stemLookup(userMuteSelections, item.videoPath, item.videoName, canonical)
           ?? stemLookup(storeState.predefinedVideoMutes, item.videoPath, item.videoName, canonical)
@@ -2346,19 +2386,27 @@ export default function TitleAdder(): JSX.Element {
         if (customMute !== undefined) {
           initMuteMap[item.videoPath] = customMute
         } else {
-          const videoFilename = item.videoName.toLowerCase()
-          const isMuteExcluded = availableVideos.length > 0 && availableVideos.filter(f => {
-            const lowerF = f.toLowerCase()
-            return !Array.from(mutedVideos).some(m => m.toLowerCase() === lowerF)
-          }).some(ex => ex.toLowerCase() === videoFilename || getCanonicalStem(ex) === canonical)
-
-          initMuteMap[item.videoPath] = item.isSpecialWaazId ? false : (muteOriginal && !isMuteExcluded)
+          // Automatic Muting Policy:
+          // If thumbnail or video is NOT ID or WAAZ -> MUST BE MUTED (initMuteMap = true)
+          // If thumbnail or video IS ID or WAAZ -> KEEP OG AUDIO (initMuteMap = false)
+          initMuteMap[item.videoPath] = !isSpecial
         }
       })
 
       setUserAudioSelections(initAudioMap)
       setUserTitleImageSelections(initImageMap)
       setUserMuteSelections(initMuteMap)
+      setMutedVideos(prev => {
+        const nextSet = new Set(prev)
+        res.assignments.forEach((item: any) => {
+          if (initMuteMap[item.videoPath] === true) {
+            nextSet.add(item.videoName)
+          } else {
+            nextSet.delete(item.videoName)
+          }
+        })
+        return nextSet
+      })
       if (watermarkedVideos.size === 0 && res.assignments.length > 0) {
         setWatermarkedVideos(new Set(res.assignments.map((a: any) => a.videoName)))
       }
@@ -2422,6 +2470,16 @@ export default function TitleAdder(): JSX.Element {
     const effectiveImages = opts.titleImageAssignments || currentStore.userTitleImageSelections || userTitleImageSelections
     const effectiveMuteSelections = opts.videoMuteSelections || currentStore.userMuteSelections || userMuteSelections
 
+    const resolvedMuteSelections: Record<string, boolean> = { ...effectiveMuteSelections }
+    for (const v of vids) {
+      if (resolvedMuteSelections[v] === undefined) {
+        const matchingItem = audioPreviewAssignments.find(a => a.videoName === v || a.videoPath === v)
+        const selImg = effectiveImages[v] || matchingItem?.defaultTitleImagePath
+        const isSpec = (matchingItem && isItemSpecialWaazId(matchingItem, selImg)) || isSpecialWaazOrId(selImg) || isSpecialWaazOrId(v)
+        resolvedMuteSelections[v] = !isSpec
+      }
+    }
+
     const dur = parseFloat(duration) || 5
     setRunning(true)
     setCancelled(false)
@@ -2451,8 +2509,8 @@ export default function TitleAdder(): JSX.Element {
       addToStats: addToStats,
       muteOriginal: muteOriginal,
       muteExceptions: vids.filter(f => {
-        const lowerF = f.toLowerCase()
-        return !Array.from(effectiveMuted).some(m => (m as string).toLowerCase() === lowerF)
+        const isMuted = resolvedMuteSelections[f] ?? Array.from(effectiveMuted).some(m => (m as string).toLowerCase() === f.toLowerCase())
+        return !isMuted
       }),
       watermarkExceptions: vids.filter(f => {
         const lowerF = f.toLowerCase()
@@ -2460,7 +2518,7 @@ export default function TitleAdder(): JSX.Element {
       }),
       audioAssignments: effectiveAudio,
       titleImageAssignments: effectiveImages,
-      videoMuteSelections: effectiveMuteSelections,
+      videoMuteSelections: resolvedMuteSelections,
       thumbnailMode: effectiveThumbMode,
       thumbnailModeSelections: effectiveThumbSelections
     })
@@ -2583,8 +2641,7 @@ export default function TitleAdder(): JSX.Element {
         if (match !== undefined) {
           next.add(f)
         } else {
-          const wasAvailable = prevAvailable.some(a => getCanonicalStem(a) === stem)
-          if (!wasAvailable && muteOriginal && !isVideoMuteExcluded(f, [])) {
+          if (muteOriginal && !isVideoMuteExcluded(f, [])) {
             next.add(f)
           }
         }
@@ -2661,8 +2718,7 @@ export default function TitleAdder(): JSX.Element {
         if (match !== undefined) {
           next.add(f)
         } else {
-          const wasAvailable = prevAvailable.some(a => getCanonicalStem(a) === stem)
-          if (!wasAvailable && muteOrig && !isVideoMuteExcluded(f, exceptions)) {
+          if (muteOrig && !isVideoMuteExcluded(f, exceptions)) {
             next.add(f)
           }
         }
@@ -4171,7 +4227,15 @@ export default function TitleAdder(): JSX.Element {
                   Muted OG Audio:
                 </span>
                 <strong>
-                  {audioPreviewAssignments.filter(item => userMuteSelections[item.videoPath] === true).length}
+                  {audioPreviewAssignments.filter(item => {
+                    const selImg = userTitleImageSelections[item.videoPath] || item.defaultTitleImagePath
+                    const isSpec = isItemSpecialWaazId(item, selImg)
+                    const isMuted = userMuteSelections[item.videoPath]
+                      ?? userMuteSelections[item.videoName]
+                      ?? userMuteSelections[getCanonicalStem(item.videoName)]
+                      ?? (!isSpec)
+                    return isMuted === true
+                  }).length}
                 </strong>
               </div>
               <div className="ta-audio-summary-badge">
@@ -4356,7 +4420,11 @@ export default function TitleAdder(): JSX.Element {
                     .map((item, idx) => {
                       const selectedAudio = userAudioSelections[item.videoPath] ?? item.defaultAudioPath
                       const selectedImage = userTitleImageSelections[item.videoPath] ?? item.defaultTitleImagePath
-                      const isMuted = userMuteSelections[item.videoPath] ?? false
+                      const isSpecial = isItemSpecialWaazId(item, selectedImage)
+                      const isMuted = userMuteSelections[item.videoPath]
+                        ?? userMuteSelections[item.videoName]
+                        ?? userMuteSelections[getCanonicalStem(item.videoName)]
+                        ?? (!isSpecial)
                       const isWatermarked = watermarkedVideos.has(item.videoName)
                       const pTheme = getPrefixColorTheme(item.prefix)
                       const curThumbMode = userThumbnailModeSelections[item.videoPath]
@@ -4376,7 +4444,7 @@ export default function TitleAdder(): JSX.Element {
                                 </span>
                               )}
                               {item.isNikah && <span className="ta-nikah-tag">👰 Nikah Audio</span>}
-                              {item.isSpecialWaazId && !item.isNikah && <span className="ta-nikah-tag" style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', borderColor: 'rgba(245, 158, 11, 0.3)' }}>⭐ Special Audio</span>}
+                              {isSpecial && !item.isNikah && <span className="ta-nikah-tag" style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', borderColor: 'rgba(245, 158, 11, 0.3)' }}>⭐ Special Audio</span>}
                             </span>
                           </td>
                           <td>
@@ -4422,6 +4490,27 @@ export default function TitleAdder(): JSX.Element {
                                 if (api?.titleAutomode?.saveSettings) {
                                   api.titleAutomode.saveSettings({ predefinedTitleImages: updatedPre })
                                 }
+
+                                // Automatic muting when thumbnail changes:
+                                // Non-ID/WAAZ thumbnails -> auto-mute original audio
+                                // ID/WAAZ thumbnails -> keep original audio
+                                const newIsSpecial = isSpecialWaazOrId(newPath) || isSpecialWaazOrId(item.prefix) || isSpecialWaazOrId(item.videoName)
+                                const newMuteVal = !newIsSpecial
+                                setUserMuteSelections(prev => ({
+                                  ...prev,
+                                  [item.videoPath]: newMuteVal,
+                                  [item.videoName]: newMuteVal,
+                                  [stem]: newMuteVal
+                                }))
+                                setMutedVideos(prev => {
+                                  const nextSet = new Set(prev)
+                                  if (newMuteVal) {
+                                    nextSet.add(item.videoName)
+                                  } else {
+                                    nextSet.delete(item.videoName)
+                                  }
+                                  return nextSet
+                                })
                               }}
                               onResetDefault={() => {
                                 const stem = getCanonicalStem(item.videoName)
@@ -4431,6 +4520,23 @@ export default function TitleAdder(): JSX.Element {
                                   [item.videoName]: item.defaultTitleImagePath,
                                   [stem]: item.defaultTitleImagePath
                                 }))
+                                const defIsSpecial = isSpecialWaazOrId(item.defaultTitleImagePath) || isSpecialWaazOrId(item.prefix) || isSpecialWaazOrId(item.videoName)
+                                const defMuteVal = !defIsSpecial
+                                setUserMuteSelections(prev => ({
+                                  ...prev,
+                                  [item.videoPath]: defMuteVal,
+                                  [item.videoName]: defMuteVal,
+                                  [stem]: defMuteVal
+                                }))
+                                setMutedVideos(prev => {
+                                  const nextSet = new Set(prev)
+                                  if (defMuteVal) {
+                                    nextSet.add(item.videoName)
+                                  } else {
+                                    nextSet.delete(item.videoName)
+                                  }
+                                  return nextSet
+                                })
                               }}
                             />
                           </td>

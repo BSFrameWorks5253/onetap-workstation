@@ -17,7 +17,7 @@ import { get } from '../core/settingsManager'
 
 // Target GitHub Repository & Default Anything Ecosystem Directory
 const GITHUB_REPO = process.env.GITHUB_REPO || 'BSFrameWorks5253/onetap-workstation'
-export const DEFAULT_ANYTHING_PATH = 'C:\\Users\\Burhanuddin\\OneDrive\\Desktop\\New folder (2)\\Anything'
+export const DEFAULT_ANYTHING_PATH = 'C:\\Users\\Burhanuddin\\OneDrive\\Desktop\\Anything\\Anything'
 
 export interface UpdateManifest {
   updateAvailable: boolean
@@ -111,7 +111,8 @@ export function compareVersions(vA: string, vB: string): number {
  * Query Anything Ecosystem directory for local child app releases and catalog entries
  */
 export async function checkAnythingUpdate(customPath?: string): Promise<UpdateManifest | null> {
-  const anythingDir = customPath || (get('anything_app_path') as string) || DEFAULT_ANYTHING_PATH
+  const resolvedDir = customPath || (get('anything_app_path') as string) || (fs.existsSync('C:\\Users\\Burhanuddin\\OneDrive\\Desktop\\Anything\\Anything') ? 'C:\\Users\\Burhanuddin\\OneDrive\\Desktop\\Anything\\Anything' : DEFAULT_ANYTHING_PATH)
+  const anythingDir = resolvedDir
   if (!fs.existsSync(anythingDir)) {
     console.log(`[Updater] Anything path does not exist on disk: ${anythingDir}`)
     return null
