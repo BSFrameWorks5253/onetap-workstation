@@ -1,7 +1,7 @@
 {
   "name": "One_Tap",
-  "version": "26.10.21",
-  "description": "UniDesk Studio \u2014 Next-Generation Automated Video Production Workstation, Sequential Multi-Batch Rendering Engine and Media Asset Management Platform for Windows and Linux.",
+  "version": "26.10.27",
+  "description": "UniDesk Studio — Next-Generation Automated Video Production Workstation, Sequential Multi-Batch Rendering Engine and Media Asset Management Platform for Windows and Linux.",
   "author": "BS.Framework <bs.framework5253@gmail.com>",
   "license": "SEE LICENSE IN LICENSE",
   "homepage": "https://github.com/BSFrameWorks5253/onetap-workstation",
@@ -38,7 +38,8 @@
     "fm:build": "npm --prefix packages/file-manager run build",
     "test:fade": "node scripts/test_fade_logic.js",
     "analyze:cache": "python scripts/codebase_analyzer.py",
-    "analyze:force": "python scripts/codebase_analyzer.py --force"
+    "analyze:force": "python scripts/codebase_analyzer.py --force",
+    "dist": "npm run build:win:nsis"
   },
   "dependencies": {
     "@electron-toolkit/utils": "^3.0.0",
@@ -71,7 +72,7 @@
     "appId": "com.bsframework.onetap",
     "productName": "One Tap",
     "executableName": "One Tap",
-    "copyright": "Copyright \u00a9 2026 BS.Framework",
+    "copyright": "Copyright © 2026 BS.Framework",
     "directories": {
       "output": "release"
     },
@@ -239,7 +240,7 @@
       "category": "Utility",
       "icon": "resources/icon.png",
       "synopsis": "Uni Desk - Professional Workstation and Media Automation Toolkit",
-      "description": "Uni Desk \u2014 Professional Workstation & Media Automation Toolkit",
+      "description": "Uni Desk — Professional Workstation & Media Automation Toolkit",
       "maintainer": "BS Framework <support@bsframework.com>",
       "desktop": {
         "StartupWMClass": "Uni Desk"

@@ -1421,8 +1421,7 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
         }
       }
 
-      let shouldMute: boolean
-      if (typeof explicitMute === 'boolean') {
+            if (typeof explicitMute === 'boolean') {
         shouldMute = explicitMute
       } else {
         // Thumbnails and videos that are NOT ID or WAAZ MUST be muted automatically!
