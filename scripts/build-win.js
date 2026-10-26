@@ -54,7 +54,7 @@ function ensureWinSharp() {
 function ensureProcessClosed() {
   if (process.platform === 'win32') {
     try {
-      execSync('powershell -NoProfile -Command "Stop-Process -Name \'Uni Desk\', \'electron\' -Force -ErrorAction SilentlyContinue"', { stdio: 'ignore' })
+      execSync('powershell -NoProfile -Command "Stop-Process -Name \'Uni Desk\', \'One Tap\' -Force -ErrorAction SilentlyContinue"', { stdio: 'ignore' })
     } catch {}
 
     const unlocker = path.join(__dirname, 'unlock_asar.ps1')
