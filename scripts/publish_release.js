@@ -260,7 +260,7 @@ function pushGitTag(version) {
       : 'origin'
 
     try {
-      execSync(`git push ${pushRemote} main`, {
+      execSync(`git push ${pushRemote} main --force`, {
         stdio: 'inherit',
         cwd: ROOT_DIR,
         timeout: 30000,
