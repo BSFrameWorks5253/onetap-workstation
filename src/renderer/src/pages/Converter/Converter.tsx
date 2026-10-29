@@ -96,21 +96,20 @@ export default function Converter(): JSX.Element {
         } catch {}
       }
 
-      const chainedVideo = sessionStorage.getItem('ot_converter_video_folder') ||
-                            sessionStorage.getItem('ot_converter_input_folder') ||
-                            evtDetail?.outputFolder ||
+      const chainedVideo = evtDetail?.outputFolder ||
+                            sessionStorage.getItem('ot_converter_video_folder') ||
                             localStorage.getItem('ot_converter_video_target')
-      const chainedJpeg = sessionStorage.getItem('ot_converter_source_jpeg') ||
-                           localStorage.getItem('ot_converter_source_jpeg')
+      const existingUserJpeg = localStorage.getItem('ot_converter_source_jpeg') || ''
+      const chainedJpeg = evtDetail?.jpegFolder || existingUserJpeg
 
       if (Array.isArray(latestBatchPairs) && latestBatchPairs.length > 0) {
         setBatchPairs(latestBatchPairs)
         const targetIdx = selectedBatchIndex < latestBatchPairs.length ? selectedBatchIndex : 0
         const activePair = latestBatchPairs[targetIdx]
         if (activePair) {
-          const jTarget = cleanPath(activePair.jpegFolder || chainedJpeg)
+          const jTarget = cleanPath(existingUserJpeg || activePair.jpegFolder || chainedJpeg)
           const vTarget = cleanPath((targetIdx === 0 && chainedVideo) ? chainedVideo : activePair.videoFolder)
-          if (jTarget) {
+          if (jTarget && !jpegFolder) {
             setJpegFolder(jTarget)
             localStorage.setItem('ot_converter_source_jpeg', jTarget)
           }
@@ -122,10 +121,10 @@ export default function Converter(): JSX.Element {
             }
           }
           setRenameCollapsed(false)
-          loadFiles(jTarget, vTarget)
+          loadFiles(jTarget || undefined, vTarget)
         }
       } else if (chainedVideo || chainedJpeg) {
-        if (chainedJpeg) {
+        if (chainedJpeg && !jpegFolder) {
           const jClean = cleanPath(chainedJpeg)
           setJpegFolder(jClean)
           localStorage.setItem('ot_converter_source_jpeg', jClean)
@@ -145,7 +144,6 @@ export default function Converter(): JSX.Element {
 
     checkChained()
     window.addEventListener('refresh-converter-paths', checkChained)
-    window.addEventListener('focus', checkChained)
 
     if (!api || !api.converter) return
     api.settings.getAll().then((all: any) => {
@@ -187,7 +185,6 @@ export default function Converter(): JSX.Element {
     return () => {
       api.converter.removeListeners()
       window.removeEventListener('refresh-converter-paths', checkChained)
-      window.removeEventListener('focus', checkChained)
     }
   }, [])
 
@@ -695,8 +692,17 @@ export default function Converter(): JSX.Element {
                   const clean = cleanPath(p)
                   setJpegFolder(clean) 
                   localStorage.setItem('ot_converter_source_jpeg', clean)
+                  sessionStorage.setItem('ot_converter_source_jpeg', clean)
                   api.settings.setAndSave('converter_source_jpeg', clean)
                   api.settings.setAndSave('converter_jpeg', clean)
+                  setBatchPairs(prev => {
+                    if (!prev || prev.length === 0) return prev
+                    const next = [...prev]
+                    const idx = selectedBatchIndex < next.length ? selectedBatchIndex : 0
+                    if (next[idx]) next[idx] = { ...next[idx], jpegFolder: clean }
+                    try { localStorage.setItem('ot_converter_batch_pairs', JSON.stringify(next)) } catch {}
+                    return next
+                  })
                   loadFiles(clean, undefined)
                 } 
               }}
@@ -704,8 +710,17 @@ export default function Converter(): JSX.Element {
                 const clean = cleanPath(val)
                 setJpegFolder(clean) 
                 localStorage.setItem('ot_converter_source_jpeg', clean)
+                sessionStorage.setItem('ot_converter_source_jpeg', clean)
                 api.settings.setAndSave('converter_source_jpeg', clean)
                 api.settings.setAndSave('converter_jpeg', clean)
+                setBatchPairs(prev => {
+                  if (!prev || prev.length === 0) return prev
+                  const next = [...prev]
+                  const idx = selectedBatchIndex < next.length ? selectedBatchIndex : 0
+                  if (next[idx]) next[idx] = { ...next[idx], jpegFolder: clean }
+                  try { localStorage.setItem('ot_converter_batch_pairs', JSON.stringify(next)) } catch {}
+                  return next
+                })
               }}
             />
             <BrowseRow label="Video folder / Output path (rename target)" value={videoFolder} placeholder="Exact folder containing rendered videos (target destination for renamed JPEGs)…"
@@ -716,9 +731,18 @@ export default function Converter(): JSX.Element {
                   const clean = cleanPath(p)
                   setVideoFolder(clean)
                   localStorage.setItem('ot_converter_video_target', clean)
+                  sessionStorage.setItem('ot_converter_video_folder', clean)
                   if (api?.settings?.setAndSave) {
                     api.settings.setAndSave('converter_video_target', clean)
                   }
+                  setBatchPairs(prev => {
+                    if (!prev || prev.length === 0) return prev
+                    const next = [...prev]
+                    const idx = selectedBatchIndex < next.length ? selectedBatchIndex : 0
+                    if (next[idx]) next[idx] = { ...next[idx], videoFolder: clean }
+                    try { localStorage.setItem('ot_converter_batch_pairs', JSON.stringify(next)) } catch {}
+                    return next
+                  })
                   loadFiles(undefined, clean)
                 }
               }}
@@ -726,9 +750,18 @@ export default function Converter(): JSX.Element {
                 const clean = cleanPath(val)
                 setVideoFolder(clean)
                 localStorage.setItem('ot_converter_video_target', clean)
+                sessionStorage.setItem('ot_converter_video_folder', clean)
                 if (api?.settings?.setAndSave) {
                   api.settings.setAndSave('converter_video_target', clean)
                 }
+                setBatchPairs(prev => {
+                  if (!prev || prev.length === 0) return prev
+                  const next = [...prev]
+                  const idx = selectedBatchIndex < next.length ? selectedBatchIndex : 0
+                  if (next[idx]) next[idx] = { ...next[idx], videoFolder: clean }
+                  try { localStorage.setItem('ot_converter_batch_pairs', JSON.stringify(next)) } catch {}
+                  return next
+                })
               }}
             />
 

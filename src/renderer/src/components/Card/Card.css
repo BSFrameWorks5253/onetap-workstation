@@ -11,7 +11,9 @@
   position: relative;
   box-shadow: 
     var(--shadow-card),
-    inset 0 1px 0 0 var(--specular-highlight);
+    inset 0 1px 0 0 var(--glass-rim-top, var(--specular-highlight)),
+    inset 0 0 0 1px var(--glass-rim-hairline, transparent),
+    inset 0 -1px 0 0 var(--glass-rim-bottom, transparent);
   transition: border-color var(--dur-normal) ease, box-shadow var(--dur-normal) ease, transform var(--dur-normal) var(--ease-spring);
 }
 
@@ -19,7 +21,9 @@
   border-color: color-mix(in srgb, var(--card-accent, var(--theme-accent)) 50%, var(--border));
   box-shadow: 
     var(--shadow-card-hover),
-    inset 0 1px 0 0 var(--specular-highlight);
+    inset 0 1px 0 0 var(--glass-rim-top, var(--specular-highlight)),
+    inset 0 0 0 1px var(--glass-rim-hairline, transparent),
+    inset 0 -1px 0 0 var(--glass-rim-bottom, transparent);
 }
 
 /* Subtle top gradient accent line */
@@ -115,7 +119,9 @@
   margin: 0;
   box-shadow: 
     var(--shadow-card),
-    inset 0 1px 0 0 var(--specular-highlight);
+    inset 0 1px 0 0 var(--glass-rim-top, var(--specular-highlight)),
+    inset 0 0 0 1px var(--glass-rim-hairline, transparent),
+    inset 0 -1px 0 0 var(--glass-rim-bottom, transparent);
   position: relative;
 }
 

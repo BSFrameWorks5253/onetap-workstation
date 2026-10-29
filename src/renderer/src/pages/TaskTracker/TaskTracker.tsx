@@ -316,6 +316,47 @@ export default function TaskTracker(): JSX.Element {
   }
 
   // ── Browse Directory Pickers ──
+  const handleSelectWorkingFolder = async () => {
+    if (!api?.dialog?.openFolder) return
+    playTick()
+    const folder = await api.dialog.openFolder({ title: 'Select Working / Safar Directory' })
+    if (!folder) return
+
+    setWorkingPath(folder)
+    localStorage.setItem('ot_tracker_working_path', folder)
+
+    const rootMatch = folder.match(/^[A-Za-z]:[\\/]/)
+    const root = rootMatch ? rootMatch[0].toUpperCase() : (folder.includes(':') ? folder.slice(0, 3) : 'C:\\')
+    const folderName = folder.split(/[\\/]/).filter(Boolean).pop() || folder
+    const parentDir = folder.replace(/[\\/][^\\/]+$/, '') || root
+
+    const newWs: DriveWorkspaceConfig = {
+      id: `drive-manual-${Date.now()}`,
+      driveRoot: root,
+      enabled: true,
+      inProcessPath: folder,
+      toUploadPath: `${parentDir}\\To Upload`,
+      toDeletePath: `${parentDir}\\To Delete`,
+      label: folderName
+    }
+
+    const updated = [newWs, ...drives.filter(d => d.inProcessPath !== folder)]
+    setDrives(updated)
+    localStorage.setItem('ot_tracker_drives', JSON.stringify(updated))
+    if (api?.settings?.setAndSave) {
+      await api.settings.setAndSave('task_tracker_drives', updated)
+    }
+
+    playSuccess()
+    showToast({
+      title: 'Working Directory Added',
+      message: `Tracking ${folderName}. Synchronizing Safars...`,
+      type: 'success'
+    })
+
+    await doScan(true)
+  }
+
   const handleBrowse = async (target: 'working' | 'upload' | 'delete') => {
     if (!api?.dialog?.openFolder) return
     const p = await api.dialog.openFolder()
@@ -893,6 +934,9 @@ export default function TaskTracker(): JSX.Element {
             </button>
           </div>
 
+          <button className="btn-secondary-action" onClick={handleSelectWorkingFolder} title="Select or add a working folder">
+            <PageIcon pageKey="folder_open" size={13} style={{ marginRight: 6 }} /> Add Working Folder
+          </button>
           <button className="btn-secondary-action" onClick={handleExportExcel} title="Export full spreadsheet">
             <PageIcon pageKey="excelmerger" size={13} style={{ marginRight: 6 }} /> Export Excel
           </button>
@@ -1378,14 +1422,28 @@ export default function TaskTracker(): JSX.Element {
       {viewMode === 'safar' && (
         <div className="tracker-safars-container">
           {filteredSafars.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '60px 20px', color: '#94A3B8' }}>
-              <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'center' }}>
-                <PageIcon pageKey="folder_open" size={42} color="#64748B" />
+            <div className="tracker-empty-card">
+              <div className="tracker-empty-icon-wrap">
+                <PageIcon pageKey="folder_open" size={44} color="var(--theme-accent, #6366F1)" />
               </div>
-              <h3 style={{ margin: '0 0 6px 0', color: '#E2E8F0' }}>No Safars Discovered</h3>
-              <p style={{ margin: 0, fontSize: '13px' }}>
-                Please select your Main Working Directory above to start automatic tracking.
+              <h3 className="tracker-empty-title">No Safars Discovered in Selected Workspaces</h3>
+              <p className="tracker-empty-sub">
+                {drives.some(d => !driveSpaces[normalizeDrive(d.driveRoot)]?.isOnline) ? (
+                  <>
+                    Configured external drives (<span className="offline-pill-text">{drives.filter(d => !driveSpaces[normalizeDrive(d.driveRoot)]?.isOnline).map(d => d.driveRoot.replace(/[\\/]/g, '')).join(', ')}</span>) are offline. Plug in your external drives or select a local working folder below.
+                  </>
+                ) : (
+                  'Select your In Process or Safar working folder to automatically track date renders, projects, and deliverables.'
+                )}
               </p>
+              <div className="tracker-empty-actions">
+                <button className="btn-primary-action" onClick={handleSelectWorkingFolder}>
+                  <PageIcon pageKey="folder_open" size={14} style={{ marginRight: 6 }} /> Select Safar / Working Directory
+                </button>
+                <button className="btn-secondary-action" onClick={handleOpenSettings}>
+                  <PageIcon pageKey="settings" size={14} style={{ marginRight: 6 }} /> Manage Drives in Settings
+                </button>
+              </div>
             </div>
           ) : (
             filteredSafars.map(safar => {

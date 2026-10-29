@@ -14,7 +14,7 @@
  * ====================================================================
  */
 
-import { ipcMain, BrowserWindow } from 'electron'
+import { ipcMain, BrowserWindow, shell } from 'electron'
 import { spawnSync, execFileSync } from 'child_process'
 import fs from 'fs'
 import path from 'path'
@@ -40,6 +40,7 @@ const VIDEO_EXTS = [
   '.m2v', '.m4p', '.nev', '.qt', '.rm', '.rmvb', '.vro', '.wtv', '.dvr-ms', '.ogm', '.mpe', '.mpv', '.m2p', '.3g2', '.avchd'
 ]
 const TEMP_EXTS = ['.tmp', '.temp']
+const PROJECT_EXTS = new Set(['.prproj', '.aep', '.psd', '.ai'])
 
 function isTempVideoFile(filename: string): boolean {
   if (!filename) return false
@@ -145,6 +146,7 @@ function findVideoFiles(dirPath: string): Array<{ fullPath: string; fileName: st
   }
 
   scan(dirPath)
+  results.sort((a, b) => a.fileName.localeCompare(b.fileName, undefined, { numeric: true, sensitivity: 'base' }))
   return results
 }
 
@@ -158,8 +160,9 @@ function resolveVideoFolderAndFiles(rootPath: string): { dir: string; files: Arr
     }
   } catch {}
 
-  // If baseDir itself is already a DVD folder
-  if (path.basename(baseDir).toLowerCase() === 'dvd') {
+  // If baseDir itself is already a DVD or Final folder
+  const baseLower = path.basename(baseDir).toLowerCase()
+  if (baseLower === 'dvd' || baseLower === 'final' || baseLower === 'final titles') {
     return { dir: baseDir, files: findVideoFiles(baseDir) }
   }
 
@@ -181,7 +184,23 @@ function resolveVideoFolderAndFiles(rootPath: string): { dir: string; files: Arr
     }
   } catch {}
 
-  // Fallback if no DVD subfolder exists
+  // Check if baseDir has a Final or Final Titles subfolder containing videos
+  const finalNames = ['Final', 'final', 'FINAL', 'Final Titles', 'final titles', 'FINAL TITLES']
+  for (const fn of finalNames) {
+    const subFinal = path.join(baseDir, fn)
+    if (fs.existsSync(subFinal)) {
+      try {
+        if (fs.statSync(subFinal).isDirectory()) {
+          const subFiles = findVideoFiles(subFinal)
+          if (subFiles.length > 0) {
+            return { dir: subFinal, files: subFiles }
+          }
+        }
+      } catch {}
+    }
+  }
+
+  // Fallback if no DVD or Final subfolder exists
   const directFiles = findVideoFiles(baseDir)
   return { dir: baseDir, files: directFiles }
 }
@@ -737,7 +756,7 @@ function parseSafarFromCandidatePaths(paths: (string | undefined)[]): SafarParse
 
 function getBatchVideos(batchSource: string): string[] {
   const { files } = resolveVideoFolderAndFiles(batchSource)
-  return files.map(f => f.fullPath).sort()
+  return files.map(f => f.fullPath).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }))
 }
 
 // ── Special1 audio helper ───────────────────────────────────
@@ -867,66 +886,83 @@ export function resolveSafarFinalPathForVideo(videoPath: string): {
   // 2. Identify Safar Folder and Final directory
   let safarFolder = ''
   let finalFolder = ''
-  let curSearch = dateFolderPath ? path.dirname(dateFolderPath) : clean
-
-  for (let depth = 0; depth < 5; depth++) {
-    if (!curSearch || curSearch === path.dirname(curSearch)) break
-    try {
-      if (fs.existsSync(curSearch)) {
-        const entries = fs.readdirSync(curSearch, { withFileTypes: true })
-        const finalEnt = entries.find(e => e.isDirectory() && (e.name.toLowerCase() === 'final' || e.name.toLowerCase() === 'final titles'))
-        if (finalEnt) {
-          safarFolder = curSearch
-          finalFolder = path.join(curSearch, finalEnt.name)
-          break
-        }
-      }
-    } catch {}
-    curSearch = path.dirname(curSearch)
-  }
-
-  // Fallback: If no Final folder found on disk yet, use safarHierarchy to determine Safar folder
-  if (!safarFolder && dateFolderPath) {
-    const parentDir = path.dirname(dateFolderPath)
-    safarFolder = parentDir
-    finalFolder = path.join(safarFolder, 'Final')
-  }
-
-  const safarName = safarFolder ? path.basename(safarFolder) : ''
-
-  // 3. Inside the Final folder, check for the date folder
   let targetPath = ''
   let dateFolderExistsInFinal = false
 
-  if (finalFolder) {
-    if (fs.existsSync(finalFolder)) {
+  // First priority: Check if the date folder itself contains a Final or Final Titles subfolder!
+  // e.g. <Safar>/<DateFolder>/Final
+  if (dateFolderPath && fs.existsSync(dateFolderPath)) {
+    try {
+      const dEntries = fs.readdirSync(dateFolderPath, { withFileTypes: true })
+      const innerFinal = dEntries.find(e => e.isDirectory() && (e.name.toLowerCase() === 'final' || e.name.toLowerCase() === 'final titles'))
+      if (innerFinal) {
+        targetPath = path.join(dateFolderPath, innerFinal.name)
+        finalFolder = targetPath
+        safarFolder = path.dirname(dateFolderPath)
+        dateFolderExistsInFinal = true
+      }
+    } catch {}
+  }
+
+  // Second priority: If date folder does not contain Final, search ancestor folders (e.g. <Safar>/Final/<DateFolder>)
+  if (!targetPath) {
+    let curSearch = dateFolderPath ? path.dirname(dateFolderPath) : clean
+
+    for (let depth = 0; depth < 5; depth++) {
+      if (!curSearch || curSearch === path.dirname(curSearch)) break
       try {
-        const subEnts = fs.readdirSync(finalFolder, { withFileTypes: true })
-        // Exact match
-        const exact = subEnts.find(e => e.isDirectory() && e.name.toLowerCase() === dateFolderName.toLowerCase())
-        if (exact) {
-          targetPath = path.join(finalFolder, exact.name)
-          dateFolderExistsInFinal = true
-        } else {
-          // Date prefix match (e.g. 1448-02-29)
-          const dateMatch = dateFolderName.match(/(\d{4}[-_.]\d{1,2}(?:[-_.]\d{1,2})?)/i)
-          if (dateMatch) {
-            const datePrefix = dateMatch[1].toLowerCase()
-            const loose = subEnts.find(e => e.isDirectory() && e.name.toLowerCase().includes(datePrefix))
-            if (loose) {
-              targetPath = path.join(finalFolder, loose.name)
-              dateFolderExistsInFinal = true
-            }
+        if (fs.existsSync(curSearch)) {
+          const entries = fs.readdirSync(curSearch, { withFileTypes: true })
+          const finalEnt = entries.find(e => e.isDirectory() && (e.name.toLowerCase() === 'final' || e.name.toLowerCase() === 'final titles'))
+          if (finalEnt) {
+            safarFolder = curSearch
+            finalFolder = path.join(curSearch, finalEnt.name)
+            break
           }
         }
       } catch {}
+      curSearch = path.dirname(curSearch)
     }
 
-    if (!targetPath) {
-      targetPath = path.join(finalFolder, dateFolderName)
-      dateFolderExistsInFinal = fs.existsSync(targetPath)
+    // Fallback: If no Final folder found on disk yet, use safarHierarchy to determine Safar folder
+    if (!safarFolder && dateFolderPath) {
+      const parentDir = path.dirname(dateFolderPath)
+      safarFolder = parentDir
+      finalFolder = path.join(safarFolder, 'Final')
+    }
+
+    if (finalFolder) {
+      if (fs.existsSync(finalFolder)) {
+        try {
+          const subEnts = fs.readdirSync(finalFolder, { withFileTypes: true })
+          // Exact match
+          const exact = subEnts.find(e => e.isDirectory() && e.name.toLowerCase() === dateFolderName.toLowerCase())
+          if (exact) {
+            targetPath = path.join(finalFolder, exact.name)
+            dateFolderExistsInFinal = true
+          } else {
+            // Date prefix match (e.g. 1448-02-29)
+            const dateMatch = dateFolderName.match(/(\d{4}[-_.]\d{1,2}(?:[-_.]\d{1,2})?)/i)
+            if (dateMatch) {
+              const datePrefix = dateMatch[1].toLowerCase()
+              const loose = subEnts.find(e => e.isDirectory() && e.name.toLowerCase().includes(datePrefix))
+              if (loose) {
+                targetPath = path.join(finalFolder, loose.name)
+                dateFolderExistsInFinal = true
+              }
+            }
+          }
+        } catch {}
+      }
+
+      if (!targetPath) {
+        targetPath = path.join(finalFolder, dateFolderName)
+        dateFolderExistsInFinal = fs.existsSync(targetPath)
+      }
     }
   }
+
+  const safarName = safarFolder ? path.basename(safarFolder) : ''
 
   if (targetPath) {
     return {
@@ -1228,7 +1264,8 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
       const dateFolder = getDateFolderName(batchSources[0])
       if (actualOutputDir && dateFolder) {
         const normOut = path.normalize(actualOutputDir).replace(/[\\/]+$/, '')
-        if (path.basename(normOut).toLowerCase() !== dateFolder.toLowerCase()) {
+        const segments = normOut.split(/[\\/]/).filter(Boolean).map(s => s.toLowerCase())
+        if (!segments.includes(dateFolder.toLowerCase()) && path.basename(normOut).toLowerCase() !== dateFolder.toLowerCase()) {
           actualOutputDir = path.join(actualOutputDir, dateFolder)
         }
       }
@@ -1392,6 +1429,10 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
       const videoFilename = path.basename(videoPath).toLowerCase()
       const videoStem = stem.toLowerCase()
 
+      // N prefix default is dedicated Nikah audio unless explicitly assigned by user
+      const isNikah = prefix.toUpperCase() === 'N'
+      const isWaazId = isSpecialWaazOrId(prefix) || isSpecialWaazOrId(titleImg) || isSpecialWaazOrId(cleanBase)
+
       const isExcluded = params.muteExceptions?.some(ex => {
         const lowerEx = ex.toLowerCase()
         const exStem = path.basename(lowerEx, path.extname(lowerEx))
@@ -1421,7 +1462,7 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
         }
       }
 
-            if (typeof explicitMute === 'boolean') {
+      if (typeof explicitMute === 'boolean') {
         shouldMute = explicitMute
       } else {
         // Thumbnails and videos that are NOT ID or WAAZ MUST be muted automatically!
@@ -1437,9 +1478,6 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
       const shouldAddWatermark = !isWatermarkExcluded
       const hasAudio = hasAudioStream(videoPath)
 
-      // N prefix default is dedicated Nikah audio unless explicitly assigned by user
-      const isNikah = prefix.toUpperCase() === 'N'
-      const isWaazId = isSpecialWaazOrId(prefix) || isSpecialWaazOrId(titleImg) || isSpecialWaazOrId(cleanBase)
       let primary: string | null = null
       let isUserSelectedAudio = false
 
@@ -1543,7 +1581,8 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
         const dateFolder = parentSource ? getDateFolderName(parentSource) : ''
         if (dateFolder) {
           const normOut = path.normalize(params.outputFolder).replace(/[\\/]+$/, '')
-          if (path.basename(normOut).toLowerCase() !== dateFolder.toLowerCase()) {
+          const segments = normOut.split(/[\\/]/).filter(Boolean).map(s => s.toLowerCase())
+          if (!segments.includes(dateFolder.toLowerCase()) && path.basename(normOut).toLowerCase() !== dateFolder.toLowerCase()) {
             outDir = path.join(normOut, dateFolder)
           } else {
             outDir = normOut
@@ -1845,7 +1884,7 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
   ipcMain.handle('titleAdder:listVideos', async (_e, rootPath: string) => {
     try {
       const { files } = resolveVideoFolderAndFiles(rootPath)
-      return files.map(f => f.fileName).sort()
+      return files.map(f => f.fileName).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }))
     } catch { return [] }
   })
 
@@ -2040,5 +2079,168 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
       }
     }
   })
+
+  // ── Final Titles Folder Management & Two-Way Sync ─────────────────────
+  ipcMain.handle('titleAdder:getFinalTitles', (_e, customPath?: string) => {
+    return getFinalTitlesInfo(customPath)
+  })
+
+  ipcMain.handle('titleAdder:setFinalTitlesFolder', async (_e, folderPath: string) => {
+    if (!folderPath || !fs.existsSync(folderPath)) {
+      return { success: false, error: 'Directory does not exist' }
+    }
+    await setAndSave('titles_folder', folderPath)
+    return getFinalTitlesInfo(folderPath)
+  })
+
+  ipcMain.handle('titleAdder:openFinalTitlesFolder', async (_e, customPath?: string) => {
+    const info = getFinalTitlesInfo(customPath)
+    if (info && info.folderPath && fs.existsSync(info.folderPath)) {
+      await shell.openPath(info.folderPath)
+      return { success: true, folderPath: info.folderPath }
+    }
+    return { success: false, error: 'Folder does not exist' }
+  })
+
+  ipcMain.handle('titleAdder:showFileInFolder', async (_e, filePath: string) => {
+    if (filePath && fs.existsSync(filePath)) {
+      shell.showItemInFolder(filePath)
+      return { success: true }
+    }
+    return { success: false, error: 'File does not exist' }
+  })
+}
+
+// ── Exported Final Titles Scanner ─────────────────────────────────────
+
+export interface FinalTitleFile {
+  name: string
+  path: string
+  size: number
+  sizeFormatted: string
+  mtime: number
+  mtimeFormatted: string
+  type: 'video' | 'image' | 'audio' | 'project' | 'other'
+  extension: string
+}
+
+export interface FinalTitlesPayload {
+  success: boolean
+  folderPath: string
+  exists: boolean
+  totalCount: number
+  stats: {
+    videos: number
+    images: number
+    audios: number
+    projects: number
+    others: number
+    totalSizeBytes: number
+    totalSizeFormatted: string
+  }
+  files: FinalTitleFile[]
+}
+
+function formatBytes(bytes: number): string {
+  if (!bytes || bytes <= 0) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`
+}
+
+export function getFinalTitlesInfo(customFolder?: string): FinalTitlesPayload {
+  const targetFolder = resolveTitlesFolder(customFolder || (get('titles_folder') as string) || '')
+
+  if (!targetFolder || !fs.existsSync(targetFolder)) {
+    return {
+      success: false,
+      folderPath: targetFolder || '',
+      exists: false,
+      totalCount: 0,
+      stats: { videos: 0, images: 0, audios: 0, projects: 0, others: 0, totalSizeBytes: 0, totalSizeFormatted: '0 B' },
+      files: []
+    }
+  }
+
+  try {
+    const entries = fs.readdirSync(targetFolder, { withFileTypes: true })
+    const files: FinalTitleFile[] = []
+    let totalSizeBytes = 0
+    let videos = 0
+    let images = 0
+    let audios = 0
+    let projects = 0
+    let others = 0
+
+    for (const entry of entries) {
+      if (entry.name.startsWith('.') || entry.name.startsWith('$') || entry.name.toLowerCase() === 'thumbs.db') continue
+      const fullPath = path.join(targetFolder, entry.name)
+
+      try {
+        const stat = fs.statSync(fullPath)
+        if (stat.isDirectory()) continue
+
+        const ext = path.extname(entry.name).toLowerCase()
+        let type: FinalTitleFile['type'] = 'other'
+
+        if (VIDEO_EXTS.includes(ext)) {
+          type = 'video'
+          videos++
+        } else if (IMG_EXTS.map(x => x.toLowerCase()).includes(ext)) {
+          type = 'image'
+          images++
+        } else if (AUDIO_EXTS.includes(ext)) {
+          type = 'audio'
+          audios++
+        } else if (PROJECT_EXTS.has(ext)) {
+          type = 'project'
+          projects++
+        } else {
+          others++
+        }
+
+        totalSizeBytes += stat.size
+        files.push({
+          name: entry.name,
+          path: fullPath,
+          size: stat.size,
+          sizeFormatted: formatBytes(stat.size),
+          mtime: stat.mtimeMs,
+          mtimeFormatted: new Date(stat.mtimeMs).toLocaleString(),
+          type,
+          extension: ext
+        })
+      } catch {}
+    }
+
+    files.sort((a, b) => b.mtime - a.mtime)
+
+    return {
+      success: true,
+      folderPath: targetFolder,
+      exists: true,
+      totalCount: files.length,
+      stats: {
+        videos,
+        images,
+        audios,
+        projects,
+        others,
+        totalSizeBytes,
+        totalSizeFormatted: formatBytes(totalSizeBytes)
+      },
+      files
+    }
+  } catch (err: any) {
+    return {
+      success: false,
+      folderPath: targetFolder,
+      exists: true,
+      totalCount: 0,
+      stats: { videos: 0, images: 0, audios: 0, projects: 0, others: 0, totalSizeBytes: 0, totalSizeFormatted: '0 B' },
+      files: []
+    }
+  }
 }
 

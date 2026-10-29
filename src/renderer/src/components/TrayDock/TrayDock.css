@@ -14,16 +14,18 @@
 
 .tray-card {
   pointer-events: auto;
-  background: rgba(18, 18, 24, 0.78);
-  backdrop-filter: blur(20px) saturate(160%);
-  -webkit-backdrop-filter: blur(20px) saturate(160%);
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 14px;
+  background: linear-gradient(180deg, var(--glass-tint-top, rgba(255, 255, 255, 0.08)) 0%, var(--glass-tint-bottom, rgba(179, 179, 179, 0.04)) 100%);
+  backdrop-filter: blur(28px) saturate(200%);
+  -webkit-backdrop-filter: blur(28px) saturate(200%);
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.14));
+  border-radius: 16px;
   padding: 16px;
   box-shadow:
-    0 12px 40px rgba(0, 0, 0, 0.45),
-    0 2px 8px rgba(0, 0, 0, 0.3),
-    0 0 1px rgba(255, 255, 255, 0.08) inset;
+    0 16px 40px rgba(0, 0, 0, 0.55),
+    0 4px 12px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 var(--glass-rim-top, rgba(255, 255, 255, 0.55)),
+    inset 0 0 0 1px var(--glass-rim-hairline, rgba(255, 255, 255, 0.12)),
+    inset 0 -1px 0 var(--glass-rim-bottom, rgba(255, 255, 255, 0.06));
   cursor: pointer;
   transition:
     transform var(--dur-normal) var(--ease-spring),

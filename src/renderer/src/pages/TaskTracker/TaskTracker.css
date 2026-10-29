@@ -2060,3 +2060,143 @@
   to { transform: rotate(360deg); }
 }
 
+/* ── 8. Apple Liquid Glass Empty Workstation Hub ── */
+.tracker-empty-card {
+  text-align: center;
+  padding: 64px 32px;
+  background: var(--surface);
+  backdrop-filter: blur(28px) saturate(200%);
+  -webkit-backdrop-filter: blur(28px) saturate(200%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card, 20px);
+  box-shadow: 
+    var(--shadow-card),
+    inset 0 1px 0 var(--glass-rim-top, rgba(255, 255, 255, 0.55)),
+    inset 0 0 0 1px var(--glass-rim-hairline, rgba(255, 255, 255, 0.12)),
+    inset 0 -1px 0 var(--glass-rim-bottom, rgba(255, 255, 255, 0.06));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  max-width: 680px;
+  margin: 32px auto;
+  position: relative;
+  overflow: hidden;
+}
+
+.tracker-empty-icon-wrap {
+  width: 72px;
+  height: 72px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.16) 0%, rgba(168, 85, 247, 0.1) 100%);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 6px;
+}
+
+.tracker-empty-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+
+.tracker-empty-sub {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  max-width: 520px;
+}
+
+.offline-pill-text {
+  display: inline-block;
+  padding: 1px 7px;
+  background: rgba(245, 158, 11, 0.14);
+  color: #F59E0B;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 6px;
+  font-weight: 700;
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+}
+
+.tracker-empty-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* ── 9. Liquid Glass Overrides for Task Tracker ── */
+[data-theme="glass"] .tracker-header,
+[data-theme="glass"] .tracker-drives-bar,
+[data-theme="glass"] .tracker-kpi-card,
+[data-theme="glass"] .tracker-stats-summary,
+[data-theme="glass"] .safar-card,
+[data-theme="glass"] .board-col,
+[data-theme="glass"] .tracker-table-container {
+  background: linear-gradient(180deg, var(--glass-tint-top, rgba(255, 255, 255, 0.08)) 0%, var(--glass-tint-bottom, rgba(179, 179, 179, 0.04)) 100%) !important;
+  backdrop-filter: blur(28px) saturate(200%) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(200%) !important;
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.14)) !important;
+  box-shadow: 
+    0 16px 40px -10px rgba(0, 0, 0, 0.55),
+    0 4px 14px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 var(--glass-rim-top, rgba(255, 255, 255, 0.55)),
+    inset 0 0 0 1px var(--glass-rim-hairline, rgba(255, 255, 255, 0.12)),
+    inset 0 -1px 0 var(--glass-rim-bottom, rgba(255, 255, 255, 0.06)) !important;
+}
+
+[data-theme="glass"] .tracker-drive-tab {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #E2E8F0 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+}
+
+[data-theme="glass"] .tracker-drive-tab:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.22) !important;
+  color: #FFFFFF !important;
+}
+
+[data-theme="glass"] .tracker-drive-tab.active {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.3) 0%, rgba(168, 85, 247, 0.2) 100%) !important;
+  border-color: rgba(99, 102, 241, 0.5) !important;
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.4) !important;
+}
+
+[data-theme="glass"] .safar-card-header {
+  background: rgba(255, 255, 255, 0.02) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+[data-theme="glass"] .task-row,
+[data-theme="glass"] .board-card {
+  background: rgba(255, 255, 255, 0.035) !important;
+  border: 1px solid rgba(255, 255, 255, 0.09) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
+}
+
+[data-theme="glass"] .task-row:hover,
+[data-theme="glass"] .board-card:hover {
+  background: rgba(255, 255, 255, 0.075) !important;
+  border-color: rgba(255, 255, 255, 0.22) !important;
+}
+
+[data-theme="glass"] .tracker-kpi-card:hover {
+  transform: translateY(-2.5px) !important;
+  box-shadow: 
+    0 24px 50px -8px rgba(0, 0, 0, 0.72),
+    0 0 24px -4px var(--theme-accent, #6366F1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.65) !important;
+}
+
+

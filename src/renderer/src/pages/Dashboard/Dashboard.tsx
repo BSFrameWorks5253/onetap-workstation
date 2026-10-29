@@ -222,7 +222,7 @@ export default function Dashboard(): JSX.Element {
                   ✦ WORKSTATION READY
                 </span>
               </div>
-              <h2>{textOverrides['welcome_title'] || 'Welcome to Uni Desk v26.10.5'}</h2>
+              <h2>{textOverrides['welcome_title'] || 'Welcome to Uni Desk v26.10.30'}</h2>
               <p>{textOverrides['welcome_text'] || 'Everything you need for your professional editing workflow is right here. Select a tool above to get started.'}</p>
 
               {/* Interactive Quick Launch & Hotkey Pills */}

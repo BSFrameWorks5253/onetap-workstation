@@ -11,6 +11,7 @@ Backed by SQLite (tracker.db) for drive-independent persistence.
 import { ipcMain, BrowserWindow, shell, dialog, app } from 'electron'
 import fs from 'fs'
 import path from 'path'
+import os from 'os'
 import { spawnSync, spawn } from 'child_process'
 import * as XLSX from 'xlsx'
 import { extractCity } from '../core/safarHierarchy'
@@ -212,6 +213,57 @@ function getTrackerScriptPath(): string | null {
 
 let detectedPythonCmd: string | null = null
 
+function runTrackerDbAsync(args: string[], stdinData?: string): Promise<any> {
+  return new Promise((resolve) => {
+    const script = getTrackerScriptPath()
+    if (!script) return resolve(null)
+
+    const py = detectedPythonCmd || 'python'
+    try {
+      const child = spawn(py, [script, ...args], {
+        windowsHide: true,
+        stdio: ['pipe', 'pipe', 'pipe']
+      })
+
+      let stdout = ''
+
+      child.stdout.on('data', (chunk) => {
+        stdout += chunk.toString('utf-8')
+      })
+
+      child.on('error', () => {
+        // Fallback to synchronous if spawn failed
+        try {
+          const syncRes = runTrackerDb(args, stdinData)
+          resolve(syncRes)
+        } catch {
+          resolve(null)
+        }
+      })
+
+      child.on('close', (code) => {
+        if (code === 0 && stdout) {
+          detectedPythonCmd = py
+          try {
+            resolve(JSON.parse(stdout.trim()))
+          } catch {
+            resolve(null)
+          }
+        } else {
+          resolve(null)
+        }
+      })
+
+      if (stdinData) {
+        child.stdin.write(stdinData)
+        child.stdin.end()
+      }
+    } catch {
+      resolve(null)
+    }
+  })
+}
+
 function runTrackerDb(args: string[], stdinData?: string): any {
   const script = getTrackerScriptPath()
   if (!script) return null
@@ -280,6 +332,26 @@ function watchFolderSafe(folderPath: string): void {
 // ── Auto-Drive Watchdog (Drive Reconnect Sentinel) ────────────
 let driveSentinelTimer: NodeJS.Timeout | null = null
 let lastKnownDrives: Set<string> = new Set()
+export let verifiedOnlineDrives: Set<string> = new Set(['C:'])
+
+export function updateOnlineDrives(): Set<string> {
+  const list = new Set<string>()
+  if (process.platform === 'win32') {
+    for (let i = 67; i <= 90; i++) {
+      const letter = String.fromCharCode(i) + ':'
+      const root = letter + '\\'
+      try {
+        if (fs.existsSync(root)) {
+          list.add(letter)
+        }
+      } catch {}
+    }
+  } else {
+    list.add('/')
+  }
+  verifiedOnlineDrives = list
+  return list
+}
 
 export function startDriveSentinel(): void {
   if (driveSentinelTimer) return
@@ -301,9 +373,11 @@ export function startDriveSentinel(): void {
   }
 
   lastKnownDrives = scanDrives()
+  updateOnlineDrives()
 
   driveSentinelTimer = setInterval(() => {
     const current = scanDrives()
+    updateOnlineDrives()
     let changed = false
     const newlyConnected: string[] = []
 
@@ -380,10 +454,42 @@ export function recordRenderFinished(params: {
 
 // ── Helpers for Safar & Date Folder Parsing ───────────────────
 
+const SYSTEM_IGNORED_DIRS = new Set([
+  'windows',
+  'program files',
+  'program files (x86)',
+  'programdata',
+  'appdata',
+  'system volume information',
+  '$recycle.bin',
+  'winsxs',
+  'systemapps',
+  'system32',
+  'syswow64',
+  'recovery',
+  'msocache',
+  'perflogs',
+  'node_modules',
+  '.git',
+  '.gemini',
+  'microsoft',
+  'msbuild',
+  'windows kits',
+  'temp',
+  'cache'
+])
+
+export function isSystemIgnored(dirName: string): boolean {
+  if (!dirName) return true
+  const lower = dirName.toLowerCase().trim()
+  if (lower.startsWith('$') || lower.startsWith('.')) return true
+  return SYSTEM_IGNORED_DIRS.has(lower)
+}
+
 export function isSafarFolder(name: string): boolean {
   if (!name) return false
   const clean = name.trim()
-  if (clean.startsWith('.') || clean.startsWith('$') || clean.toLowerCase() === 'system volume information') return false
+  if (isSystemIgnored(clean)) return false
   // Standard Safar folder patterns:
   // e.g. "1448-03 Mumbai", "1448_03_Mumbai", "1448 - 03 Mumbai", "1448-03-Mumbai", "1448-03"
   if (/^\d{4}[\s\-_.]+\d{1,3}(?:[\s\-_.]+[A-Za-z].*)?$/i.test(clean)) return true
@@ -460,21 +566,22 @@ export function isDateFolder(name: string): boolean {
   )
 }
 
-function scanFolderMedia(folderPath: string): { videoCount: number; totalSize: number; mtime: number } {
+function scanFolderMedia(folderPath: string, maxDepth = 2, currentDepth = 0): { videoCount: number; totalSize: number; mtime: number } {
   let videoCount = 0
   let totalSize = 0
   let maxMtime = 0
 
-  if (!fs.existsSync(folderPath)) {
+  if (currentDepth > maxDepth || !folderPath || !fs.existsSync(folderPath)) {
     return { videoCount, totalSize, mtime: 0 }
   }
 
   try {
     const entries = fs.readdirSync(folderPath, { withFileTypes: true })
     for (const ent of entries) {
+      if (isSystemIgnored(ent.name)) continue
       const full = path.join(folderPath, ent.name)
       if (ent.isDirectory()) {
-        const sub = scanFolderMedia(full)
+        const sub = scanFolderMedia(full, maxDepth, currentDepth + 1)
         videoCount += sub.videoCount
         totalSize += sub.totalSize
         if (sub.mtime > maxMtime) maxMtime = sub.mtime
@@ -791,7 +898,24 @@ function scanSingleWorkspace(
   const resourcesToUpsert: MediaResourceRecord[] = []
 
   let actualWorkingPath = (workingPath || '').trim()
-  if (!actualWorkingPath || !fs.existsSync(actualWorkingPath)) {
+  if (!actualWorkingPath) {
+    return { safars: [], tasks: [], resources: [] }
+  }
+
+  // Fast offline check: If the drive letter is not currently verified online, return immediately without touching disk!
+  const targetDriveRoot = driveRootOverride || path.parse(actualWorkingPath).root
+  const driveLetterMatch = targetDriveRoot.match(/^([A-Za-z]:)/)
+  const driveLetter = driveLetterMatch ? driveLetterMatch[1].toUpperCase() : null
+  if (driveLetter && !verifiedOnlineDrives.has(driveLetter)) {
+    return { safars: [], tasks: [], resources: [] }
+  }
+
+  // Skip system/program directories
+  if (isSystemIgnored(path.basename(actualWorkingPath))) {
+    return { safars: [], tasks: [], resources: [] }
+  }
+
+  if (!fs.existsSync(actualWorkingPath)) {
     // 1. Try case-insensitive lookup in parent directory
     const parent = path.dirname(actualWorkingPath || '')
     if (parent && fs.existsSync(parent)) {
@@ -824,7 +948,7 @@ function scanSingleWorkspace(
     }
   }
 
-  if (!actualWorkingPath || !fs.existsSync(actualWorkingPath)) {
+  if (!actualWorkingPath || !fs.existsSync(actualWorkingPath) || isSystemIgnored(path.basename(actualWorkingPath))) {
     return { safars: [], tasks: [], resources: [] }
   }
 
@@ -836,7 +960,6 @@ function scanSingleWorkspace(
     : new Map<string, string>()
 
   const parsedRoot = path.parse(actualWorkingPath).root
-  const driveLetterMatch = (driveRootOverride || parsedRoot).match(/^([A-Za-z]:)/)
   const workingDrive = driveLetterMatch ? driveLetterMatch[1].toUpperCase() + '\\' : (driveRootOverride || parsedRoot)
   const workingDriveLabel = resolveDriveLabel(workingDrive)
 
@@ -867,7 +990,7 @@ function scanSingleWorkspace(
         }
         const found: string[] = []
         for (const ent of entries) {
-          if (!ent.isDirectory() || ent.name.startsWith('.') || ent.name.startsWith('$') || ent.name.toLowerCase() === 'system volume information' || ent.name.toLowerCase() === 'node_modules') continue
+          if (!ent.isDirectory() || isSystemIgnored(ent.name)) continue
           const sub = path.join(dir, ent.name)
           if (isSafarFolder(ent.name)) {
             found.push(sub)
@@ -885,7 +1008,7 @@ function scanSingleWorkspace(
       safarDirs = discovered
     } else {
       safarDirs = rootEntries
-        .filter(e => e.isDirectory() && !e.name.startsWith('.') && e.name.toLowerCase() !== '$recycle.bin')
+        .filter(e => e.isDirectory() && !isSystemIgnored(e.name) && isSafarFolder(e.name))
         .map(e => path.join(actualWorkingPath, e.name))
     }
   }
@@ -1467,26 +1590,30 @@ let cachedScanResult: { safars: SafarRecord[]; tasks: TaskRecord[] } | null = nu
 let lastScanTimestamp = 0
 let isScanRunning = false
 
-export function scanTrackerData(input: {
+export async function scanTrackerDataAsync(input: {
   workingPath?: string
   toUploadPath?: string
   toDeletePath?: string
   workspaces?: DriveWorkspaceConfig[]
   force?: boolean
-} | DriveWorkspaceConfig[]): { safars: SafarRecord[]; tasks: TaskRecord[] } {
+} | DriveWorkspaceConfig[]): Promise<{ safars: SafarRecord[]; tasks: TaskRecord[] }> {
   const isForce = !Array.isArray(input) && Boolean((input as any)?.force)
 
-  // Fast-path: return cached result if scanned within the last 8 seconds
-  if (!isForce && cachedScanResult && Date.now() - lastScanTimestamp < 8000) {
+  // Fast-path: return cached result if scanned within the last 6 seconds
+  if (!isForce && cachedScanResult && Date.now() - lastScanTimestamp < 6000) {
     return cachedScanResult
   }
 
-  // If a scan is already running on the disk, return cached without blocking
+  // If a scan is already running on the disk, return cached or db state without blocking
   if (isScanRunning) {
-    return cachedScanResult || { safars: [], tasks: [] }
+    if (cachedScanResult) return cachedScanResult
+    const py = await runTrackerDbAsync(['--get-all'])
+    return py?.data ? enrichTrackerData(py.data.safars || [], py.data.tasks || []) : { safars: [], tasks: [] }
   }
 
   isScanRunning = true
+  updateOnlineDrives()
+
   try {
     let allSafarsToUpsert: SafarRecord[] = []
     let allTasksToUpsert: TaskRecord[] = []
@@ -1499,54 +1626,181 @@ export function scanTrackerData(input: {
       workspaceList = input.workspaces.filter(w => w.enabled)
     }
 
-  if (workspaceList.length > 0) {
-    for (const ws of workspaceList) {
-      const workingDir = ws.inProcessPath || ws.driveRoot || ''
-      if (workingDir) {
-        const res = scanSingleWorkspace(workingDir, ws.toUploadPath, ws.toDeletePath, ws.driveRoot)
-        allSafarsToUpsert.push(...res.safars)
-        allTasksToUpsert.push(...res.tasks)
-        allResourcesToUpsert.push(...res.resources)
+    if (workspaceList.length > 0) {
+      for (const ws of workspaceList) {
+        // Yield to event loop between workspaces to prevent any UI freezing
+        await new Promise(r => setImmediate(r))
+
+        const workingDir = ws.inProcessPath || ws.driveRoot || ''
+        const driveLetter = (ws.driveRoot || workingDir).match(/^([A-Za-z]:)/)?.[1]?.toUpperCase()
+        if (driveLetter && !verifiedOnlineDrives.has(driveLetter)) {
+          continue // Skip offline drive instantly without touching disk
+        }
+
+        if (workingDir) {
+          const res = scanSingleWorkspace(workingDir, ws.toUploadPath, ws.toDeletePath, ws.driveRoot)
+          allSafarsToUpsert.push(...res.safars)
+          allTasksToUpsert.push(...res.tasks)
+          allResourcesToUpsert.push(...res.resources)
+        }
+      }
+    } else if (!Array.isArray(input) && input?.workingPath) {
+      const workingDir = input.workingPath
+      const driveLetter = workingDir.match(/^([A-Za-z]:)/)?.[1]?.toUpperCase()
+      if (!driveLetter || verifiedOnlineDrives.has(driveLetter)) {
+        const res = scanSingleWorkspace(input.workingPath, input.toUploadPath, input.toDeletePath)
+        allSafarsToUpsert = res.safars
+        allTasksToUpsert = res.tasks
+        allResourcesToUpsert = res.resources
       }
     }
-  } else if (!Array.isArray(input) && input?.workingPath) {
-    const res = scanSingleWorkspace(input.workingPath, input.toUploadPath, input.toDeletePath)
-    allSafarsToUpsert = res.safars
-    allTasksToUpsert = res.tasks
-    allResourcesToUpsert = res.resources
-  } else {
-    const pyRes = runTrackerDb(['--get-all'])
-    if (pyRes && pyRes.success && pyRes.data) {
-      return enrichTrackerData(pyRes.data.safars || [], pyRes.data.tasks || [])
-    }
-    return { safars: [], tasks: [] }
-  }
 
-  // Persist tasks, safars, and ghost media resources to SQLite tracker.db
-  if (allTasksToUpsert.length > 0 || allSafarsToUpsert.length > 0 || allResourcesToUpsert.length > 0) {
-    try {
-      runTrackerDb(['--upsert-batch'], JSON.stringify({
-        tasks: allTasksToUpsert,
-        safars: allSafarsToUpsert,
-        resources: allResourcesToUpsert
-      }))
-    } catch (err) {
-      console.warn('[taskTracker] Upsert-batch error:', err)
+    // Persist tasks, safars, and ghost media resources to SQLite tracker.db asynchronously
+    if (allTasksToUpsert.length > 0 || allSafarsToUpsert.length > 0 || allResourcesToUpsert.length > 0) {
+      try {
+        await runTrackerDbAsync(['--upsert-batch'], JSON.stringify({
+          tasks: allTasksToUpsert,
+          safars: allSafarsToUpsert,
+          resources: allResourcesToUpsert
+        }))
+      } catch (err) {
+        console.warn('[taskTracker] Upsert-batch error:', err)
+      }
     }
-  }
 
     // Return full consolidated state from tracker.db so all drives remain visible and preserved
-    const pyRes = runTrackerDb(['--get-all'])
+    const pyRes = await runTrackerDbAsync(['--get-all'])
     if (pyRes && pyRes.success && pyRes.data && Array.isArray(pyRes.data.safars) && pyRes.data.safars.length > 0) {
       cachedScanResult = enrichTrackerData(pyRes.data.safars, pyRes.data.tasks || [])
-    } else {
+    } else if (allSafarsToUpsert.length > 0) {
       cachedScanResult = enrichTrackerData(allSafarsToUpsert, allTasksToUpsert)
+    } else if (pyRes?.data?.safars) {
+      cachedScanResult = enrichTrackerData(pyRes.data.safars, pyRes.data.tasks || [])
+    } else {
+      cachedScanResult = { safars: [], tasks: [] }
     }
     lastScanTimestamp = Date.now()
+    exportProductionSummary(cachedScanResult)
     return cachedScanResult
   } finally {
     isScanRunning = false
   }
+}
+
+// ── Exported Production Summary for Anything & External Hubs ──
+
+export function exportProductionSummary(data: { safars: SafarRecord[]; tasks: TaskRecord[] }): any {
+  try {
+    const safars = data.safars || []
+    const tasks = data.tasks || []
+
+    const activeSafar = safars.find(s => !s.isSafarDone) || safars[0] || null
+
+    let pendingCount = 0
+    let inProgressCount = 0
+    let reviewCount = 0
+    let uploadPendingCount = 0
+    let uploadedCount = 0
+    let submittedCount = 0
+
+    for (const t of tasks) {
+      if (t.status === 'editing_pending') pendingCount++
+      else if (t.status === 'in_progress') inProgressCount++
+      else if (t.status === 'review') reviewCount++
+      else if (t.status === 'upload_pending') uploadPendingCount++
+      else if (t.status === 'uploaded') uploadedCount++
+      else if (t.status === 'submitted') submittedCount++
+    }
+
+    const payload = {
+      updatedAt: Date.now(),
+      activeSafar: activeSafar ? activeSafar.safarName : null,
+      city: activeSafar?.city || 'Unassigned',
+      totalDays: activeSafar?.totalDays || 0,
+      completedDays: activeSafar?.completedDays || 0,
+      percent: activeSafar && activeSafar.totalDays > 0
+        ? Math.round((activeSafar.completedDays / activeSafar.totalDays) * 100)
+        : 0,
+      isSafarDone: activeSafar?.isSafarDone || false,
+      currentPath: activeSafar?.currentPath || null,
+      currentDrive: activeSafar?.currentDrive || null,
+      totalSafars: safars.length,
+      counts: {
+        editingPending: pendingCount,
+        inProgress: inProgressCount,
+        review: reviewCount,
+        uploadPending: uploadPendingCount,
+        uploaded: uploadedCount,
+        submitted: submittedCount,
+        totalTasks: tasks.length
+      },
+      recentTasks: tasks.slice(0, 6).map(t => ({
+        safarName: t.safarName,
+        dateFolder: t.dateFolder,
+        status: t.status,
+        renderedAt: t.renderedAt,
+        finalPath: t.finalPath,
+        currentDrive: t.currentDrive
+      }))
+    }
+
+    const appData = process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming')
+    const primaryDir = path.join(appData, 'One Tap')
+    if (!fs.existsSync(primaryDir)) {
+      fs.mkdirSync(primaryDir, { recursive: true })
+    }
+    const primaryFile = path.join(primaryDir, 'production_summary.json')
+    fs.writeFileSync(primaryFile, JSON.stringify(payload, null, 2), 'utf-8')
+
+    // Also write to custom settings location if present
+    const locFile = path.join(primaryDir, 'settings_location.ini')
+    if (fs.existsSync(locFile)) {
+      try {
+        const customDir = fs.readFileSync(locFile, 'utf-8').trim()
+        if (customDir && fs.existsSync(customDir) && customDir !== primaryDir) {
+          fs.writeFileSync(path.join(customDir, 'production_summary.json'), JSON.stringify(payload, null, 2), 'utf-8')
+        }
+      } catch {}
+    }
+
+    return payload
+  } catch (err) {
+    console.warn('[taskTracker] exportProductionSummary error:', err)
+    return null
+  }
+}
+
+export function getProductionSummary(): any {
+  try {
+    const appData = process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming')
+    const primaryFile = path.join(appData, 'One Tap', 'production_summary.json')
+    if (fs.existsSync(primaryFile)) {
+      return JSON.parse(fs.readFileSync(primaryFile, 'utf-8'))
+    }
+    // Check custom settings location if primary does not exist yet
+    const locFile = path.join(appData, 'One Tap', 'settings_location.ini')
+    if (fs.existsSync(locFile)) {
+      const customDir = fs.readFileSync(locFile, 'utf-8').trim()
+      const customFile = path.join(customDir, 'production_summary.json')
+      if (fs.existsSync(customFile)) {
+        return JSON.parse(fs.readFileSync(customFile, 'utf-8'))
+      }
+    }
+  } catch {}
+  return null
+}
+
+export function scanTrackerData(input: any): { safars: SafarRecord[]; tasks: TaskRecord[] } {
+  if (cachedScanResult && Date.now() - lastScanTimestamp < 8000) {
+    return cachedScanResult
+  }
+  const pyRes = runTrackerDb(['--get-all'])
+  if (pyRes && pyRes.success && pyRes.data) {
+    cachedScanResult = enrichTrackerData(pyRes.data.safars || [], pyRes.data.tasks || [])
+    exportProductionSummary(cachedScanResult)
+    return cachedScanResult
+  }
+  return { safars: [], tasks: [] }
 }
 
 // ── Safar Directory Mover ──────────────────────────────────────
@@ -1656,9 +1910,9 @@ export function registerTaskTrackerIPC(): void {
   startDriveSentinel()
 
   // 1. Scan and compute tasks
-  ipcMain.handle('taskTracker:scan', (_e, input: any) => {
+  ipcMain.handle('taskTracker:scan', async (_e, input: any) => {
     try {
-      return scanTrackerData(input)
+      return await scanTrackerDataAsync(input)
     } catch (e) {
       console.error('[taskTracker] Scan error:', e)
       return { safars: [], tasks: [] }

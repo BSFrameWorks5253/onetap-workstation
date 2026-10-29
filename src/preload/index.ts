@@ -114,6 +114,10 @@ contextBridge.exposeInMainWorld('api', {
     renameFiles: (params: { renames: Array<{ originalPath: string; newName: string }> }) => ipcRenderer.invoke('titleAdder:renameFiles', params),
     getAvailablePrefixes: () => ipcRenderer.invoke('titleAdder:getAvailablePrefixes'),
     resolveSafarFinalPath: (videoPath: string) => ipcRenderer.invoke('titleAdder:resolveSafarFinalPath', videoPath),
+    getFinalTitles: (customPath?: string) => ipcRenderer.invoke('titleAdder:getFinalTitles', customPath),
+    setFinalTitlesFolder: (folderPath: string) => ipcRenderer.invoke('titleAdder:setFinalTitlesFolder', folderPath),
+    openFinalTitlesFolder: (customPath?: string) => ipcRenderer.invoke('titleAdder:openFinalTitlesFolder', customPath),
+    showFileInFolder: (filePath: string) => ipcRenderer.invoke('titleAdder:showFileInFolder', filePath),
     onSetBatchSource: (cb: (d: string) => void) => {
       const sub = (_e: any, d: string): void => cb(d)
       ipcRenderer.on('titleAdder:setBatchSource', sub)
@@ -217,6 +221,11 @@ contextBridge.exposeInMainWorld('api', {
       const sub = (_e: any, d: any): void => cb(d)
       ipcRenderer.on('ame:render-complete', sub)
       return () => ipcRenderer.removeListener('ame:render-complete', sub)
+    },
+    onNavigate: (cb: (page: string) => void) => {
+      const sub = (_e: any, page: string): void => cb(page)
+      ipcRenderer.on('app:navigate', sub)
+      return () => ipcRenderer.removeListener('app:navigate', sub)
     }
   },
 

@@ -39,13 +39,13 @@ import { initWatcher, startWatcher } from './core/folderWatcher'
 import { applyFolderIcon } from './core/folderIconHelper'
 import { registerSettingsIPC } from './ipc/settings.ipc'
 import { registerDialogIPC } from './ipc/dialog.ipc'
-import { registerTitleAdderIPC, isGroupPhotoVideo } from './ipc/titleAdder.ipc'
+import { registerTitleAdderIPC, isGroupPhotoVideo, getFinalTitlesInfo } from './ipc/titleAdder.ipc'
 import { registerConverterIPC } from './ipc/converter.ipc'
 import { registerDriveSyncIPC } from './ipc/driveSync.ipc'
 import { registerFolderMakerIPC } from './ipc/folderMaker.ipc'
 import { registerAudioIPC } from './ipc/audio.ipc'
 import { registerSystemIPC } from './ipc/system.ipc'
-import { registerTaskTrackerIPC } from './ipc/taskTracker.ipc'
+import { registerTaskTrackerIPC, getProductionSummary } from './ipc/taskTracker.ipc'
 import { registerUpdateIPC, triggerSilentStartupCheck } from './ipc/update.ipc'
 import { registerPdfIPC } from './ipc/pdf.ipc'
 import { registerViewerIPC } from './ipc/viewer.ipc'
@@ -60,6 +60,7 @@ import { registerUserProfileIPC } from './ipc/userProfile.ipc'
 import { startDriveWatcherDaemon, stopDriveWatcherDaemon } from './core/driveWatcherDaemon'
 import { registerTitleAutomodeIPC } from './ipc/titleAutomode.ipc'
 import { initDynamicIsland } from './core/dynamicIsland'
+import { resolveChildAppLoaderConfig, showChildAppSplash, ChildAppLoaderConfig } from './core/splash'
 import http from 'http'
 
 // Keep user settings database folder compatible with "One Tap" data folder path
@@ -528,6 +529,20 @@ function startAmeLogMonitor(win: BrowserWindow | null): void {
   scanAndWatchAmeLogs(win)
 }
 
+let isSplashActive = false
+let activeLoaderConfig: ChildAppLoaderConfig | null = null
+
+function revealMainWindow(): void {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    if (!mainWindow.isVisible()) {
+      mainWindow.show()
+      mainWindow.maximize()
+      mainWindow.focus()
+    }
+    createTray(mainWindow)
+  }
+}
+
 function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1400,
@@ -554,22 +569,19 @@ function createWindow(): void {
 
   // Graceful show after paint — avoids white flash
   mainWindow.once('ready-to-show', () => {
-    if (mainWindow) {
-      mainWindow.show()
-      mainWindow.maximize()
-      mainWindow.focus()
-      createTray(mainWindow)
+    if (!isSplashActive) {
+      revealMainWindow()
     }
   })
 
   // Fallback to ensure window is shown even if ready-to-show event was missed
+  const splashDuration = activeLoaderConfig?.durationMs || 2500
   setTimeout(() => {
     if (mainWindow && !mainWindow.isVisible()) {
-      mainWindow.show()
-      mainWindow.maximize()
-      mainWindow.focus()
+      isSplashActive = false
+      revealMainWindow()
     }
-  }, 1000)
+  }, isSplashActive ? splashDuration + 1500 : 1000)
 
   // Send pending file-open (from Explorer double-click on first launch)
   mainWindow.webContents.once('did-finish-load', () => {
@@ -890,6 +902,19 @@ app.whenReady().then(() => {
   registerUserProfileIPC()
   registerTitleAutomodeIPC()
 
+  // ── Universal Child App Loader & Splash Screen Synchronization ──
+  const APP_ID = 'one-tap'
+  const APP_NAME = 'One Tap'
+  activeLoaderConfig = resolveChildAppLoaderConfig(APP_ID, APP_NAME)
+  isSplashActive = activeLoaderConfig.enabled !== false
+
+  if (isSplashActive) {
+    showChildAppSplash(activeLoaderConfig, () => {
+      isSplashActive = false
+      revealMainWindow()
+    })
+  }
+
   createWindow()
   initDynamicIsland(() => mainWindow)
   startDriveWatcherDaemon(() => mainWindow)
@@ -919,6 +944,11 @@ app.whenReady().then(() => {
       mainWindow.focus()
       if (filePath) {
         mainWindow.webContents.send('viewer:openFile', filePath)
+      }
+      const pageArg = argv.find(a => a.startsWith('--page='))
+      if (pageArg) {
+        const pageKey = pageArg.split('=')[1]
+        mainWindow.webContents.send('app:navigate', pageKey)
       }
     }
   })
@@ -1103,6 +1133,124 @@ function normalizeFolderPath(folderPath: any): string {
         })
         res.end('Error retrieving settings: ' + String(err))
       }
+    } else if (req.method === 'GET' && req.url === '/tracker-summary') {
+      try {
+        const summary = getProductionSummary()
+        res.writeHead(200, {
+          'Access-Control-Allow-Origin': '*',
+          'Content-Type': 'application/json'
+        })
+        res.end(JSON.stringify(summary || { success: false, message: 'No production summary available yet' }))
+      } catch (err) {
+        res.writeHead(500, {
+          'Access-Control-Allow-Origin': '*',
+          'Content-Type': 'application/json'
+        })
+        res.end(JSON.stringify({ error: String(err) }))
+      }
+    } else if (req.method === 'GET' && req.url === '/status') {
+      res.writeHead(200, {
+        'Access-Control-Allow-Origin': '*',
+        'Content-Type': 'application/json'
+      })
+      res.end(JSON.stringify({ status: 'online', app: 'One Tap', version: '26.10.30' }))
+    } else if (req.method === 'GET' && req.url === '/final-titles') {
+      try {
+        const info = getFinalTitlesInfo()
+        res.writeHead(200, {
+          'Access-Control-Allow-Origin': '*',
+          'Content-Type': 'application/json'
+        })
+        res.end(JSON.stringify(info))
+      } catch (err) {
+        res.writeHead(500, {
+          'Access-Control-Allow-Origin': '*',
+          'Content-Type': 'application/json'
+        })
+        res.end(JSON.stringify({ error: String(err) }))
+      }
+    } else if (req.method === 'POST' && req.url === '/set-final-titles-folder') {
+      let body = ''
+      req.on('data', chunk => { body += chunk.toString() })
+      req.on('end', async () => {
+        try {
+          const parsed = JSON.parse(body || '{}')
+          const folder = parsed.folder
+          if (folder && fs.existsSync(folder)) {
+            const { setAndSave } = require('./core/settingsManager')
+            await setAndSave('titles_folder', folder)
+            const info = getFinalTitlesInfo(folder)
+            res.writeHead(200, { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' })
+            res.end(JSON.stringify(info))
+          } else {
+            res.writeHead(400, { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ error: 'Folder does not exist' }))
+          }
+        } catch (e: any) {
+          res.writeHead(500, { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' })
+          res.end(JSON.stringify({ error: e.message }))
+        }
+      })
+    } else if (req.method === 'POST' && req.url === '/open-final-titles') {
+      try {
+        const info = getFinalTitlesInfo()
+        if (info.folderPath && fs.existsSync(info.folderPath)) {
+          shell.openPath(info.folderPath)
+          res.writeHead(200, { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' })
+          res.end(JSON.stringify({ success: true, folderPath: info.folderPath }))
+        } else {
+          res.writeHead(404, { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' })
+          res.end(JSON.stringify({ error: 'Folder not found' }))
+        }
+      } catch (e: any) {
+        res.writeHead(500, { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ error: e.message }))
+      }
+    } else if (req.method === 'POST' && req.url === '/reveal-file') {
+      let body = ''
+      req.on('data', chunk => { body += chunk.toString() })
+      req.on('end', () => {
+        try {
+          const parsed = JSON.parse(body || '{}')
+          if (parsed.path && fs.existsSync(parsed.path)) {
+            shell.showItemInFolder(parsed.path)
+            res.writeHead(200, { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ success: true }))
+          } else {
+            res.writeHead(404, { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ error: 'File not found' }))
+          }
+        } catch (e: any) {
+          res.writeHead(500, { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' })
+          res.end(JSON.stringify({ error: e.message }))
+        }
+      })
+    } else if (req.method === 'POST' && req.url === '/open-page') {
+      let body = ''
+      req.on('data', chunk => { body += chunk.toString() })
+      req.on('end', () => {
+        try {
+          const parsed = JSON.parse(body || '{}')
+          const targetPage = parsed.page || 'tracker'
+          if (mainWindow) {
+            if (mainWindow.isMinimized()) mainWindow.restore()
+            mainWindow.show()
+            mainWindow.focus()
+            mainWindow.webContents.send('app:navigate', targetPage)
+          }
+          res.writeHead(200, {
+            'Access-Control-Allow-Origin': '*',
+            'Content-Type': 'application/json'
+          })
+          res.end(JSON.stringify({ success: true, navigatedTo: targetPage }))
+        } catch (e: any) {
+          res.writeHead(400, {
+            'Access-Control-Allow-Origin': '*',
+            'Content-Type': 'application/json'
+          })
+          res.end(JSON.stringify({ error: e?.message || 'Invalid JSON' }))
+        }
+      })
     } else if (req.method === 'OPTIONS') {
       res.writeHead(204, {
         'Access-Control-Allow-Origin': '*',

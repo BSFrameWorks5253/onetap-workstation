@@ -78,6 +78,15 @@
   --glass-shadow: 0 10px 30px -4px rgba(65, 50, 30, 0.08), 0 2px 8px rgba(0, 0, 0, 0.03);
   --specular-highlight: rgba(255, 255, 255, 0.85);
 
+  /* Apple Liquid Glass Polish Rims */
+  --glass-tint-top: rgba(255, 255, 255, 0.07);
+  --glass-tint-bottom: rgba(179, 179, 179, 0.04);
+  --glass-tint-top-hover: rgba(255, 255, 255, 0.12);
+  --glass-tint-bottom-hover: rgba(179, 179, 179, 0.07);
+  --glass-rim-top: rgba(255, 255, 255, 0.55);
+  --glass-rim-hairline: rgba(255, 255, 255, 0.12);
+  --glass-rim-bottom: rgba(255, 255, 255, 0.06);
+
   /* -- Skeleton shimmer tokens ------------------------------- */
   --skeleton-base: rgba(0, 0, 0, 0.06);
   --skeleton-highlight: rgba(255, 255, 255, 0.55);
@@ -652,15 +661,27 @@ body.dark-theme {
 
   /* Liquid Glass Core Specular Tokens */
   --glass-blur: blur(28px) saturate(210%);
-  --glass-blur-heavy: blur(44px) saturate(230%);
-  --glass-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.02) 100%);
-  --glass-bg-heavy: rgba(10, 14, 24, 0.82);
-  --glass-border: rgba(255, 255, 255, 0.16);
+  --glass-blur-heavy: blur(48px) saturate(230%);
+  --glass-tint-top: rgba(255, 255, 255, 0.08);
+  --glass-tint-bottom: rgba(179, 179, 179, 0.04);
+  --glass-tint-top-hover: rgba(255, 255, 255, 0.14);
+  --glass-tint-bottom-hover: rgba(179, 179, 179, 0.08);
+
+  --glass-rim-top: rgba(255, 255, 255, 0.55);
+  --glass-rim-hairline: rgba(255, 255, 255, 0.12);
+  --glass-rim-bottom: rgba(255, 255, 255, 0.06);
+
+  --glass-bg: linear-gradient(180deg, var(--glass-tint-top) 0%, var(--glass-tint-bottom) 100%);
+  --glass-bg-heavy: rgba(10, 14, 24, 0.85);
+  --glass-border: rgba(255, 255, 255, 0.14);
   --glass-border-subtle: rgba(255, 255, 255, 0.08);
   --glass-shadow: 
     0 24px 60px -12px rgba(0, 0, 0, 0.65),
-    0 6px 20px rgba(0, 0, 0, 0.35),
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.4);
+    0 6px 20px rgba(0, 0, 0, 0.35);
+
+  --glass-menu-surface: rgba(14, 18, 30, 0.78);
+  --glass-modal-tint: rgba(12, 16, 28, 0.88);
+  --glass-scrim: rgba(5, 7, 12, 0.72);
 
   /* Page Accents (Luminous Liquid Neon) */
   --accent-dashboard:     #818CF8;

@@ -2,6 +2,7 @@ import { ipcMain, BrowserWindow } from 'electron'
 import fs from 'fs'
 import path from 'path'
 import { getFfmpegExePath } from '../core/gpuDetector'
+import { isGroupPhotoVideo } from './titleAdder.ipc'
 
 type WinGetter = () => BrowserWindow | null
 
@@ -45,8 +46,35 @@ export interface ImageFileInfo {
 }
 
 export function resolveVideoFiles(folder: string): { dir: string; videos: VideoFileInfo[] } {
-  const clean = cleanPath(folder)
+  let clean = cleanPath(folder)
   if (!clean || !fs.existsSync(clean)) return { dir: clean, videos: [] }
+
+  // If clean is a directory, check if it contains a 'Final' or 'Final Titles' subfolder where rendered videos live
+  try {
+    if (fs.statSync(clean).isDirectory()) {
+      const finalCandidates = ['Final', 'final', 'FINAL', 'Final Titles', 'final titles', 'FINAL TITLES']
+      for (const cand of finalCandidates) {
+        const subFinal = path.join(clean, cand)
+        if (fs.existsSync(subFinal)) {
+          try {
+            if (fs.statSync(subFinal).isDirectory()) {
+              const subEntries = fs.readdirSync(subFinal)
+              const hasVideos = subEntries.some(f => 
+                !f.startsWith('.') && 
+                !f.toLowerCase().includes('_temp_') && 
+                !isGroupPhotoVideo(f) &&
+                VIDEO_EXTS.includes(path.extname(f).toLowerCase())
+              )
+              if (hasVideos) {
+                clean = subFinal
+                break
+              }
+            }
+          } catch {}
+        }
+      }
+    }
+  } catch {}
 
   const results: VideoFileInfo[] = []
 
@@ -54,7 +82,11 @@ export function resolveVideoFiles(folder: string): { dir: string; videos: VideoF
   try {
     const entries = fs.readdirSync(clean, { withFileTypes: true })
     for (const ent of entries) {
-      if (ent.isFile() && VIDEO_EXTS.includes(path.extname(ent.name).toLowerCase())) {
+      if (ent.isFile() && 
+          !ent.name.startsWith('.') && 
+          !ent.name.toLowerCase().includes('_temp_') && 
+          !isGroupPhotoVideo(ent.name) &&
+          VIDEO_EXTS.includes(path.extname(ent.name).toLowerCase())) {
         results.push({
           fileName: ent.name,
           fullPath: path.join(clean, ent.name),
@@ -63,27 +95,34 @@ export function resolveVideoFiles(folder: string): { dir: string; videos: VideoF
       }
     }
 
-    // 2. 1-level deep subdirectories (e.g. Title Adder date folders like 1448-03-12_01M)
-    for (const ent of entries) {
-      if (ent.isDirectory()) {
-        const subPath = path.join(clean, ent.name)
-        try {
-          const subEntries = fs.readdirSync(subPath, { withFileTypes: true })
-          for (const subEnt of subEntries) {
-            if (subEnt.isFile() && VIDEO_EXTS.includes(path.extname(subEnt.name).toLowerCase())) {
-              results.push({
-                fileName: subEnt.name,
-                fullPath: path.join(subPath, subEnt.name),
-                dir: subPath
-              })
+    // 2. Only look in 1-level deep subdirectories if no direct video files were found
+    if (results.length === 0) {
+      const IGNORE_SUBDIRS = new Set(['dvd', 'converted_jpegs', 'thumbnails', 'temp', 'tmp', '.git', '$recycle.bin'])
+      for (const ent of entries) {
+        if (ent.isDirectory() && !ent.name.startsWith('.') && !IGNORE_SUBDIRS.has(ent.name.toLowerCase())) {
+          const subPath = path.join(clean, ent.name)
+          try {
+            const subEntries = fs.readdirSync(subPath, { withFileTypes: true })
+            for (const subEnt of subEntries) {
+              if (subEnt.isFile() && 
+                  !subEnt.name.startsWith('.') && 
+                  !subEnt.name.toLowerCase().includes('_temp_') && 
+                  !isGroupPhotoVideo(subEnt.name) &&
+                  VIDEO_EXTS.includes(path.extname(subEnt.name).toLowerCase())) {
+                results.push({
+                  fileName: subEnt.name,
+                  fullPath: path.join(subPath, subEnt.name),
+                  dir: subPath
+                })
+              }
             }
-          }
-        } catch {}
+          } catch {}
+        }
       }
     }
   } catch {}
 
-  results.sort((a, b) => a.fileName.localeCompare(b.fileName, undefined, { numeric: true }))
+  results.sort((a, b) => a.fileName.localeCompare(b.fileName, undefined, { numeric: true, sensitivity: 'base' }))
   return { dir: clean, videos: results }
 }
 
@@ -99,7 +138,7 @@ export function resolveImageFiles(folder: string): { dir: string; images: ImageF
     try {
       const cEntries = fs.readdirSync(convertedDir, { withFileTypes: true })
       for (const ent of cEntries) {
-        if (ent.isFile() && IMAGE_EXTS.includes(path.extname(ent.name).toLowerCase())) {
+        if (ent.isFile() && !ent.name.startsWith('.') && IMAGE_EXTS.includes(path.extname(ent.name).toLowerCase())) {
           results.push({
             fileName: ent.name,
             fullPath: path.join(convertedDir, ent.name),
@@ -114,7 +153,7 @@ export function resolveImageFiles(folder: string): { dir: string; images: ImageF
   try {
     const entries = fs.readdirSync(clean, { withFileTypes: true })
     for (const ent of entries) {
-      if (ent.isFile() && IMAGE_EXTS.includes(path.extname(ent.name).toLowerCase())) {
+      if (ent.isFile() && !ent.name.startsWith('.') && IMAGE_EXTS.includes(path.extname(ent.name).toLowerCase())) {
         const full = path.join(clean, ent.name)
         if (!results.some(r => r.fullPath.toLowerCase() === full.toLowerCase())) {
           results.push({
@@ -129,12 +168,12 @@ export function resolveImageFiles(folder: string): { dir: string; images: ImageF
     // 3. 1-level deep subdirectories if no images found yet
     if (results.length === 0) {
       for (const ent of entries) {
-        if (ent.isDirectory() && ent.name !== 'Converted_JPEGs') {
+        if (ent.isDirectory() && ent.name !== 'Converted_JPEGs' && !ent.name.startsWith('.')) {
           const subPath = path.join(clean, ent.name)
           try {
             const subEntries = fs.readdirSync(subPath, { withFileTypes: true })
             for (const subEnt of subEntries) {
-              if (subEnt.isFile() && IMAGE_EXTS.includes(path.extname(subEnt.name).toLowerCase())) {
+              if (subEnt.isFile() && !subEnt.name.startsWith('.') && IMAGE_EXTS.includes(path.extname(subEnt.name).toLowerCase())) {
                 results.push({
                   fileName: subEnt.name,
                   fullPath: path.join(subPath, subEnt.name),
@@ -148,7 +187,7 @@ export function resolveImageFiles(folder: string): { dir: string; images: ImageF
     }
   } catch {}
 
-  results.sort((a, b) => a.fileName.localeCompare(b.fileName, undefined, { numeric: true }))
+  results.sort((a, b) => a.fileName.localeCompare(b.fileName, undefined, { numeric: true, sensitivity: 'base' }))
   return { dir: clean, images: results }
 }
 

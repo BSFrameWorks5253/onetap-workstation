@@ -439,5 +439,6 @@ export default function PowerHubModal({ isOpen, onClose, onNavigate }: PowerHubM
           <span style={{ fontWeight: 700, color: 'var(--accent-dashboard)' }}>One Tap Workstation v26.10</span>
         </div>
       </div>
+    </div>
   )
 }

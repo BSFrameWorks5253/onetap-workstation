@@ -373,6 +373,19 @@ function AppInner(): JSX.Element {
     ;(window as any).showAdobeSplashScreen = () => setShowSplash(true)
     ;(window as any).openAdminStudio = () => navigate('admin')
 
+    // Listen for cross-app remote navigation (from Anything or local HTTP server)
+    let unsubscribeNav: (() => void) | undefined
+    try {
+      const apiObj = (window as any).api
+      if (apiObj?.system?.onNavigate) {
+        unsubscribeNav = apiObj.system.onNavigate((page: string) => {
+          if (page && typeof navigate === 'function') {
+            navigate(page as PageKey)
+          }
+        })
+      }
+    } catch {}
+
     async function check(): Promise<void> {
       try {
         const api = (window as any).api
@@ -545,7 +558,10 @@ function AppInner(): JSX.Element {
 
     check()
 
-    return () => clearTimeout(safetyTimer)
+    return () => {
+      clearTimeout(safetyTimer)
+      unsubscribeNav?.()
+    }
   }, [])
 
   // Listen for real-time video processing updates globally

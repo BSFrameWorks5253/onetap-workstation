@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react'
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { PAGE_META } from '../../types'
 import { Card, CardHeader } from '../../components/Card'
 import { Button, DangerButton, GhostButton } from '../../components/Button'
 import { BrowseRow, Input } from '../../components/Input'
 import LogBox, { useLogLines } from '../../components/LogBox'
 import { StatusChip } from '../../components/StatCard'
+import Modal from '../../components/Modal/Modal'
 import './TitleAdder.css'
 
 import { useToast } from '../../components/Toast'
@@ -791,19 +792,23 @@ export default function TitleAdder(): JSX.Element {
         resolvedVideo = batchOutputsOverride[src] || batchOutputsOverride[cleanSrc]
       } else if (baseOut) {
         const normOut = baseOut.trim().replace(/[\\/]+$/, '')
+        const segments = normOut.split(/[\\/]/).filter(Boolean).map(s => s.toLowerCase())
         const outBase = normOut.split(/[\\/]/).filter(Boolean).pop() || ''
-        if (dateFolder && outBase.toLowerCase() !== dateFolder.toLowerCase()) {
+        if (dateFolder && !segments.includes(dateFolder.toLowerCase()) && outBase.toLowerCase() !== dateFolder.toLowerCase()) {
           resolvedVideo = `${normOut}\\${dateFolder}`
         } else {
           resolvedVideo = normOut
         }
       }
 
+      // Preserve existing user-defined JPEG folder
+      const existingJpeg = localStorage.getItem('ot_converter_source_jpeg') || ''
+
       return {
         batchIndex: idx,
         batchName,
         sourcePath: src,
-        jpegFolder: cleanSrc,
+        jpegFolder: existingJpeg,
         videoFolder: resolvedVideo
       }
     })
@@ -812,18 +817,60 @@ export default function TitleAdder(): JSX.Element {
       localStorage.setItem('ot_converter_batch_pairs', JSON.stringify(batchPairs))
       if (batchPairs.length > 0) {
         const first = batchPairs[0]
-        localStorage.setItem('ot_converter_source_jpeg', first.jpegFolder)
         localStorage.setItem('ot_converter_video_target', first.videoFolder)
-        sessionStorage.setItem('ot_converter_source_jpeg', first.jpegFolder)
         sessionStorage.setItem('ot_converter_video_folder', first.videoFolder)
         const api = (window as any).api
         if (api?.settings?.setAndSave) {
-          api.settings.setAndSave('converter_source_jpeg', first.jpegFolder).catch(() => {})
           api.settings.setAndSave('converter_video_target', first.videoFolder).catch(() => {})
         }
       }
       window.dispatchEvent(new CustomEvent('refresh-converter-paths', { detail: { batchPairs, outputFolder: baseOut, batchOutputs: batchOutputsOverride } }))
     } catch {}
+  }
+
+  // ── Final Titles Folder Link & Two-Way Sync ─────────────────────
+  const [isFinalTitlesModalOpen, setIsFinalTitlesModalOpen] = useState(false)
+  const [finalTitlesData, setFinalTitlesData] = useState<any>(null)
+  const [isLoadingFinalTitles, setIsLoadingFinalTitles] = useState(false)
+  const [finalTitlesSearch, setFinalTitlesSearch] = useState('')
+
+  const loadFinalTitles = useCallback(async () => {
+    const apiInst = (window as any).api
+    if (!apiInst?.titleAdder?.getFinalTitles) return
+    setIsLoadingFinalTitles(true)
+    try {
+      const res = await apiInst.titleAdder.getFinalTitles()
+      if (res && res.folderPath) {
+        setFinalTitlesData(res)
+      }
+    } catch (err) {
+      console.warn('Failed to load final titles:', err)
+    } finally {
+      setIsLoadingFinalTitles(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadFinalTitles()
+  }, [loadFinalTitles])
+
+  const handleChangeFinalTitlesFolder = async () => {
+    const apiInst = (window as any).api
+    if (!apiInst?.dialog?.openFolder || !apiInst?.titleAdder?.setFinalTitlesFolder) return
+    const picked = await apiInst.dialog.openFolder({ title: 'Select Final Titles Folder' })
+    if (picked) {
+      const res = await apiInst.titleAdder.setFinalTitlesFolder(picked)
+      setFinalTitlesData(res)
+      showToast('Final Titles folder linked successfully!', 'success')
+      refreshAvailablePrefixes()
+    }
+  }
+
+  const handleOpenFinalTitlesInExplorer = async () => {
+    const apiInst = (window as any).api
+    if (apiInst?.titleAdder?.openFinalTitlesFolder) {
+      await apiInst.titleAdder.openFinalTitlesFolder()
+    }
   }
 
   const setBatchSources = (sources: string[]) => {
@@ -1158,10 +1205,11 @@ export default function TitleAdder(): JSX.Element {
     if (!baseOut) return ''
     if (mode === 'batch' && (sourcePath || batchSource)) {
       const src = (sourcePath || batchSource).trim()
-      const dateFolder = src.split(/[\\/]/).filter(Boolean).pop() || ''
+      const dateFolder = extractDateFolderFromSource(src)
       const normOut = baseOut.trim().replace(/[\\/]+$/, '')
+      const segments = normOut.split(/[\\/]/).filter(Boolean).map(s => s.toLowerCase())
       const outBase = normOut.split(/[\\/]/).filter(Boolean).pop() || ''
-      if (dateFolder && outBase.toLowerCase() !== dateFolder.toLowerCase()) {
+      if (dateFolder && !segments.includes(dateFolder.toLowerCase()) && outBase.toLowerCase() !== dateFolder.toLowerCase()) {
         return `${normOut}\\${dateFolder}`
       }
       return normOut
@@ -2611,7 +2659,9 @@ export default function TitleAdder(): JSX.Element {
       if (!src) continue
       try {
         const raw = await api.titleAdder.listVideos(src)
-        const folderVids = (raw || []).filter((f: string) => !isGroupPhotoVideo(f)).sort()
+        const folderVids = (raw || [])
+          .filter((f: string) => !isGroupPhotoVideo(f))
+          .sort((a: string, b: string) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }))
         for (const f of folderVids) {
           if (!seen.has(f.toLowerCase())) {
             seen.add(f.toLowerCase())
@@ -2688,7 +2738,9 @@ export default function TitleAdder(): JSX.Element {
       if (!src) continue
       try {
         const raw = await api.titleAdder.listVideos(src)
-        const folderVids = (raw || []).filter((f: string) => !isGroupPhotoVideo(f)).sort()
+        const folderVids = (raw || [])
+          .filter((f: string) => !isGroupPhotoVideo(f))
+          .sort((a: string, b: string) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }))
         for (const f of folderVids) {
           if (!seen.has(f.toLowerCase())) {
             seen.add(f.toLowerCase())
@@ -3039,6 +3091,25 @@ export default function TitleAdder(): JSX.Element {
                   </span>
                 )}
               </Button>
+              <Button
+                size="sm"
+                onClick={() => {
+                  setIsFinalTitlesModalOpen(true)
+                  loadFinalTitles()
+                }}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                  color: '#fff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontWeight: 600
+                }}
+                title="View & link Final Titles folder (syncs with Anything)"
+              >
+                <span>🎬</span> Final Titles ({finalTitlesData?.totalCount ?? '...'})
+              </Button>
               <button
                 type="button"
                 className={`ta-logs-pill-btn ${isLogsPopupOpen ? 'active' : ''}`}
@@ -3325,7 +3396,7 @@ export default function TitleAdder(): JSX.Element {
                         className="ta-safar-pill"
                         title={`Safar: ${safarFinalInfo.safarName || 'Detected'}\nTarget: ${safarFinalInfo.targetPath}`}
                       >
-                        <span>🎯 Safar: Final\{safarFinalInfo.dateFolder}</span>
+                        <span>🎯 Safar: {safarFinalInfo.targetPath && safarFinalInfo.dateFolder && safarFinalInfo.targetPath.includes(safarFinalInfo.dateFolder) && /final(?: titles)?$/i.test(safarFinalInfo.targetPath.trim()) ? `${safarFinalInfo.dateFolder}\\Final` : `Final\\${safarFinalInfo.dateFolder}`}</span>
                         {safarFinalInfo.dateFolderExistsInFinal && <span className="ta-verified-tick">✓</span>}
                       </span>
                       {outputFolder !== safarFinalInfo.targetPath && (
@@ -4165,6 +4236,208 @@ export default function TitleAdder(): JSX.Element {
         </div>
       )}
 
+      {/* Final Titles Folder & Asset Manager Modal (Two-Way Sync with Anything) */}
+      {isFinalTitlesModalOpen && (
+        <div className="ta-modal-overlay anim-fade-in" style={{ zIndex: 9999 }} onClick={() => setIsFinalTitlesModalOpen(false)}>
+          <div className="ta-modal-card anim-scale-in" style={{ maxWidth: '820px', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
+            <div className="ta-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div className="ta-modal-header-icon" style={{ fontSize: '24px' }}>🎬</div>
+                <div>
+                  <h3 className="ta-modal-title">Final Titles Folder & Asset Manager</h3>
+                  <p className="ta-modal-subtitle">Two-way synchronized title templates, overlays, and rendered videos (Linked with Anything)</p>
+                </div>
+              </div>
+              <button className="ta-modal-close" onClick={() => setIsFinalTitlesModalOpen(false)}>✕</button>
+            </div>
+
+            <div className="ta-modal-body" style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px', padding: '16px 20px' }}>
+              {/* Folder Location & Link Bar */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '12px 16px',
+                background: 'rgba(255, 255, 255, 0.04)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                borderRadius: '12px',
+                gap: '12px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
+                  <span style={{ fontSize: '18px' }}>📂</span>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.5)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Linked Folder Path</div>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#38bdf8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={finalTitlesData?.folderPath}>
+                      {finalTitlesData?.folderPath || 'No folder linked'}
+                    </div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                  <button
+                    type="button"
+                    onClick={handleChangeFinalTitlesFolder}
+                    style={{
+                      background: 'rgba(56, 189, 248, 0.15)',
+                      border: '1px solid rgba(56, 189, 248, 0.3)',
+                      color: '#38bdf8',
+                      borderRadius: '8px',
+                      padding: '6px 12px',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Change Folder
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleOpenFinalTitlesInExplorer}
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.08)',
+                      border: '1px solid rgba(255, 255, 255, 0.15)',
+                      color: '#fff',
+                      borderRadius: '8px',
+                      padding: '6px 12px',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Open in Explorer ↗
+                  </button>
+                  <button
+                    type="button"
+                    onClick={loadFinalTitles}
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.08)',
+                      border: '1px solid rgba(255, 255, 255, 0.15)',
+                      color: '#fff',
+                      borderRadius: '8px',
+                      padding: '6px 10px',
+                      fontSize: '12px',
+                      cursor: 'pointer'
+                    }}
+                    title="Refresh folder contents"
+                  >
+                    🔄
+                  </button>
+                </div>
+              </div>
+
+              {/* Stats Bar */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(4, 1fr)',
+                gap: '10px'
+              }}>
+                <div style={{ background: 'rgba(255,255,255,0.03)', padding: '10px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)', textAlign: 'center' }}>
+                  <div style={{ fontSize: '11px', color: '#94a3b8' }}>Total Files</div>
+                  <div style={{ fontSize: '16px', fontWeight: 700, color: '#fff' }}>{finalTitlesData?.totalCount ?? 0}</div>
+                </div>
+                <div style={{ background: 'rgba(255,255,255,0.03)', padding: '10px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)', textAlign: 'center' }}>
+                  <div style={{ fontSize: '11px', color: '#94a3b8' }}>Videos</div>
+                  <div style={{ fontSize: '16px', fontWeight: 700, color: '#38bdf8' }}>{finalTitlesData?.stats?.videos ?? 0}</div>
+                </div>
+                <div style={{ background: 'rgba(255,255,255,0.03)', padding: '10px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)', textAlign: 'center' }}>
+                  <div style={{ fontSize: '11px', color: '#94a3b8' }}>Images</div>
+                  <div style={{ fontSize: '16px', fontWeight: 700, color: '#f59e0b' }}>{finalTitlesData?.stats?.images ?? 0}</div>
+                </div>
+                <div style={{ background: 'rgba(255,255,255,0.03)', padding: '10px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)', textAlign: 'center' }}>
+                  <div style={{ fontSize: '11px', color: '#94a3b8' }}>Total Size</div>
+                  <div style={{ fontSize: '16px', fontWeight: 700, color: '#10b981' }}>{finalTitlesData?.stats?.totalSizeFormatted ?? '0 B'}</div>
+                </div>
+              </div>
+
+              {/* Filter Search */}
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="text"
+                  placeholder="🔍 Filter files by name or prefix (e.g. Z, QMZ, Nikah, MP4)..."
+                  value={finalTitlesSearch}
+                  onChange={e => setFinalTitlesSearch(e.target.value)}
+                  style={{
+                    width: '100%',
+                    background: 'rgba(0,0,0,0.25)',
+                    border: '1px solid rgba(255,255,255,0.12)',
+                    borderRadius: '8px',
+                    padding: '8px 12px',
+                    color: '#fff',
+                    fontSize: '12px',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+
+              {/* File List */}
+              <div style={{
+                maxHeight: '340px',
+                overflowY: 'auto',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '6px',
+                paddingRight: '4px'
+              }}>
+                {(!finalTitlesData?.files || finalTitlesData.files.length === 0) ? (
+                  <div style={{ textAlign: 'center', padding: '30px 20px', color: 'rgba(255,255,255,0.4)', fontSize: '13px' }}>
+                    {isLoadingFinalTitles ? 'Scanning folder...' : 'No files found in the linked Final Titles folder.'}
+                  </div>
+                ) : (
+                  finalTitlesData.files
+                    .filter((f: any) => !finalTitlesSearch || f.name.toLowerCase().includes(finalTitlesSearch.toLowerCase()))
+                    .map((f: any) => (
+                      <div
+                        key={f.path}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '8px 12px',
+                          background: 'rgba(255,255,255,0.02)',
+                          border: '1px solid rgba(255,255,255,0.06)',
+                          borderRadius: '8px',
+                          fontSize: '12px'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
+                          <span style={{ fontSize: '14px' }}>
+                            {f.type === 'video' ? '🎬' : f.type === 'image' ? '🖼️' : f.type === 'audio' ? '🎵' : f.type === 'project' ? '📽️' : '📄'}
+                          </span>
+                          <span style={{ fontWeight: 500, color: '#f1f5f9', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={f.name}>
+                            {f.name}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+                          <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '11px' }}>{f.sizeFormatted}</span>
+                          <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '11px' }}>{f.mtimeFormatted}</span>
+                          <button
+                            type="button"
+                            onClick={() => (window as any).api?.titleAdder?.showFileInFolder?.(f.path)}
+                            style={{
+                              background: 'rgba(255,255,255,0.08)',
+                              border: '1px solid rgba(255,255,255,0.12)',
+                              color: '#fff',
+                              borderRadius: '6px',
+                              padding: '3px 8px',
+                              fontSize: '11px',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Reveal ↗
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                )}
+              </div>
+            </div>
+
+            <div className="ta-modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', padding: '12px 20px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+              <Button size="sm" onClick={() => setIsFinalTitlesModalOpen(false)}>Done</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {isAudioModalOpen && (
         <div className={`ta-modal-overlay ${isAudioModalFullscreen ? 'is-fullscreen' : ''}`} onClick={() => setIsAudioModalOpen(false)}>
           <div
@@ -4705,6 +4978,208 @@ export default function TitleAdder(): JSX.Element {
                   {outputExists === false ? '⚠️ Invalid Output Path' : `✔ Confirm & Render (${audioPreviewAssignments.length} Videos)`}
                 </Button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Final Titles Folder & Asset Manager Modal (Two-Way Sync with Anything) */}
+      {isFinalTitlesModalOpen && (
+        <div className="ta-modal-overlay anim-fade-in" style={{ zIndex: 9999 }} onClick={() => setIsFinalTitlesModalOpen(false)}>
+          <div className="ta-modal-card anim-scale-in" style={{ maxWidth: '820px', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
+            <div className="ta-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div className="ta-modal-header-icon" style={{ fontSize: '24px' }}>🎬</div>
+                <div>
+                  <h3 className="ta-modal-title">Final Titles Folder & Asset Manager</h3>
+                  <p className="ta-modal-subtitle">Two-way synchronized title templates, overlays, and rendered videos (Linked with Anything)</p>
+                </div>
+              </div>
+              <button className="ta-modal-close" onClick={() => setIsFinalTitlesModalOpen(false)}>✕</button>
+            </div>
+
+            <div className="ta-modal-body" style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px', padding: '16px 20px' }}>
+              {/* Folder Location & Link Bar */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '12px 16px',
+                background: 'rgba(255, 255, 255, 0.04)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                borderRadius: '12px',
+                gap: '12px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
+                  <span style={{ fontSize: '18px' }}>📂</span>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.5)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Linked Folder Path</div>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#38bdf8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={finalTitlesData?.folderPath}>
+                      {finalTitlesData?.folderPath || 'No folder linked'}
+                    </div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                  <button
+                    type="button"
+                    onClick={handleChangeFinalTitlesFolder}
+                    style={{
+                      background: 'rgba(56, 189, 248, 0.15)',
+                      border: '1px solid rgba(56, 189, 248, 0.3)',
+                      color: '#38bdf8',
+                      borderRadius: '8px',
+                      padding: '6px 12px',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Change Folder
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleOpenFinalTitlesInExplorer}
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.08)',
+                      border: '1px solid rgba(255, 255, 255, 0.15)',
+                      color: '#fff',
+                      borderRadius: '8px',
+                      padding: '6px 12px',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Open in Explorer ↗
+                  </button>
+                  <button
+                    type="button"
+                    onClick={loadFinalTitles}
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.08)',
+                      border: '1px solid rgba(255, 255, 255, 0.15)',
+                      color: '#fff',
+                      borderRadius: '8px',
+                      padding: '6px 10px',
+                      fontSize: '12px',
+                      cursor: 'pointer'
+                    }}
+                    title="Refresh folder contents"
+                  >
+                    🔄
+                  </button>
+                </div>
+              </div>
+
+              {/* Stats Bar */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(4, 1fr)',
+                gap: '10px'
+              }}>
+                <div style={{ background: 'rgba(255,255,255,0.03)', padding: '10px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)', textAlign: 'center' }}>
+                  <div style={{ fontSize: '11px', color: '#94a3b8' }}>Total Files</div>
+                  <div style={{ fontSize: '16px', fontWeight: 700, color: '#fff' }}>{finalTitlesData?.totalCount ?? 0}</div>
+                </div>
+                <div style={{ background: 'rgba(255,255,255,0.03)', padding: '10px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)', textAlign: 'center' }}>
+                  <div style={{ fontSize: '11px', color: '#94a3b8' }}>Videos</div>
+                  <div style={{ fontSize: '16px', fontWeight: 700, color: '#38bdf8' }}>{finalTitlesData?.stats?.videos ?? 0}</div>
+                </div>
+                <div style={{ background: 'rgba(255,255,255,0.03)', padding: '10px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)', textAlign: 'center' }}>
+                  <div style={{ fontSize: '11px', color: '#94a3b8' }}>Images</div>
+                  <div style={{ fontSize: '16px', fontWeight: 700, color: '#f59e0b' }}>{finalTitlesData?.stats?.images ?? 0}</div>
+                </div>
+                <div style={{ background: 'rgba(255,255,255,0.03)', padding: '10px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)', textAlign: 'center' }}>
+                  <div style={{ fontSize: '11px', color: '#94a3b8' }}>Total Size</div>
+                  <div style={{ fontSize: '16px', fontWeight: 700, color: '#10b981' }}>{finalTitlesData?.stats?.totalSizeFormatted ?? '0 B'}</div>
+                </div>
+              </div>
+
+              {/* Filter Search */}
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="text"
+                  placeholder="🔍 Filter files by name or prefix (e.g. Z, QMZ, Nikah, MP4)..."
+                  value={finalTitlesSearch}
+                  onChange={e => setFinalTitlesSearch(e.target.value)}
+                  style={{
+                    width: '100%',
+                    background: 'rgba(0,0,0,0.25)',
+                    border: '1px solid rgba(255,255,255,0.12)',
+                    borderRadius: '8px',
+                    padding: '8px 12px',
+                    color: '#fff',
+                    fontSize: '12px',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+
+              {/* File List */}
+              <div style={{
+                maxHeight: '340px',
+                overflowY: 'auto',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '6px',
+                paddingRight: '4px'
+              }}>
+                {(!finalTitlesData?.files || finalTitlesData.files.length === 0) ? (
+                  <div style={{ textAlign: 'center', padding: '30px 20px', color: 'rgba(255,255,255,0.4)', fontSize: '13px' }}>
+                    {isLoadingFinalTitles ? 'Scanning folder...' : 'No files found in the linked Final Titles folder.'}
+                  </div>
+                ) : (
+                  finalTitlesData.files
+                    .filter((f: any) => !finalTitlesSearch || f.name.toLowerCase().includes(finalTitlesSearch.toLowerCase()))
+                    .map((f: any) => (
+                      <div
+                        key={f.path}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '8px 12px',
+                          background: 'rgba(255,255,255,0.02)',
+                          border: '1px solid rgba(255,255,255,0.06)',
+                          borderRadius: '8px',
+                          fontSize: '12px'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
+                          <span style={{ fontSize: '14px' }}>
+                            {f.type === 'video' ? '🎬' : f.type === 'image' ? '🖼️' : f.type === 'audio' ? '🎵' : f.type === 'project' ? '📽️' : '📄'}
+                          </span>
+                          <span style={{ fontWeight: 500, color: '#f1f5f9', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={f.name}>
+                            {f.name}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+                          <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '11px' }}>{f.sizeFormatted}</span>
+                          <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '11px' }}>{f.mtimeFormatted}</span>
+                          <button
+                            type="button"
+                            onClick={() => (window as any).api?.titleAdder?.showFileInFolder?.(f.path)}
+                            style={{
+                              background: 'rgba(255,255,255,0.08)',
+                              border: '1px solid rgba(255,255,255,0.12)',
+                              color: '#fff',
+                              borderRadius: '6px',
+                              padding: '3px 8px',
+                              fontSize: '11px',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Reveal ↗
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                )}
+              </div>
+            </div>
+
+            <div className="ta-modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', padding: '12px 20px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+              <Button size="sm" onClick={() => setIsFinalTitlesModalOpen(false)}>Done</Button>
             </div>
           </div>
         </div>

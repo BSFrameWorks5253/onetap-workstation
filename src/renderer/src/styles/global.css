@@ -557,62 +557,75 @@ h1, h2, h3 {
   overflow: hidden;
   pointer-events: none;
   z-index: 0;
-  opacity: 0.75;
+  opacity: 0.85;
   transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1);
   contain: strict;
 }
 
+.app-liquid-mesh::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(44rem 36rem at 38% 32%, rgba(139, 92, 246, 0.24), transparent 60%),
+    radial-gradient(38rem 34rem at 66% 54%, rgba(236, 72, 153, 0.20), transparent 62%),
+    radial-gradient(42rem 38rem at 45% 74%, rgba(6, 182, 212, 0.18), transparent 62%),
+    radial-gradient(64rem 46rem at 10% -10%, rgba(99, 102, 241, 0.22), transparent 60%),
+    radial-gradient(55rem 40rem at 92% 108%, rgba(245, 158, 11, 0.15), transparent 60%);
+  pointer-events: none;
+}
+
 [data-theme="glass"] .app-liquid-mesh,
 [data-theme="dark"] .app-liquid-mesh {
-  opacity: 0.9;
+  opacity: 0.95;
 }
 
 [data-theme="light"] .app-liquid-mesh,
 [data-theme="beige"] .app-liquid-mesh {
-  opacity: 0.4;
+  opacity: 0.45;
 }
 
 .app-liquid-orb {
   position: absolute;
   border-radius: 50%;
-  filter: blur(42px);
+  filter: blur(54px);
   transform: translate3d(0, 0, 0);
   backface-visibility: hidden;
-  opacity: 0.42;
+  opacity: 0.48;
 }
 
 .app-liquid-orb-1 {
-  width: 580px;
-  height: 580px;
+  width: 620px;
+  height: 620px;
   top: -120px;
-  left: -60px;
+  left: -80px;
   background: radial-gradient(circle, #6366F1 0%, rgba(99, 102, 241, 0) 70%);
   animation: floatLiquidOrb1 24s ease-in-out infinite alternate;
 }
 
 .app-liquid-orb-2 {
-  width: 640px;
-  height: 640px;
-  bottom: -150px;
+  width: 680px;
+  height: 680px;
+  bottom: -160px;
   right: 2%;
   background: radial-gradient(circle, #06B6D4 0%, rgba(6, 182, 212, 0) 70%);
   animation: floatLiquidOrb2 28s ease-in-out infinite alternate;
 }
 
 .app-liquid-orb-3 {
-  width: 480px;
-  height: 480px;
-  top: 35%;
-  left: 30%;
+  width: 520px;
+  height: 520px;
+  top: 32%;
+  left: 28%;
   background: radial-gradient(circle, #EC4899 0%, rgba(236, 72, 153, 0) 70%);
   animation: floatLiquidOrb3 22s ease-in-out infinite alternate;
 }
 
 .app-liquid-orb-4 {
-  width: 440px;
-  height: 440px;
-  bottom: 15%;
-  left: 6%;
+  width: 480px;
+  height: 480px;
+  bottom: 12%;
+  left: 5%;
   background: radial-gradient(circle, #F59E0B 0%, rgba(245, 158, 11, 0) 70%);
   animation: floatLiquidOrb4 26s ease-in-out infinite alternate;
 }
@@ -650,45 +663,50 @@ h1, h2, h3 {
 }
 
 [data-theme="glass"] .app-watermark-pattern {
-  opacity: 0.03 !important;
+  opacity: 0.02 !important;
 }
 
 [data-theme="glass"] .app-main-container {
-  background: linear-gradient(135deg, rgba(16, 21, 38, 0.72) 0%, rgba(10, 14, 26, 0.82) 100%) !important;
-  backdrop-filter: blur(36px) saturate(220%) !important;
-  -webkit-backdrop-filter: blur(36px) saturate(220%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%) !important;
+  backdrop-filter: blur(34px) saturate(210%) !important;
+  -webkit-backdrop-filter: blur(34px) saturate(210%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
   box-shadow: 
     0 24px 60px -12px rgba(0, 0, 0, 0.7),
     0 6px 20px rgba(0, 0, 0, 0.35),
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.4) !important;
+    inset 0 1px 0 var(--glass-rim-top, rgba(255, 255, 255, 0.55)),
+    inset 0 0 0 1px var(--glass-rim-hairline, rgba(255, 255, 255, 0.12)),
+    inset 0 -1px 0 var(--glass-rim-bottom, rgba(255, 255, 255, 0.06)) !important;
 }
 
 [data-theme="glass"] .app-main-container::before {
-  opacity: 0.03 !important;
+  opacity: 0.02 !important;
 }
 
 [data-theme="glass"] .app-main-container .toolbar {
-  background: rgba(13, 17, 30, 0.65) !important;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.015) 100%) !important;
   backdrop-filter: blur(28px) saturate(210%) !important;
   -webkit-backdrop-filter: blur(28px) saturate(210%) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
 }
 
 [data-theme="glass"] .app-main-container .toolbar::before {
   background: linear-gradient(90deg, transparent 0%, #818CF8 20%, #38BDF8 50%, #EC4899 80%, transparent 100%) !important;
 }
 
-/* ── 3. Sidebar Liquid Glass Dock ── */
+/* ── 3. Sidebar Apple Liquid Glass Dock ── */
 [data-theme="glass"] .sidebar {
-  background: linear-gradient(180deg, rgba(16, 21, 38, 0.75) 0%, rgba(10, 14, 26, 0.84) 100%) !important;
-  backdrop-filter: blur(36px) saturate(220%) !important;
-  -webkit-backdrop-filter: blur(36px) saturate(220%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.055) 0%, rgba(255, 255, 255, 0.02) 100%) !important;
+  backdrop-filter: blur(34px) saturate(210%) !important;
+  -webkit-backdrop-filter: blur(34px) saturate(210%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.13) !important;
   box-shadow: 
     0 20px 50px rgba(0, 0, 0, 0.65),
     0 4px 16px rgba(0, 0, 0, 0.3),
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.35) !important;
+    inset 0 1px 0 var(--glass-rim-top, rgba(255, 255, 255, 0.55)),
+    inset 0 0 0 1px var(--glass-rim-hairline, rgba(255, 255, 255, 0.12)),
+    inset 0 -1px 0 var(--glass-rim-bottom, rgba(255, 255, 255, 0.06)) !important;
 }
 
 [data-theme="glass"] .sidebar .nav-item {
@@ -698,110 +716,186 @@ h1, h2, h3 {
 }
 
 [data-theme="glass"] .sidebar .nav-item:hover {
-  background: rgba(255, 255, 255, 0.08) !important;
+  background: rgba(255, 255, 255, 0.09) !important;
   color: #FFFFFF !important;
-  border: 1px solid rgba(255, 255, 255, 0.14) !important;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.35) !important;
 }
 
 [data-theme="glass"] .sidebar .nav-item--active {
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.32) 0%, rgba(168, 85, 247, 0.22) 100%) !important;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.35) 0%, rgba(168, 85, 247, 0.25) 100%) !important;
   color: #FFFFFF !important;
   border: 1px solid rgba(255, 255, 255, 0.28) !important;
   box-shadow: 
-    0 8px 24px -4px rgba(99, 102, 241, 0.4),
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.45) !important;
+    0 8px 24px -4px rgba(99, 102, 241, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55) !important;
 }
 
-/* ── 4. Liquid Glass Cards & Surfaces ── */
+/* ── 4. Apple Liquid Glass Cards & Workstations (Rule 2 & Rule 3) ── */
 [data-theme="glass"] .card,
-[data-theme="glass"] .stat-card {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.02) 100%) !important;
+[data-theme="glass"] .stat-card,
+[data-theme="glass"] .page-hero,
+[data-theme="glass"] .liquid-glass {
+  background: linear-gradient(180deg, var(--glass-tint-top, rgba(255, 255, 255, 0.08)) 0%, var(--glass-tint-bottom, rgba(179, 179, 179, 0.04)) 100%) !important;
   backdrop-filter: blur(28px) saturate(200%) !important;
   -webkit-backdrop-filter: blur(28px) saturate(200%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.14)) !important;
+  border-radius: var(--radius-card, 16px) !important;
   box-shadow: 
     0 16px 40px -10px rgba(0, 0, 0, 0.55),
     0 4px 14px rgba(0, 0, 0, 0.25),
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.35) !important;
+    inset 0 1px 0 var(--glass-rim-top, rgba(255, 255, 255, 0.55)),
+    inset 0 0 0 1px var(--glass-rim-hairline, rgba(255, 255, 255, 0.12)),
+    inset 0 -1px 0 var(--glass-rim-bottom, rgba(255, 255, 255, 0.06)) !important;
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.22s ease !important;
 }
 
 [data-theme="glass"] .card:hover,
-[data-theme="glass"] .stat-card:hover {
+[data-theme="glass"] .stat-card:hover,
+[data-theme="glass"] .liquid-glass--hover:hover {
+  background: linear-gradient(180deg, var(--glass-tint-top-hover, rgba(255, 255, 255, 0.13)) 0%, var(--glass-tint-bottom-hover, rgba(179, 179, 179, 0.07)) 100%) !important;
   border-color: rgba(255, 255, 255, 0.32) !important;
+  transform: translateY(-2px) !important;
   box-shadow: 
-    0 22px 50px -8px rgba(0, 0, 0, 0.7),
-    0 0 25px -4px var(--theme-accent, #6366F1),
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.5) !important;
+    0 24px 50px -8px rgba(0, 0, 0, 0.72),
+    0 0 28px -4px var(--theme-accent, #6366F1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.65),
+    inset 0 0 0 1px var(--glass-rim-hairline, rgba(255, 255, 255, 0.14)),
+    inset 0 -1px 0 var(--glass-rim-bottom, rgba(255, 255, 255, 0.08)) !important;
 }
 
-/* ── 5. Liquid Glass Buttons ── */
+/* Rule 3: Child elements paint NO opaque background */
+[data-theme="glass"] .card-header {
+  background: rgba(255, 255, 255, 0.025) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+[data-theme="glass"] .card-body {
+  background: transparent !important;
+}
+
+/* Inner rows, file entries, batch items */
+[data-theme="glass"] .file-item,
+[data-theme="glass"] .batch-item,
+[data-theme="glass"] .video-item,
+[data-theme="glass"] .stat-mini-card,
+[data-theme="glass"] .log-entry {
+  background: rgba(255, 255, 255, 0.035) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 10px !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
+  transition: all 0.18s ease !important;
+}
+
+[data-theme="glass"] .file-item:hover,
+[data-theme="glass"] .batch-item:hover,
+[data-theme="glass"] .video-item:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
+}
+
+/* ── 5. Apple Liquid Glass Buttons ── */
 [data-theme="glass"] .btn-primary,
 [data-theme="glass"] button.btn--primary,
 [data-theme="glass"] .vault-btn-primary {
   background: linear-gradient(135deg, var(--theme-accent, #6366F1) 0%, #A855F7 100%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.35) !important;
+  border: 1px solid rgba(255, 255, 255, 0.38) !important;
   box-shadow: 
     0 8px 25px -4px rgba(99, 102, 241, 0.55),
     0 2px 6px rgba(0, 0, 0, 0.3),
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.6) !important;
+    inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.65) !important;
   color: #FFFFFF !important;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35) !important;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, filter 0.2s ease !important;
 }
 
 [data-theme="glass"] .btn-primary:hover,
-[data-theme="glass"] button.btn--primary:hover {
-  filter: brightness(1.12);
-  transform: translateY(-1.5px);
+[data-theme="glass"] button.btn--primary:hover,
+[data-theme="glass"] .vault-btn-primary:hover {
+  filter: brightness(1.12) !important;
+  transform: translateY(-1.5px) !important;
   box-shadow: 
-    0 12px 30px -4px rgba(99, 102, 241, 0.7),
-    inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.7) !important;
+    0 12px 30px -4px rgba(99, 102, 241, 0.75),
+    inset 0 1px 2px 0 rgba(255, 255, 255, 0.8) !important;
 }
 
 [data-theme="glass"] .btn-ghost,
 [data-theme="glass"] .vault-btn-ghost,
 [data-theme="glass"] .btn--secondary {
-  background: rgba(255, 255, 255, 0.08) !important;
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
+  background: rgba(255, 255, 255, 0.07) !important;
+  backdrop-filter: blur(18px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(180%) !important;
   border: 1px solid rgba(255, 255, 255, 0.16) !important;
   color: #E2E8F0 !important;
   box-shadow: 
     0 4px 12px rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
+    inset 0 1px 0 rgba(255, 255, 255, 0.35) !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
 [data-theme="glass"] .btn-ghost:hover,
 [data-theme="glass"] .btn--secondary:hover,
 [data-theme="glass"] .vault-btn-ghost:hover {
-  background: rgba(255, 255, 255, 0.16) !important;
-  border-color: rgba(255, 255, 255, 0.32) !important;
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-color: rgba(255, 255, 255, 0.35) !important;
   color: #FFFFFF !important;
-  transform: translateY(-1px);
+  transform: translateY(-1px) !important;
+  box-shadow: 
+    0 6px 18px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55) !important;
 }
 
 /* ── 6. Liquid Glass Form Inputs & Dropdowns ── */
+[data-theme="glass"] .input-field,
+[data-theme="glass"] .browse-row .input-field,
 [data-theme="glass"] input[type="text"],
 [data-theme="glass"] input[type="number"],
 [data-theme="glass"] input[type="search"],
 [data-theme="glass"] select,
 [data-theme="glass"] textarea {
-  background: rgba(14, 18, 32, 0.65) !important;
+  background: rgba(255, 255, 255, 0.045) !important;
   backdrop-filter: blur(20px) !important;
   -webkit-backdrop-filter: blur(20px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  border: 1px solid rgba(255, 255, 255, 0.13) !important;
   color: #F8FAFC !important;
-  box-shadow: inset 0 1.5px 3px rgba(0, 0, 0, 0.35) !important;
+  box-shadow: 
+    inset 0 1.5px 3px rgba(0, 0, 0, 0.35),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05) !important;
   border-radius: 12px !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
+[data-theme="glass"] .input-field:focus,
 [data-theme="glass"] input:focus,
 [data-theme="glass"] select:focus,
 [data-theme="glass"] textarea:focus {
   border-color: var(--theme-accent, #818CF8) !important;
+  background: rgba(255, 255, 255, 0.07) !important;
   box-shadow: 
-    0 0 20px -2px var(--theme-accent, #818CF8),
-    inset 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+    0 0 22px -2px var(--theme-accent, #818CF8),
+    inset 0 1px 2px rgba(0, 0, 0, 0.25) !important;
+}
+
+[data-theme="glass"] .browse-btn {
+  background: rgba(255, 255, 255, 0.08) !important;
+  backdrop-filter: blur(18px) !important;
+  -webkit-backdrop-filter: blur(18px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  color: #FFFFFF !important;
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45) !important;
+  border-radius: 10px !important;
+}
+
+[data-theme="glass"] .browse-btn:hover {
+  background: rgba(255, 255, 255, 0.16) !important;
+  border-color: rgba(255, 255, 255, 0.32) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 
+    0 6px 16px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
 }
 
 [data-theme="glass"] select option {
@@ -809,29 +903,52 @@ h1, h2, h3 {
   color: #FFFFFF !important;
 }
 
-/* ── 7. Liquid Glass Modals & Dialogs ── */
+/* ── 7. Liquid Glass Modals & Dialogs (VisionOS Float Tier) ── */
 [data-theme="glass"] .modal,
 [data-theme="glass"] .safar-modal-card,
 [data-theme="glass"] .ta-modal,
 [data-theme="glass"] .cmd-palette,
-[data-theme="glass"] .st-modal-card {
-  background: linear-gradient(135deg, rgba(20, 26, 46, 0.85) 0%, rgba(12, 16, 28, 0.94) 100%) !important;
-  backdrop-filter: blur(40px) saturate(220%) !important;
-  -webkit-backdrop-filter: blur(40px) saturate(220%) !important;
+[data-theme="glass"] .cmd-modal,
+[data-theme="glass"] .st-modal-card,
+[data-theme="glass"] .phub-modal,
+[data-theme="glass"] .shortcut-help-panel {
+  background: linear-gradient(135deg, rgba(22, 28, 48, 0.84) 0%, rgba(12, 16, 28, 0.94) 100%) !important;
+  backdrop-filter: blur(48px) saturate(230%) !important;
+  -webkit-backdrop-filter: blur(48px) saturate(230%) !important;
   border: 1px solid rgba(255, 255, 255, 0.22) !important;
   box-shadow: 
-    0 30px 80px -15px rgba(0, 0, 0, 0.85),
+    0 32px 80px -15px rgba(0, 0, 0, 0.85),
     0 0 50px -10px var(--theme-accent, #6366F1),
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.5) !important;
+    inset 0 1px 0 var(--glass-rim-top, rgba(255, 255, 255, 0.6)),
+    inset 0 0 0 1px var(--glass-rim-hairline, rgba(255, 255, 255, 0.15)) !important;
   border-radius: 22px !important;
 }
 
-/* ── 8. Liquid Glass Scrollbars ── */
+/* ── 8. Liquid Glass Chips & Badges ── */
+.liquid-glass-chip,
+[data-theme="glass"] .badge,
+[data-theme="glass"] .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.24rem 0.65rem;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  border-radius: 9999px !important;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(179, 179, 179, 0.04) 100%) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45) !important;
+  backdrop-filter: blur(8px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(8px) saturate(140%) !important;
+}
+
+/* ── 9. Liquid Glass Scrollbars ── */
 [data-theme="glass"] ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2) !important;
-  border: 1.5px solid transparent !important;
+  background: rgba(255, 255, 255, 0.18) !important;
+  border-radius: 9999px !important;
+  border: 2px solid transparent !important;
+  background-clip: padding-box !important;
 }
 
 [data-theme="glass"] ::-webkit-scrollbar-thumb:hover {
   background: var(--theme-accent, #818CF8) !important;
+  background-clip: padding-box !important;
 }

@@ -111,11 +111,107 @@ export function compareVersions(vA: string, vB: string): number {
  * Query Anything Ecosystem directory for local child app releases and catalog entries
  */
 export async function checkAnythingUpdate(customPath?: string): Promise<UpdateManifest | null> {
-  const resolvedDir = customPath || (get('anything_app_path') as string) || (fs.existsSync('C:\\Users\\Burhanuddin\\OneDrive\\Desktop\\Anything\\Anything') ? 'C:\\Users\\Burhanuddin\\OneDrive\\Desktop\\Anything\\Anything' : DEFAULT_ANYTHING_PATH)
-  const anythingDir = resolvedDir
+  const currentVer = getWorkstationVersion().trim();
+
+  // 0. Probe Anything Local Hub Server on port 49153 first
+  try {
+    const hubReq = await new Promise<any>((resolve) => {
+      const req = http.request({
+        hostname: '127.0.0.1',
+        port: 49153,
+        path: '/api/catalog',
+        method: 'GET',
+        timeout: 1000,
+        headers: { 'Accept': 'application/json' }
+      }, (res) => {
+        let data = '';
+        res.on('data', chunk => data += chunk);
+        res.on('end', () => {
+          try {
+            resolve(JSON.parse(data));
+          } catch {
+            resolve(null);
+          }
+        });
+      });
+      req.on('error', () => resolve(null));
+      req.on('timeout', () => { req.destroy(); resolve(null); });
+      req.end();
+    });
+
+    if (hubReq && Array.isArray(hubReq.apps)) {
+      const entry = hubReq.apps.find((a: any) => {
+        const id = (a.id || '').toLowerCase().replace(/^app-/, '');
+        const name = (a.name || '').toLowerCase();
+        return id === 'one-tap' || id === 'onetap' || name === 'one tap' || (a.githubRepo && String(a.githubRepo).toLowerCase().includes('onetap-workstation'));
+      });
+
+      if (entry && entry.version) {
+        const remoteVer = String(entry.version).replace(/^v/i, '').trim();
+        const isNew = compareVersions(remoteVer, currentVer) > 0;
+        const downloadUrl = 'http://127.0.0.1:49153/api/download-package/one-tap';
+        const manifest: UpdateManifest = {
+          updateAvailable: isNew,
+          currentVersion: currentVer,
+          latestVersion: remoteVer,
+          releaseName: entry.name ? `${entry.name} v${remoteVer}` : `One Tap v${remoteVer} (Anything Hub LAN)`,
+          releaseDate: entry.publishedAt ? new Date(entry.publishedAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+          downloadUrl: downloadUrl,
+          size: entry.packageSize || '78.5 MB',
+          releaseNotes: Array.isArray(entry.changelog) ? entry.changelog.join('\n') : (entry.description || 'Fast Local LAN Update via Anything Hub Server'),
+          source: 'anything',
+          isLocalFile: false,
+          anythingPath: 'http://127.0.0.1:49153'
+        };
+        console.log(`[Updater] Anything HTTP 49153 probe: found v${remoteVer} | current: v${currentVer} | updateAvailable: ${isNew}`);
+        if (isNew) return manifest;
+      }
+    }
+  } catch {
+    console.log('[Updater] Anything Hub local HTTP server not accessible, falling back to disk catalog check.');
+  }
+  const cliArg = process.argv.find((a) => a.startsWith('--anything-dir='))?.split('=')[1];
+  const appData = process.env.APPDATA || (process.env.USERPROFILE ? path.join(process.env.USERPROFILE, 'AppData', 'Roaming') : '');
+
+  const candidates = [
+    customPath,
+    cliArg,
+    process.env.ANYTHING_DIR,
+    process.env.ANYTHING_ECOSYSTEM_PATH,
+    (get('anything_app_path') as string),
+    'C:\\Users\\Burhanuddin\\OneDrive\\Desktop\\Anything\\Anything',
+    'C:\\Users\\Burhanuddin\\OneDrive\\Desktop\\Anything',
+    appData ? path.join(appData, 'Anything') : '',
+    appData ? path.join(appData, 'anything') : '',
+    DEFAULT_ANYTHING_PATH
+  ].filter((p): p is string => Boolean(p && typeof p === 'string' && fs.existsSync(p)));
+
+  let anythingDir = '';
+  let catalogPath = '';
+  for (const cand of candidates) {
+    const cat1 = path.join(cand, 'published-apps', 'catalog.json');
+    const cat2 = path.join(cand, 'ecosystem_catalog.json');
+    const rel1 = path.join(cand, 'releases');
+    if (fs.existsSync(cat1)) {
+      anythingDir = cand;
+      catalogPath = cat1;
+      break;
+    } else if (fs.existsSync(cat2)) {
+      anythingDir = cand;
+      catalogPath = cat2;
+      break;
+    } else if (fs.existsSync(rel1)) {
+      anythingDir = cand;
+      break;
+    }
+  }
+
+  if (!anythingDir) {
+    anythingDir = candidates[0] || DEFAULT_ANYTHING_PATH;
+  }
   if (!fs.existsSync(anythingDir)) {
-    console.log(`[Updater] Anything path does not exist on disk: ${anythingDir}`)
-    return null
+    console.log(`[Updater] Anything path does not exist on disk: ${anythingDir}`);
+    return null;
   }
 
   const currentVer = getWorkstationVersion().trim()
@@ -125,10 +221,10 @@ export async function checkAnythingUpdate(customPath?: string): Promise<UpdateMa
   let bestExeSize: number = 0
 
   // 1. Scan published-apps/catalog.json
-  const catalogPath = path.join(anythingDir, 'published-apps', 'catalog.json')
-  if (fs.existsSync(catalogPath)) {
+  const diskCatalogFile = catalogPath || path.join(anythingDir, 'published-apps', 'catalog.json')
+  if (fs.existsSync(diskCatalogFile)) {
     try {
-      const catalog = JSON.parse(fs.readFileSync(catalogPath, 'utf8'))
+      const catalog = JSON.parse(fs.readFileSync(diskCatalogFile, 'utf8'))
       if (Array.isArray(catalog)) {
         const entry = catalog.find((a: any) => {
           const id = (a.id || '').toLowerCase().replace(/^app-/, '')
@@ -281,8 +377,19 @@ export async function checkAnythingUpdate(customPath?: string): Promise<UpdateMa
     notes = `New One Tap update v${bestVersion} published in Anything ecosystem.`
   }
 
-  const fallbackExe = path.join(anythingDir, 'release', 'One Tap', `V-${bestVersion}`, `OneTap-V-${bestVersion}.exe`)
-  const targetDownloadUrl = bestExePath || fallbackExe
+  const fallbackExe = path.join(anythingDir, 'release', 'One Tap', `V-${bestVersion}`, `OneTap-V-${bestVersion}.exe`);
+  let remoteCatalogUrl = '';
+  if (catalogPath && fs.existsSync(catalogPath)) {
+    try {
+      const cat = JSON.parse(fs.readFileSync(catalogPath, 'utf8'));
+      const match = (Array.isArray(cat) ? cat : []).find((a: any) => {
+        const id = (a.id || '').toLowerCase().replace(/^app-/, '');
+        return id === 'one-tap' || id === 'onetap' || (a.name || '').toLowerCase() === 'one tap';
+      });
+      if (match?.downloadUrl) remoteCatalogUrl = match.downloadUrl;
+    } catch {}
+  }
+  const targetDownloadUrl = (bestExePath && fs.existsSync(bestExePath) ? bestExePath : '') || remoteCatalogUrl || fallbackExe
 
   const manifest: UpdateManifest = {
     updateAvailable: isNew,
@@ -781,6 +888,7 @@ chcp 65001 >nul
 timeout /t 2 /nobreak >nul
 
 :: Ensure any lingering Uni Desk process instances are terminated
+taskkill /F /IM "One Tap.exe" >nul 2>&1
 taskkill /F /IM "Uni Desk.exe" >nul 2>&1
 taskkill /F /IM "UniDesk_App.exe" >nul 2>&1
 timeout /t 1 /nobreak >nul
@@ -793,7 +901,8 @@ if %ERRORLEVEL% NEQ 0 (
 )
 
 :: Re-launch updated workstation
-set "TARGET_EXE=%LOCALAPPDATA%\\Programs\\Uni Desk\\Uni Desk.exe"
+set "TARGET_EXE=%LOCALAPPDATA%\\Programs\\One Tap\\One Tap.exe"
+if not exist "%TARGET_EXE%" set "TARGET_EXE=%LOCALAPPDATA%\\Programs\\Uni Desk\\Uni Desk.exe"
 if exist "%TARGET_EXE%" (
     start "" "%TARGET_EXE%"
 ) else (
