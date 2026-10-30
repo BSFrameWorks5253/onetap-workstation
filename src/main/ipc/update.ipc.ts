@@ -214,7 +214,6 @@ export async function checkAnythingUpdate(customPath?: string): Promise<UpdateMa
     return null;
   }
 
-  const currentVer = getWorkstationVersion().trim()
   let bestVersion = ''
   let bestReleaseRecord: any = null
   let bestExePath: string = ''

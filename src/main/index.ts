@@ -1153,7 +1153,7 @@ function normalizeFolderPath(folderPath: any): string {
         'Access-Control-Allow-Origin': '*',
         'Content-Type': 'application/json'
       })
-      res.end(JSON.stringify({ status: 'online', app: 'One Tap', version: '26.10.30' }))
+      res.end(JSON.stringify({ status: 'online', app: 'One Tap', version: '26.10.31' }))
     } else if (req.method === 'GET' && req.url === '/final-titles') {
       try {
         const info = getFinalTitlesInfo()
