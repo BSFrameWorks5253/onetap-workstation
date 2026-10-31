@@ -92,15 +92,56 @@ export function registerUserProfileIPC(): void {
     }
   })
 
-  // ── Load profile from userData ────────────────────────────────────────────
+  // ── Load profile from userData & Anything Ecosystem Session ───────────────
   ipcMain.handle('userProfile:load', async () => {
     try {
       const p = getProfilePath()
-      if (!fs.existsSync(p)) {
-        return null
+      let data: any = null
+      if (fs.existsSync(p)) {
+        try {
+          data = JSON.parse(fs.readFileSync(p, 'utf8')) as UserProfile
+        } catch {}
       }
-      const data = JSON.parse(fs.readFileSync(p, 'utf8')) as UserProfile
-      if (!data.name || !data.email) {
+
+      // Check ecosystem_session.json from Anything master hub
+      const appDataDir = process.env.APPDATA || path.join(require('os').homedir(), 'AppData', 'Roaming')
+      const anythingSessionPath = path.join(appDataDir, 'Anything', 'ecosystem_session.json')
+      let ecosystemUser: any = null
+      if (fs.existsSync(anythingSessionPath)) {
+        try {
+          const sess = JSON.parse(fs.readFileSync(anythingSessionPath, 'utf8'))
+          if (sess && sess.user && (sess.user.name || sess.user.email || sess.user.username)) {
+            ecosystemUser = sess.user
+          }
+        } catch {}
+      }
+
+      // Also check command line arguments --ecosystem-user-name, --ecosystem-user-email, --ecosystem-user-id
+      for (const arg of process.argv) {
+        if (arg.startsWith('--ecosystem-user-name=')) {
+          const name = decodeURIComponent(arg.split('=')[1] || '')
+          if (name) ecosystemUser = { ...ecosystemUser, name }
+        } else if (arg.startsWith('--ecosystem-user-email=')) {
+          const email = arg.split('=')[1] || ''
+          if (email) ecosystemUser = { ...ecosystemUser, email }
+        } else if (arg.startsWith('--ecosystem-user-id=')) {
+          const id = arg.split('=')[1] || ''
+          if (id) ecosystemUser = { ...ecosystemUser, id }
+        }
+      }
+
+      if (ecosystemUser) {
+        return {
+          name: ecosystemUser.name || (data && data.name) || 'Creative Member',
+          email: ecosystemUser.email || (data && data.email) || '',
+          username: ecosystemUser.username || (ecosystemUser.email ? ecosystemUser.email.split('@')[0] : 'creator'),
+          userId: ecosystemUser.username || ecosystemUser.id || 'creator',
+          avatarBase64: ecosystemUser.avatar || (data && data.avatarBase64) || null,
+          isAdmin: ecosystemUser.role === 'admin' || (data && data.isAdmin === true)
+        }
+      }
+
+      if (!data || (!data.name && !data.email)) {
         return null
       }
       return {
