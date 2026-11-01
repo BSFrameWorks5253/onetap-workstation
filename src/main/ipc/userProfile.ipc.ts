@@ -105,15 +105,22 @@ export function registerUserProfileIPC(): void {
 
       // Check ecosystem_session.json from Anything master hub
       const appDataDir = process.env.APPDATA || path.join(require('os').homedir(), 'AppData', 'Roaming')
-      const anythingSessionPath = path.join(appDataDir, 'Anything', 'ecosystem_session.json')
+      const sessionCandidates = [
+        path.join(appDataDir, 'Anything', 'ecosystem_session.json'),
+        path.join(appDataDir, 'anything', 'ecosystem_session.json'),
+        path.join(app.getPath('userData'), 'ecosystem_session.json')
+      ];
       let ecosystemUser: any = null
-      if (fs.existsSync(anythingSessionPath)) {
-        try {
-          const sess = JSON.parse(fs.readFileSync(anythingSessionPath, 'utf8'))
-          if (sess && sess.user && (sess.user.name || sess.user.email || sess.user.username)) {
-            ecosystemUser = sess.user
-          }
-        } catch {}
+      for (const sp of sessionCandidates) {
+        if (fs.existsSync(sp)) {
+          try {
+            const sess = JSON.parse(fs.readFileSync(sp, 'utf8'))
+            if (sess && sess.user && (sess.user.name || sess.user.email || sess.user.username)) {
+              ecosystemUser = sess.user;
+              break;
+            }
+          } catch {}
+        }
       }
 
       // Also check command line arguments --ecosystem-user-name, --ecosystem-user-email, --ecosystem-user-id
