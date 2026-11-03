@@ -1,7 +1,7 @@
 {
-  "name": "uni-file-manager",
+  "name": "anything-file-manager",
   "version": "1.0.0",
-  "description": "Uni Desk File Manager - Standalone fast file browser",
+  "description": "Anything File Manager — High-performance Media & Production File Explorer",
   "main": "dist/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
@@ -26,8 +26,8 @@
     "lucide-react": "^0.400.0"
   },
   "build": {
-    "appId": "com.unidesk.filemanager",
-    "productName": "Uni File Manager",
+    "appId": "com.anything.filemanager",
+    "productName": "Anything File Manager",
     "directories": { "output": "dist-installer" },
     "win": {
       "target": "dir",
