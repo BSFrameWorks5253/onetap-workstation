@@ -496,6 +496,24 @@ def compile_installer(version: str, log_fn):
     """Run NSIS (Linux or Windows) or Inno Setup (Windows only) to produce Setup.exe."""
     nsis = get_makensis_path()
     iscc = get_iscc_path()
+    # On Windows, prefer Inno Setup (ISCC) for professional branding, quick compilation, and taskbar AUMID registration
+    if iscc and IS_WIN:
+        iss_file = os.path.join('installer', 'installer.iss')
+        if not os.path.exists(iss_file):
+            log_fn(f'[Installer] Inno Setup script not found at {iss_file}')
+            return None
+        log_fn('\n' + '-'*56)
+        log_fn('  COMPILING INNO SETUP INSTALLER  (ISCC)')
+        log_fn('-'*56 + '\n')
+        ok = _stream_cmd(f'"{iscc}" /DAppVersion="{version}" /DOutputBaseFilename="OneTap-Setup-V-{version}" installer.iss', log_fn, cwd='installer')
+        if ok:
+            for d in ['release', 'dist', 'out']:
+                if not os.path.exists(d):
+                    continue
+                for f in os.listdir(d):
+                    if f.lower().endswith('.exe') and ('setup' in f.lower() or 'onetap' in f.lower()) and is_version_match(f, version):
+                        return os.path.join(d, f)
+        return None
     if nsis:
         nsi_file = os.path.join('installer', 'installer.nsi')
         if not os.path.exists(nsi_file):
@@ -521,7 +539,7 @@ def compile_installer(version: str, log_fn):
         log_fn('\n' + '-'*56)
         log_fn('  COMPILING INNO SETUP INSTALLER  (ISCC)')
         log_fn('-'*56 + '\n')
-        ok = _stream_cmd(f'"{iscc}" installer.iss', log_fn, cwd='installer')
+        ok = _stream_cmd(f'"{iscc}" /DAppVersion="{version}" /DOutputBaseFilename="OneTap-Setup-V-{version}" installer.iss', log_fn, cwd='installer')
         if ok:
             for d in ['release', 'dist', 'out']:
                 if not os.path.exists(d):

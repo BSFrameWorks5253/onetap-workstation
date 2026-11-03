@@ -96,6 +96,12 @@ Section -Post
   WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_DIR_REGKEY}" "" "$INSTDIR\One Tap.exe"
   WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_DIR_REGKEY}" "Path" "$INSTDIR"
 
+  ; Register AppUserModelID for Taskbar Grouping and Pin Unification
+  WriteRegStr HKCU "Software\Classes\Applications\One Tap.exe" "AppUserModelID" "com.bsframework.onetap"
+  WriteRegStr HKCU "Software\Classes\Applications\One Tap.exe" "FriendlyAppName" "One Tap"
+  WriteRegStr HKCU "Software\Classes\AppUserModelId\com.bsframework.onetap" "DisplayName" "One Tap"
+  WriteRegStr HKCU "Software\Classes\AppUserModelId\com.bsframework.onetap" "IconUri" "$INSTDIR\One Tap.exe,0"
+
   ; Write Windows Add/Remove Programs Information
   WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "DisplayName" "$(^Name)"
   WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "UninstallString" "$INSTDIR\Uninstall One Tap.exe"
@@ -140,5 +146,7 @@ Section Uninstall
   ; Clean Registry
   DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}"
   DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_DIR_REGKEY}"
+  DeleteRegKey HKCU "Software\Classes\Applications\One Tap.exe"
+  DeleteRegKey HKCU "Software\Classes\AppUserModelId\com.bsframework.onetap"
   SetAutoClose true
 SectionEnd

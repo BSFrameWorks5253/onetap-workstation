@@ -347,11 +347,15 @@ async function publishRelease(options = {}) {
 
   // Target executable name strictly per Anything CHILD_APP_GUIDE standard
   const targetExeName = `OneTap-V-${version}.exe`
+  const setupExeName = `OneTap-Setup-V-${version}.exe`
+  const flatTargetPath = path.join(flatReleaseDir, targetExeName)
+  const flatSetupPath = path.join(flatReleaseDir, setupExeName)
   const targetExePath = path.join(versionDir, targetExeName)
 
   if (detectedExe && fs.existsSync(detectedExe)) {
     if (detectedExe !== targetExePath) {
-      fs.copyFileSync(detectedExe, targetExePath)
+      try { fs.copyFileSync(detectedExe, targetExePath) } catch {}
+
       logSuccess(`Organized setup executable into: release/One Tap/V-${version}/${targetExeName}`)
     }
     const setupExeName = `OneTap-Setup-V-${version}.exe`

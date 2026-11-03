@@ -67,6 +67,10 @@ import http from 'http'
 const currentAppData = app.getPath('appData')
 app.setPath('userData', join(currentAppData, 'One Tap'))
 
+// Set app metadata & AppUserModelID immediately so Windows taskbar grouping and pinned shortcuts unify cleanly
+app.setName('One Tap')
+app.setAppUserModelId('com.bsframework.onetap')
+
 
 protocol.registerSchemesAsPrivileged([
   { scheme: 'local-resource', privileges: { secure: true, standard: true, supportFetchAPI: true, bypassCSP: true, stream: true } }
@@ -670,12 +674,25 @@ function createWindow(): void {
   }
 }
 
+function ensureWindowsAppUserModelId(): void {
+  if (process.platform !== 'win32') return
+  try {
+    const { spawn } = require('child_process')
+    const exePath = app.getPath('exe')
+    spawn('reg', ['add', 'HKCU\\Software\\Classes\\Applications\\One Tap.exe', '/v', 'AppUserModelID', '/d', 'com.bsframework.onetap', '/f'], { windowsHide: true })
+    spawn('reg', ['add', 'HKCU\\Software\\Classes\\Applications\\One Tap.exe', '/v', 'FriendlyAppName', '/d', 'One Tap', '/f'], { windowsHide: true })
+    spawn('reg', ['add', 'HKCU\\Software\\Classes\\AppUserModelId\\com.bsframework.onetap', '/v', 'DisplayName', '/d', 'One Tap', '/f'], { windowsHide: true })
+    spawn('reg', ['add', 'HKCU\\Software\\Classes\\AppUserModelId\\com.bsframework.onetap', '/v', 'IconUri', '/d', `${exePath},0`, '/f'], { windowsHide: true })
+  } catch {}
+}
+
 app.whenReady().then(() => {
   // Set app metadata
   app.setName('One Tap')
   try { app.setVersion(getWorkstationVersion()) } catch {}
   // Set app id for windows taskbar grouping
   app.setAppUserModelId('com.bsframework.onetap')
+  ensureWindowsAppUserModelId()
 
   // Register protocol to serve local files (Electron 31 compatible, direct fs read)
   protocol.handle('local-resource', async (request) => {

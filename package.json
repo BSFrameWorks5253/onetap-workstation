@@ -267,7 +267,7 @@
       "createStartMenuShortcut": true,
       "menuCategory": "One Tap",
       "shortcutName": "One Tap",
-      "artifactName": "OneTap-V-${version}.${ext}",
+      "artifactName": "OneTap-Setup-V-${version}.${ext}",
       "uninstallDisplayName": "One Tap",
       "deleteAppDataOnUninstall": false,
       "installerIcon": "resources/icon.ico",

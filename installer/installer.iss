@@ -1,10 +1,17 @@
 ; One Tap Professional Setup Script
 ; Script generated for BS Framework
 
+#ifndef AppVersion
+#define AppVersion "26.11.6"
+#endif
+#ifndef OutputBaseFilename
+#define OutputBaseFilename "OneTap-Setup-V-" + AppVersion
+#endif
+
 [Setup]
 AppId={{com.bsframework.onetap}}
 AppName=One Tap
-AppVersion=26.11.6
+AppVersion={#AppVersion}
 AppPublisher=BS Framework
 AppPublisherURL=https://bsframework.com/
 DefaultDirName={autopf}\One Tap
@@ -19,11 +26,10 @@ Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
 OutputDir=..\release
-OutputBaseFilename=OneTap-Setup-V-26.11.6
+OutputBaseFilename={#OutputBaseFilename}
 PrivilegesRequired=lowest
 SetupMutex=OneTap_Setup_Mutex
 AppMutex=OneTap_App_Mutex
-
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -38,11 +44,20 @@ Source: "..\release\win-unpacked\*"; DestDir: "{app}"; Flags: ignoreversion recu
 Source: "..\packages\file-manager\dist-installer\win-unpacked\*"; DestDir: "{app}\FileManager"; Flags: recursesubdirs ignoreversion skipifsourcedoesntexist; Check: DirExists(ExpandConstant('{src}\..\packages\file-manager\dist-installer\win-unpacked'))
 
 [Icons]
-Name: "{group}\One Tap"; Filename: "{app}\One Tap.exe"
+Name: "{group}\One Tap"; Filename: "{app}\One Tap.exe"; AppUserModelID: "com.bsframework.onetap"
 Name: "{group}\Uni File Manager"; Filename: "{app}\FileManager\UniFileManager.exe"; IconFilename: "{app}\FileManager\UniFileManager.exe"
-Name: "{autodesktop}\One Tap"; Filename: "{app}\One Tap.exe"; Tasks: desktopicon
+Name: "{autodesktop}\One Tap"; Filename: "{app}\One Tap.exe"; Tasks: desktopicon; AppUserModelID: "com.bsframework.onetap"
 
 [Registry]
+; ── Windows Taskbar Grouping & AppUserModelID Registration ───────────────────
+Root: HKCU; Subkey: "Software\Classes\Applications\One Tap.exe"; ValueType: string; ValueName: "AppUserModelID"; ValueData: "com.bsframework.onetap"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\Applications\One Tap.exe"; ValueType: string; ValueName: "FriendlyAppName"; ValueData: "One Tap"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\Applications\One Tap.exe\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\One Tap.exe,0"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\Applications\One Tap.exe\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\One Tap.exe"" ""%1"""; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\AppUserModelId\com.bsframework.onetap"; ValueType: string; ValueName: "DisplayName"; ValueData: "One Tap"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\AppUserModelId\com.bsframework.onetap"; ValueType: string; ValueName: "IconUri"; ValueData: "{app}\One Tap.exe,0"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\AppUserModelId\com.bsframework.onetap"; ValueType: string; ValueName: "IconIndex"; ValueData: "0"; Flags: uninsdeletekey
+
 ; ── Image formats ──────────────────────────────────────────────────────
 Root: HKCU; Subkey: "Software\Classes\.jpg\OpenWithProgids"; ValueType: string; ValueName: "OneTap.Viewer"; ValueData: ""; Flags: uninsdeletevalue; Tasks: fileassoc
 Root: HKCU; Subkey: "Software\Classes\.jpeg\OpenWithProgids"; ValueType: string; ValueName: "OneTap.Viewer"; ValueData: ""; Flags: uninsdeletevalue; Tasks: fileassoc
