@@ -88,6 +88,86 @@ function formatTimelapse(secs: number): string {
   return `${m}m ${s}s`
 }
 
+function MacFolderIcon({ size = 64, className = '', type = 'generic' }: { size?: number; className?: string; type?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" className={`select-none filter drop-shadow-md ${className}`}>
+      <defs>
+        <linearGradient id="macFolderBackFm" x1="60" y1="18" x2="60" y2="100" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#53bbf4" />
+          <stop offset="100%" stopColor="#1f82e2" />
+        </linearGradient>
+        <linearGradient id="macFolderFrontFm" x1="60" y1="36" x2="60" y2="104" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#67c7ff" />
+          <stop offset="35%" stopColor="#3aa8f7" />
+          <stop offset="100%" stopColor="#1072de" />
+        </linearGradient>
+        <linearGradient id="macFolderRimFm" x1="60" y1="36" x2="60" y2="46" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.65" />
+          <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
+        </linearGradient>
+        <linearGradient id="macFolderPaperFm" x1="60" y1="26" x2="60" y2="40" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#f8fafc" />
+          <stop offset="100%" stopColor="#e2e8f0" />
+        </linearGradient>
+        <radialGradient id="macFolderShadowFm" cx="50%" cy="100%" r="50%">
+          <stop offset="0%" stopColor="#003e8a" stopOpacity="0.4" />
+          <stop offset="100%" stopColor="#003e8a" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      <path d="M12 28C12 23.5817 15.5817 20 20 20H46C49.5 20 52.8 22 55 25L61 32H100C104.418 32 108 35.5817 108 40V92C108 97.5228 103.523 102 98 102H22C16.4772 102 12 97.5228 12 92V28Z" fill="url(#macFolderBackFm)" />
+      <rect x="22" y="27" width="76" height="24" rx="4" fill="url(#macFolderPaperFm)" opacity="0.9" />
+      <path d="M10 44C10 39.5817 13.5817 36 18 36H102C106.418 36 110 39.5817 110 44V94C110 99.5228 105.523 104 100 104H20C14.4772 104 10 99.5228 10 94V44Z" fill="url(#macFolderFrontFm)" />
+      <path d="M10 44C10 39.5817 13.5817 36 18 36H102C106.418 36 110 39.5817 110 44V48H10V44Z" fill="url(#macFolderRimFm)" />
+      <path d="M12 46C12 43 14 41 18 41H102C106 41 108 43 108 46" stroke="#ffffff" strokeWidth="1.2" strokeOpacity="0.4" strokeLinecap="round" />
+      <rect x="10" y="80" width="100" height="24" rx="10" fill="url(#macFolderShadowFm)" />
+    </svg>
+  )
+}
+
+function MacDocumentIcon({ ext = '', size = 64, className = '' }: { ext?: string; size?: number; className?: string }) {
+  const cleanExt = (ext || '').toLowerCase().replace('.', '')
+  let badgeBg = '#64748b'
+  let badgeLabel = cleanExt.toUpperCase() || 'FILE'
+  if (['ts', 'tsx', 'js', 'jsx', 'json', 'html', 'css', 'py'].includes(cleanExt)) {
+    badgeBg = '#0071e3'
+  } else if (['xlsx', 'xls', 'csv'].includes(cleanExt)) {
+    badgeBg = '#10b981'
+    badgeLabel = 'XLS'
+  } else if (['pptx', 'ppt'].includes(cleanExt)) {
+    badgeBg = '#f59e0b'
+    badgeLabel = 'PPT'
+  } else if (['docx', 'doc', 'txt', 'md'].includes(cleanExt)) {
+    badgeBg = '#3b82f6'
+  } else if (cleanExt === 'pdf') {
+    badgeBg = '#ef4444'
+    badgeLabel = 'PDF'
+  } else if (['zip', 'rar', '7z'].includes(cleanExt)) {
+    badgeBg = '#8b5cf6'
+    badgeLabel = 'ZIP'
+  }
+  return (
+    <svg width={size} height={size} viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" className={`select-none filter drop-shadow-md ${className}`}>
+      <defs>
+        <linearGradient id="macDocFaceFm" x1="60" y1="12" x2="60" y2="108" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#ffffff" />
+          <stop offset="100%" stopColor="#f1f5f9" />
+        </linearGradient>
+        <linearGradient id="macFoldFlapFm" x1="94" y1="14" x2="82" y2="38" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#ffffff" />
+          <stop offset="100%" stopColor="#e2e8f0" />
+        </linearGradient>
+      </defs>
+      <path d="M26 20C26 15.5817 29.5817 12 34 12H76L98 34V100C98 104.418 94.4183 108 90 108H34C29.5817 108 26 104.418 26 100V20Z" fill="url(#macDocFaceFm)" stroke="#cbd5e1" strokeWidth="1.5" />
+      <path d="M74 12V32C74 34 76 36 78 36H98" fill="none" stroke="#94a3b8" strokeWidth="1.2" opacity="0.5" />
+      <path d="M76 12L98 34H80C77.7909 34 76 32.2091 76 30V12Z" fill="url(#macFoldFlapFm)" stroke="#cbd5e1" strokeWidth="1" />
+      <rect x="36" y="58" width="48" height="22" rx="5" fill={badgeBg} />
+      <text x="60" y="73" fill="#ffffff" fontSize="10" fontWeight="800" fontFamily="sans-serif" textAnchor="middle" letterSpacing="0.5">
+        {badgeLabel}
+      </text>
+    </svg>
+  )
+}
+
 // ── Smart Video & Photo Thumbnail Component ───────────────────
 const videoThumbCache = new Map<string, { thumb: string; duration: number }>()
 
@@ -334,9 +414,9 @@ function MediaThumbnailCard({
             />
           </div>
         ) : entry.isDir ? (
-          <Folder className="w-14 h-14 text-amber-400 group-hover:scale-110 transition-transform" />
+          <MacFolderIcon size={76} />
         ) : (
-          <File className="w-12 h-12 text-gray-400 group-hover:scale-110 transition-transform" />
+          <MacDocumentIcon size={68} ext={entry.ext} />
         )}
 
         {/* Video Duration / Timelapse Badge (e.g. 10s) */}
@@ -1468,7 +1548,7 @@ export default function App() {
                 onClick={() => navigate(e.fullPath)}
                 className="w-full flex items-center gap-2 px-2.5 py-1 text-xs hover:bg-white/5 text-gray-400 hover:text-gray-200 truncate"
               >
-                <Folder className="w-3.5 h-3.5 text-amber-400/70 flex-shrink-0" />
+                <MacFolderIcon size={16} className="flex-shrink-0" />
                 <span className="truncate">{e.name}</span>
               </button>
             ))}
@@ -1605,7 +1685,7 @@ export default function App() {
                         <td className="py-2 px-3 truncate">
                           <div className="flex items-center gap-2.5 truncate">
                             {e.isDir ? (
-                              <Folder className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                              <MacFolderIcon size={18} className="flex-shrink-0" />
                             ) : isRaw ? (
                               <div className="flex items-center gap-1 flex-shrink-0">
                                 <ImageIcon className="w-4 h-4 text-rose-400" />
@@ -1618,7 +1698,7 @@ export default function App() {
                             ) : isVidExt(e.ext) ? (
                               <Film className="w-4 h-4 text-purple-400 flex-shrink-0" />
                             ) : (
-                              <File className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                              <MacDocumentIcon size={18} ext={e.ext} className="flex-shrink-0" />
                             )}
                             <span className="truncate font-medium" title={e.name}>
                               {e.name}
@@ -1674,7 +1754,7 @@ export default function App() {
                     >
                       <div className="flex items-center gap-2 truncate flex-1 min-w-0 mr-1.5">
                         {e.isDir ? (
-                          <Folder className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+                          <MacFolderIcon size={16} className="flex-shrink-0" />
                         ) : isRaw ? (
                           <div className="flex items-center gap-1 flex-shrink-0">
                             <ImageIcon className="w-3.5 h-3.5 text-rose-400" />
@@ -1685,7 +1765,7 @@ export default function App() {
                         ) : isVid ? (
                           <Film className="w-3.5 h-3.5 text-purple-400 flex-shrink-0" />
                         ) : (
-                          <File className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                          <MacDocumentIcon size={16} ext={e.ext} className="flex-shrink-0" />
                         )}
                         <span className="truncate" title={e.name}>{e.name}</span>
                       </div>
