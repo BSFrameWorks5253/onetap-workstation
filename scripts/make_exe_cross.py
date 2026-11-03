@@ -283,8 +283,8 @@ def update_version_in_files(old: str, new: str, log_fn):
                 content = f.read()
             if 'installer.iss' in fp:
                 updated = re.sub(r'AppVersion=.*', f'AppVersion={new}', content)
-                updated = re.sub(r'OutputBaseFilename=UniDesk_V.*_Setup',
-                                 f'OutputBaseFilename=UniDesk_V{new}_Setup', updated)
+                updated = re.sub(r'OutputBaseFilename=.*', f'OutputBaseFilename=OneTap-Setup-V-{new}', updated) # type: ignore
+
             elif 'installer.nsi' in fp:
                 updated = re.sub(r'!define\s+VERSION\s+".*"', f'!define VERSION "{new}"', content)
             elif old in content:
@@ -370,10 +370,10 @@ def ensure_icon_ico(log_fn):
 # ─────────────────────────────────────────────────────────────────────────────
 #  BUILD FUNCTIONS
 # ─────────────────────────────────────────────────────────────────────────────
-def _stream_cmd(cmd: str, log_fn) -> bool:
+def _stream_cmd(cmd: str, log_fn, cwd: str = None) -> bool:
     try:
         proc = subprocess.Popen(
-            cmd, shell=True,
+            cmd, shell=True, cwd=cwd,
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             text=True, encoding='utf-8', errors='replace'
         )
@@ -411,6 +411,11 @@ def build_msix(log_fn) -> bool:
     log_fn('-'*56 + '\n')
     return _stream_cmd(f'{NPM_CMD} run build:win:msix', log_fn)
 
+def normalize_semver_str(v: str) -> str:
+    clean = v.strip().lstrip('vV').replace('-', '.')
+    parts = clean.split('.')
+    return '.'.join(str(int(p)) if p.isdigit() else p for p in parts)
+
 def is_version_match(filename: str, target_version: str) -> bool:
     """Strictly checks if a filename belongs specifically to target_version and NOT an older/different version."""
     clean = target_version.strip().lstrip('vV')
@@ -420,9 +425,11 @@ def is_version_match(filename: str, target_version: str) -> bool:
     if clean.lower() not in fn and clean_alt1.lower() not in fn and clean_alt2.lower() not in fn:
         return False
     found_versions = re.findall(r'\b\d+\.\d+\.\d+(?:\.\d+)?\b', filename)
-    for v in found_versions:
-        if v != clean:
-            return False
+    if found_versions:
+        return any(normalize_semver_str(v) == normalize_semver_str(clean) for v in found_versions)
+
+
+
     return True
 
 def organize_version_release_folder(version: str, log_fn) -> tuple:
@@ -440,7 +447,7 @@ def organize_version_release_folder(version: str, log_fn) -> tuple:
             if item in ('old_versions', clean_ver) or not os.path.isfile(item_path):
                 continue
             item_vers = re.findall(r'\b\d+\.\d+\.\d+(?:\.\d+)?\b', item)
-            if item_vers and any(v != clean_ver for v in item_vers):
+            if item_vers and all(normalize_semver_str(v) != normalize_semver_str(clean_ver) for v in item_vers):
                 try:
                     shutil.move(item_path, os.path.join(old_dir, item))
                     log_fn(f'  [Archive Old] Moved older version asset {item} -> release/old_versions/')
@@ -496,13 +503,13 @@ def compile_installer(version: str, log_fn):
         log_fn('\n' + '-'*56)
         log_fn('  COMPILING NSIS SETUP INSTALLER  (makensis)')
         log_fn('-'*56 + '\n')
-        ok = _stream_cmd(f'"{nsis}" -DVERSION="{version}" "{nsi_file}"', log_fn)
+        ok = _stream_cmd(f'"{nsis}" -DVERSION="{version}" installer.nsi', log_fn, cwd='installer')
         if ok:
             for d in ['release', 'dist', 'out']:
                 if not os.path.exists(d):
                     continue
                 for f in os.listdir(d):
-                    if f.lower().endswith('.exe') and 'setup' in f.lower() and version in f:
+                    if f.lower().endswith('.exe') and ('setup' in f.lower() or 'onetap' in f.lower()) and is_version_match(f, version):
                         return os.path.join(d, f)
         return None
     if iscc and IS_WIN:
@@ -513,16 +520,24 @@ def compile_installer(version: str, log_fn):
         log_fn('\n' + '-'*56)
         log_fn('  COMPILING INNO SETUP INSTALLER  (ISCC)')
         log_fn('-'*56 + '\n')
-        ok = _stream_cmd(f'"{iscc}" "{iss_file}"', log_fn)
+        ok = _stream_cmd(f'"{iscc}" installer.iss', log_fn, cwd='installer')
         if ok:
             for d in ['release', 'dist', 'out']:
                 if not os.path.exists(d):
                     continue
                 for f in os.listdir(d):
-                    if f.lower().endswith('.exe') and 'setup' in f.lower():
+                    if f.lower().endswith('.exe') and ('setup' in f.lower() or 'onetap' in f.lower()) and is_version_match(f, version):
                         return os.path.join(d, f)
         return None
-    log_fn('[Installer] No NSIS or Inno Setup found — skipping installer step.')
+    log_fn('[Installer] Compiling NSIS Setup Installer via electron-builder (npm run build:win:nsis)...')
+    ok = _stream_cmd(f'{NPM_CMD} run build:win:nsis', log_fn)
+    if ok:
+        for d in ['release', 'dist', 'out']:
+            if not os.path.exists(d):
+                continue
+            for f in os.listdir(d):
+                if f.lower().endswith('.exe') and ('setup' in f.lower() or 'onetap' in f.lower()) and is_version_match(f, version):
+                    return os.path.join(d, f)
     return None
 
 
@@ -534,15 +549,16 @@ def find_all_release_assets(version: str) -> list:
     seen_basenames = set()
 
     # Priority 1: Check release/<version>/ subfolder
-    ver_dir = os.path.join('release', clean)
-    if os.path.exists(ver_dir):
-        for f in os.listdir(ver_dir):
-            if f.lower().endswith(exts) and 'uninstaller' not in f.lower() and 'unideskstudio' not in f.lower():
-                if is_version_match(f, clean):
-                    fp = os.path.join(ver_dir, f)
-                    if f.lower() not in seen_basenames:
-                        seen_basenames.add(f.lower())
-                        found.append(fp)
+    for ver_dir in [os.path.join('release', clean), os.path.join('release', 'One Tap', f'V-{clean}')]:
+        if os.path.exists(ver_dir):
+            for f in os.listdir(ver_dir):
+                if f.lower().endswith(exts) and 'uninstaller' not in f.lower() and 'unideskstudio' not in f.lower():
+                    if is_version_match(f, clean):
+
+                        fp = os.path.join(ver_dir, f)
+                        if f.lower() not in seen_basenames:
+                            seen_basenames.add(f.lower())
+                            found.append(fp)
 
     # Priority 2: Check standard output directories with strict version match
     for d in ['release', 'out']:
@@ -561,6 +577,7 @@ def find_all_release_assets(version: str) -> list:
                 fp = os.path.join(root, f)
                 # STRICT: MUST match the exact target version
                 if is_version_match(f, clean):
+
                     seen_basenames.add(f.lower())
                     found.append(fp)
     return found
@@ -622,9 +639,11 @@ def upload_to_github(version: str, file_paths: list, release_body: str, log_fn) 
                 if r2.status != 200:
                     log_fn(f'  [Error] Could not fetch existing release: {body[:120]}')
                     return False
+        
             else:
                 log_fn(f'  [Error] Create release HTTP {resp.status}: {body[:120]}')
                 return False
+    
         rel_info = json.loads(body)
         upload_url = rel_info.get('upload_url', '').split('{')[0]
         existing = rel_info.get('assets', [])

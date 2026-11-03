@@ -139,7 +139,7 @@ async function buildWindows() {
   prepareCustomMsiTemplate()
 
   const requestedTarget = process.argv[2] // e.g. "zip", "nsis", "msi", "msix", "dir"
-  let builderTarget = requestedTarget ? requestedTarget : ''
+  let builderTarget = requestedTarget ? requestedTarget : 'nsis'
 
   if (requestedTarget === 'msix' || requestedTarget === 'appx') {
     builderTarget = 'appx'

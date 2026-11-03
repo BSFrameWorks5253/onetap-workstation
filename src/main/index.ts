@@ -30,9 +30,8 @@ process.on('unhandledRejection', (reason: any) => {
   console.error('[Main Process UnhandledRejection Suppressed]:', reason?.message || reason)
 })
 
-// Load environment variables and discover FFmpeg before doing anything else
+// Load environment variables before doing anything else
 loadEnv()
-findAndEnsureFfmpegPath()
 
 import { initSettings, getAll, flushSaveSync } from './core/settingsManager'
 import { initWatcher, startWatcher } from './core/folderWatcher'
@@ -61,7 +60,7 @@ import { registerUserProfileIPC } from './ipc/userProfile.ipc'
 import { startDriveWatcherDaemon, stopDriveWatcherDaemon } from './core/driveWatcherDaemon'
 import { registerTitleAutomodeIPC } from './ipc/titleAutomode.ipc'
 import { initDynamicIsland } from './core/dynamicIsland'
-import { resolveChildAppLoaderConfig, showChildAppSplash, ChildAppLoaderConfig } from './core/splash'
+import { resolveChildAppLoaderConfig, showChildAppSplash, closeChildAppSplash, ChildAppLoaderConfig } from './core/splash'
 import http from 'http'
 
 // Keep user settings database folder compatible with "One Tap" data folder path
@@ -568,21 +567,21 @@ function createWindow(): void {
     console.log(`[Renderer Console - Level ${level}] ${message} (at ${sourceId}:${line})`)
   })
 
-  // Graceful show after paint — avoids white flash
+  // Graceful show after paint — close splash immediately once main window is ready
   mainWindow.once('ready-to-show', () => {
-    if (!isSplashActive) {
-      revealMainWindow()
-    }
+    isSplashActive = false
+    closeChildAppSplash()
+    revealMainWindow()
   })
 
   // Fallback to ensure window is shown even if ready-to-show event was missed
-  const splashDuration = activeLoaderConfig?.durationMs || 2500
   setTimeout(() => {
     if (mainWindow && !mainWindow.isVisible()) {
       isSplashActive = false
+      closeChildAppSplash()
       revealMainWindow()
     }
-  }, isSplashActive ? splashDuration + 1500 : 1000)
+  }, 1000)
 
   // Send pending file-open (from Explorer double-click on first launch)
   mainWindow.webContents.once('did-finish-load', () => {
@@ -922,8 +921,6 @@ app.whenReady().then(() => {
   createWindow()
   initDynamicIsland(() => mainWindow)
   startDriveWatcherDaemon(() => mainWindow)
-  initWatcher(() => mainWindow)
-  startWatcher()
 
   // Apply Adobe-style custom folder icon branding to program folder in production
   if (app.isPackaged) {

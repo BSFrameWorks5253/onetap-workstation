@@ -29,7 +29,7 @@ export const AdobeSplashScreen: React.FC<AdobeSplashScreenProps> = ({
   isPreview = false,
   isBootScreen = true,
   version = '26.11.03',
-  durationMs = 2800,
+  durationMs = 1000,
   artworkUrl
 }) => {
   const [progress, setProgress] = useState(0)

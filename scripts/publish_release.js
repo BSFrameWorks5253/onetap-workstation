@@ -354,6 +354,18 @@ async function publishRelease(options = {}) {
       fs.copyFileSync(detectedExe, targetExePath)
       logSuccess(`Organized setup executable into: release/One Tap/V-${version}/${targetExeName}`)
     }
+    const setupExeName = `OneTap-Setup-V-${version}.exe`
+    const setupExePath = path.join(versionDir, setupExeName)
+    const flatSetupPath = path.join(flatReleaseDir, setupExeName)
+    if (fs.existsSync(flatSetupPath)) {
+      if (!fs.existsSync(setupExePath) || fs.statSync(flatSetupPath).mtimeMs > fs.statSync(setupExePath).mtimeMs) {
+        fs.copyFileSync(flatSetupPath, setupExePath)
+        logSuccess(`Organized professional setup into: release/One Tap/V-${version}/${setupExeName}`)
+      }
+    } else if (detectedExe !== setupExePath) {
+      fs.copyFileSync(detectedExe, setupExePath)
+      logSuccess(`Organized professional setup into: release/One Tap/V-${version}/${setupExeName}`)
+    }
   } else if (!fs.existsSync(targetExePath)) {
     // If not built yet, create placeholder indicator so the release folder structure is valid
     logWarn(`Executable not yet in release/. Preparing release structure for ${targetExeName}...`)

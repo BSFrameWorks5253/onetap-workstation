@@ -31,10 +31,10 @@ export function resolveChildAppLoaderConfig(appId: string, fallbackAppName: stri
     tagline: 'Autonomous Video & Media Production Workstation',
     artistName: 'Anything Creative Ecosystem',
     artworkTitle: 'Master Studio Edition',
-    durationMs: 2500,
+    durationMs: 800,
     logoText: 'OT',
     badgeGradient: 'linear-gradient(135deg, #ef4444, #f97316)',
-    artworkUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=85',
+    artworkUrl: '',
     artworkFit: 'cover',
     artworkPosition: 'center'
   }
@@ -93,23 +93,40 @@ export function resolveChildAppLoaderConfig(appId: string, fallbackAppName: stri
 }
 
 let splashWindow: BrowserWindow | null = null
+let splashFinishCallback: (() => void) | null = null
+
+export function closeChildAppSplash(): void {
+  if (splashFinishCallback) {
+    const cb = splashFinishCallback
+    splashFinishCallback = null
+    cb()
+  }
+}
 
 function resolveArtworkSource(artworkUrl?: string): string {
-  if (!artworkUrl) {
-    return 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=85'
+  // Check local assets first to eliminate any remote HTTP fetch or network blocking
+  const localCandidates = [
+    artworkUrl,
+    path.join(app.getAppPath(), 'resources', 'installer_banner.png'),
+    path.join(process.resourcesPath, 'resources', 'installer_banner.png'),
+    path.join(__dirname, '..', '..', 'resources', 'installer_banner.png'),
+    path.join(__dirname, '..', 'resources', 'installer_banner.png')
+  ]
+  for (const c of localCandidates) {
+    if (c && !c.startsWith('http') && fs.existsSync(c)) {
+      try {
+        const ext = path.extname(c).toLowerCase().replace('.', '')
+        const mime = ext === 'png' ? 'image/png' : ext === 'svg' ? 'image/svg+xml' : 'image/jpeg'
+        const buf = fs.readFileSync(c)
+        return `data:${mime};base64,${buf.toString('base64')}`
+      } catch {}
+    }
   }
-  if (artworkUrl.startsWith('http://') || artworkUrl.startsWith('https://') || artworkUrl.startsWith('data:')) {
+  if (artworkUrl && (artworkUrl.startsWith('data:') || artworkUrl.startsWith('http'))) {
     return artworkUrl
   }
-  try {
-    if (fs.existsSync(artworkUrl)) {
-      const ext = path.extname(artworkUrl).toLowerCase().replace('.', '')
-      const mime = ext === 'png' ? 'image/png' : ext === 'svg' ? 'image/svg+xml' : ext === 'webp' ? 'image/webp' : 'image/jpeg'
-      const buf = fs.readFileSync(artworkUrl)
-      return `data:${mime};base64,${buf.toString('base64')}`
-    }
-  } catch {}
-  return artworkUrl
+  // Instant local dark radial backdrop fallback with zero latency
+  return 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="720" height="440"><defs><radialGradient id="g" cx="50%" cy="40%" r="80%"><stop offset="0%" stop-color="%231e1b4b"/><stop offset="60%" stop-color="%230f172a"/><stop offset="100%" stop-color="%23020617"/></radialGradient></defs><rect width="720" height="440" fill="url(%23g)"/></svg>'
 }
 
 export function showChildAppSplash(
@@ -328,14 +345,16 @@ export function showChildAppSplash(
   const finish = () => {
     if (hasFinished) return
     hasFinished = true
+    splashFinishCallback = null
     if (splashWindow && !splashWindow.isDestroyed()) {
       splashWindow.close()
       splashWindow = null
     }
     onFinished()
   }
+  splashFinishCallback = finish
 
-  const duration = config.durationMs || 2500
+  const duration = config.durationMs || 800
   setTimeout(finish, duration)
 
   return splashWindow

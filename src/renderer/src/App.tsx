@@ -105,11 +105,7 @@ function AppInner(): JSX.Element {
 
   const [showSplash, setShowSplash] = useState<boolean>(() => {
     const params = new URLSearchParams(window.location.search)
-    if (params.get('view') === 'splash') return true
-    // On refresh, do not show the heavy rectangular splash!
-    if (isReload) return false
-    const bootSplash = sessionStorage.getItem('ot_boot_splash_shown')
-    return !bootSplash
+    return params.get('view') === 'splash'
   })
 
   // Dedicated radial loader for in-app refresh
