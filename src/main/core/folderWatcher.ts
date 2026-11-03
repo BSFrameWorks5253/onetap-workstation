@@ -3,22 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import os from 'os'
 import { spawn } from 'child_process'
-let sharpModule: any = null
-let sharpLoadAttempted = false
-
-async function getSharp() {
-  if (sharpModule) return sharpModule
-  if (sharpLoadAttempted) return null
-  sharpLoadAttempted = true
-  try {
-    const s = await import('sharp')
-    sharpModule = s.default || s
-    return sharpModule
-  } catch (err: any) {
-    console.warn('[Folder Watcher] Sharp native binary not available, falling back to FFmpeg:', err?.message || err)
-    return null
-  }
-}
+import { getSharp } from './sharpHelper'
 import { get, setAndSave } from './settingsManager'
 import { getFfmpegExePath } from './gpuDetector'
 

@@ -13,9 +13,11 @@ try {
       text.includes('EBUSY') ||
       text.includes('AMEEncodingLog.txt') ||
       text.includes('resource busy or locked') ||
-      text.includes('EPERM')
+      text.includes('EPERM') ||
+      text.includes('sharp') ||
+      text.includes('@img')
     ) {
-      console.warn('[Suppressed Transient EBUSY ErrorBox]:', title, text)
+      console.warn('[Suppressed Transient / Native Module ErrorBox]:', title, text)
       return
     }
     return originalShowErrorBox.call(dialog, title, content)
@@ -1228,7 +1230,7 @@ function normalizeFolderPath(folderPath: any): string {
         'Access-Control-Allow-Origin': '*',
         'Content-Type': 'application/json'
       })
-      res.end(JSON.stringify({ status: 'online', app: 'One Tap', version: '26.11.05' }))
+      res.end(JSON.stringify({ status: 'online', app: 'One Tap', version: 'v26.11.6' }))
     } else if (req.method === 'GET' && req.url === '/final-titles') {
       try {
         const info = getFinalTitlesInfo()

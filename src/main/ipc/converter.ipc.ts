@@ -3,6 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import { getFfmpegExePath } from '../core/gpuDetector'
 import { isGroupPhotoVideo } from './titleAdder.ipc'
+import { getSharp } from '../core/sharpHelper'
 
 type WinGetter = () => BrowserWindow | null
 
@@ -221,9 +222,11 @@ export function registerConverterIPC(getWin: WinGetter): void {
 
       // Try fast native sharp first
       try {
-        const sharp = (await import('sharp')).default
-        await sharp(srcPath).jpeg({ quality: 92 }).toFile(dstPath)
-        converted = true
+        const sharp = await getSharp()
+        if (sharp) {
+          await sharp(srcPath).jpeg({ quality: 92 }).toFile(dstPath)
+          converted = true
+        }
       } catch (sharpErr) {
         console.warn('[Converter] Sharp conversion failed, falling back to FFmpeg:', sharpErr)
       }
@@ -411,9 +414,31 @@ export function registerConverterIPC(getWin: WinGetter): void {
 
         const ext = path.extname(srcFile).toLowerCase()
         if (ext === '.png') {
-          // If source is a PNG, convert on the fly to JPEG using sharp
-          const sharp = (await import('sharp')).default
-          await sharp(srcFile).jpeg({ quality: 92 }).toFile(dstJpeg)
+          // If source is a PNG, convert on the fly to JPEG using sharp or FFmpeg fallback
+          let converted = false
+          try {
+            const sharp = await getSharp()
+            if (sharp) {
+              await sharp(srcFile).jpeg({ quality: 92 }).toFile(dstJpeg)
+              converted = true
+            }
+          } catch (sharpErr) {
+            console.warn('[Converter] Sharp quick convert failed, falling back to FFmpeg/copy:', sharpErr)
+          }
+
+          if (!converted) {
+            try {
+              const { spawnSync } = await import('child_process')
+              const r = spawnSync(ffmpegExe, ['-y', '-i', srcFile, '-q:v', '2', dstJpeg], { windowsHide: true })
+              if (r.status === 0 && fs.existsSync(dstJpeg)) {
+                converted = true
+              }
+            } catch {}
+          }
+
+          if (!converted) {
+            fs.copyFileSync(srcFile, dstJpeg)
+          }
         } else {
           fs.copyFileSync(srcFile, dstJpeg)
         }

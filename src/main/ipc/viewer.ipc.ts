@@ -3,6 +3,7 @@ import { readFile, stat } from 'fs/promises'
 import { extname, dirname, basename } from 'path'
 import { existsSync } from 'fs'
 import { mkdir } from 'fs/promises'
+import { getSharp } from '../core/sharpHelper'
 
 // RAW image extensions that need conversion via sharp
 const RAW_EXTENSIONS = new Set([
@@ -17,8 +18,10 @@ export function registerViewerIPC(): void {
   // ── Read RAW image and convert to JPEG via sharp ───────────────
   ipcMain.handle('viewer:readRaw', async (_event, filePath: string) => {
     try {
-      // Lazy-load sharp so it doesn't bloat startup
-      const sharp = (await import('sharp')).default
+      const sharp = await getSharp()
+      if (!sharp) {
+        return { ok: false, error: 'Sharp native library not available' }
+      }
       const jpegBuffer = await sharp(filePath)
         .rotate()           // auto-rotate based on EXIF orientation
         .jpeg({ quality: 92, mozjpeg: false })
@@ -94,10 +97,12 @@ export function registerViewerIPC(): void {
 
       if (isRaw || ['.jpg','.jpeg','.png','.webp','.bmp','.tiff','.tif','.gif'].includes(ext)) {
         try {
-          const sharp = (await import('sharp')).default
-          const meta = await sharp(filePath).metadata()
-          if (meta.width && meta.height) {
-            dimensions = { width: meta.width, height: meta.height }
+          const sharp = await getSharp()
+          if (sharp) {
+            const meta = await sharp(filePath).metadata()
+            if (meta.width && meta.height) {
+              dimensions = { width: meta.width, height: meta.height }
+            }
           }
         } catch { /* non-fatal */ }
       }
@@ -125,7 +130,10 @@ export function registerViewerIPC(): void {
   // size = longest edge in pixels (default 256)
   ipcMain.handle('viewer:getThumbnail', async (_event, filePath: string, size = 256) => {
     try {
-      const sharp = (await import('sharp')).default
+      const sharp = await getSharp()
+      if (!sharp) {
+        return { ok: false, error: 'Sharp not available' }
+      }
       const buf = await sharp(filePath)
         .rotate()  // respect EXIF orientation
         .resize(size, size, { fit: 'inside', withoutEnlargement: true })
@@ -141,28 +149,35 @@ export function registerViewerIPC(): void {
   // Saves .jpg thumbnails to a hidden cache folder next to the source files.
   // This lets any file manager (including Windows Explorer) pick them up.
   ipcMain.handle('viewer:pregenThumbnails', async (_event, filePaths: string[], size = 256) => {
-    const sharp = (await import('sharp')).default
-    const results: { path: string; thumbPath: string; ok: boolean }[] = []
-
-    for (const filePath of filePaths) {
-      try {
-        const dir  = dirname(filePath)
-        const name = basename(filePath)
-        const cacheDir = `${dir}\.thumbcache_ud`
-        if (!existsSync(cacheDir)) await mkdir(cacheDir, { recursive: true })
-
-        const thumbPath = `${cacheDir}\\${name}.thumb.jpg`
-        await sharp(filePath)
-          .rotate()
-          .resize(size, size, { fit: 'inside', withoutEnlargement: true })
-          .jpeg({ quality: 82 })
-          .toFile(thumbPath)
-        results.push({ path: filePath, thumbPath, ok: true })
-      } catch {
-        results.push({ path: filePath, thumbPath: '', ok: false })
+    try {
+      const sharp = await getSharp()
+      if (!sharp) {
+        return { ok: false, error: 'Sharp not available', results: [] }
       }
+      const results: { path: string; thumbPath: string; ok: boolean }[] = []
+
+      for (const filePath of filePaths) {
+        try {
+          const dir  = dirname(filePath)
+          const name = basename(filePath)
+          const cacheDir = `${dir}\\.thumbcache_ud`
+          if (!existsSync(cacheDir)) await mkdir(cacheDir, { recursive: true })
+
+          const thumbPath = `${cacheDir}\\${name}.thumb.jpg`
+          await sharp(filePath)
+            .rotate()
+            .resize(size, size, { fit: 'inside', withoutEnlargement: true })
+            .jpeg({ quality: 82 })
+            .toFile(thumbPath)
+          results.push({ path: filePath, thumbPath, ok: true })
+        } catch {
+          results.push({ path: filePath, thumbPath: '', ok: false })
+        }
+      }
+      return { ok: true, results }
+    } catch (err: any) {
+      return { ok: false, error: err?.message || String(err), results: [] }
     }
-    return { ok: true, results }
   })
 
   // ── Check Windows RAW Image Extension availability ─────────────────
