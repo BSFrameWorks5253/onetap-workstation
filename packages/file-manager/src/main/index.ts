@@ -3,11 +3,74 @@ import { join } from 'path'
 import path from 'path'
 import fs from 'fs'
 import os from 'os'
+import crypto from 'crypto'
 import { pathToFileURL } from 'url'
 import { exec } from 'child_process'
 import { promisify } from 'util'
 
 const execAsync = promisify(exec)
+
+// Camera RAW extensions
+const RAW_EXTS = new Set([
+  'cr2', 'cr3', 'nef', 'arw', 'dng', 'raf', 'raw', 'orf', 'rw2', 'pef', 'sr2', 'srf'
+])
+
+// Persistent Disk Thumbnail Cache Directory
+let thumbCacheDir: string | null = null
+function getThumbCacheDir(): string {
+  if (!thumbCacheDir) {
+    thumbCacheDir = path.join(app.getPath('userData'), 'thumb-cache')
+    if (!fs.existsSync(thumbCacheDir)) {
+      try {
+        fs.mkdirSync(thumbCacheDir, { recursive: true })
+      } catch {}
+    }
+  }
+  return thumbCacheDir
+}
+
+function getCacheKey(filePath: string, stat: fs.Stats): string {
+  return crypto.createHash('md5').update(`${filePath}:${stat.size}:${stat.mtimeMs}`).digest('hex')
+}
+
+/**
+ * Super-fast pure Node buffer extractor for embedded JPEGs inside Camera RAW files
+ */
+function extractEmbeddedRawJpeg(filePath: string, forThumbnail = true): Buffer | null {
+  try {
+    const fd = fs.openSync(filePath, 'r')
+    const READ_SIZE = forThumbnail ? 4 * 1024 * 1024 : 10 * 1024 * 1024
+    const buf = Buffer.alloc(READ_SIZE)
+    const bytesRead = fs.readSync(fd, buf, 0, READ_SIZE, 0)
+    fs.closeSync(fd)
+
+    const jpegs: Buffer[] = []
+    for (let i = 0; i < bytesRead - 4; i++) {
+      if (buf[i] === 0xFF && buf[i+1] === 0xD8 && buf[i+2] === 0xFF) {
+        for (let j = i + 100; j < bytesRead - 1; j++) {
+          if (buf[j] === 0xFF && buf[j+1] === 0xD9) {
+            const slice = buf.subarray(i, j + 2)
+            jpegs.push(slice)
+            i = j + 2
+            break
+          }
+        }
+      }
+    }
+
+    if (jpegs.length === 0) return null
+
+    if (forThumbnail) {
+      const medium = jpegs.find(b => b.length >= 40 * 1024 && b.length <= 800 * 1024)
+      if (medium) return medium
+      return jpegs.sort((a, b) => b.length - a.length)[0]
+    } else {
+      return jpegs.sort((a, b) => b.length - a.length)[0]
+    }
+  } catch {
+    return null
+  }
+}
 
 protocol.registerSchemesAsPrivileged([
   { scheme: 'local-resource', privileges: { secure: true, standard: true, supportFetchAPI: true, bypassCSP: true, stream: true, corsEnabled: true } }
@@ -137,6 +200,15 @@ ipcMain.handle('fm:createFolder', async (_e, parentPath: string, name: string) =
 ipcMain.handle('fm:readImageBase64', async (_e, filePath: string) => {
   try {
     const ext = (filePath.split('.').pop() || '').toLowerCase()
+
+    // Camera RAW files: extract high-res preview
+    if (RAW_EXTS.has(ext)) {
+      const rawBuf = extractEmbeddedRawJpeg(filePath, false)
+      if (rawBuf && rawBuf.length > 0) {
+        return { ok: true, dataUrl: `data:image/jpeg;base64,${rawBuf.toString('base64')}` }
+      }
+    }
+
     const mime = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : ext === 'gif' ? 'image/gif' : ext === 'svg' ? 'image/svg+xml' : 'image/jpeg'
     const buf = fs.readFileSync(filePath)
     return { ok: true, dataUrl: `data:${mime};base64,${buf.toString('base64')}` }
@@ -152,8 +224,43 @@ ipcMain.handle('fm:getVideoMetadata', async (_e, filePath: string) => {
     if (!filePath || !fs.existsSync(filePath)) {
       return { ok: false, error: 'File not found', duration: 0, thumb: '' }
     }
-    const cached = fmVideoCache.get(filePath)
-    if (cached) return { ok: true, duration: cached.duration, thumb: cached.thumb }
+
+    // In-memory cache
+    const memCached = fmVideoCache.get(filePath)
+    if (memCached) return { ok: true, duration: memCached.duration, thumb: memCached.thumb }
+
+    const stat = fs.statSync(filePath)
+    const ext = (filePath.split('.').pop() || '').toLowerCase()
+    const isRaw = RAW_EXTS.has(ext)
+
+    // Disk cache check
+    const cacheDir = getThumbCacheDir()
+    const cacheKey = getCacheKey(filePath, stat)
+    const diskCacheFile = path.join(cacheDir, `${cacheKey}.jpg`)
+
+    if (fs.existsSync(diskCacheFile)) {
+      try {
+        const thumbBuf = fs.readFileSync(diskCacheFile)
+        const thumb = `data:image/jpeg;base64,${thumbBuf.toString('base64')}`
+        const result = { duration: 0, thumb }
+        fmVideoCache.set(filePath, result)
+        return { ok: true, duration: 0, thumb }
+      } catch {}
+    }
+
+    // Camera RAW files: instant buffer extraction (~5-15ms)
+    if (isRaw) {
+      const rawBuf = extractEmbeddedRawJpeg(filePath, true)
+      if (rawBuf && rawBuf.length > 0) {
+        try {
+          fs.writeFileSync(diskCacheFile, rawBuf)
+        } catch {}
+        const thumb = `data:image/jpeg;base64,${rawBuf.toString('base64')}`
+        const result = { duration: 0, thumb }
+        fmVideoCache.set(filePath, result)
+        return { ok: true, duration: 0, thumb }
+      }
+    }
 
     let duration = 0
     try {
@@ -192,7 +299,12 @@ ipcMain.handle('fm:getVideoMetadata', async (_e, filePath: string) => {
         maxBuffer: 15 * 1024 * 1024,
         timeout: 5000
       })
-      if (buf && buf.length > 0) thumb = `data:image/jpeg;base64,${buf.toString('base64')}`
+      if (buf && buf.length > 0) {
+        thumb = `data:image/jpeg;base64,${buf.toString('base64')}`
+        try {
+          fs.writeFileSync(diskCacheFile, buf)
+        } catch {}
+      }
     } catch {}
 
     const result = { duration, thumb }

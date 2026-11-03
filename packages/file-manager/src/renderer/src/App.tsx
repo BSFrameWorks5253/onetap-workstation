@@ -51,9 +51,15 @@ interface FsEntry {
   fullPath: string
 }
 
-const IMG_EXTS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'avif', 'ico', 'tiff', 'tif'])
-const VID_EXTS = new Set(['mp4', 'mov', 'mkv', 'avi', 'webm', 'm4v', 'ts', 'wmv', 'flv'])
+const RAW_EXTS = new Set(['cr2', 'cr3', 'nef', 'arw', 'dng', 'raf', 'raw', 'orf', 'rw2', 'pef', 'sr2', 'srf'])
+const STANDARD_IMG_EXTS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'avif', 'ico', 'tiff', 'tif'])
+const IMG_EXTS = new Set([...STANDARD_IMG_EXTS, ...RAW_EXTS])
+const VID_EXTS = new Set(['mp4', 'mov', 'mkv', 'avi', 'webm', 'm4v', 'ts', 'wmv', 'flv', 'm2ts', 'mpg', 'mpeg', '3gp'])
 const DOC_EXTS = new Set(['pdf', 'doc', 'docx', 'txt', 'md', 'xlsx', 'csv'])
+
+const isRawExt = (ext: string) => RAW_EXTS.has(ext.toLowerCase())
+const isImgExt = (ext: string) => IMG_EXTS.has(ext.toLowerCase())
+const isVidExt = (ext: string) => VID_EXTS.has(ext.toLowerCase())
 
 function formatSize(bytes: number): string {
   if (bytes === 0) return '—'
@@ -80,6 +86,42 @@ function formatTimelapse(secs: number): string {
 // ── Smart Video & Photo Thumbnail Component ───────────────────
 const videoThumbCache = new Map<string, { thumb: string; duration: number }>()
 
+function RawOrImgPreview({ entry, className }: { entry: FsEntry; className?: string }) {
+  const isRaw = isRawExt(entry.ext)
+  const [src, setSrc] = useState<string>(() => {
+    if (isRaw) return videoThumbCache.get(entry.fullPath)?.thumb || ''
+    return api?.toLocalResourceUrl ? api.toLocalResourceUrl(entry.fullPath) : entry.fullPath
+  })
+
+  useEffect(() => {
+    if (!isRaw) {
+      setSrc(api?.toLocalResourceUrl ? api.toLocalResourceUrl(entry.fullPath) : entry.fullPath)
+      return
+    }
+    const cached = videoThumbCache.get(entry.fullPath)?.thumb
+    if (cached) setSrc(cached)
+
+    let isCancelled = false
+    if ((api as any)?.readImageBase64) {
+      (api as any).readImageBase64(entry.fullPath).then((res: any) => {
+        if (!isCancelled && res?.ok && res.dataUrl) setSrc(res.dataUrl)
+      })
+    }
+    return () => { isCancelled = true }
+  }, [entry.fullPath, isRaw])
+
+  if (!src && isRaw) {
+    return (
+      <div className="flex flex-col items-center justify-center text-rose-400">
+        <ImageIcon className="w-10 h-10 opacity-60 animate-pulse" />
+        <span className="text-[10px] font-bold text-rose-300 mt-1 uppercase">RAW Preview</span>
+      </div>
+    )
+  }
+
+  return <img src={src} alt={entry.name} className={className || 'w-full h-full object-contain'} />
+}
+
 function MediaThumbnailCard({
   entry,
   onClick,
@@ -89,16 +131,18 @@ function MediaThumbnailCard({
   onClick: () => void
   onDoubleClick: () => void
 }) {
+  const isRaw = isRawExt(entry.ext)
+  const isVid = isVidExt(entry.ext)
+  const isDirectImg = isImgExt(entry.ext) && !isRaw
+
   const [thumb, setThumb] = useState<string | null>(() => videoThumbCache.get(entry.fullPath)?.thumb || null)
   const [duration, setDuration] = useState<number>(() => videoThumbCache.get(entry.fullPath)?.duration || 0)
-  const [loadingMeta, setLoadingMeta] = useState<boolean>(!videoThumbCache.get(entry.fullPath) && VID_EXTS.has(entry.ext))
-  const isImg = IMG_EXTS.has(entry.ext)
-  const isVid = VID_EXTS.has(entry.ext)
+  const [loadingMeta, setLoadingMeta] = useState<boolean>(!videoThumbCache.get(entry.fullPath) && (isVid || isRaw))
 
   useEffect(() => {
-    if (!isVid) return
+    if (!isVid && !isRaw) return
     const cached = videoThumbCache.get(entry.fullPath)
-    if (cached && cached.thumb && cached.duration > 0) {
+    if (cached && cached.thumb) {
       setThumb(cached.thumb)
       setDuration(cached.duration)
       setLoadingMeta(false)
@@ -108,7 +152,7 @@ function MediaThumbnailCard({
     let isCancelled = false
     setLoadingMeta(true)
 
-    // 1. Native extraction via IPC (ffprobe/ffmpeg & Windows Shell COM)
+    // 1. Native extraction via IPC (Camera RAW embedded preview, or ffprobe/ffmpeg with disk cache)
     if ((api as any)?.getVideoMetadata) {
       (api as any).getVideoMetadata(entry.fullPath).then((res: any) => {
         if (isCancelled) return
@@ -119,13 +163,17 @@ function MediaThumbnailCard({
           videoThumbCache.set(entry.fullPath, { thumb: res.thumb, duration: res.duration })
           return
         }
-        // Fallback to DOM video if native didn't produce result
-        runDomFallback()
+        if (!isRaw) runDomFallback()
+        else setLoadingMeta(false)
       }).catch(() => {
-        if (!isCancelled) runDomFallback()
+        if (!isCancelled) {
+          if (!isRaw) runDomFallback()
+          else setLoadingMeta(false)
+        }
       })
     } else {
-      runDomFallback()
+      if (!isRaw) runDomFallback()
+      else setLoadingMeta(false)
     }
 
     function runDomFallback() {
@@ -174,9 +222,9 @@ function MediaThumbnailCard({
     return () => {
       isCancelled = true
     }
-  }, [entry.fullPath, isVid])
+  }, [entry.fullPath, isVid, isRaw])
 
-  const imgUrl = isImg ? (api?.toLocalResourceUrl ? api.toLocalResourceUrl(entry.fullPath) : entry.fullPath) : null
+  const imgUrl = isDirectImg ? (api?.toLocalResourceUrl ? api.toLocalResourceUrl(entry.fullPath) : entry.fullPath) : null
 
   return (
     <div
@@ -186,7 +234,20 @@ function MediaThumbnailCard({
     >
       {/* Thumbnail viewport */}
       <div className="relative aspect-video w-full bg-black/40 flex items-center justify-center overflow-hidden">
-        {isImg ? (
+        {isRaw ? (
+          thumb ? (
+            <img
+              src={thumb}
+              alt={entry.name}
+              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+            />
+          ) : (
+            <div className="flex flex-col items-center justify-center text-rose-400">
+              <ImageIcon className="w-8 h-8 opacity-60 animate-pulse" />
+              <span className="text-[10px] font-bold text-rose-300 mt-1 uppercase">RAW</span>
+            </div>
+          )
+        ) : isDirectImg ? (
           <img
             src={imgUrl || ''}
             alt={entry.name}
@@ -216,6 +277,13 @@ function MediaThumbnailCard({
           <span className="absolute bottom-1.5 right-1.5 bg-black/90 backdrop-blur-md text-amber-300 border border-amber-400/40 text-[11px] font-bold px-2 py-0.5 rounded shadow-lg flex items-center gap-1 z-10 pointer-events-none">
             <Clock className={`w-3 h-3 text-amber-400 ${loadingMeta ? 'animate-spin' : ''}`} />
             <span>{duration > 0 ? formatTimelapse(duration) : loadingMeta ? '...' : 'VID'}</span>
+          </span>
+        )}
+
+        {/* RAW Badge */}
+        {isRaw && (
+          <span className="absolute bottom-1.5 right-1.5 bg-black/90 backdrop-blur-md text-rose-300 border border-rose-500/40 text-[10px] font-bold px-1.5 py-0.5 rounded shadow-lg z-10 pointer-events-none uppercase">
+            {entry.ext}
           </span>
         )}
 
@@ -260,9 +328,33 @@ function MediaViewerModal({
   onClose: () => void
   onNavigateFile: (e: FsEntry) => void
 }) {
-  const isVid = VID_EXTS.has(entry.ext)
-  const isImg = IMG_EXTS.has(entry.ext)
+  const isVid = isVidExt(entry.ext)
+  const isRaw = isRawExt(entry.ext)
+  const isImg = isImgExt(entry.ext)
   const mediaUrl = api?.toLocalResourceUrl ? api.toLocalResourceUrl(entry.fullPath) : entry.fullPath
+
+  const [rawPhotoUrl, setRawPhotoUrl] = useState<string | null>(() => {
+    return isRaw ? (videoThumbCache.get(entry.fullPath)?.thumb || null) : null
+  })
+
+  useEffect(() => {
+    if (!isRaw) {
+      setRawPhotoUrl(null)
+      return
+    }
+    const cached = videoThumbCache.get(entry.fullPath)?.thumb
+    if (cached) setRawPhotoUrl(cached)
+
+    let isCancelled = false
+    if ((api as any)?.readImageBase64) {
+      (api as any).readImageBase64(entry.fullPath).then((res: any) => {
+        if (!isCancelled && res?.ok && res.dataUrl) {
+          setRawPhotoUrl(res.dataUrl)
+        }
+      })
+    }
+    return () => { isCancelled = true }
+  }, [entry.fullPath, isRaw])
 
   // Video State
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -507,7 +599,7 @@ function MediaViewerModal({
 
         {isImg ? (
           <img
-            src={mediaUrl}
+            src={isRaw ? (rawPhotoUrl || '') : mediaUrl}
             alt={entry.name}
             style={{
               transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom}) rotate(${rotate}deg)`,
@@ -1263,11 +1355,7 @@ export default function App() {
               <div className="flex-1 bg-black rounded-xl overflow-hidden flex items-center justify-center relative p-4 mb-3 border border-white/10">
                 {selectedEntry ? (
                   IMG_EXTS.has(selectedEntry.ext) ? (
-                    <img
-                      src={api?.toLocalResourceUrl ? api.toLocalResourceUrl(selectedEntry.fullPath) : selectedEntry.fullPath}
-                      alt={selectedEntry.name}
-                      className="max-h-full max-w-full object-contain"
-                    />
+                    <RawOrImgPreview entry={selectedEntry} className="max-h-full max-w-full object-contain" />
                   ) : VID_EXTS.has(selectedEntry.ext) ? (
                     <video
                       src={api?.toLocalResourceUrl ? api.toLocalResourceUrl(selectedEntry.fullPath) : selectedEntry.fullPath}
@@ -1317,7 +1405,7 @@ export default function App() {
               <div className="space-y-4">
                 <div className="aspect-video bg-black/60 rounded-xl overflow-hidden flex items-center justify-center border border-white/10">
                   {IMG_EXTS.has(selectedEntry.ext) ? (
-                    <img src={api?.toLocalResourceUrl ? api.toLocalResourceUrl(selectedEntry.fullPath) : selectedEntry.fullPath} className="w-full h-full object-contain" />
+                    <RawOrImgPreview entry={selectedEntry} className="w-full h-full object-contain" />
                   ) : (
                     <File className="w-12 h-12 text-indigo-400 opacity-60" />
                   )}
@@ -1396,7 +1484,7 @@ export default function App() {
             </div>
             <div className="flex-1 bg-black flex items-center justify-center p-3 min-h-[400px] max-h-[60vh] overflow-hidden">
               {IMG_EXTS.has(selectedEntry.ext) ? (
-                <img src={api?.toLocalResourceUrl ? api.toLocalResourceUrl(selectedEntry.fullPath) : selectedEntry.fullPath} alt={selectedEntry.name} className="max-h-full max-w-full object-contain" />
+                <RawOrImgPreview entry={selectedEntry} className="max-h-full max-w-full object-contain" />
               ) : VID_EXTS.has(selectedEntry.ext) ? (
                 <video src={api?.toLocalResourceUrl ? api.toLocalResourceUrl(selectedEntry.fullPath) : selectedEntry.fullPath} autoPlay controls loop className="max-h-full max-w-full object-contain" />
               ) : (
