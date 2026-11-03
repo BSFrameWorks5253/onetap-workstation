@@ -85,8 +85,9 @@
 /* ── GRID LAYOUT ─────────────────────────────────────────── */
 .sh-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 20px;
+  align-items: start;
   padding-bottom: 40px;
 }
 
@@ -95,14 +96,19 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  padding: 22px;
-  min-height: 180px;
+  gap: 12px;
+  padding: 20px 22px;
+  min-height: auto;
   border-radius: var(--radius-card);
-  transition: all var(--dur-normal) var(--ease-spring);
+  transition: transform var(--dur-normal) var(--ease-spring), box-shadow var(--dur-normal) var(--ease-spring), border-color var(--dur-normal) ease;
   overflow: hidden;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.05);
   animation: slideUpFade var(--dur-slow) var(--ease-spring) both;
+  cursor: grab;
+}
+
+.sh-card:active {
+  cursor: grabbing;
 }
 
 .sh-card:hover {
@@ -298,8 +304,7 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  flex: 1;
-  justify-content: flex-end;
+  margin-top: 4px;
 }
 
 .sh-card-url-bar {
@@ -766,10 +771,37 @@
 }
 
 .sh-card--dragging {
-  opacity: 0.45;
+  opacity: 0.35;
   transform: scale(0.96);
   border: 2px dashed var(--theme-accent) !important;
   box-shadow: none !important;
+}
+
+.sh-card--drag-over {
+  border-color: var(--theme-accent) !important;
+  box-shadow: 0 0 0 2px var(--theme-accent), 0 8px 24px rgba(99, 102, 241, 0.25) !important;
+  transform: translateY(-4px) scale(1.015) !important;
+}
+
+.sh-card-drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  cursor: grab;
+  padding: 2px;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.sh-card-drag-handle:hover {
+  color: var(--text-primary);
+  background: var(--surface-hover);
+}
+
+.sh-card-drag-handle:active {
+  cursor: grabbing;
 }
 
 /* ── RESPONSIVE DESIGN ── */

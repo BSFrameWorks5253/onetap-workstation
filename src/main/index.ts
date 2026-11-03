@@ -50,7 +50,8 @@ import { registerUpdateIPC, triggerSilentStartupCheck } from './ipc/update.ipc'
 import { registerPdfIPC } from './ipc/pdf.ipc'
 import { registerViewerIPC } from './ipc/viewer.ipc'
 import { registerCameraTransferIPC } from './ipc/cameraTransfer.ipc'
-import { registerPrprojIPC } from './ipc/prproj.ipc'
+import * as XLSX from 'xlsx'
+import { registerPrprojIPC, discoverSubfolderVideosWithFoldersNode } from './ipc/prproj.ipc'
 import { registerVideoTransferIPC } from './ipc/videoTransfer.ipc'
 import { registerPVSeparatorIPC } from './ipc/pvSeparator.ipc'
 import { registerInventoryMergerIPC } from './ipc/inventoryMerger.ipc'
@@ -1153,7 +1154,7 @@ function normalizeFolderPath(folderPath: any): string {
         'Access-Control-Allow-Origin': '*',
         'Content-Type': 'application/json'
       })
-      res.end(JSON.stringify({ status: 'online', app: 'One Tap', version: '26.11.02' }))
+      res.end(JSON.stringify({ status: 'online', app: 'One Tap', version: '26.11.03' }))
     } else if (req.method === 'GET' && req.url === '/final-titles') {
       try {
         const info = getFinalTitlesInfo()
@@ -1249,6 +1250,130 @@ function normalizeFolderPath(folderPath: any): string {
             'Content-Type': 'application/json'
           })
           res.end(JSON.stringify({ error: e?.message || 'Invalid JSON' }))
+        }
+      })
+    } else if (req.method === 'POST' && req.url === '/parse-manifest') {
+      let body = ''
+      req.on('data', chunk => { body += chunk.toString() })
+      req.on('end', () => {
+        try {
+          const parsed = JSON.parse(body || '{}')
+          const searchFolder = parsed.searchFolder || (parsed.projectPath ? path.dirname(parsed.projectPath) : '')
+          const manifestPath = parsed.manifestPath
+
+          let targetManifest = manifestPath
+          if (!targetManifest || !fs.existsSync(targetManifest)) {
+            if (searchFolder && fs.existsSync(searchFolder)) {
+              // Search searchFolder and its parent for Media_Relink_Manifest
+              const candidates = [searchFolder]
+              try {
+                const parent = path.dirname(searchFolder)
+                if (parent && parent !== searchFolder) candidates.push(parent)
+              } catch {}
+
+              for (const cDir of candidates) {
+                try {
+                  const files = fs.readdirSync(cDir)
+                  const jFile = files.find(f => /^Media_Relink_Manifest.*\.json$/i.test(f))
+                  if (jFile) { targetManifest = path.join(cDir, jFile); break }
+                  const xFile = files.find(f => /^Media_Relink_Manifest.*\.xlsx$/i.test(f))
+                  if (xFile) { targetManifest = path.join(cDir, xFile); break }
+                } catch {}
+              }
+            }
+          }
+
+          let files: any[] = []
+          let manifestSource = ''
+
+          if (targetManifest && fs.existsSync(targetManifest)) {
+            manifestSource = targetManifest
+            if (targetManifest.toLowerCase().endsWith('.json')) {
+              try {
+                const jsonRaw = JSON.parse(fs.readFileSync(targetManifest, 'utf-8'))
+                files = jsonRaw.files || []
+              } catch (jErr) {
+                console.warn('[Server] Error reading JSON manifest:', jErr)
+              }
+            } else if (targetManifest.toLowerCase().endsWith('.xlsx')) {
+              try {
+                // XLSX is imported at top level
+                const wb = XLSX.readFile(targetManifest)
+                const sheetName = wb.SheetNames[0]
+                const sheet = wb.Sheets[sheetName]
+                const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[][]
+                // Row 0-3 are titles, header row contains 'file name'
+                let headerIdx = -1
+                for (let r = 0; r < Math.min(10, rows.length); r++) {
+                  const row = rows[r] || []
+                  if (row.some((cell: any) => String(cell).toLowerCase().includes('file name'))) {
+                    headerIdx = r
+                    break
+                  }
+                }
+                if (headerIdx !== -1) {
+                  const dataRows = rows.slice(headerIdx + 1)
+                  for (let d = 0; d < dataRows.length; d++) {
+                    const row = dataRows[d]
+                    if (!row || !row[1]) continue
+                    files.push({
+                      index: d + 1,
+                      fileName: String(row[1]).trim(),
+                      subfolder: row[2] ? String(row[2]).trim() : '',
+                      relPath: row[3] ? String(row[3]).trim().replace(/\\/g, '/') : '',
+                      fullPath: row[4] ? String(row[4]).trim() : '',
+                      sizeFormatted: row[5] ? String(row[5]).trim() : '',
+                      sizeBytes: Number(row[6]) || 0,
+                      ext: row[7] ? String(row[7]).trim() : ''
+                    })
+                  }
+                }
+              } catch (xErr) {
+                console.warn('[Server] Error reading XLSX manifest:', xErr)
+              }
+            }
+          }
+
+          // If no manifest file found, but searchFolder exists, discover videos directly
+          if (files.length === 0 && searchFolder && fs.existsSync(searchFolder)) {
+            // discoverSubfolderVideosWithFoldersNode is imported at top level
+            const vEntries = discoverSubfolderVideosWithFoldersNode(searchFolder)
+            files = vEntries.map((ve: any, idx: number) => {
+              const fullP = ve.path
+              const rel = path.relative(searchFolder, fullP).replace(/\\/g, '/')
+              let sz = 0
+              try { sz = fs.statSync(fullP).size } catch {}
+              return {
+                index: idx + 1,
+                fileName: path.basename(fullP),
+                subfolder: ve.folderName || '',
+                relPath: rel,
+                fullPath: fullP,
+                sizeBytes: sz,
+                sizeFormatted: '',
+                ext: path.extname(fullP).toUpperCase()
+              }
+            })
+            manifestSource = 'Direct Directory Scan'
+          }
+
+          res.writeHead(200, {
+            'Access-Control-Allow-Origin': '*',
+            'Content-Type': 'application/json'
+          })
+          res.end(JSON.stringify({
+            success: true,
+            manifestFound: !!manifestSource,
+            manifestPath: manifestSource,
+            totalFiles: files.length,
+            files
+          }))
+        } catch (e: any) {
+          res.writeHead(500, {
+            'Access-Control-Allow-Origin': '*',
+            'Content-Type': 'application/json'
+          })
+          res.end(JSON.stringify({ success: false, error: e?.message || String(e) }))
         }
       })
     } else if (req.method === 'OPTIONS') {

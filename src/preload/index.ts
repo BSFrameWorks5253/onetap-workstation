@@ -322,6 +322,7 @@ contextBridge.exposeInMainWorld('api', {
     scanSubfolders: (params: any) => ipcRenderer.invoke('prproj:scanSubfolders', params),
     scan: (params: any) => ipcRenderer.invoke('prproj:scan', params),
     generate: (params: any) => ipcRenderer.invoke('prproj:generate', params),
+    generateRelinkManifest: (params: any) => ipcRenderer.invoke('prproj:generateRelinkManifest', params),
     onProgress: (cb: (d: any) => void) => {
       const sub = (_e: any, d: any): void => cb(d)
       ipcRenderer.on('prproj:progress', sub)

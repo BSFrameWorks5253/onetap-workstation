@@ -9,7 +9,7 @@ Installers (.exe) using NSIS (makensis) or Inno Setup without requiring Wine.
 
 Features identical pipeline logic to make_exe.py:
 - Multi-file Version Synchronization (package.json, components, README, ISS/NSI)
-- Automated Changelog & Manifest updates (website/data/updates.json, update.json)
+- Automated Changelog & Manifest updates (update.json)
 - Professional Windows Setup Installer (.exe) compilation
 - SHA-256 Checksum generation (Endpoint Central / IT Compliance)
 - Direct GitHub Release creation and asset publishing via REST API
@@ -308,7 +308,6 @@ def update_changelog_databases(version: str, whats_new: str, release_notes: str,
     }
 
     target_paths = [
-        os.path.join(ROOT_DIR, 'website', 'data', 'updates.json'),
         resolve_version_path('update.json')
     ]
 
@@ -923,7 +922,7 @@ class ProfessionalInstallerStudioApp(tk.Tk):
             update_version_in_files(self.current_version, target_ver, lambda m: self.log(m, "white"))
             write_version_txt(target_ver, whats_new, release_notes, bugs_fixed, improvements, lambda m: self.log(m, "white"))
 
-        # Step 2: Update website & release changelog JSON databases
+        # Step 2: Update release changelog JSON database
         if self.opt_update_json.get():
             self.log("\n[Step 2/5] Updating changelog databases (updates.json & update.json)...", "cyan")
             update_changelog_databases(target_ver, whats_new, release_notes, bugs_fixed, improvements, lambda m: self.log(m, "white"))

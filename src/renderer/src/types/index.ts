@@ -233,7 +233,6 @@ export const NAV_ORDER: PageKey[] = [
   "notes",
   "stats",
   "cameratransfer",
-  "videotransfer",
   "drivesync",
   "tracker",
   "archivevault",
@@ -506,5 +505,3 @@ declare global {
     api: any
   }
 }
-
-

@@ -32,18 +32,6 @@ export default function Toolbar({ activePage, onOpenCmdPalette }: ToolbarProps):
     return () => clearInterval(id)
   }, [])
 
-  function openZenInfoWebsite() {
-    const url = 'https://www.zeninfo.in/'
-    const api = (window as any).api
-    if (api && api.shell && typeof api.shell.openExternal === 'function') {
-      api.shell.openExternal(url).catch(() => {
-        window.open(url, '_blank')
-      })
-    } else {
-      window.open(url, '_blank')
-    }
-  }
-
   return (
     <header className="toolbar drag-region">
       <div className="toolbar-inner no-drag">
@@ -59,7 +47,7 @@ export default function Toolbar({ activePage, onOpenCmdPalette }: ToolbarProps):
             title="One Tap Workstation"
             style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center' }}
           >
-            <MorphingBrand logoSize={20} fontSize={13} />
+            <MorphingBrand logoSize={22} fontSize={13} maxWidth={260} singleLine={true} />
           </span>
           <span className="toolbar-crumb-sep">›</span>
           <span className="toolbar-crumb-page" style={{ color: meta.accent, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>

@@ -6,6 +6,8 @@ interface MorphingBrandProps {
   fontSize?: number
   compact?: boolean
   version?: string
+  maxWidth?: number | string
+  singleLine?: boolean
   onClick?: () => void
 }
 
@@ -14,6 +16,8 @@ export default function MorphingBrand({
   fontSize = 15,
   compact = false,
   version = 'v26.10.30',
+  maxWidth,
+  singleLine = false,
   onClick
 }: MorphingBrandProps): JSX.Element {
   const [activeSlide, setActiveSlide] = useState<0 | 1>(0)
@@ -71,9 +75,10 @@ export default function MorphingBrand({
       style={{
         display: 'inline-flex',
         alignItems: 'center',
-        gap: compact ? '0' : '10px',
+        gap: compact ? '0' : '8px',
         cursor: onClick ? 'pointer' : 'default',
-        userSelect: 'none'
+        userSelect: 'none',
+        flexShrink: 0
       }}
       title={`One Tap Workstation · ${userProfile ? `${userProfile.name} (@${effectiveHandle})` : version}`}
     >
@@ -82,29 +87,49 @@ export default function MorphingBrand({
       {!compact && (
         <div
           style={{
-            display: 'flex',
+            display: 'inline-flex',
             flexDirection: 'column',
             justifyContent: 'center',
-            height: `${logoSize}px`,
+            height: singleLine ? 'auto' : `${logoSize}px`,
             position: 'relative',
             userSelect: 'none',
             overflow: 'hidden',
-            minWidth: '85px'
+            maxWidth: maxWidth ? (typeof maxWidth === 'number' ? `${maxWidth}px` : maxWidth) : '240px'
           }}
         >
-          {/* Slide 0: App Name (One Tap) + Version (v26.10.31) */}
+          {/* Ghost element to dynamically size the parent container to the widest slide */}
+          <div
+            aria-hidden="true"
+            style={{
+              visibility: 'hidden',
+              height: 0,
+              overflow: 'hidden',
+              whiteSpace: 'nowrap',
+              pointerEvents: 'none',
+              fontSize: `${singleLine ? fontSize : (userProfile && userProfile.name.length > 12 ? Math.min(fontSize, 11.5) : fontSize)}px`,
+              fontWeight: 800,
+              fontFamily: 'var(--font-display, "Outfit", "Plus Jakarta Sans", system-ui, sans-serif)',
+              letterSpacing: '-0.02em',
+              paddingRight: '6px'
+            }}
+          >
+            {userProfile && userProfile.name.length > 7 ? userProfile.name : 'One Tap Work'}
+          </div>
+
+          {/* Slide 0: App Name (One Tap) + Version */}
           <div
             style={{
-              position: 'absolute',
+              position: singleLine ? 'relative' : 'absolute',
               top: 0,
               left: 0,
               width: '100%',
-              height: '100%',
+              height: singleLine ? 'auto' : '100%',
               display: 'flex',
-              flexDirection: 'column',
+              flexDirection: singleLine ? 'row' : 'column',
+              alignItems: singleLine ? 'center' : 'flex-start',
               justifyContent: 'center',
-              gap: '2px',
-              transform: activeSlide === 0 ? 'translateY(0%)' : 'translateY(-105%)',
+              gap: singleLine ? '6px' : '2px',
+              transform: activeSlide === 0 ? 'translateY(0%)' : (singleLine ? 'translateY(-120%)' : 'translateY(-105%)'),
               opacity: activeSlide === 0 ? 1 : 0,
               transition: 'transform 0.55s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease-in-out',
               pointerEvents: activeSlide === 0 ? 'auto' : 'none'
@@ -116,7 +141,7 @@ export default function MorphingBrand({
                 fontWeight: 800,
                 fontFamily: 'var(--font-display, "Outfit", "Plus Jakarta Sans", system-ui, sans-serif)',
                 letterSpacing: '-0.02em',
-                lineHeight: 1.15,
+                lineHeight: singleLine ? 1.2 : 1.15,
                 color: 'var(--text-primary, #1C1917)',
                 whiteSpace: 'nowrap'
               }}
@@ -124,16 +149,17 @@ export default function MorphingBrand({
               One Tap
             </div>
 
-            {version && (
+            {version && !singleLine && (
               <div
                 style={{
                   fontSize: `${Math.max(10, Math.round(fontSize * 0.72))}px`,
                   fontWeight: 650,
-                  fontFamily: 'var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace)',
+                  fontFamily: 'var(--font-mono, "SF Mono", "Segoe UI Mono", "Cascadia Code", Consolas, monospace)',
                   color: 'var(--text-muted, #78716C)',
                   letterSpacing: '0.02em',
                   lineHeight: 1.1,
-                  whiteSpace: 'nowrap'
+                  whiteSpace: 'nowrap',
+                  WebkitFontSmoothing: 'antialiased'
                 }}
               >
                 {version}
@@ -149,12 +175,13 @@ export default function MorphingBrand({
                 top: 0,
                 left: 0,
                 width: '100%',
-                height: '100%',
+                height: singleLine ? 'auto' : '100%',
                 display: 'flex',
-                flexDirection: 'column',
+                flexDirection: singleLine ? 'row' : 'column',
+                alignItems: singleLine ? 'center' : 'flex-start',
                 justifyContent: 'center',
-                gap: '2px',
-                transform: activeSlide === 1 ? 'translateY(0%)' : 'translateY(105%)',
+                gap: singleLine ? '6px' : '2px',
+                transform: activeSlide === 1 ? 'translateY(0%)' : (singleLine ? 'translateY(120%)' : 'translateY(105%)'),
                 opacity: activeSlide === 1 ? 1 : 0,
                 transition: 'transform 0.55s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease-in-out',
                 pointerEvents: activeSlide === 1 ? 'auto' : 'none'
@@ -162,39 +189,40 @@ export default function MorphingBrand({
             >
               <div
                 style={{
-                  fontSize: `${fontSize}px`,
+                  fontSize: `${singleLine ? fontSize : (userProfile.name.length > 12 ? Math.min(fontSize, 11.5) : fontSize)}px`,
                   fontWeight: 800,
                   fontFamily: 'var(--font-display, "Outfit", "Plus Jakarta Sans", system-ui, sans-serif)',
                   letterSpacing: '-0.02em',
-                  lineHeight: 1.15,
+                  lineHeight: singleLine ? 1.2 : 1.15,
                   color: 'var(--accent-primary, #0284c7)',
                   whiteSpace: 'nowrap',
                   textOverflow: 'ellipsis',
-                  overflow: 'hidden',
-                  maxWidth: '120px'
+                  overflow: 'hidden'
                 }}
                 title={userProfile.name}
               >
                 {userProfile.name}
               </div>
 
-              <div
-                style={{
-                  fontSize: `${Math.max(10, Math.round(fontSize * 0.72))}px`,
-                  fontWeight: 650,
-                  fontFamily: 'var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace)',
-                  color: 'var(--text-muted, #78716C)',
-                  letterSpacing: '0.01em',
-                  lineHeight: 1.1,
-                  whiteSpace: 'nowrap',
-                  textOverflow: 'ellipsis',
-                  overflow: 'hidden',
-                  maxWidth: '120px'
-                }}
-                title={`@${effectiveHandle}`}
-              >
-                @{effectiveHandle}
-              </div>
+              {!singleLine && (
+                <div
+                  style={{
+                    fontSize: `${Math.max(10, Math.round((userProfile.name.length > 12 ? Math.min(fontSize, 11.5) : fontSize) * 0.78))}px`,
+                    fontWeight: 650,
+                    fontFamily: 'var(--font-mono, "SF Mono", "Segoe UI Mono", "Cascadia Code", Consolas, monospace)',
+                    color: 'var(--text-muted, #78716C)',
+                    letterSpacing: '0.01em',
+                    lineHeight: 1.1,
+                    whiteSpace: 'nowrap',
+                    textOverflow: 'ellipsis',
+                    overflow: 'hidden',
+                    WebkitFontSmoothing: 'antialiased'
+                  }}
+                  title={`@${effectiveHandle}`}
+                >
+                  @{effectiveHandle}
+                </div>
+              )}
             </div>
           )}
         </div>

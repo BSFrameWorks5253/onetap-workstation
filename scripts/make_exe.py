@@ -185,7 +185,7 @@ def read_release_notes_file(filepath: str = None) -> dict:
     if not os.path.exists(filepath):
         # Create a default template if missing
         default_data["version"] = compute_next_version(get_current_version())
-        default_data["whats_new"] = "• Arabic & Lisan-ud-Dawat Welcome Screen on first launch / version updates.\n• Clean, lightweight Tkinter-based Executable Compiler & Release Manager.\n• Automatic update manifest generator for website/data/updates.json & update.json.\n• Standardized GitHub Releases with System Requirements & Download Steps."
+        default_data["whats_new"] = "• Arabic & Lisan-ud-Dawat Welcome Screen on first launch / version updates.\n• Clean, lightweight Tkinter-based Executable Compiler & Release Manager.\n• Automatic update manifest generator for update.json.\n• Standardized GitHub Releases with System Requirements & Download Steps."
         default_data["bugs_fixed"] = "Fixed false-positive camera color matching on description words (e.g. Zen matching Z prefix).\nRemoved dev/demo preview popup in Title Adder."
         default_data["improvements"] = "Fast folder marker parser and instant launch response.\nResponsive SVG vector teardrop banner with zero pixelation."
         default_data["release_notes"] = "* Native Arabic (Amiri) & Lisan-ud-Dawat Welcome Interface\n* Lightweight Tkinter Build Tool (make_exe.py)\n* Automatic Release Manifest & GitHub Distribution Sync\n* Verified TypeScript compilation and packaging pipeline"
@@ -361,7 +361,6 @@ def update_changelog_databases(version: str, whats_new: str, release_notes: str,
     }
     
     target_paths = [
-        os.path.join('website', 'data', 'updates.json'),
         resolve_version_path('update.json')
     ]
 
@@ -1732,7 +1731,7 @@ class UniDeskBuilderApp(tk.Tk):
         # Step 2: Update databases
         if self.opt_update_json.get():
             self.set_status("Step 2/5: Updating Release Manifests...", "#FBBF24")
-            self.log("[Manifest] Updating website/data/updates.json & update.json...", "cyan")
+            self.log("[Manifest] Updating update.json...", "cyan")
             update_changelog_databases(target_version, whats_new, release_notes, bugs_fixed, improvements, lambda m: self.log(m, "white"))
 
         # Step 3: Build Windows Application

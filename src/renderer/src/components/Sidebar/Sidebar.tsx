@@ -89,18 +89,6 @@ export default function Sidebar({ activePage, onNavigate, busyPages, adderProgre
     return () => window.removeEventListener('toggle-sidebar', handleToggle)
   }, [])
 
-  function openZenInfoWebsite() {
-    const url = 'https://www.zeninfo.in/'
-    const api = (window as any).api
-    if (api && api.shell && typeof api.shell.openExternal === 'function') {
-      api.shell.openExternal(url).catch(() => {
-        window.open(url, '_blank')
-      })
-    } else {
-      window.open(url, '_blank')
-    }
-  }
-
   return (
     <aside className={`sidebar ${collapsed ? 'sidebar--collapsed' : ''}`}>
       {/* Dynamic glow strip on top */}
@@ -125,7 +113,7 @@ export default function Sidebar({ activePage, onNavigate, busyPages, adderProgre
         title="One Tap Workstation"
         style={{ cursor: 'pointer', padding: '6px' }}
       >
-        <MorphingBrand logoSize={34} fontSize={15} compact={collapsed} version={`v${version}`} />
+        <MorphingBrand logoSize={32} fontSize={13} compact={collapsed} version={`v${version}`} maxWidth="100%" />
       </div>
 
       {/* Section label */}
@@ -147,7 +135,7 @@ export default function Sidebar({ activePage, onNavigate, busyPages, adderProgre
 
         <nav className="sidebar-nav" style={{ position: 'relative' }}>
           {orderedNav.filter(key => {
-            if (key === 'drivesync' || key === 'folder' || key === 'gdrive' || key === 'cameratransfer' || key === 'pvseparator' || key === 'excelmerger') return false // Hide folder, drivesync, gdrive, cameratransfer, pvseparator, and excelmerger from sidebar
+            if (key === 'drivesync' || key === 'folder' || key === 'gdrive' || key === 'cameratransfer' || key === 'pvseparator' || key === 'excelmerger' || key === 'videotransfer') return false // Hide folder, drivesync, gdrive, cameratransfer, pvseparator, excelmerger, and videotransfer from sidebar
             try {
               const hidden = JSON.parse(textOverrides['hidden_tools'] || '[]')
               return !hidden.includes(key)

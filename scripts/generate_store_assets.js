@@ -103,8 +103,8 @@ app.whenReady().then(async () => {
 
   // Copy and strictly guarantee 1:1 Box Art (1080x1080)
   console.log('[Store Assets Generator] Formatting 1:1 Box Art (1080x1080)...');
-  const boxArtSrc = path.join(__dirname, '../website/assets/store_box_art_1080x1080.png');
-  const boxArtIconSrc = path.join(__dirname, '../website/assets/store_box_art_icon_1080x1080.png');
+  const boxArtSrc = path.join(storeDir, '02_Store_Logo_1x1_BoxArt_1080x1080.png');
+  const boxArtIconSrc = path.join(storeDir, '02_Store_Logo_1x1_BoxArt_IconOnly_1080x1080.png');
 
   if (fs.existsSync(boxArtSrc)) {
     const boxBuf = await sharp(boxArtSrc).resize(1080, 1080, { fit: 'fill' }).png().toBuffer();
@@ -117,18 +117,11 @@ app.whenReady().then(async () => {
 
   // Copy and strictly guarantee 2:3 Poster Art (720x1080)
   console.log('[Store Assets Generator] Formatting 2:3 Poster Art (720x1080)...');
-  const posterSrc = path.join(__dirname, '../website/assets/store_poster_art_720x1080.png');
+  const posterSrc = path.join(storeDir, '03_Poster_Art_2x3_720x1080.png');
   if (fs.existsSync(posterSrc)) {
     const posterBuf = await sharp(posterSrc).resize(720, 1080, { fit: 'fill' }).png().toBuffer();
     fs.writeFileSync(path.join(storeDir, '03_Poster_Art_2x3_720x1080.png'), posterBuf);
   }
-
-  // Also update website/assets/ and website/microsoft_store_import/ so everything is synced
-  const webAssets = path.join(__dirname, '../website/assets');
-  fs.copyFileSync(path.join(storeDir, '01_Screenshot_1_Dashboard_1920x1080.png'), path.join(webAssets, 'store_screenshot_1_dashboard.png'));
-  fs.copyFileSync(path.join(storeDir, '01_Screenshot_2_TitleAdder_1920x1080.png'), path.join(webAssets, 'store_screenshot_2_converter.png'));
-  fs.copyFileSync(path.join(storeDir, '01_Screenshot_3_MediaConverter_1920x1080.png'), path.join(webAssets, 'store_screenshot_3_vault.png'));
-  fs.copyFileSync(path.join(storeDir, '01_Screenshot_4_ArchiveVault_1920x1080.png'), path.join(webAssets, 'store_screenshot_4_stats.png'));
 
   console.log('[Store Assets Generator] All assets generated successfully in:', storeDir);
   app.quit();

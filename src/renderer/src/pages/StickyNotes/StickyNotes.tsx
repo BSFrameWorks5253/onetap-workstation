@@ -108,6 +108,7 @@ export default function StickyNotes(): JSX.Element {
     return (localStorage.getItem('ot_sticky_layout') as 'grid' | 'canvas') ?? 'grid'
   })
   const [draggedId, setDraggedId] = useState<string | null>(null)
+  const [dragOverId, setDragOverId] = useState<string | null>(null)
   const [activeDragId, setActiveDragId] = useState<string | null>(null)
 
   // Creator modal triggers
@@ -177,23 +178,29 @@ export default function StickyNotes(): JSX.Element {
     }
   }
 
-  // Grid Drag and Drop Handlers (Only reorder on Drop to prevent DOM cancellation during DragOver)
+  // Grid Drag and Drop Handlers (Smooth reorder with visual drop target & audio cue)
   const handleGridDragStart = (e: React.DragEvent, id: string) => {
     e.dataTransfer.setData('text/plain', id)
     e.dataTransfer.effectAllowed = 'move'
     setDraggedId(id)
   }
 
-  const handleGridDragOver = (e: React.DragEvent) => {
+  const handleGridDragOver = (e: React.DragEvent, id: string) => {
     e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    if (dragOverId !== id) {
+      setDragOverId(id)
+    }
   }
 
-  const handleGridDragEnter = (e: React.DragEvent) => {
-    e.preventDefault()
+  const handleGridDragLeave = (e: React.DragEvent) => {
+    if (e.currentTarget.contains(e.relatedTarget as Node)) return
+    setDragOverId(null)
   }
 
   const handleGridDrop = (e: React.DragEvent, targetId: string) => {
     e.preventDefault()
+    setDragOverId(null)
     const id = e.dataTransfer.getData('text/plain') || draggedId
     if (!id || id === targetId) return
 
@@ -205,12 +212,14 @@ export default function StickyNotes(): JSX.Element {
     const [draggedItem] = newItems.splice(draggedIndex, 1)
     newItems.splice(targetIndex, 0, draggedItem)
     
+    playTick()
     saveItems(newItems)
     setDraggedId(null)
   }
 
   const handleGridDragEnd = () => {
     setDraggedId(null)
+    setDragOverId(null)
   }
 
   // Free-form Canvas Mouse Dragging Handlers
@@ -609,10 +618,11 @@ export default function StickyNotes(): JSX.Element {
         ) : (
           filteredItems.map((item, idx) => {
             const isDragged = layoutMode === 'grid' && draggedId === item.id;
+            const isOver = layoutMode === 'grid' && dragOverId === item.id;
             return (
               <Card 
                 key={item.id} 
-                className={`sh-card sh-card--${item.type} ${isDragged ? 'sh-card--dragging' : ''} anim-scale-in`}
+                className={`sh-card sh-card--${item.type} ${isDragged ? 'sh-card--dragging' : ''} ${isOver ? 'sh-card--drag-over' : ''} anim-scale-in`}
                 style={{ 
                   animationDelay: `${idx * 40}ms`,
                   '--shadow-glow': `${item.color}55`,
@@ -634,8 +644,8 @@ export default function StickyNotes(): JSX.Element {
                   }
                   handleGridDragStart(e, item.id)
                 }}
-                onDragOver={handleGridDragOver}
-                onDragEnter={handleGridDragEnter}
+                onDragOver={(e) => handleGridDragOver(e, item.id)}
+                onDragLeave={handleGridDragLeave}
                 onDrop={(e) => handleGridDrop(e, item.id)}
                 onDragEnd={handleGridDragEnd}
                 onMouseDown={(e) => handleCanvasMouseDown(e, item)}
@@ -643,43 +653,50 @@ export default function StickyNotes(): JSX.Element {
                 <div className="sh-card-glow" style={{ background: item.color }} />
                 
                 <div className="sh-card-top">
-                  <span className="sh-card-category" style={{ color: item.color, backgroundColor: `${item.color}15`, display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                    {item.type === 'note' ? (
-                      <>
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-                        <span>Note</span>
-                      </>
-                    ) : (
-                      <>
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-                        <span>{item.category?.toUpperCase()}</span>
-                      </>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                    {layoutMode === 'grid' && (
+                      <span className="sh-card-drag-handle" title="Drag to reorder card">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                          <circle cx="8.5" cy="6.5" r="1.5"/><circle cx="15.5" cy="6.5" r="1.5"/>
+                          <circle cx="8.5" cy="12" r="1.5"/><circle cx="15.5" cy="12" r="1.5"/>
+                          <circle cx="8.5" cy="17.5" r="1.5"/><circle cx="15.5" cy="17.5" r="1.5"/>
+                        </svg>
+                      </span>
                     )}
-                  </span>
+                    <span className="sh-card-category" style={{ color: item.color, backgroundColor: `${item.color}15`, display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                      {item.type === 'note' ? (
+                        <>
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                          <span>Note</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                          <span>{item.category?.toUpperCase()}</span>
+                        </>
+                      )}
+                    </span>
+                  </div>
                   <span className="sh-card-date">{formatDate(item.date)}</span>
                 </div>
 
                 <h3 
                   className="sh-card-title truncate" 
                   title={item.title}
-                  onMouseDown={(e) => e.stopPropagation()}
                 >
                   {item.title}
                 </h3>
 
                 {item.type === 'note' && (
-                  <div className="sh-card-note-content" onMouseDown={(e) => e.stopPropagation()}>
+                  <div className="sh-card-note-content">
                     {item.body && (
-                      <p 
-                        className="sh-card-body" 
-                        onMouseDown={(e) => e.stopPropagation()}
-                      >
+                      <p className="sh-card-body">
                         {item.body}
                       </p>
                     )}
                     
                     {item.checklist && item.checklist.length > 0 && (
-                      <div className="sh-checklist" onMouseDown={(e) => e.stopPropagation()}>
+                      <div className="sh-checklist">
                         {item.checklist.map(chk => (
                           <label 
                             key={chk.id} 
@@ -692,10 +709,7 @@ export default function StickyNotes(): JSX.Element {
                               onChange={() => handleToggleChecklist(item.id, chk.id)}
                             />
                             <span className="sh-checkbox-custom" style={{ borderColor: item.color, '--check-color': item.color } as React.CSSProperties} />
-                            <span 
-                              className="sh-checklist-text"
-                              onMouseDown={(e) => e.stopPropagation()}
-                            >
+                            <span className="sh-checklist-text">
                               {chk.text}
                             </span>
                           </label>
@@ -706,15 +720,14 @@ export default function StickyNotes(): JSX.Element {
                 )}
 
                 {item.type === 'link' && (
-                  <div className="sh-card-link-content" onMouseDown={(e) => e.stopPropagation()}>
+                  <div className="sh-card-link-content">
                     <div 
                       className="sh-card-url-bar truncate" 
                       title={item.url}
-                      onMouseDown={(e) => e.stopPropagation()}
                     >
                       {item.url}
                     </div>
-                    <div className="sh-card-link-actions">
+                    <div className="sh-card-link-actions" onMouseDown={(e) => e.stopPropagation()}>
                       <Button 
                         size="sm" 
                         variant="primary" 

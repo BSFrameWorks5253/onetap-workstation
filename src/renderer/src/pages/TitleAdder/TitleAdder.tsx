@@ -3091,35 +3091,28 @@ export default function TitleAdder(): JSX.Element {
                   </span>
                 )}
               </Button>
-              <Button
+              <GhostButton
                 size="sm"
                 onClick={() => {
                   setIsFinalTitlesModalOpen(true)
                   loadFinalTitles()
                 }}
-                style={{
-                  background: 'rgba(255, 255, 255, 0.08)',
-                  border: '1px solid rgba(255, 255, 255, 0.15)',
-                  color: '#fff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  fontWeight: 600
-                }}
                 title="View & link Final Titles folder (syncs with Anything)"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--text-primary)' }}
               >
-                <span>🎬</span> Final Titles ({finalTitlesData?.totalCount ?? '...'})
-              </Button>
-              <button
-                type="button"
-                className={`ta-logs-pill-btn ${isLogsPopupOpen ? 'active' : ''}`}
+                <span>🎬</span> Final Titles ({finalTitlesData?.totalCount ?? 0})
+              </GhostButton>
+              <GhostButton
+                size="sm"
                 onClick={() => setIsLogsPopupOpen(true)}
                 title="Click to open execution logs popup"
+                className={isLogsPopupOpen ? 'active' : ''}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--text-primary)' }}
               >
-                <span>📜 Logs</span>
+                <span>📜</span> Logs
                 {lines.length > 0 && <span className="ta-logs-pill-count">{lines.length}</span>}
                 {running && <span className="ta-logs-pulse-dot" style={{ width: '6px', height: '6px' }} />}
-              </button>
+              </GhostButton>
               <GhostButton size="sm" onClick={() => (window as any).showPage('settings')}>⚙ Configure</GhostButton>
             </div>
           </div>

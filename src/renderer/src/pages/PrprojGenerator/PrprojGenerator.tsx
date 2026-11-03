@@ -28,6 +28,10 @@ export default function PrprojGenerator(): JSX.Element {
     enableExcelReport,
     showExcelModal,
     generatedExcelPath,
+    enableRelinkManifest,
+    generatingRelinkManifest,
+    generatedRelinkManifestPaths,
+    manifestStats,
     overwriteExisting,
     excludedPaths,
     loadingScan,
@@ -39,7 +43,8 @@ export default function PrprojGenerator(): JSX.Element {
     progress,
     logs,
     search,
-    activeProgressStatus
+    activeProgressStatus,
+    activeSection = 'generator'
   } = store
 
   const [isDragging, setIsDragging] = useState(false)
@@ -60,6 +65,8 @@ export default function PrprojGenerator(): JSX.Element {
   const setExcelFolder = (val: string) => setStore({ excelFolder: val })
   const setEnableExcelReport = (val: boolean) => setStore({ enableExcelReport: val })
   const setShowExcelModal = (val: boolean) => setStore({ showExcelModal: val })
+  const setEnableRelinkManifest = (val: boolean) => setStore({ enableRelinkManifest: val })
+  const setGeneratingRelinkManifest = (val: boolean) => setStore({ generatingRelinkManifest: val })
   const setOverwriteExisting = (val: boolean) => setStore({ overwriteExisting: val })
   const setExcludedPaths = (val: string[] | ((prev: string[]) => string[])) => {
     if (typeof val === 'function') {
@@ -71,6 +78,7 @@ export default function PrprojGenerator(): JSX.Element {
   const setLoadingScan = (val: boolean) => setStore({ loadingScan: val })
   const setTemplateInfo = (val: any) => setStore({ templateInfo: val })
   const setSearch = (val: string) => setStore({ search: val })
+  const setActiveSection = (val: 'generator' | 'relink' | 'logs') => setStore({ activeSection: val })
 
   const api = (window as any).api
 
@@ -214,11 +222,90 @@ export default function PrprojGenerator(): JSX.Element {
     }
   }
 
+  const [relinkTargetFolder, setRelinkTargetFolder] = useState<string>('')
+
   const handleBrowse = async () => {
     if (!api?.dialog) return
     const p = await api.dialog.openFolder({ title: 'Select Directory (Date Folder or Master Folder)' })
     if (p) {
       await handleFolderSelect(p)
+      if (!relinkTargetFolder) setRelinkTargetFolder(p)
+    }
+  }
+
+  const handleBrowseRelinkFolder = async () => {
+    if (!api?.dialog) return
+    const p = await api.dialog.openFolder({ title: 'Select Date Folder or Media Directory to Relink' })
+    if (p) {
+      playTick()
+      setRelinkTargetFolder(p)
+      if (!parentFolder) {
+        await handleFolderSelect(p)
+      }
+    }
+  }
+
+  const handleGenerateRelinkManifestNow = async () => {
+    const target = relinkTargetFolder || parentFolder
+    if (!target) {
+      await handleBrowseRelinkFolder()
+      return
+    }
+    if (!api?.prproj || generatingRelinkManifest) return
+
+    setGeneratingRelinkManifest(true)
+    playTick()
+
+    try {
+      const result = await api.prproj.generateRelinkManifest({
+        parentFolder: target,
+        targetFolders: [target],
+        mode: 'single'
+      })
+
+      if (result && result.success) {
+        const createdPaths: string[] = []
+        if (result.manifests && result.manifests.length > 0) {
+          result.manifests.forEach((m: any) => {
+            if (m.excelPath) createdPaths.push(m.excelPath)
+          })
+        }
+        if (result.masterManifestPath) {
+          createdPaths.push(result.masterManifestPath)
+        }
+
+        const firstManifest = result.manifests?.[0]
+        setStore({
+          generatedRelinkManifestPaths: createdPaths,
+          manifestStats: {
+            totalFiles: result.totalFiles || 0,
+            totalFolders: firstManifest?.totalFolders || 0,
+            folderName: target.split(/[\\/]/).pop() || '',
+            excelPath: createdPaths[0] || ''
+          }
+        })
+
+        playSuccess()
+        showToast({
+          title: 'Media Relink Manifest Generated!',
+          message: `Indexed ${result.totalFiles || 0} clips into Excel manifest near project file.`,
+          type: 'success'
+        })
+      } else {
+        showToast({
+          title: 'Manifest Generation Failed',
+          message: result?.error || 'Could not generate manifest.',
+          type: 'error'
+        })
+      }
+    } catch (err: any) {
+      showToast({
+        title: 'Error Generating Manifest',
+        message: err?.message || String(err),
+        type: 'error'
+      })
+    } finally {
+      setGeneratingRelinkManifest(false)
     }
   }
 
@@ -248,6 +335,79 @@ export default function PrprojGenerator(): JSX.Element {
     if (files && files.length > 0) {
       const p = (files[0] as any).path
       if (p) await handleFolderSelect(p)
+    }
+  }
+
+  // ── Direct Media Relink Manifest (.xlsx) Generation ─────────────
+  const handleGenerateRelinkManifest = async () => {
+    if (!parentFolder) {
+      handleBrowse()
+      return
+    }
+    if (!api?.prproj || generatingRelinkManifest) return
+
+    let activeFolders: string[] = []
+    if (activeMode === 'single') {
+      activeFolders = [parentFolder]
+    } else {
+      activeFolders = subfolders.filter(s => !excludedPaths.includes(s.path)).map(s => s.path)
+    }
+
+    if (activeFolders.length === 0) {
+      showToast({ title: 'No Folders Selected', message: 'Please include at least one folder for manifest generation.', type: 'warning' })
+      return
+    }
+
+    setGeneratingRelinkManifest(true)
+    playTick()
+
+    try {
+      const result = await api.prproj.generateRelinkManifest({
+        parentFolder,
+        targetFolders: activeFolders,
+        mode: activeMode
+      })
+
+      if (result && result.success) {
+        const createdPaths: string[] = []
+        if (result.manifests && result.manifests.length > 0) {
+          result.manifests.forEach((m: any) => {
+            if (m.excelPath) createdPaths.push(m.excelPath)
+          })
+        }
+        if (result.masterManifestPath) {
+          createdPaths.push(result.masterManifestPath)
+        }
+
+        const firstManifest = result.manifests?.[0]
+        setStore({
+          generatedRelinkManifestPaths: createdPaths,
+          manifestStats: {
+            totalFiles: result.totalFiles || 0,
+            totalFolders: firstManifest?.totalFolders || 0,
+            folderName: activeMode === 'single' ? parentFolder.split(/[\\\/]/).pop() || '' : `${result.count || 0} Date Folders`,
+            excelPath: createdPaths[0] || ''
+          }
+        })
+
+        playSuccess()
+        showToast({
+          title: 'Media Relink Manifest Generated!',
+          message: `Generated Excel manifest (.xlsx & .json) near project file for ${result.totalFiles || 0} media file(s). Ready for Premiere Pro auto-relinking!`,
+          type: 'success',
+          badge: '🔗 MEDIA MANIFEST',
+          icon: '📊',
+          action: { label: '📂 Open Folder', onClick: () => api?.shell?.openFolder(parentFolder) }
+        })
+      } else {
+        throw new Error(result?.error || 'Manifest generation failed.')
+      }
+    } catch (err: any) {
+      console.error('[PrprojGenerator] Manifest error:', err)
+      playError()
+      showToast({ title: 'Manifest Generation Failed', message: err.message || 'Check logs for details.', type: 'danger' })
+    } finally {
+      setGeneratingRelinkManifest(false)
     }
   }
 
@@ -296,6 +456,7 @@ export default function PrprojGenerator(): JSX.Element {
         ignoreOutputFolders: true,
         overwrite: overwriteExisting,
         excelFolderPath: finalExcelFolder,
+        enableRelinkManifest: enableRelinkManifest,
         excludedPaths: activeMode === 'single' ? excludedPaths : []
       })
 
@@ -327,6 +488,7 @@ export default function PrprojGenerator(): JSX.Element {
           isCompleted: true,
           createdFiles: result.created || [],
           generatedExcelPath: result.excelReportPath || null,
+          generatedRelinkManifestPaths: result.relinkManifestPaths || [],
           logs: [...prev.logs, ...newLogs]
         }))
 
@@ -388,6 +550,9 @@ export default function PrprojGenerator(): JSX.Element {
       logs: [],
       createdFiles: [],
       generatedExcelPath: null,
+      generatedRelinkManifestPaths: [],
+      manifestStats: null,
+      generatingRelinkManifest: false,
       progress: 0,
       currentStep: 1,
       subfolders: [],
@@ -449,6 +614,67 @@ export default function PrprojGenerator(): JSX.Element {
         </div>
       </div>
 
+      {/* ── Section Page Navigation Bar (Apple Segmented Bar) ── */}
+      <div className="prproj-section-nav">
+        <button
+          type="button"
+          className={`prproj-section-nav-btn ${activeSection === 'generator' ? 'active' : ''}`}
+          onClick={() => {
+            playTick()
+            setActiveSection('generator')
+          }}
+        >
+          <span style={{ fontSize: '16px' }}>🎞️</span>
+          <span>Project &amp; Sequence Generator</span>
+          <span className="prproj-section-nav-badge">
+            {parentFolder ? (activeMode === 'single' ? 'Single Date' : `${subfolders.length} Folders`) : 'Primary'}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          className={`prproj-section-nav-btn ${activeSection === 'relink' ? 'active' : ''}`}
+          onClick={() => {
+            playTick()
+            setActiveSection('relink')
+          }}
+        >
+          <span style={{ fontSize: '16px' }}>🔗</span>
+          <span>Media Relocation &amp; Relink Excel</span>
+          {manifestStats ? (
+            <span className="prproj-section-nav-badge" style={{ background: 'color-mix(in srgb, #10B981 16%, transparent)', color: '#10B981', borderColor: 'color-mix(in srgb, #10B981 30%, transparent)' }}>
+              ✓ Ready ({manifestStats.totalFiles})
+            </span>
+          ) : (
+            <span className="prproj-section-nav-badge">
+              Relinker
+            </span>
+          )}
+        </button>
+
+        <button
+          type="button"
+          className={`prproj-section-nav-btn ${activeSection === 'logs' ? 'active' : ''}`}
+          onClick={() => {
+            playTick()
+            setActiveSection('logs')
+          }}
+        >
+          <span style={{ fontSize: '16px' }}>📜</span>
+          <span>Engine Status &amp; Logs</span>
+          {logs.length > 0 && (
+            <span className="prproj-section-nav-badge">
+              {logs.length}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* ══════════════════════════════════════════════════════════
+          SECTION 1: PROJECT & SEQUENCE GENERATOR
+      ══════════════════════════════════════════════════════════ */}
+      {activeSection === 'generator' && (
+        <>
       {/* ── Template & Engine Status Banner ── */}
       <Card style={{ padding: '14px 20px', borderLeft: '4px solid #9999FF' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -468,6 +694,7 @@ export default function PrprojGenerator(): JSX.Element {
           </span>
         </div>
       </Card>
+
 
       {/* ── Main Folder Selector Card ── */}
       <Card>
@@ -502,35 +729,146 @@ export default function PrprojGenerator(): JSX.Element {
       </Card>
 
       {/* ── Excel Sequence Report Options Card ── */}
-      {parentFolder && (
-        <Card>
-          <CardHeader title="2. Excel Sequence Summary Report (.xlsx)" accent="#10B981" />
-          <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px' }}>
-              <div>
-                <div style={{ fontWeight: '700', fontSize: '14px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span>📊 Auto-Generate Date-Wise Excel Sequence Report</span>
-                  <span className="prproj-status-badge badge-new" style={{ background: '#059669', color: '#FFF' }}>
-                    Automatic Output Path
-                  </span>
-                </div>
-                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px', lineHeight: 1.5 }}>
-                  Generates an Excel (.xlsx) report containing <strong>Unedit Duration</strong> (initial sequence duration) and <strong>Edit Duration</strong> (updated timeline duration after editing) alongside cameraman prefix clip counts. The report is saved automatically directly inside the target directory.
-                </div>
+      <Card>
+        <CardHeader title="2. Excel Sequence Summary Report (.xlsx)" accent="#10B981" />
+        <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px' }}>
+            <div>
+              <div style={{ fontWeight: '700', fontSize: '14px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span>📊 Auto-Generate Date-Wise Excel Sequence Report</span>
+                <span className="prproj-status-badge badge-new" style={{ background: '#059669', color: '#FFF' }}>
+                  Automatic Output Path
+                </span>
               </div>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px', lineHeight: 1.5 }}>
+                Generates an Excel (.xlsx) report containing <strong>Unedit Duration</strong> (initial sequence duration) and <strong>Edit Duration</strong> (updated timeline duration after editing) alongside cameraman prefix clip counts. The report is saved automatically directly inside the target directory.
+              </div>
+            </div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '13px', color: 'var(--text-primary)', background: 'var(--surface-2)', padding: '10px 16px', borderRadius: '10px', border: '1px solid var(--border-soft)', userSelect: 'none' }}>
+              <input
+                type="checkbox"
+                checked={enableExcelReport}
+                onChange={e => { playTick(); setEnableExcelReport(e.target.checked) }}
+                style={{ width: '18px', height: '18px', accentColor: '#10B981', cursor: 'pointer' }}
+              />
+              <span>Enable Excel Report</span>
+            </label>
+          </div>
+        </div>
+      </Card>
+
+      {/* ── Media Relocation Manifest (.xlsx & .json) Card ── */}
+      <Card>
+        <CardHeader title="3. Media Relocation Manifest (.xlsx & .json) for Premiere Pro" accent="#6366F1" />
+        <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px' }}>
+            <div style={{ flex: 1, minWidth: '280px' }}>
+              <div style={{ fontWeight: '700', fontSize: '14px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span>🔗 Media Relocation & Relink Manifest Generator</span>
+                <span className="prproj-status-badge badge-new" style={{ background: '#6366F1', color: '#FFF' }}>
+                  Saved Near .prproj File
+                </span>
+              </div>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px', lineHeight: 1.5 }}>
+                Generates an Excel relocation manifest (<code>Media_Relink_Manifest_&lt;Date&gt;.xlsx</code> &amp; companion <code>.json</code>) right next to each date folder's <code>.prproj</code> project file. It documents all cameraman subfolders, video filenames, relative paths, file sizes, and metadata so the <strong>One Tap Premiere Pro Extension</strong> can automatically locate, match, and relink missing or moved footage with 100% precision.
+              </div>
+              {parentFolder ? (
+                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', fontFamily: 'monospace', background: 'var(--surface-2)', padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--border-soft)', marginTop: '8px', display: 'inline-block' }}>
+                  Target Folder: {parentFolder}
+                </div>
+              ) : (
+                <div style={{ fontSize: '11px', color: '#6366F1', fontWeight: '650', marginTop: '6px' }}>
+                  ℹ Ready to generate — select a date folder above or click the button below to pick one.
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '13px', color: 'var(--text-primary)', background: 'var(--surface-2)', padding: '10px 16px', borderRadius: '10px', border: '1px solid var(--border-soft)', userSelect: 'none' }}>
                 <input
                   type="checkbox"
-                  checked={enableExcelReport}
-                  onChange={e => { playTick(); setEnableExcelReport(e.target.checked) }}
-                  style={{ width: '18px', height: '18px', accentColor: '#10B981', cursor: 'pointer' }}
+                  checked={enableRelinkManifest}
+                  onChange={e => { playTick(); setEnableRelinkManifest(e.target.checked) }}
+                  style={{ width: '18px', height: '18px', accentColor: '#6366F1', cursor: 'pointer' }}
                 />
-                <span>Enable Excel Report</span>
+                <span>Auto-Create with Project</span>
               </label>
+
+              <button
+                className="prproj-action-btn"
+                disabled={generating || generatingRelinkManifest}
+                onClick={handleGenerateRelinkManifest}
+                style={{
+                  background: 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)',
+                  color: '#FFF',
+                  border: 'none',
+                  padding: '10px 18px',
+                  borderRadius: '10px',
+                  fontSize: '13px',
+                  fontWeight: '750',
+                  cursor: (generating || generatingRelinkManifest) ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  width: 'auto',
+                  boxShadow: '0 4px 14px rgba(99, 102, 241, 0.35)',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                {generatingRelinkManifest ? (
+                  <span>⏳ Generating Manifest...</span>
+                ) : !parentFolder ? (
+                  <>
+                    <span>📁</span>
+                    <span>Browse Folder &amp; Generate (.xlsx)</span>
+                  </>
+                ) : (
+                  <>
+                    <span>📊</span>
+                    <span>Generate Relink Manifest (.xlsx) Now</span>
+                  </>
+                )}
+              </button>
             </div>
           </div>
+
+            {/* Generated Manifest Success Banner */}
+            {manifestStats && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', background: 'rgba(99, 102, 241, 0.10)', border: '1px solid rgba(99, 102, 241, 0.35)', borderRadius: '10px', padding: '12px 16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ fontSize: '20px' }}>✔</span>
+                  <div>
+                    <div style={{ fontWeight: '750', fontSize: '13px', color: 'var(--text-primary)' }}>
+                      Media Relink Manifest Ready ({manifestStats.totalFiles} video clips indexed)
+                    </div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace', marginTop: '2px' }}>
+                      {manifestStats.excelPath.split(/[\\\/]/).pop()}
+                    </div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    className="prproj-btn-sm"
+                    style={{ background: '#6366F1', color: '#FFF', border: 'none', padding: '6px 12px', fontSize: '11px', fontWeight: '700' }}
+                    onClick={() => api?.shell?.openFolder(manifestStats.excelPath)}
+                  >
+                    📂 Open Folder
+                  </button>
+                  <button
+                    className="prproj-btn-sm"
+                    style={{ background: 'var(--surface-card)', color: 'var(--text-primary)', border: '1px solid var(--border)', padding: '6px 12px', fontSize: '11px', fontWeight: '700' }}
+                    onClick={() => {
+                      navigator.clipboard.writeText(manifestStats.excelPath)
+                      showToast({ title: 'Path Copied', message: 'Manifest path copied to clipboard.', type: 'info' })
+                    }}
+                  >
+                    📋 Copy Path
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </Card>
-      )}
 
       {/* ── Mode Selector & Folder Preview ── */}
       {parentFolder && (
@@ -993,6 +1331,223 @@ export default function PrprojGenerator(): JSX.Element {
           )}
         </div>
       </Card>
+
+        </>
+      )}
+      {/* ══════════════════════════════════════════════════════════
+          SECTION 2: MEDIA RELOCATION & RELINK EXCEL MANIFEST
+      ══════════════════════════════════════════════════════════ */}
+      {activeSection === 'relink' && (
+        <>
+      {/* ── Media Relocation & Relink Excel Generator (Browse Folder Section) ── */}
+      <Card>
+        <CardHeader title="Media Relocation & Relink Manifest Generator" accent="#9999FF" />
+        <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.55 }}>
+            Browse and select the <strong>Date Folder containing media to be relinked</strong>. Generates an Excel manifest (<code>Media_Relink_Manifest_&lt;Date&gt;.xlsx</code> &amp; companion <code>.json</code>) near the <code>.prproj</code> project file so the <strong>One Tap Premiere Pro Extension</strong> can automatically bring all offline clips back online with 100% precision.
+          </div>
+
+          <BrowseRow
+            label="Folder to be Relinked"
+            value={relinkTargetFolder || parentFolder}
+            placeholder="Browse or select the date folder containing video clips to be relinked..."
+            onBrowse={handleBrowseRelinkFolder}
+            onChange={(val) => setRelinkTargetFolder(val)}
+          />
+
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px', paddingTop: '4px' }}>
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer', userSelect: 'none' }}>
+              <input
+                type="checkbox"
+                checked={enableRelinkManifest}
+                onChange={e => { playTick(); setEnableRelinkManifest(e.target.checked) }}
+                style={{ width: '16px', height: '16px', accentColor: 'var(--theme-accent)', cursor: 'pointer' }}
+              />
+              <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-secondary)' }}>
+                Auto-create manifest when generating project
+              </span>
+            </label>
+
+            <button
+              className="prproj-generate-relink-btn"
+              disabled={generatingRelinkManifest}
+              onClick={handleGenerateRelinkManifestNow}
+            >
+              {generatingRelinkManifest ? (
+                <span>⏳ Generating Manifest...</span>
+              ) : !(relinkTargetFolder || parentFolder) ? (
+                <>
+                  <span>📁</span>
+                  <span>Browse Folder &amp; Generate Manifest</span>
+                </>
+              ) : (
+                <>
+                  <span>📊</span>
+                  <span>Generate Relink Manifest (.xlsx)</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Generated Manifest Success Banner */}
+          {manifestStats && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', background: 'color-mix(in srgb, #10B981 10%, var(--surface))', border: '1px solid color-mix(in srgb, #10B981 30%, var(--border))', borderRadius: '12px', padding: '14px 18px', marginTop: '4px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{ fontSize: '20px', color: '#10B981' }}>✔</span>
+                <div>
+                  <div style={{ fontWeight: '750', fontSize: '13px', color: 'var(--text-primary)' }}>
+                    Media Relink Manifest Ready ({manifestStats.totalFiles} video clips indexed)
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace', marginTop: '2px' }}>
+                    {manifestStats.excelPath}
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  className="prproj-btn-sm"
+                  style={{ background: '#10B981', color: '#FFF', border: 'none', padding: '7px 14px', fontSize: '11px', fontWeight: '700', borderRadius: '7px' }}
+                  onClick={() => api?.shell?.openFolder(manifestStats.excelPath)}
+                >
+                  📂 Open Folder
+                </button>
+                <button
+                  className="prproj-btn-sm"
+                  style={{ background: 'var(--surface-card)', color: 'var(--text-primary)', border: '1px solid var(--border)', padding: '7px 14px', fontSize: '11px', fontWeight: '700', borderRadius: '7px' }}
+                  onClick={() => {
+                    navigator.clipboard.writeText(manifestStats.excelPath)
+                    showToast({ title: 'Path Copied', message: 'Manifest path copied to clipboard.', type: 'info' })
+                  }}
+                >
+                  📋 Copy Path
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </Card>
+
+      {/* ── How Relinking Works in Premiere Pro Extension ── */}
+      <Card>
+        <CardHeader title="How Media Relinking Works with Premiere Pro Extension" accent="#9999FF" />
+        <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div className="relink-steps-grid">
+            <div className="relink-step-card">
+              <div className="relink-step-header">
+                <div className="relink-step-num">1</div>
+                <div className="relink-step-title">Generate Manifest</div>
+              </div>
+              <div className="relink-step-desc">
+                Select your Date folder above and click <strong>Generate Relink Manifest</strong>. An Excel sheet (<code>Media_Relink_Manifest_&lt;Date&gt;.xlsx</code>) and companion JSON are created right next to your project file.
+              </div>
+            </div>
+
+            <div className="relink-step-card">
+              <div className="relink-step-header">
+                <div className="relink-step-num">2</div>
+                <div className="relink-step-title">Open Premiere Pro</div>
+              </div>
+              <div className="relink-step-desc">
+                Launch Adobe Premiere Pro and open the project. If any media is offline due to moved folders or drive letter changes, open <strong>Window &gt; Extensions &gt; One Tap</strong>.
+              </div>
+            </div>
+
+            <div className="relink-step-card">
+              <div className="relink-step-header">
+                <div className="relink-step-num">3</div>
+                <div className="relink-step-title">One-Click Auto-Relink</div>
+              </div>
+              <div className="relink-step-desc">
+                Click <strong>🔗 Relink Missing Media via Excel Manifest</strong> in the One Tap extension. All offline clips will reconnect instantly with 100% camera bin precision!
+              </div>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+        </>
+      )}
+      {/* ══════════════════════════════════════════════════════════
+          SECTION 3: ENGINE STATUS & EXECUTION LOGS
+      ══════════════════════════════════════════════════════════ */}
+      {activeSection === 'logs' && (
+        <>
+      {/* ── Template & Engine Status Banner ── */}
+      <Card style={{ padding: '14px 20px', borderLeft: '4px solid #9999FF' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '20px' }}>🎞️</span>
+            <div>
+              <div style={{ fontWeight: '700', fontSize: '14px', color: 'var(--text-primary)' }}>
+                Sequence Generator Engine: Active (Single Date & Master Folder Modes)
+              </div>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                Generates .xml & .prproj files with sequence timeline markers for cameraman folders (Q, BQ, M, BM, MZ, Z, BZ, AQ, N, ID, Waaz). Open .xml in Premiere Pro.
+              </div>
+            </div>
+          </div>
+          <span className="prproj-status-badge badge-new" style={{ textTransform: 'uppercase' }}>
+            {templateInfo?.available ? 'Engine Ready' : 'Ready'}
+          </span>
+        </div>
+      </Card>
+
+
+          <Card>
+            <CardHeader title="📜 Sequence Engine Terminal Console" accent="#10B981" />
+            <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                  Total Log Entries: <strong>{logs.length}</strong> | Engine Status: <strong>Active</strong>
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    className="prproj-btn-sm"
+                    style={{ background: 'var(--surface-card)', color: 'var(--text-primary)', border: '1px solid var(--border)', padding: '8px 14px', fontSize: '12px', fontWeight: '700' }}
+                    onClick={() => {
+                      navigator.clipboard.writeText(logs.join('\n'))
+                      showToast({ title: 'Logs Copied', message: 'All logs copied to clipboard.', type: 'info' })
+                    }}
+                  >
+                    📋 Copy All Logs
+                  </button>
+                  <button
+                    className="prproj-btn-sm"
+                    style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#EF4444', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '8px 14px', fontSize: '12px', fontWeight: '700' }}
+                    onClick={() => {
+                      playTick()
+                      setStore({ logs: [] })
+                      showToast({ title: 'Logs Cleared', message: 'Console log history reset.', type: 'info' })
+                    }}
+                  >
+                    🗑️ Clear Logs
+                  </button>
+                </div>
+              </div>
+
+              <div className="prproj-cyber-console" style={{ marginTop: '4px' }}>
+                <div className="prproj-console-bar">
+                  <div className="prproj-console-dots">
+                    <div className="prproj-console-dot" style={{ background: '#FF5F56' }} />
+                    <div className="prproj-console-dot" style={{ background: '#FFBD2E' }} />
+                    <div className="prproj-console-dot" style={{ background: '#27C93F' }} />
+                  </div>
+                  <div className="prproj-console-title">⚡ REAL-TIME ENGINE LOG STREAM</div>
+                </div>
+                <div ref={logBoxRef} className="prproj-log-box" style={{ maxHeight: '420px', minHeight: '260px' }}>
+                  {logs.length === 0 ? (
+                    <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
+                      No execution logs recorded yet. Run a project generation or relink scan to view activity.
+                    </div>
+                  ) : (
+                    logs.map((log, i) => renderFormattedLog(log, i))
+                  )}
+                </div>
+              </div>
+            </div>
+          </Card>
+        </>
+      )}
     </div>
   )
 }

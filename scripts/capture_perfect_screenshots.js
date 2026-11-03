@@ -455,13 +455,6 @@ app.whenReady().then(async () => {
   fs.writeFileSync(path.join(storeDir, '01_Screenshot_4_ArchiveVault_1920x1080.png'), buf4);
   console.log('[Studio Capture] Wrote 01_Screenshot_4_ArchiveVault_1920x1080.png');
 
-  // Mirror all to website/assets
-  const webAssets = path.join(__dirname, '../website/assets');
-  fs.copyFileSync(path.join(storeDir, '01_Screenshot_1_Dashboard_1920x1080.png'), path.join(webAssets, 'store_screenshot_1_dashboard.png'));
-  fs.copyFileSync(path.join(storeDir, '01_Screenshot_2_TitleAdder_1920x1080.png'), path.join(webAssets, 'store_screenshot_2_converter.png'));
-  fs.copyFileSync(path.join(storeDir, '01_Screenshot_3_MediaConverter_1920x1080.png'), path.join(webAssets, 'store_screenshot_3_vault.png'));
-  fs.copyFileSync(path.join(storeDir, '01_Screenshot_4_ArchiveVault_1920x1080.png'), path.join(webAssets, 'store_screenshot_4_stats.png'));
-
   console.log('[Studio Capture] All 4 perfect screenshots successfully refreshed!');
   app.quit();
 });

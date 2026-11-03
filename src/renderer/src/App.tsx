@@ -883,7 +883,7 @@ function AppInner(): JSX.Element {
 
         // Filter out hidden tools to match visual order
         const visible = orderedNav.filter(key => {
-          if (key === 'drivesync' || key === 'folder' || key === 'gdrive' || key === 'cameratransfer' || key === 'pvseparator' || key === 'excelmerger') return false
+          if (key === 'drivesync' || key === 'folder' || key === 'gdrive' || key === 'cameratransfer' || key === 'pvseparator' || key === 'excelmerger' || key === 'videotransfer') return false
           try {
             const hidden = JSON.parse(textOverrides['hidden_tools'] || '[]')
             return !hidden.includes(key)

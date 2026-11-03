@@ -5,7 +5,7 @@
 
 /* ── Toolbar Shell ──────────────────────────────── */
 .toolbar {
-  height: 46px;
+  height: 48px;
   flex-shrink: 0;
   background: color-mix(in srgb, var(--surface) 96%, transparent);
   backdrop-filter: var(--glass-blur, blur(28px));
@@ -64,6 +64,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  flex-shrink: 0;
   transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
@@ -80,18 +81,18 @@
 }
 
 .toolbar-crumb-page {
-  font-family: var(--font-display);
-  font-weight: 850;
-  font-size: 13.5px;
+  font-family: var(--font-display, "Outfit", "Plus Jakarta Sans", system-ui, sans-serif);
+  font-weight: 750;
+  font-size: 13px;
   color: var(--text-primary);
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 4px 10px;
+  padding: 4px 11px;
   border-radius: var(--radius-sm, 8px);
-  background: color-mix(in srgb, var(--theme-accent) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--theme-accent) 24%, transparent);
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--theme-accent) 10%, transparent);
+  background: color-mix(in srgb, var(--theme-accent) 12%, var(--surface-2));
+  border: 1px solid color-mix(in srgb, var(--theme-accent) 26%, var(--border));
+  box-shadow: 0 1px 4px color-mix(in srgb, var(--theme-accent) 12%, transparent);
 }
 
 /* Page icon pill */

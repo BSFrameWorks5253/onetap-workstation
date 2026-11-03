@@ -837,6 +837,277 @@ export function generateExcelSequenceReportNode(
   return finalReturnedPath
 }
 
+export interface MediaManifestItem {
+  index: number
+  fileName: string
+  subfolder: string
+  relPath: string
+  relPathWin: string
+  fullPath: string
+  sizeBytes: number
+  sizeFormatted: string
+  ext: string
+  modified: string
+}
+
+export interface FolderSummaryItem {
+  index: number
+  folderName: string
+  relPath: string
+  videoCount: number
+  totalSizeBytes: number
+  totalSizeFormatted: string
+}
+
+export interface MediaRelinkManifestResult {
+  success: boolean
+  folderName: string
+  folderPath: string
+  excelPath: string
+  excelDatedPath: string
+  jsonPath: string
+  jsonDatedPath: string
+  totalFiles: number
+  totalFolders: number
+  totalSizeBytes: number
+  totalSizeFormatted: string
+  files: MediaManifestItem[]
+  folders: FolderSummaryItem[]
+}
+
+/**
+ * Generate Premiere Pro Media Relocation Manifest (.xlsx & companion .json)
+ * Saved directly near the .prproj project file of the date folder.
+ */
+export function generateMediaRelinkManifestNode(
+  dateFolderPath: string,
+  options?: { outputFolder?: string }
+): MediaRelinkManifestResult {
+  const folderName = path.basename(dateFolderPath)
+  const destDir = options?.outputFolder || dateFolderPath
+
+  if (!fs.existsSync(destDir)) {
+    fs.mkdirSync(destDir, { recursive: true })
+  }
+
+  // Scan all video entries with their folder information
+  const videoEntries = discoverSubfolderVideosWithFoldersNode(dateFolderPath)
+
+  const items: MediaManifestItem[] = []
+  const folderMap = new Map<string, { count: number; size: number; relPath: string }>()
+  let totalBytes = 0
+
+  for (let i = 0; i < videoEntries.length; i++) {
+    const entry = videoEntries[i]
+    const fullP = entry.path
+    const fileName = path.basename(fullP)
+    const relPath = path.relative(dateFolderPath, fullP).replace(/\\/g, '/')
+    const relPathWin = relPath.replace(/\//g, '\\')
+
+    let size = 0
+    let mtime = new Date()
+    try {
+      const st = fs.statSync(fullP)
+      size = st.size
+      mtime = st.mtime
+    } catch {}
+
+    totalBytes += size
+
+    // Immediate subfolder relative to date folder (e.g. "CAM A", "Q", "Waaz", or "." if root)
+    const relParts = relPath.split('/')
+    const subfolderName = relParts.length > 1 ? relParts[0] : (entry.folderName || 'Root')
+    const subfolderRel = relParts.length > 1 ? relParts.slice(0, -1).join('/') : '.'
+
+    if (!folderMap.has(subfolderName)) {
+      folderMap.set(subfolderName, { count: 0, size: 0, relPath: subfolderRel })
+    }
+    const fData = folderMap.get(subfolderName)!
+    fData.count++
+    fData.size += size
+
+    items.push({
+      index: i + 1,
+      fileName,
+      subfolder: subfolderName,
+      relPath,
+      relPathWin,
+      fullPath: fullP,
+      sizeBytes: size,
+      sizeFormatted: formatBytes(size),
+      ext: path.extname(fullP).toUpperCase(),
+      modified: mtime.toLocaleString()
+    })
+  }
+
+  const folderSummaries: FolderSummaryItem[] = []
+  let fIdx = 1
+  for (const [fName, fInfo] of folderMap.entries()) {
+    folderSummaries.push({
+      index: fIdx++,
+      folderName: fName,
+      relPath: fInfo.relPath,
+      videoCount: fInfo.count,
+      totalSizeBytes: fInfo.size,
+      totalSizeFormatted: formatBytes(fInfo.size)
+    })
+  }
+
+  // Create Excel Workbook
+  const wb = XLSX.utils.book_new()
+
+  // Sheet 1: Media Manifest
+  const manifestRows: any[][] = [
+    ['ONE TAP — PREMIERE PRO MEDIA RELOCATION MANIFEST'],
+    [`Date Folder: ${folderName}`, `Target Project: ${folderName}.prproj`],
+    [`Directory: ${dateFolderPath}`, `Generated: ${new Date().toLocaleString()}`],
+    [`Total Media Clips: ${items.length}`, `Total Size: ${formatBytes(totalBytes)}`],
+    [],
+    [
+      '#',
+      'File Name',
+      'Subfolder / Camera',
+      'Relative Path',
+      'Full Absolute Path',
+      'File Size',
+      'Size (Bytes)',
+      'Extension',
+      'Status'
+    ]
+  ]
+
+  for (const it of items) {
+    manifestRows.push([
+      it.index,
+      it.fileName,
+      it.subfolder,
+      it.relPathWin,
+      it.fullPath,
+      it.sizeFormatted,
+      it.sizeBytes,
+      it.ext,
+      'Ready for Relink'
+    ])
+  }
+
+  const manifestWs = XLSX.utils.aoa_to_sheet(manifestRows)
+  manifestWs['!cols'] = [
+    { wch: 6 },
+    { wch: 30 },
+    { wch: 22 },
+    { wch: 35 },
+    { wch: 60 },
+    { wch: 14 },
+    { wch: 16 },
+    { wch: 10 },
+    { wch: 18 }
+  ]
+  XLSX.utils.book_append_sheet(wb, manifestWs, 'Media Manifest')
+
+  // Sheet 2: Folder Breakdown
+  const folderRows: any[][] = [
+    ['SUBFOLDER & CAMERA FOLDER BREAKDOWN'],
+    [`Date Folder: ${folderName}`, `Total Subfolders: ${folderSummaries.length}`],
+    [],
+    ['#', 'Subfolder / Camera Folder', 'Relative Path', 'Video Clips Count', 'Total Size']
+  ]
+
+  for (const f of folderSummaries) {
+    folderRows.push([
+      f.index,
+      f.folderName,
+      f.relPath,
+      f.videoCount,
+      f.totalSizeFormatted
+    ])
+  }
+
+  folderRows.push([
+    'TOTAL',
+    'ALL SUBFOLDERS',
+    '.',
+    items.length,
+    formatBytes(totalBytes)
+  ])
+
+  const folderWs = XLSX.utils.aoa_to_sheet(folderRows)
+  folderWs['!cols'] = [
+    { wch: 6 },
+    { wch: 28 },
+    { wch: 32 },
+    { wch: 20 },
+    { wch: 18 }
+  ]
+  XLSX.utils.book_append_sheet(wb, folderWs, 'Folder Breakdown')
+
+  // Save files near the project file of the date folder
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
+  const cleanFolderName = folderName.replace(/[^a-zA-Z0-9_-]/g, '_')
+
+  const excelDatedPath = path.join(destDir, `Media_Relink_Manifest_${cleanFolderName}_${timestamp}.xlsx`)
+  const excelNamedPath = path.join(destDir, `Media_Relink_Manifest_${cleanFolderName}.xlsx`)
+  const excelStandardPath = path.join(destDir, 'Media_Relink_Manifest.xlsx')
+
+  let finalExcelPath = excelNamedPath
+  try {
+    XLSX.writeFile(wb, excelDatedPath)
+    XLSX.writeFile(wb, excelNamedPath)
+    try {
+      XLSX.writeFile(wb, excelStandardPath)
+    } catch {}
+  } catch (err) {
+    console.warn('[Prproj IPC] Excel manifest write lock error:', err)
+    finalExcelPath = excelDatedPath
+  }
+
+  // Save Companion JSON for fast ExtendScript / API parsing
+  const jsonNamedPath = path.join(destDir, `Media_Relink_Manifest_${cleanFolderName}.json`)
+  const jsonStandardPath = path.join(destDir, 'Media_Relink_Manifest.json')
+  const jsonDatedPath = path.join(destDir, `Media_Relink_Manifest_${cleanFolderName}_${timestamp}.json`)
+
+  const jsonPayload = {
+    version: '1.0',
+    app: 'One Tap',
+    dateFolderName: folderName,
+    folderPath: dateFolderPath,
+    projectFile: `${folderName}.prproj`,
+    generatedAt: new Date().toISOString(),
+    totalFiles: items.length,
+    totalSizeBytes: totalBytes,
+    totalSizeFormatted: formatBytes(totalBytes),
+    folders: folderSummaries,
+    files: items
+  }
+
+  try {
+    const jsonStr = JSON.stringify(jsonPayload, null, 2)
+    fs.writeFileSync(jsonDatedPath, jsonStr, 'utf-8')
+    fs.writeFileSync(jsonNamedPath, jsonStr, 'utf-8')
+    try {
+      fs.writeFileSync(jsonStandardPath, jsonStr, 'utf-8')
+    } catch {}
+  } catch (jErr) {
+    console.warn('[Prproj IPC] JSON manifest write error:', jErr)
+  }
+
+  return {
+    success: true,
+    folderName,
+    folderPath: dateFolderPath,
+    excelPath: finalExcelPath,
+    excelDatedPath,
+    jsonPath: jsonNamedPath,
+    jsonDatedPath,
+    totalFiles: items.length,
+    totalFolders: folderSummaries.length,
+    totalSizeBytes: totalBytes,
+    totalSizeFormatted: formatBytes(totalBytes),
+    files: items,
+    folders: folderSummaries
+  }
+}
+
+
 function pathToPathUrl(filePath: string): string {
   const abs = path.resolve(filePath).replace(/\\/g, '/')
   const parts = abs.split('/')
@@ -1542,6 +1813,82 @@ export function registerPrprojIPC(): void {
     }
   })
 
+  // Generate Media Relink Manifest (.xlsx & .json) near project file
+  ipcMain.handle('prproj:generateRelinkManifest', async (_e, params) => {
+    try {
+      const targetFolders: string[] = Array.isArray(params?.targetFolders)
+        ? params.targetFolders
+        : params?.parentFolder ? [params.parentFolder] : []
+
+      if (targetFolders.length === 0) {
+        return { success: false, error: 'No target folder specified for relink manifest generation.' }
+      }
+
+      const mode = params?.mode || (targetFolders.length > 1 ? 'master' : 'single')
+      const manifests: MediaRelinkManifestResult[] = []
+      let totalFilesAll = 0
+
+      for (const fPath of targetFolders) {
+        if (!fs.existsSync(fPath)) continue
+        const res = generateMediaRelinkManifestNode(fPath)
+        manifests.push(res)
+        totalFilesAll += res.totalFiles
+      }
+
+      // If master mode and multiple folders, generate combined master manifest
+      let masterExcelPath: string | null = null
+      if (mode === 'master' && params?.parentFolder && manifests.length > 1) {
+        try {
+          const masterWb = XLSX.utils.book_new()
+          const masterRows: any[][] = [
+            ['ONE TAP — MASTER PREMIERE PRO MEDIA RELOCATION MANIFEST'],
+            [`Master Directory: ${params.parentFolder}`, `Generated: ${new Date().toLocaleString()}`],
+            [`Total Date Folders: ${manifests.length}`, `Total Combined Media Files: ${totalFilesAll}`],
+            [],
+            ['#', 'Date Folder', 'Subfolder / Camera', 'File Name', 'Relative Path', 'Full Absolute Path', 'File Size', 'Status']
+          ]
+
+          let globalIdx = 1
+          for (const m of manifests) {
+            for (const it of m.files) {
+              masterRows.push([
+                globalIdx++,
+                m.folderName,
+                it.subfolder,
+                it.fileName,
+                it.relPathWin,
+                it.fullPath,
+                it.sizeFormatted,
+                'Ready for Relink'
+              ])
+            }
+          }
+
+          const masterWs = XLSX.utils.aoa_to_sheet(masterRows)
+          masterWs['!cols'] = [
+            { wch: 6 }, { wch: 20 }, { wch: 22 }, { wch: 30 }, { wch: 35 }, { wch: 60 }, { wch: 14 }, { wch: 18 }
+          ]
+          XLSX.utils.book_append_sheet(masterWb, masterWs, 'Master Relink Manifest')
+          masterExcelPath = path.join(params.parentFolder, 'Media_Relink_Manifest_Master.xlsx')
+          XLSX.writeFile(masterWb, masterExcelPath)
+        } catch (mErr) {
+          console.warn('[Prproj IPC] Master manifest write error:', mErr)
+        }
+      }
+
+      return {
+        success: true,
+        manifests,
+        masterManifestPath: masterExcelPath,
+        totalFiles: totalFilesAll,
+        count: manifests.length
+      }
+    } catch (err: any) {
+      console.error('[Prproj IPC] generateRelinkManifest error:', err)
+      return { success: false, error: err.message || String(err) }
+    }
+  })
+
   // Batch-generate Premiere Pro project files (.prproj & .xml) in subfolders or single date folder
   ipcMain.handle('prproj:generate', async (_e, params: {
     parentFolder: string
@@ -1552,6 +1899,7 @@ export function registerPrprojIPC(): void {
     ignoreOutputFolders?: boolean
     overwrite?: boolean
     excelFolderPath?: string
+    enableRelinkManifest?: boolean
     excludedPaths?: string[]
   }) => {
     try {
@@ -1562,6 +1910,7 @@ export function registerPrprojIPC(): void {
       const { templatePath } = findPrprojTemplate(params.customTemplatePath)
       const created: string[] = []
       const skipped: string[] = []
+      const relinkManifestPaths: string[] = []
       const allDateReports: DateSequenceReportData[] = []
       const ignoreOutput = params.ignoreOutputFolders !== false // default true
       const mode = params.mode || 'master'
@@ -1673,6 +2022,19 @@ export function registerPrprojIPC(): void {
 
           created.push(destPrprojPath)
           console.log(`[Prproj IPC] Generated Premiere project & XML sequence for ${folderName} (${videos.length} videos on V1/A1)`)
+
+          // Auto-generate Media Relink Manifest (.xlsx & .json) near the .prproj project file
+          if (params.enableRelinkManifest !== false) {
+            try {
+              const relinkRes = generateMediaRelinkManifestNode(dirPath)
+              if (relinkRes?.excelPath) {
+                relinkManifestPaths.push(relinkRes.excelPath)
+                console.log(`[Prproj IPC] ✔ [MEDIA RELINK MANIFEST] Created ${path.basename(relinkRes.excelPath)} in ${folderName}`)
+              }
+            } catch (mErr) {
+              console.warn(`[Prproj IPC] Failed to create media relink manifest for ${folderName}:`, mErr)
+            }
+          }
         } catch (genErr) {
           console.warn(`[Prproj IPC] Project generation error for ${folderName}:`, genErr)
           if (templatePath && fs.existsSync(templatePath)) {
@@ -1708,7 +2070,8 @@ export function registerPrprojIPC(): void {
         skippedCount: skipped.length,
         created,
         skipped,
-        excelReportPath
+        excelReportPath,
+        relinkManifestPaths
       }
     } catch (err: any) {
       console.error('[Prproj IPC] Generation failed:', err)

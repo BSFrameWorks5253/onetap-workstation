@@ -166,7 +166,7 @@ export default function Dashboard(): JSX.Element {
       <div className="db-grid">
         {/* Main action cards */}
         {orderedNav.filter(k => {
-          if (k === 'dashboard' || k === 'drivesync' || k === 'gdrive' || k === 'cameratransfer' || k === 'excelmerger' || k === 'pvseparator') return false
+          if (k === 'dashboard' || k === 'drivesync' || k === 'gdrive' || k === 'cameratransfer' || k === 'excelmerger' || k === 'pvseparator' || k === 'videotransfer') return false
           try {
             const hidden = JSON.parse(textOverrides['hidden_tools'] || '[]')
             return !hidden.includes(k)

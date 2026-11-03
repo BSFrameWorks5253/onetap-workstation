@@ -24,10 +24,6 @@ async function processLogos() {
     .toBuffer();
 
   fs.writeFileSync('resources/app_logo_light.png', lightBuffer);
-  fs.writeFileSync('website/assets/logo_light.png', lightBuffer);
-
-  const light300 = await sharp(lightBuffer).resize(300, 300).png().toBuffer();
-  fs.writeFileSync('website/assets/store_logo_light_300x300.png', light300);
 
   console.log('Generating Dark Theme Logo with 100% transparent corners (no white border bleed)...');
   const darkBuffer = await sharp(darkSource)
@@ -38,11 +34,6 @@ async function processLogos() {
 
   fs.writeFileSync('resources/app_logo.png', darkBuffer);
   fs.writeFileSync('resources/icon.png', darkBuffer);
-  fs.writeFileSync('website/assets/logo.png', darkBuffer);
-
-  const dark300 = await sharp(darkBuffer).resize(300, 300).png().toBuffer();
-  fs.writeFileSync('website/assets/store_logo_300x300.png', dark300);
-  fs.writeFileSync('website/assets/store_logo_dark_300x300.png', dark300);
 
   // Generate 256x256, 128x128, 64x64, 48x48, 32x32, 16x16 ICO files with transparency
   const icoPng = await sharp(darkBuffer).resize(256, 256).png().toBuffer();

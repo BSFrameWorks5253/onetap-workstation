@@ -10,9 +10,7 @@ app.whenReady().then(async () => {
   console.log('[Store Asset Studio] Creating proper high-definition Store Box Art and Poster Art...');
 
   const storeDir = path.join(__dirname, '../Microsoft_Store_Assets');
-  const webAssetsDir = path.join(__dirname, '../website/assets');
   if (!fs.existsSync(storeDir)) fs.mkdirSync(storeDir, { recursive: true });
-  if (!fs.existsSync(webAssetsDir)) fs.mkdirSync(webAssetsDir, { recursive: true });
 
   // Read assets
   const iconPath = path.join(__dirname, '../resources/icon.png');
@@ -256,7 +254,6 @@ app.whenReady().then(async () => {
   const cap1 = await win1.webContents.capturePage({ x: 0, y: 0, width: 1080, height: 1080 });
   const buf1 = await sharp(cap1.toPNG()).resize(1080, 1080, { fit: 'fill' }).png().toBuffer();
   fs.writeFileSync(path.join(storeDir, '02_Store_Logo_1x1_BoxArt_1080x1080.png'), buf1);
-  fs.writeFileSync(path.join(webAssetsDir, 'store_box_art_1080x1080.png'), buf1);
   console.log('[Store Asset Studio] Wrote 02_Store_Logo_1x1_BoxArt_1080x1080.png');
   win1.close();
 
@@ -607,7 +604,6 @@ app.whenReady().then(async () => {
   const cap2 = await win2.webContents.capturePage({ x: 0, y: 0, width: 720, height: 1080 });
   const buf2 = await sharp(cap2.toPNG()).resize(720, 1080, { fit: 'fill' }).png().toBuffer();
   fs.writeFileSync(path.join(storeDir, '03_Poster_Art_2x3_720x1080.png'), buf2);
-  fs.writeFileSync(path.join(webAssetsDir, 'store_poster_art_720x1080.png'), buf2);
   console.log('[Store Asset Studio] Wrote 03_Poster_Art_2x3_720x1080.png');
   win2.close();
 

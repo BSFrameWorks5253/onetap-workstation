@@ -34,6 +34,10 @@ export interface PrprojState {
   enableExcelReport: boolean
   showExcelModal: boolean
   generatedExcelPath: string | null
+  enableRelinkManifest: boolean
+  generatingRelinkManifest: boolean
+  generatedRelinkManifestPaths: string[]
+  manifestStats: { totalFiles: number; totalFolders: number; folderName: string; excelPath: string } | null
   overwriteExisting: boolean
   excludedPaths: string[]
   loadingScan: boolean
@@ -46,6 +50,7 @@ export interface PrprojState {
   logs: string[]
   search: string
   activeProgressStatus: string
+  activeSection?: 'generator' | 'relink' | 'logs'
 }
 
 const initialState: PrprojState = {
@@ -53,6 +58,7 @@ const initialState: PrprojState = {
   mode: 'auto',
   detectedMode: 'single',
   activeMode: 'single',
+  activeSection: 'generator',
   subfolders: [],
   cameramanFolders: [],
   totalVideos: 0,
@@ -62,6 +68,10 @@ const initialState: PrprojState = {
   enableExcelReport: true,
   showExcelModal: false,
   generatedExcelPath: null,
+  enableRelinkManifest: true,
+  generatingRelinkManifest: false,
+  generatedRelinkManifestPaths: [],
+  manifestStats: null,
   overwriteExisting: false,
   excludedPaths: [],
   loadingScan: false,

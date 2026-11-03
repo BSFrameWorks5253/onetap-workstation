@@ -320,7 +320,7 @@ def update_changelog_databases(version, whats_new, release_notes, bugs_fixed, im
         'whats_new': whats_new, 'release_notes': release_notes,
         'bugs_fixed': bugs_fixed, 'improvements': improvements
     }
-    for db_path in [os.path.join('website', 'data', 'updates.json'), resolve_version_path('update.json')]:
+    for db_path in [resolve_version_path('update.json')]:
         releases = []
         if os.path.exists(db_path):
             try:

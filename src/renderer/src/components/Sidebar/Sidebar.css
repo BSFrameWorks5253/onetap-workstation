@@ -6,8 +6,8 @@
 
 /* -- Base Sidebar Shell -------------------------------- */
 .sidebar {
-  width: var(--sidebar-width, 214px);
-  min-width: var(--sidebar-width, 214px);
+  width: var(--sidebar-width, 232px);
+  min-width: var(--sidebar-width, 232px);
   height: calc(100% - 16px);
   margin: 8px 6px 8px 8px;
   flex-shrink: 0;
