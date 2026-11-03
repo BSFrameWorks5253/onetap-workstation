@@ -1657,9 +1657,19 @@
             });
         }
 
-        function runImportMediaXml() {
+        function runImportMediaXml(explicitPath) {
+            if (explicitPath) {
+                showStatus("⏳ Importing XML sequence into Premiere Pro...", "var(--accent)");
+                var escapedPath = explicitPath.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+                cs.evalScript('$.runScript.importMediaXml("' + escapedPath + '")', handleXmlImportResult);
+                return;
+            }
             showStatus("⏳ Scanning directory for matching sequence XML...", "var(--accent)");
-            cs.evalScript("$.runScript.importMediaXml()", function (r) {
+            cs.evalScript("$.runScript.importMediaXml()", function (r) {
+                if (r && r.indexOf("ERROR|||Could not locate sequence XML file.") === 0) {
+                    browseAndImportXml();
+                    return;
+                }
                 if (!r) {
                     showStatus("❌ No response received from Premiere Pro.", "var(--danger)");
                     return;
@@ -1676,6 +1686,22 @@
             });
         }
 
+        function browseAndImportXml() {
+            showStatus("📂 Select XML sequence file...", "var(--accent)");
+            cs.evalScript("$.runScript.browseForXmlFile()", function (r) {
+                if (!r || r.indexOf("CANCEL|||") === 0) {
+                    showStatus("XML selection cancelled.", "var(--text-muted)");
+                    return;
+                }
+                if (r.indexOf("SUCCESS|||") === 0) {
+                    var xmlPath = r.replace("SUCCESS|||", "");
+                    runImportMediaXml(xmlPath);
+                } else if (r.indexOf("ERROR|||") === 0) {
+                    showStatus("❌ " + r.replace("ERROR|||", ""), "var(--danger)");
+                }
+            });
+        }
+
         function runNikahGroupPhoto() {
             showStatus("⏳ Ripple-inserting Nikah group photo video...", "var(--warning)");
             cs.evalScript("$.runScript.distributeNikahGroupPhoto()", function (r) {
@@ -1950,9 +1976,9 @@
                     </div>
                 </div>
                 <div class="header-actions">
-                    <button id="locateXmlBtn" class="locate-xml-btn" onclick="runImportMediaXml()" title="Scan project directory or locate XML sequence file to open in Timeline">
+                    <button id="locateXmlBtn" class="locate-xml-btn" onclick="runImportMediaXml()" oncontextmenu="browseAndImportXml(); return false;" title="Import XML sequence into Timeline. Click to auto-locate or Right-click to browse XML file.">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                        Locate XML
+                        Import XML
                     </button>
                     <button id="relinkMediaBtn" class="locate-xml-btn" onclick="switchTab('relink'); scanRelinkStatus();" title="Relink / Relocate offline or moved project media using Date Folder Excel Manifest">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>

@@ -1112,7 +1112,7 @@ $.runScript.locateMatchingXmlFile = function() {
     var defaultDir = (candidateDirs.length > 0 && candidateDirs[0].exists) ? candidateDirs[0] : Folder.myDocuments;
     try { Folder.current = defaultDir; } catch(eCur) {}
 
-    var picked = File.openDialog("Locate Sequence XML File to Import", "XML Files:*.xml;All Files:*.*");
+    var picked = File.openDialog("Locate Sequence XML File to Import", "XML Files:*.xml,All Files:*.*");
     if (picked && picked.exists) {
         try {
             var saveTrk = new File(Folder.temp.fsName + "/.onetap_recent_xml.txt");
@@ -1126,9 +1126,46 @@ $.runScript.locateMatchingXmlFile = function() {
     return null;
 };
 
-$.runScript.importMediaXml = function() {
+$.runScript.browseForXmlFile = function() {
+    try {
+        var defaultFolder = Folder.myDocuments;
+        try {
+            if (app.project && app.project.path) {
+                var pf = new File(app.project.path);
+                if (pf.exists && pf.parent && pf.parent.exists) defaultFolder = pf.parent;
+            }
+        } catch(eDef) {}
+
+        try { Folder.current = defaultFolder; } catch(eCur) {}
+
+        var picked = File.openDialog("Select XML Sequence File to Import", "XML Files:*.xml,All Files:*.*");
+        if (picked && picked.exists) {
+            return "SUCCESS|||" + picked.fsName;
+        }
+        return "CANCEL|||User cancelled XML file selection.";
+    } catch(err) {
+        return "ERROR|||" + err.toString();
+    }
+};
+
+$.runScript.importMediaXml = function(explicitXmlPath) {
     try {
-        var targetXml = $.runScript.locateMatchingXmlFile();
+        if (!app.project) {
+            return "ERROR|||No project is currently open in Premiere Pro. Please open or create a project first.";
+        }
+
+        var targetXml = null;
+        if (explicitXmlPath && typeof explicitXmlPath === "string" && explicitXmlPath.replace(/^\s+|\s+$/g, "")) {
+            var cleanP = explicitXmlPath.replace(/^\s+|\s+$/g, "");
+            targetXml = new File(cleanP);
+            if (!targetXml.exists) {
+                try { targetXml = new File(decodeURIComponent(cleanP)); } catch(eDec) {}
+            }
+        }
+
+        if (!targetXml || !targetXml.exists) {
+            targetXml = $.runScript.locateMatchingXmlFile();
+        }
 
         if (!targetXml || !targetXml.exists) {
             var notFoundMsg = "Could not locate matching sequence XML file.\n\nPlease select the generated .xml file or generate your project in One Tap first.";
@@ -1152,16 +1189,31 @@ $.runScript.importMediaXml = function() {
         // Import the XML file into Premiere Pro
         var importSuccess = false;
         try {
-            importSuccess = app.project.importFiles([targetXml.fsName], true, app.project.rootItem, false);
+            // Tier 1: suppressUI = false
+            try {
+                importSuccess = app.project.importFiles([targetXml.fsName], false, app.project.rootItem, false);
+            } catch (e1) {
+                importSuccess = false;
+            }
+            if (!importSuccess) { // Tier 2: forward slashes
+                try {
+                    importSuccess = app.project.importFiles([targetXml.fsName.replace(/\\/g, "/")], false, app.project.rootItem, false);
+                } catch (e2) {}
+            }
+            if (!importSuccess) { // Tier 3: suppressUI = true
+                try {
+                    importSuccess = app.project.importFiles([targetXml.fsName], true, app.project.rootItem, false);
+                } catch (e3) {}
+            }
         } catch (eImp) {
-            $.runScript.showWorkspaceModal("One Tap — XML Import Error", "Import Failed", eImp.toString(), "ERROR");
+            if (true) { $.runScript.showWorkspaceModal("One Tap — XML Import Error", "Import Failed", eImp.toString(), "ERROR");
             return "ERROR|||Import exception: " + eImp.toString();
         }
 
-        if (!importSuccess) {
-            var failMsg = "Premiere Pro could not import XML sequence file:\n" + targetXml.fsName;
-            $.runScript.showWorkspaceModal("One Tap — XML Import Error", "Premiere Pro Import Failed", failMsg, "ERROR");
-            return "ERROR|||" + failMsg;
+
+
+
+
         }
 
         // Locate the newly imported sequence
@@ -1196,7 +1248,7 @@ $.runScript.importMediaXml = function() {
         if (!targetSeq) {
             function findSeqInItem(item) {
                 if (!item) return null;
-                if (item.type === 2 || (item.isSequence && item.isSequence())) {
+                if (typeof item.isSequence === "function" && item.isSequence()) {
                     return item;
                 }
                 if (item.children && item.children.numItems > 0) {
@@ -1232,7 +1284,8 @@ $.runScript.importMediaXml = function() {
                     try { mPath = item.getMediaPath(); } catch(eMp) {}
                     if (mPath && mPath.indexOf("file://") === 0) {
                         var decodedPath = mPath.replace(/^file:\/\/(localhost)?\/?/i, "");
-                        decodedPath = decodeURIComponent(decodedPath);
+                        decodedPath = decodeURIComponent(decodedPath);
+                        if (/^\/[a-zA-Z]:/.test(decodedPath)) decodedPath = decodedPath.substring(1);
                         var checkF = new File(decodedPath);
                         if (checkF.exists && typeof item.changeMediaPath === "function") {
                             item.changeMediaPath(checkF.fsName, true);
@@ -1260,7 +1313,9 @@ $.runScript.importMediaXml = function() {
         if (targetSeq) {
             try {
                 if (typeof app.project.openSequence === "function" && targetSeq.sequenceID) {
-                    app.project.openSequence(targetSeq.sequenceID);
+                    try { app.project.openSequence(targetSeq); } catch (eOpenObj) {
+                        if (targetSeq.sequenceID) app.project.openSequence(targetSeq.sequenceID);
+                    }
                 }
             } catch (eOpenSeq) {}
             try { app.project.activeSequence = targetSeq; } catch (eActiveSeq) {}
