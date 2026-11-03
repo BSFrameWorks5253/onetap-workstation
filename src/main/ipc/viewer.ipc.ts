@@ -34,6 +34,35 @@ export function registerViewerIPC(): void {
     }
   })
 
+  // ── Read any image (JPG, PNG, WEBP, GIF, SVG, BMP, ICO) as base64 Data URL ──
+  ipcMain.handle('viewer:readImageBase64', async (_event, filePath: string) => {
+    try {
+      const ext = extname(filePath).toLowerCase()
+      const MIME_MAP: Record<string, string> = {
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.png': 'image/png',
+        '.webp': 'image/webp',
+        '.gif': 'image/gif',
+        '.svg': 'image/svg+xml',
+        '.bmp': 'image/bmp',
+        '.ico': 'image/x-icon',
+        '.avif': 'image/avif',
+        '.tiff': 'image/tiff',
+        '.tif': 'image/tiff',
+      }
+      const mime = MIME_MAP[ext] || 'image/jpeg'
+      const buf = await readFile(filePath)
+      return {
+        ok: true,
+        dataUrl: `data:${mime};base64,${buf.toString('base64')}`
+      }
+    } catch (err: any) {
+      console.error('[viewer:readImageBase64] Failed:', err)
+      return { ok: false, error: err.message ?? String(err) }
+    }
+  })
+
   // ── Read any file as base64 (for docx/xlsx parsing in renderer) ─
   ipcMain.handle('viewer:readFileBase64', async (_event, filePath: string) => {
     try {

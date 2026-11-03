@@ -73,7 +73,7 @@ app.setAppUserModelId('com.bsframework.onetap')
 
 
 protocol.registerSchemesAsPrivileged([
-  { scheme: 'local-resource', privileges: { secure: true, standard: true, supportFetchAPI: true, bypassCSP: true, stream: true } }
+  { scheme: 'local-resource', privileges: { secure: true, standard: true, supportFetchAPI: true, bypassCSP: true, stream: true, corsEnabled: true } }
 ])
 
 // ── Single-instance lock — ensures Explorer double-click focuses the same app ──
@@ -679,11 +679,55 @@ function ensureWindowsAppUserModelId(): void {
   try {
     const { spawn } = require('child_process')
     const exePath = app.getPath('exe')
-    spawn('reg', ['add', 'HKCU\\Software\\Classes\\Applications\\One Tap.exe', '/v', 'AppUserModelID', '/d', 'com.bsframework.onetap', '/f'], { windowsHide: true })
+    const AUMID = 'com.bsframework.onetap'
+
+    // 1. Registry registrations for shell open & taskbar grouping
+    spawn('reg', ['add', 'HKCU\\Software\\Classes\\Applications\\One Tap.exe', '/v', 'AppUserModelID', '/d', AUMID, '/f'], { windowsHide: true })
     spawn('reg', ['add', 'HKCU\\Software\\Classes\\Applications\\One Tap.exe', '/v', 'FriendlyAppName', '/d', 'One Tap', '/f'], { windowsHide: true })
-    spawn('reg', ['add', 'HKCU\\Software\\Classes\\AppUserModelId\\com.bsframework.onetap', '/v', 'DisplayName', '/d', 'One Tap', '/f'], { windowsHide: true })
-    spawn('reg', ['add', 'HKCU\\Software\\Classes\\AppUserModelId\\com.bsframework.onetap', '/v', 'IconUri', '/d', `${exePath},0`, '/f'], { windowsHide: true })
-  } catch {}
+    spawn('reg', ['add', `HKCU\\Software\\Classes\\AppUserModelId\\${AUMID}`, '/v', 'DisplayName', '/d', 'One Tap', '/f'], { windowsHide: true })
+    spawn('reg', ['add', `HKCU\\Software\\Classes\\AppUserModelId\\${AUMID}`, '/v', 'IconUri', '/d', `${exePath},0`, '/f'], { windowsHide: true })
+
+    // 2. Scan and unify all Desktop, Start Menu, and Pinned Taskbar shortcuts with exact AUMID
+    const homeDir = app.getPath('home')
+    const appData = app.getPath('appData')
+    const candidateDirs = [
+      app.getPath('desktop'),
+      join(homeDir, 'Desktop'),
+      join(homeDir, 'OneDrive', 'Desktop'),
+      join(appData, 'Microsoft', 'Windows', 'Start Menu', 'Programs'),
+      join(appData, 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'One Tap'),
+      join(appData, 'Microsoft', 'Internet Explorer', 'Quick Launch', 'User Pinned', 'TaskBar')
+    ]
+
+    for (const dir of candidateDirs) {
+      if (!fs.existsSync(dir)) continue
+      try {
+        const files = fs.readdirSync(dir)
+        for (const file of files) {
+          if (!file.toLowerCase().endsWith('.lnk')) continue
+          const fullPath = join(dir, file)
+          try {
+            const details = shell.readShortcutLink(fullPath)
+            const targetLower = (details.target || '').toLowerCase()
+            const exeLower = exePath.toLowerCase()
+            const isOurTarget = targetLower === exeLower || targetLower.endsWith('\\one tap.exe')
+            const isOurName = file.toLowerCase().includes('one tap')
+            if (isOurTarget || isOurName) {
+              if (details.appUserModelId !== AUMID) {
+                shell.writeShortcutLink(fullPath, 'update', {
+                  target: exePath,
+                  appUserModelId: AUMID
+                })
+                console.log(`[AUMID] Synchronized taskbar shortcut: ${fullPath}`)
+              }
+            }
+          } catch {}
+        }
+      } catch {}
+    }
+  } catch (err) {
+    console.warn('[AUMID] Setup warning:', err)
+  }
 }
 
 app.whenReady().then(() => {
@@ -697,19 +741,13 @@ app.whenReady().then(() => {
   // Register protocol to serve local files (Electron 31 compatible, direct fs read)
   protocol.handle('local-resource', async (request) => {
     try {
-      // Parse local-resource URL into an absolute file path regardless of Chromium URL normalization
-      const u = new URL(request.url)
-      const decodedPath = decodeURIComponent(u.pathname)
-      let rawPath: string
-      if (u.host && /^[a-zA-Z]:?$/.test(u.host)) {
-        const drive = u.host.replace(':', '').toUpperCase()
-        rawPath = `${drive}:${decodedPath}`
-      } else if (/^\/[a-zA-Z]:/.test(decodedPath)) {
-        rawPath = decodedPath.slice(1)
-      } else {
-        rawPath = decodedPath
+      // Parse local-resource URL directly and reliably for Windows and POSIX paths
+      let cleanUrl = request.url.replace(/^local-resource:\/\/?\/?/i, '');
+      let rawPath = decodeURIComponent(cleanUrl);
+      if (/^\/?[a-zA-Z]:[\\\/]/.test(rawPath)) {
+        rawPath = rawPath.replace(/^\//, '');
       }
-      rawPath = rawPath.replace(/\\/g, '/')
+      rawPath = rawPath.replace(/\//g, '\\');
 
       console.log('[local-resource] Request URL:', request.url, '→ Resolved path:', rawPath)
 
@@ -775,6 +813,7 @@ app.whenReady().then(() => {
               'Content-Range': `bytes ${start}-${end}/${fileSize}`,
               'Accept-Ranges': 'bytes',
               'Content-Length': String(chunkSize),
+              'Access-Control-Allow-Origin': '*',
             }
           })
         }
@@ -789,6 +828,7 @@ app.whenReady().then(() => {
           'Content-Length': String(buf.length),
           'Accept-Ranges': 'bytes',
           'Cache-Control': 'no-cache',
+          'Access-Control-Allow-Origin': '*',
         }
       })
     } catch (err: any) {

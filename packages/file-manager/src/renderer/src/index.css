@@ -1,6 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 :root { --bg: #0D0F14; --panel: #161921; --border: rgba(255,255,255,0.08); }
 body { margin: 0; background: var(--bg); color: #e2e8f0; font-family: 'Inter', system-ui, sans-serif; overflow: hidden; }

@@ -328,9 +328,19 @@ function CustomVideoPlayer({ src }: VideoPlayerProps): JSX.Element {
   const [videoReady, setVideoReady] = useState(false)
   const fadeTimeout = useRef<NodeJS.Timeout | null>(null)
 
+  // ── Video Frame Zoom & Pan State ──
+  const [zoom, setZoom] = useState(1)
+  const [pan, setPan] = useState({ x: 0, y: 0 })
+  const [isDragging, setIsDragging] = useState(false)
+  const dragStart = useRef<{ mx: number; my: number; ox: number; oy: number } | null>(null)
+  const [snapshotMsg, setSnapshotMsg] = useState<string | null>(null)
+
   useEffect(() => {
     setIsPlaying(true)
     setVideoReady(false)
+    setZoom(1)
+    setPan({ x: 0, y: 0 })
+    setIsDragging(false)
     if (videoRef.current) {
       videoRef.current.playbackRate = speed
       videoRef.current.volume = volume
@@ -348,6 +358,81 @@ function CustomVideoPlayer({ src }: VideoPlayerProps): JSX.Element {
     }
   }
 
+  // ── Mouse Wheel Zooming on Video Frame ──
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault()
+    const delta = e.deltaY > 0 ? -0.15 : 0.15
+    setZoom(z => {
+      const nextZoom = Math.min(Math.max(1, z + delta * z), 6)
+      if (nextZoom === 1) setPan({ x: 0, y: 0 })
+      return nextZoom
+    })
+  }
+
+  // ── Pan Video Frame When Zoomed ──
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (zoom <= 1) return
+    e.preventDefault()
+    setIsDragging(true)
+    dragStart.current = { mx: e.clientX, my: e.clientY, ox: pan.x, oy: pan.y }
+  }
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || !dragStart.current) return
+    setPan({
+      x: dragStart.current.ox + (e.clientX - dragStart.current.mx),
+      y: dragStart.current.oy + (e.clientY - dragStart.current.my)
+    })
+  }
+
+  const handleMouseUp = () => {
+    setIsDragging(false)
+    dragStart.current = null
+  }
+
+  // ── Step Frame Forward / Backward ──
+  const stepFrame = (frames: number) => {
+    if (!videoRef.current) return
+    videoRef.current.pause()
+    setIsPlaying(false)
+    const fps = 30
+    const newTime = Math.max(0, Math.min(duration || 99999, videoRef.current.currentTime + frames / fps))
+    videoRef.current.currentTime = newTime
+    setCurrentTime(newTime)
+  }
+
+  // ── High-Res Video Frame Snapshot ──
+  const captureFrame = () => {
+    if (!videoRef.current) return
+    try {
+      const v = videoRef.current
+      const canvas = document.createElement('canvas')
+      canvas.width = v.videoWidth || 1920
+      canvas.height = v.videoHeight || 1080
+      const ctx = canvas.getContext('2d')
+      if (ctx) {
+        ctx.drawImage(v, 0, 0, canvas.width, canvas.height)
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.95)
+        const a = document.createElement('a')
+        a.href = dataUrl
+        a.download = `frame_${Math.round(currentTime * 1000)}ms.jpg`
+        a.click()
+        setSnapshotMsg('Frame Saved!')
+        setTimeout(() => setSnapshotMsg(null), 2200)
+      }
+    } catch (err) {
+      console.error('Frame capture failed:', err)
+    }
+  }
+
+  const formatTimelapseDuration = (secs: number) => {
+    if (!isFinite(secs) || secs <= 0) return ''
+    if (secs < 60) return `${Math.round(secs)}s`
+    const m = Math.floor(secs / 60)
+    const s = Math.round(secs % 60)
+    return `${m}m ${s}s`
+  }
+
   useEffect(() => {
     const handleKeys = (e: KeyboardEvent) => {
       // Check if typing in inputs
@@ -355,11 +440,17 @@ function CustomVideoPlayer({ src }: VideoPlayerProps): JSX.Element {
       if (e.key === ' ' || e.code === 'Space') {
         e.preventDefault()
         togglePlay()
+      } else if (e.key === 'ArrowLeft' && !isPlaying) {
+        e.preventDefault()
+        stepFrame(-1)
+      } else if (e.key === 'ArrowRight' && !isPlaying) {
+        e.preventDefault()
+        stepFrame(1)
       }
     }
     window.addEventListener('keydown', handleKeys)
     return () => window.removeEventListener('keydown', handleKeys)
-  }, [isPlaying])
+  }, [isPlaying, duration])
 
   const handleTimeUpdate = () => {
     if (videoRef.current) {
@@ -479,14 +570,28 @@ function CustomVideoPlayer({ src }: VideoPlayerProps): JSX.Element {
         className="fv-video"
         src={src}
         preload="auto"
-        style={{ opacity: videoReady ? 1 : 0 }}
+        style={{
+          opacity: videoReady ? 1 : 0,
+          transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+          transformOrigin: 'center center',
+          cursor: zoom > 1 ? (isDragging ? 'grabbing' : 'grab') : 'default',
+          transition: isDragging ? 'none' : 'transform 0.12s ease-out'
+        }}
         onTimeUpdate={handleTimeUpdate}
         onDurationChange={handleDurationChange}
         onCanPlay={handleCanPlay}
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
         onEnded={() => setIsPlaying(false)}
-        onClick={togglePlay}
+        onClick={() => {
+          if (zoom > 1) return
+          togglePlay()
+        }}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        onWheel={handleWheel}
       />
 
       {/* Controls overlay */}
@@ -502,12 +607,74 @@ function CustomVideoPlayer({ src }: VideoPlayerProps): JSX.Element {
 
         <div className="fv-controls-row">
           {/* Play/Pause */}
-          <button className="fv-ctrl-btn" onClick={togglePlay} title={isPlaying ? 'Pause' : 'Play'}>
+          <button className="fv-ctrl-btn" onClick={togglePlay} title={isPlaying ? 'Pause (Space)' : 'Play (Space)'}>
             {isPlaying ? '⏸' : '▶'}
           </button>
 
           {/* Time */}
           <span className="fv-time-label">{formatTime(currentTime)} / {formatTime(duration)}</span>
+
+          {/* Frame Stepping */}
+          <button className="fv-ctrl-btn" onClick={() => stepFrame(-1)} title="Step 1 Frame Back (Left Arrow)">
+            ⏮ -1f
+          </button>
+          <button className="fv-ctrl-btn" onClick={() => stepFrame(1)} title="Step 1 Frame Forward (Right Arrow)">
+            +1f ⏭
+          </button>
+
+          {/* Video Frame Zoom Controls */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 8, padding: '2px 6px' }}>
+            <button className="fv-ctrl-btn" onClick={() => setZoom(z => { const nz = Math.max(1, z - 0.25); if (nz === 1) setPan({x:0,y:0}); return nz; })} title="Zoom Out (-)">
+              🔍-
+            </button>
+            <span style={{ fontSize: 11, color: '#a5b4fc', minWidth: 38, textAlign: 'center', fontWeight: 600 }}>
+              {Math.round(zoom * 100)}%
+            </span>
+            <button className="fv-ctrl-btn" onClick={() => setZoom(z => Math.min(6, z + 0.25))} title="Zoom In (+)">
+              🔍+
+            </button>
+            {zoom > 1 && (
+              <button
+                className="fv-ctrl-btn"
+                onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }) }}
+                title="Reset Zoom to Fit"
+                style={{ color: '#f59e0b', fontSize: 11, padding: '0 6px' }}
+              >
+                Fit
+              </button>
+            )}
+          </div>
+
+          {/* Capture Frame Snapshot */}
+          <button className="fv-ctrl-btn" onClick={captureFrame} title="Capture & Save Current Frame" style={{ marginLeft: 6 }}>
+            📸 Snapshot
+          </button>
+
+          {/* Timelapse / Duration Badge */}
+          {duration > 0 && (
+            <span
+              style={{
+                fontSize: 11,
+                padding: '2px 8px',
+                borderRadius: 999,
+                background: 'rgba(99, 102, 241, 0.25)',
+                border: '1px solid rgba(129, 140, 248, 0.4)',
+                color: '#c7d2fe',
+                fontWeight: 600,
+                letterSpacing: '0.02em',
+                marginLeft: 6
+              }}
+              title="Duration / Timelapse"
+            >
+              ⏱ {formatTimelapseDuration(duration)}
+            </span>
+          )}
+
+          {snapshotMsg && (
+            <span style={{ fontSize: 11, color: '#34d399', fontWeight: 600, marginLeft: 4 }}>
+              {snapshotMsg}
+            </span>
+          )}
 
           <div className="fv-controls-spacer" />
 
@@ -619,8 +786,16 @@ export default function FileViewer({ filePath, onClose }: Props): JSX.Element | 
             if (res.ok) setImgSrc(res.dataUrl)
             else setError(`RAW decode failed: ${res.error}`)
           } else {
-            // Build a proper local-resource URL for the image
-            setImgSrc(toLocalResourceUrl(currentPath))
+            try {
+              if (v.readImageBase64) {
+                const imgRes = await v.readImageBase64(currentPath);
+                if (imgRes && imgRes.ok && imgRes.dataUrl) {
+                  setImgSrc(imgRes.dataUrl);
+                  return;
+                }
+              }
+            } catch (e) {}
+            setImgSrc(toLocalResourceUrl(currentPath));
           }
         } else if (mode === 'video') {
           // Build a proper local-resource URL — Electron's net.fetch handles Range headers
