@@ -57,7 +57,7 @@ interface FsEntry {
 const RAW_EXTS = new Set(['cr2', 'cr3', 'nef', 'arw', 'dng', 'raf', 'raw', 'orf', 'rw2', 'pef', 'sr2', 'srf'])
 const STANDARD_IMG_EXTS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'avif', 'ico', 'tiff', 'tif'])
 const IMG_EXTS = new Set([...STANDARD_IMG_EXTS, ...RAW_EXTS])
-const VID_EXTS = new Set(['mp4', 'mov', 'mkv', 'avi', 'webm', 'm4v', 'ts', 'wmv', 'flv', 'm2ts', 'mpg', 'mpeg', '3gp'])
+const VID_EXTS = new Set(['mp4', 'mov', 'mkv', 'avi', 'webm', 'm4v', 'wmv', 'flv', 'm2ts', 'mts', 'mpg', 'mpeg', '3gp'])
 const DOC_EXTS = new Set(['pdf', 'doc', 'docx', 'txt', 'md', 'xlsx', 'csv'])
 
 const isRawExt = (ext: string) => RAW_EXTS.has(ext.toLowerCase())
@@ -178,10 +178,10 @@ function MediaThumbnailCard({
 
   const [thumb, setThumb] = useState<string | null>(() => videoThumbCache.get(entry.fullPath)?.thumb || null)
   const [duration, setDuration] = useState<number>(() => videoThumbCache.get(entry.fullPath)?.duration || 0)
-  const [loadingMeta, setLoadingMeta] = useState<boolean>(!videoThumbCache.get(entry.fullPath) && !isDirectImg && !entry.isDir)
+  const [loadingMeta, setLoadingMeta] = useState<boolean>(!videoThumbCache.get(entry.fullPath) && !isDirectImg)
 
   useEffect(() => {
-    if (isDirectImg || entry.isDir) return
+    if (isDirectImg) return
     const cached = videoThumbCache.get(entry.fullPath)
     if (cached && cached.thumb) {
       setThumb(cached.thumb)
@@ -308,18 +308,18 @@ function MediaThumbnailCard({
             </div>
           )
         ) : thumb ? (
-          /* Universal thumbnail for all other files (PDF, audio, docs, code, zip, exe) */
-          <div className="w-full h-full flex items-center justify-center p-3 bg-gradient-to-b from-white/[0.04] to-black/60">
+          /* Universal Windows Shell Icon for all other files & folders (Shortcuts, Batch, Excel, Zip, TypeScript, Documents, Folders) */
+          <div className="w-full h-full flex items-center justify-center p-3">
             <img
               src={thumb}
               alt={entry.name}
-              className="max-h-full max-w-full object-contain filter drop-shadow-xl transition-transform duration-300 group-hover:scale-110"
+              className="w-14 h-14 sm:w-16 sm:h-16 object-contain filter drop-shadow-md transition-transform duration-200 group-hover:scale-110"
             />
           </div>
         ) : entry.isDir ? (
-          <Folder className="w-12 h-12 text-amber-400/80 group-hover:scale-110 transition-transform" />
+          <Folder className="w-14 h-14 text-amber-400 group-hover:scale-110 transition-transform" />
         ) : (
-          <File className="w-10 h-10 text-gray-400 group-hover:scale-110 transition-transform" />
+          <File className="w-12 h-12 text-gray-400 group-hover:scale-110 transition-transform" />
         )}
 
         {/* Video Duration / Timelapse Badge (e.g. 10s) */}
@@ -327,13 +327,6 @@ function MediaThumbnailCard({
           <span className="absolute bottom-1.5 right-1.5 bg-black/90 backdrop-blur-md text-amber-300 border border-amber-400/40 text-[11px] font-bold px-2 py-0.5 rounded shadow-lg flex items-center gap-1 z-10 pointer-events-none">
             <Clock className={`w-3 h-3 text-amber-400 ${loadingMeta ? 'animate-spin' : ''}`} />
             <span>{duration > 0 ? formatTimelapse(duration) : loadingMeta ? '...' : 'VID'}</span>
-          </span>
-        )}
-
-        {/* RAW / Extension Badge */}
-        {!entry.isDir && entry.ext && (
-          <span className="absolute top-1.5 left-1.5 bg-black/80 backdrop-blur-md text-gray-300 border border-white/10 text-[10px] font-bold px-1.5 py-0.5 rounded shadow-lg z-10 pointer-events-none uppercase">
-            {entry.ext}
           </span>
         )}
 

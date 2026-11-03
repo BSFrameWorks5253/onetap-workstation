@@ -16,7 +16,7 @@ const RAW_EXTS = new Set([
 ])
 
 const VIDEO_EXTS = new Set([
-  'mp4', 'mov', 'mkv', 'avi', 'webm', 'm4v', 'ts', 'wmv', 'flv', 'm2ts', 'mpg', 'mpeg', '3gp', 'vob', 'ogv'
+  'mp4', 'mov', 'mkv', 'avi', 'webm', 'm4v', 'wmv', 'flv', 'm2ts', 'mts', 'mpg', 'mpeg', '3gp', 'vob', 'ogv'
 ])
 
 const AUDIO_EXTS = new Set([
@@ -297,6 +297,16 @@ ipcMain.handle('fm:getVideoMetadata', async (_e, filePath: string) => {
       } catch {}
     }
 
+    // 0. Folders: Extract authentic native OS folder icon
+    if (stat.isDirectory()) {
+      try {
+        const icon = await app.getFileIcon(filePath, { size: 'large' })
+        const folderThumb = icon.toDataURL()
+        fmVideoCache.set(cacheKey, { thumb: folderThumb, duration: 0 })
+        return { ok: true, duration: 0, thumb: folderThumb }
+      } catch {}
+    }
+
     // 1. Camera RAW files: instant buffer extraction (~5-15ms)
     if (isRaw) {
       const rawBuf = extractEmbeddedRawJpeg(filePath, true)
@@ -340,8 +350,18 @@ ipcMain.handle('fm:getVideoMetadata', async (_e, filePath: string) => {
             fs.writeFileSync(diskCacheFile, buf)
             fs.writeFileSync(metaCacheFile, JSON.stringify({ duration }))
           } catch {}
+        } else {
+          try {
+            const icon = await app.getFileIcon(filePath, { size: 'large' })
+            thumb = icon.toDataURL()
+          } catch {}
         }
-      } catch {}
+      } catch {
+        try {
+          const icon = await app.getFileIcon(filePath, { size: 'large' })
+          thumb = icon.toDataURL()
+        } catch {}
+      }
 
       const result = { duration, thumb }
       if (thumb || duration > 0) fmVideoCache.set(cacheKey, result)
