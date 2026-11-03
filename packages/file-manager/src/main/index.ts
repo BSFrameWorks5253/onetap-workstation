@@ -10,9 +10,17 @@ import { promisify } from 'util'
 
 const execAsync = promisify(exec)
 
-// Camera RAW extensions
+// File extension categories
 const RAW_EXTS = new Set([
   'cr2', 'cr3', 'nef', 'arw', 'dng', 'raf', 'raw', 'orf', 'rw2', 'pef', 'sr2', 'srf'
+])
+
+const VIDEO_EXTS = new Set([
+  'mp4', 'mov', 'mkv', 'avi', 'webm', 'm4v', 'ts', 'wmv', 'flv', 'm2ts', 'mpg', 'mpeg', '3gp', 'vob', 'ogv'
+])
+
+const AUDIO_EXTS = new Set([
+  'mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a', 'wma', 'opus', 'aiff', 'alac', 'mid', 'midi'
 ])
 
 // Persistent Disk Thumbnail Cache Directory
@@ -199,6 +207,10 @@ ipcMain.handle('fm:createFolder', async (_e, parentPath: string, name: string) =
 
 ipcMain.handle('fm:readImageBase64', async (_e, filePath: string) => {
   try {
+    if (!filePath || !fs.existsSync(filePath)) {
+      return { ok: false, error: 'File not found' }
+    }
+
     const ext = (filePath.split('.').pop() || '').toLowerCase()
 
     // Camera RAW files: extract high-res preview
@@ -209,9 +221,37 @@ ipcMain.handle('fm:readImageBase64', async (_e, filePath: string) => {
       }
     }
 
-    const mime = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : ext === 'gif' ? 'image/gif' : ext === 'svg' ? 'image/svg+xml' : 'image/jpeg'
-    const buf = fs.readFileSync(filePath)
-    return { ok: true, dataUrl: `data:${mime};base64,${buf.toString('base64')}` }
+    const MIME_MAP: Record<string, string> = {
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+      png: 'image/png',
+      webp: 'image/webp',
+      gif: 'image/gif',
+      svg: 'image/svg+xml',
+      bmp: 'image/bmp',
+      ico: 'image/x-icon',
+      avif: 'image/avif',
+      tiff: 'image/tiff',
+      tif: 'image/tiff'
+    }
+
+    if (MIME_MAP[ext]) {
+      const buf = fs.readFileSync(filePath)
+      return { ok: true, dataUrl: `data:${MIME_MAP[ext]};base64,${buf.toString('base64')}` }
+    }
+
+    // Check disk thumbnail cache
+    const stat = fs.statSync(filePath)
+    const cacheKey = getCacheKey(filePath, stat)
+    const diskCacheFile = path.join(getThumbCacheDir(), `${cacheKey}.jpg`)
+    if (fs.existsSync(diskCacheFile)) {
+      const diskBuf = fs.readFileSync(diskCacheFile)
+      return { ok: true, dataUrl: `data:image/jpeg;base64,${diskBuf.toString('base64')}` }
+    }
+
+    // Fallback: Windows Shell 256x256 native icon
+    const icon = await app.getFileIcon(filePath, { size: 'large' })
+    return { ok: true, dataUrl: icon.toDataURL() }
   } catch (err: any) {
     return { ok: false, error: err.message }
   }
@@ -225,30 +265,39 @@ ipcMain.handle('fm:getVideoMetadata', async (_e, filePath: string) => {
       return { ok: false, error: 'File not found', duration: 0, thumb: '' }
     }
 
+    const stat = fs.statSync(filePath)
+    const cacheKey = getCacheKey(filePath, stat)
+
     // In-memory cache
-    const memCached = fmVideoCache.get(filePath)
+    const memCached = fmVideoCache.get(cacheKey)
     if (memCached) return { ok: true, duration: memCached.duration, thumb: memCached.thumb }
 
-    const stat = fs.statSync(filePath)
     const ext = (filePath.split('.').pop() || '').toLowerCase()
     const isRaw = RAW_EXTS.has(ext)
 
     // Disk cache check
     const cacheDir = getThumbCacheDir()
-    const cacheKey = getCacheKey(filePath, stat)
     const diskCacheFile = path.join(cacheDir, `${cacheKey}.jpg`)
+    const metaCacheFile = path.join(cacheDir, `${cacheKey}.json`)
 
     if (fs.existsSync(diskCacheFile)) {
       try {
         const thumbBuf = fs.readFileSync(diskCacheFile)
+        let duration = 0
+        if (fs.existsSync(metaCacheFile)) {
+          try {
+            const meta = JSON.parse(fs.readFileSync(metaCacheFile, 'utf-8'))
+            duration = meta.duration || 0
+          } catch {}
+        }
         const thumb = `data:image/jpeg;base64,${thumbBuf.toString('base64')}`
-        const result = { duration: 0, thumb }
-        fmVideoCache.set(filePath, result)
-        return { ok: true, duration: 0, thumb }
+        const result = { duration, thumb }
+        fmVideoCache.set(cacheKey, result)
+        return { ok: true, duration, thumb }
       } catch {}
     }
 
-    // Camera RAW files: instant buffer extraction (~5-15ms)
+    // 1. Camera RAW files: instant buffer extraction (~5-15ms)
     if (isRaw) {
       const rawBuf = extractEmbeddedRawJpeg(filePath, true)
       if (rawBuf && rawBuf.length > 0) {
@@ -257,59 +306,130 @@ ipcMain.handle('fm:getVideoMetadata', async (_e, filePath: string) => {
         } catch {}
         const thumb = `data:image/jpeg;base64,${rawBuf.toString('base64')}`
         const result = { duration: 0, thumb }
-        fmVideoCache.set(filePath, result)
+        fmVideoCache.set(cacheKey, result)
         return { ok: true, duration: 0, thumb }
       }
     }
 
-    let duration = 0
-    try {
-      const { stdout } = await execAsync(
-        `ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${filePath}"`,
-        { timeout: 4000 }
-      )
-      const parsed = parseFloat(stdout.trim())
-      if (isFinite(parsed) && parsed > 0) duration = Math.round(parsed * 10) / 10
-    } catch {}
-
-    if (duration === 0 && process.platform === 'win32') {
+    // 2. Video Files
+    if (VIDEO_EXTS.has(ext)) {
+      let duration = 0
       try {
-        const dir = path.dirname(filePath).replace(/'/g, "''")
-        const leaf = path.basename(filePath).replace(/'/g, "''")
-        const psCmd = `powershell -NoProfile -Command "$shell = New-Object -ComObject Shell.Application; $folder = $shell.Namespace('${dir}'); $item = $folder.ParseName('${leaf}'); $folder.GetDetailsOf($item, 27)"`
-        const { stdout } = await execAsync(psCmd, { timeout: 3000 })
-        const raw = stdout.trim()
-        if (raw && raw.includes(':')) {
-          const parts = raw.split(':').map(p => parseInt(p, 10))
-          if (parts.length === 3 && parts.every(p => !isNaN(p))) {
-            duration = parts[0] * 3600 + parts[1] * 60 + parts[2]
-          }
+        const { stdout } = await execAsync(
+          `ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${filePath}"`,
+          { timeout: 4000 }
+        )
+        const parsed = parseFloat(stdout.trim())
+        if (isFinite(parsed) && parsed > 0) duration = Math.round(parsed * 10) / 10
+      } catch {}
+
+      let thumb = ''
+      let seekSecs = duration > 1 ? Math.min(Math.max(1, duration * 0.1), duration - 0.2) : 0.5
+      const seekFormatted = new Date(seekSecs * 1000).toISOString().substr(11, 8) + '.' + String(Math.floor((seekSecs % 1) * 1000)).padStart(3, '0')
+
+      try {
+        const cmd = `ffmpeg -ss ${seekFormatted} -i "${filePath}" -vframes 1 -vf "scale=360:-1" -f image2 -update 1 pipe:1`
+        const { stdout: buf } = await execAsync(cmd, {
+          encoding: 'buffer',
+          maxBuffer: 15 * 1024 * 1024,
+          timeout: 5000
+        })
+        if (buf && buf.length > 0) {
+          thumb = `data:image/jpeg;base64,${buf.toString('base64')}`
+          try {
+            fs.writeFileSync(diskCacheFile, buf)
+            fs.writeFileSync(metaCacheFile, JSON.stringify({ duration }))
+          } catch {}
         }
       } catch {}
+
+      const result = { duration, thumb }
+      if (thumb || duration > 0) fmVideoCache.set(cacheKey, result)
+      return { ok: true, duration, thumb }
     }
 
-    let thumb = ''
-    let seekSecs = duration > 1 ? Math.min(Math.max(1, duration * 0.1), duration - 0.2) : 0.5
-    const seekFormatted = new Date(seekSecs * 1000).toISOString().substr(11, 8) + '.' + String(Math.floor((seekSecs % 1) * 1000)).padStart(3, '0')
+    // 3. Audio Files (.MP3, .FLAC, .M4A, .WAV, etc.)
+    if (AUDIO_EXTS.has(ext)) {
+      let duration = 0
+      try {
+        const { stdout } = await execAsync(
+          `ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${filePath}"`,
+          { timeout: 3000 }
+        )
+        const parsed = parseFloat(stdout.trim())
+        if (isFinite(parsed) && parsed > 0) duration = Math.round(parsed * 10) / 10
+      } catch {}
 
-    try {
-      const cmd = `ffmpeg -ss ${seekFormatted} -i "${filePath}" -vframes 1 -vf "scale=360:-1" -f image2 -update 1 pipe:1`
-      const { stdout: buf } = await execAsync(cmd, {
-        encoding: 'buffer',
-        maxBuffer: 15 * 1024 * 1024,
-        timeout: 5000
-      })
-      if (buf && buf.length > 0) {
-        thumb = `data:image/jpeg;base64,${buf.toString('base64')}`
+      let thumb = ''
+      try {
+        const { stdout: artBuf } = await execAsync(
+          `ffmpeg -ss 0 -i "${filePath}" -vframes 1 -vf "scale=360:-1" -f image2 -update 1 pipe:1`,
+          { encoding: 'buffer', maxBuffer: 10 * 1024 * 1024, timeout: 3500 }
+        )
+        if (artBuf && artBuf.length > 0) {
+          thumb = `data:image/jpeg;base64,${artBuf.toString('base64')}`
+          try {
+            fs.writeFileSync(diskCacheFile, artBuf)
+            fs.writeFileSync(metaCacheFile, JSON.stringify({ duration }))
+          } catch {}
+        }
+      } catch {}
+
+      if (!thumb) {
         try {
-          fs.writeFileSync(diskCacheFile, buf)
+          const icon = await app.getFileIcon(filePath, { size: 'large' })
+          thumb = icon.toDataURL()
+        } catch {}
+      }
+
+      const result = { duration, thumb }
+      if (thumb || duration > 0) fmVideoCache.set(cacheKey, result)
+      return { ok: true, duration, thumb }
+    }
+
+    // 4. PDF Files (.PDF)
+    if (ext === 'pdf') {
+      let thumb = ''
+      try {
+        const { stdout: pdfBuf } = await execAsync(
+          `ffmpeg -i "${filePath}" -vframes 1 -vf "scale=360:-1" -f image2 pipe:1`,
+          { encoding: 'buffer', maxBuffer: 10 * 1024 * 1024, timeout: 4000 }
+        )
+        if (pdfBuf && pdfBuf.length > 0) {
+          thumb = `data:image/jpeg;base64,${pdfBuf.toString('base64')}`
+          try { fs.writeFileSync(diskCacheFile, pdfBuf) } catch {}
+        }
+      } catch {}
+
+      if (!thumb) {
+        try {
+          const icon = await app.getFileIcon(filePath, { size: 'large' })
+          thumb = icon.toDataURL()
+        } catch {}
+      }
+
+      const result = { duration: 0, thumb }
+      if (thumb) fmVideoCache.set(cacheKey, result)
+      return { ok: true, duration: 0, thumb }
+    }
+
+    // 5. Universal Windows Shell 256x256 Native Thumbnail / Icon for ALL other files
+    // (.DOCX, .XLSX, .PPTX, .ZIP, .RAR, .7Z, .EXE, .TXT, .JS, .PY, .HTML, etc.)
+    let shellThumb = ''
+    try {
+      const icon = await app.getFileIcon(filePath, { size: 'large' })
+      shellThumb = icon.toDataURL()
+      if (shellThumb) {
+        const rawBase64 = shellThumb.replace(/^data:image\/[a-z]+;base64,/, '')
+        try {
+          fs.writeFileSync(diskCacheFile, Buffer.from(rawBase64, 'base64'))
         } catch {}
       }
     } catch {}
 
-    const result = { duration, thumb }
-    if (thumb || duration > 0) fmVideoCache.set(filePath, result)
-    return { ok: true, duration, thumb }
+    const result = { duration: 0, thumb: shellThumb }
+    if (shellThumb) fmVideoCache.set(cacheKey, result)
+    return { ok: true, duration: 0, thumb: shellThumb }
   } catch (err: any) {
     return { ok: false, error: err.message, duration: 0, thumb: '' }
   }

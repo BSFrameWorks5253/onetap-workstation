@@ -175,10 +175,10 @@ function MediaThumbnailCard({
 
   const [thumb, setThumb] = useState<string | null>(() => videoThumbCache.get(entry.fullPath)?.thumb || null)
   const [duration, setDuration] = useState<number>(() => videoThumbCache.get(entry.fullPath)?.duration || 0)
-  const [loadingMeta, setLoadingMeta] = useState<boolean>(!videoThumbCache.get(entry.fullPath) && (isVid || isRaw))
+  const [loadingMeta, setLoadingMeta] = useState<boolean>(!videoThumbCache.get(entry.fullPath) && !isDirectImg && !entry.isDir)
 
   useEffect(() => {
-    if (!isVid && !isRaw) return
+    if (isDirectImg || entry.isDir) return
     const cached = videoThumbCache.get(entry.fullPath)
     if (cached && cached.thumb) {
       setThumb(cached.thumb)
@@ -190,7 +190,7 @@ function MediaThumbnailCard({
     let isCancelled = false
     setLoadingMeta(true)
 
-    // 1. Native extraction via IPC (Camera RAW embedded preview, or ffprobe/ffmpeg with disk cache)
+    // Universal thumbnail extraction via IPC (Videos, RAW, Audio, PDFs, and Windows Shell icons for all other files)
     if ((api as any)?.getVideoMetadata) {
       (api as any).getVideoMetadata(entry.fullPath).then((res: any) => {
         if (isCancelled) return
@@ -201,16 +201,16 @@ function MediaThumbnailCard({
           videoThumbCache.set(entry.fullPath, { thumb: res.thumb, duration: res.duration })
           return
         }
-        if (!isRaw) runDomFallback()
+        if (isVid) runDomFallback()
         else setLoadingMeta(false)
       }).catch(() => {
         if (!isCancelled) {
-          if (!isRaw) runDomFallback()
+          if (isVid) runDomFallback()
           else setLoadingMeta(false)
         }
       })
     } else {
-      if (!isRaw) runDomFallback()
+      if (isVid) runDomFallback()
       else setLoadingMeta(false)
     }
 
@@ -260,7 +260,7 @@ function MediaThumbnailCard({
     return () => {
       isCancelled = true
     }
-  }, [entry.fullPath, isVid, isRaw])
+  }, [entry.fullPath, isDirectImg, isVid, entry.isDir])
 
   const imgUrl = isDirectImg ? (api?.toLocalResourceUrl ? api.toLocalResourceUrl(entry.fullPath) : entry.fullPath) : null
 
@@ -304,6 +304,15 @@ function MediaThumbnailCard({
               <Play className="w-8 h-8 opacity-70 animate-pulse" />
             </div>
           )
+        ) : thumb ? (
+          /* Universal thumbnail for all other files (PDF, audio, docs, code, zip, exe) */
+          <div className="w-full h-full flex items-center justify-center p-3 bg-gradient-to-b from-white/[0.04] to-black/60">
+            <img
+              src={thumb}
+              alt={entry.name}
+              className="max-h-full max-w-full object-contain filter drop-shadow-xl transition-transform duration-300 group-hover:scale-110"
+            />
+          </div>
         ) : entry.isDir ? (
           <Folder className="w-12 h-12 text-amber-400/80 group-hover:scale-110 transition-transform" />
         ) : (
@@ -318,9 +327,9 @@ function MediaThumbnailCard({
           </span>
         )}
 
-        {/* RAW Badge */}
-        {isRaw && (
-          <span className="absolute bottom-1.5 right-1.5 bg-black/90 backdrop-blur-md text-rose-300 border border-rose-500/40 text-[10px] font-bold px-1.5 py-0.5 rounded shadow-lg z-10 pointer-events-none uppercase">
+        {/* RAW / Extension Badge */}
+        {!entry.isDir && entry.ext && (
+          <span className="absolute top-1.5 left-1.5 bg-black/80 backdrop-blur-md text-gray-300 border border-white/10 text-[10px] font-bold px-1.5 py-0.5 rounded shadow-lg z-10 pointer-events-none uppercase">
             {entry.ext}
           </span>
         )}
