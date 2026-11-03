@@ -122,7 +122,20 @@ function RawOrImgPreview({ entry, className }: { entry: FsEntry; className?: str
     )
   }
 
-  return <img src={src} alt={entry.name} className={className || 'w-full h-full object-contain'} />
+  return (
+    <img
+      src={src}
+      alt={entry.name}
+      onError={() => {
+        if ((api as any)?.readImageBase64) {
+          (api as any).readImageBase64(entry.fullPath).then((res: any) => {
+            if (res?.ok && res.dataUrl) setSrc(res.dataUrl)
+          })
+        }
+      }}
+      className={className || 'w-full h-full object-contain'}
+    />
+  )
 }
 
 function FmVideoDuration({ entry }: { entry: FsEntry }) {

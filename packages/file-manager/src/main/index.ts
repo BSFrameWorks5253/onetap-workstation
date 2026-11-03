@@ -469,12 +469,17 @@ app.whenReady().then(() => {
   // Native protocol handler for streaming local video & media with full range seeking
   protocol.handle('local-resource', (request) => {
     try {
-      let cleanUrl = request.url.replace(/^local-resource:\/\/?\/?/i, '')
-      let rawPath = decodeURIComponent(cleanUrl)
-      if (/^\/?[a-zA-Z]:[\\\/]/.test(rawPath)) {
-        rawPath = rawPath.replace(/^\//, '')
+      let s = request.url.replace(/^local-resource:\/\//i, '')
+      s = s.replace(/^\/+/, '')
+      s = s.replace(/^localhost[\/\\]/i, '')
+      s = decodeURIComponent(s)
+
+      if (/^[a-zA-Z][\\\/]/.test(s)) {
+        s = s[0] + ':' + s.slice(1)
+      } else if (/^\/?[a-zA-Z]:[\\\/]/.test(s)) {
+        s = s.replace(/^\//, '')
       }
-      rawPath = rawPath.replace(/\//g, '\\')
+      const rawPath = s.replace(/\//g, '\\')
 
       if (!fs.existsSync(rawPath)) {
         return new Response('File not found', { status: 404 })
