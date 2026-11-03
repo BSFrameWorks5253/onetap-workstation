@@ -1,7 +1,13 @@
-import { app, BrowserWindow, ipcMain, shell, protocol } from 'electron'
+import { app, BrowserWindow, ipcMain, shell, protocol, net } from 'electron'
 import { join } from 'path'
+import path from 'path'
 import fs from 'fs'
 import os from 'os'
+import { pathToFileURL } from 'url'
+import { exec } from 'child_process'
+import { promisify } from 'util'
+
+const execAsync = promisify(exec)
 
 protocol.registerSchemesAsPrivileged([
   { scheme: 'local-resource', privileges: { secure: true, standard: true, supportFetchAPI: true, bypassCSP: true, stream: true, corsEnabled: true } }
@@ -103,6 +109,64 @@ ipcMain.handle('fm:readImageBase64', async (_e, filePath: string) => {
   }
 })
 
+const fmVideoCache = new Map<string, { duration: number; thumb: string }>()
+
+ipcMain.handle('fm:getVideoMetadata', async (_e, filePath: string) => {
+  try {
+    if (!filePath || !fs.existsSync(filePath)) {
+      return { ok: false, error: 'File not found', duration: 0, thumb: '' }
+    }
+    const cached = fmVideoCache.get(filePath)
+    if (cached) return { ok: true, duration: cached.duration, thumb: cached.thumb }
+
+    let duration = 0
+    try {
+      const { stdout } = await execAsync(
+        `ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${filePath}"`,
+        { timeout: 4000 }
+      )
+      const parsed = parseFloat(stdout.trim())
+      if (isFinite(parsed) && parsed > 0) duration = Math.round(parsed * 10) / 10
+    } catch {}
+
+    if (duration === 0 && process.platform === 'win32') {
+      try {
+        const dir = path.dirname(filePath).replace(/'/g, "''")
+        const leaf = path.basename(filePath).replace(/'/g, "''")
+        const psCmd = `powershell -NoProfile -Command "$shell = New-Object -ComObject Shell.Application; $folder = $shell.Namespace('${dir}'); $item = $folder.ParseName('${leaf}'); $folder.GetDetailsOf($item, 27)"`
+        const { stdout } = await execAsync(psCmd, { timeout: 3000 })
+        const raw = stdout.trim()
+        if (raw && raw.includes(':')) {
+          const parts = raw.split(':').map(p => parseInt(p, 10))
+          if (parts.length === 3 && parts.every(p => !isNaN(p))) {
+            duration = parts[0] * 3600 + parts[1] * 60 + parts[2]
+          }
+        }
+      } catch {}
+    }
+
+    let thumb = ''
+    let seekSecs = duration > 1 ? Math.min(Math.max(1, duration * 0.1), duration - 0.2) : 0.5
+    const seekFormatted = new Date(seekSecs * 1000).toISOString().substr(11, 8) + '.' + String(Math.floor((seekSecs % 1) * 1000)).padStart(3, '0')
+
+    try {
+      const cmd = `ffmpeg -ss ${seekFormatted} -i "${filePath}" -vframes 1 -vf "scale=360:-1" -f image2 -update 1 pipe:1`
+      const { stdout: buf } = await execAsync(cmd, {
+        encoding: 'buffer',
+        maxBuffer: 15 * 1024 * 1024,
+        timeout: 5000
+      })
+      if (buf && buf.length > 0) thumb = `data:image/jpeg;base64,${buf.toString('base64')}`
+    } catch {}
+
+    const result = { duration, thumb }
+    if (thumb || duration > 0) fmVideoCache.set(filePath, result)
+    return { ok: true, duration, thumb }
+  } catch (err: any) {
+    return { ok: false, error: err.message, duration: 0, thumb: '' }
+  }
+})
+
 ipcMain.handle('fm:getDeepLinkPath', async () => initialPath)
 
 app.on('open-url', (_e, url) => {
@@ -114,8 +178,8 @@ app.on('open-url', (_e, url) => {
 })
 
 app.whenReady().then(() => {
-  // Protocol handler for streaming local video & media
-  protocol.handle('local-resource', async (request) => {
+  // Native protocol handler for streaming local video & media with full range seeking
+  protocol.handle('local-resource', (request) => {
     try {
       let cleanUrl = request.url.replace(/^local-resource:\/\/?\/?/i, '')
       let rawPath = decodeURIComponent(cleanUrl)
@@ -124,62 +188,12 @@ app.whenReady().then(() => {
       }
       rawPath = rawPath.replace(/\//g, '\\')
 
-      const ext = rawPath.includes('.') ? rawPath.slice(rawPath.lastIndexOf('.')).toLowerCase() : ''
-      const MIME: Record<string, string> = {
-        '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png',
-        '.gif': 'image/gif', '.webp': 'image/webp', '.bmp': 'image/bmp',
-        '.svg': 'image/svg+xml', '.ico': 'image/x-icon',
-        '.mp4': 'video/mp4', '.mkv': 'video/x-matroska', '.avi': 'video/x-msvideo',
-        '.mov': 'video/quicktime', '.webm': 'video/webm', '.m4v': 'video/x-m4v',
-      }
-      const contentType = MIME[ext] || 'application/octet-stream'
-
       if (!fs.existsSync(rawPath)) {
         return new Response('File not found', { status: 404 })
       }
 
-      const fileStat = fs.statSync(rawPath)
-      const fileSize = fileStat.size
-
-      const rangeHeader = request.headers.get('Range')
-      if (rangeHeader) {
-        const match = rangeHeader.match(/bytes=(\d+)-(\d*)/)
-        if (match) {
-          const start = parseInt(match[1], 10)
-          const end = match[2] ? parseInt(match[2], 10) : Math.min(start + 1024 * 1024, fileSize - 1)
-          const chunkSize = end - start + 1
-          const stream = fs.createReadStream(rawPath, { start, end })
-          const webStream = new ReadableStream({
-            start(controller) {
-              stream.on('data', chunk => controller.enqueue(chunk))
-              stream.on('end', () => controller.close())
-              stream.on('error', e => controller.error(e))
-            },
-            cancel() { stream.destroy() }
-          })
-          return new Response(webStream, {
-            status: 206,
-            headers: {
-              'Content-Type': contentType,
-              'Content-Range': `bytes ${start}-${end}/${fileSize}`,
-              'Accept-Ranges': 'bytes',
-              'Content-Length': String(chunkSize),
-              'Access-Control-Allow-Origin': '*'
-            }
-          })
-        }
-      }
-
-      const buf = fs.readFileSync(rawPath)
-      return new Response(buf, {
-        status: 200,
-        headers: {
-          'Content-Type': contentType,
-          'Content-Length': String(buf.length),
-          'Accept-Ranges': 'bytes',
-          'Access-Control-Allow-Origin': '*'
-        }
-      })
+      const fileUrl = pathToFileURL(rawPath).toString()
+      return net.fetch(fileUrl)
     } catch {
       return new Response('Error loading resource', { status: 500 })
     }
@@ -191,7 +205,3 @@ app.whenReady().then(() => {
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
 })
-
-
-app.whenReady().then(createWindow)
-app.on('window-all-closed', () => app.quit())

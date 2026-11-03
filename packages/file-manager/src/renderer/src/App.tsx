@@ -79,55 +79,90 @@ function MediaThumbnailCard({
 }) {
   const [thumb, setThumb] = useState<string | null>(() => videoThumbCache.get(entry.fullPath)?.thumb || null)
   const [duration, setDuration] = useState<number>(() => videoThumbCache.get(entry.fullPath)?.duration || 0)
+  const [loadingMeta, setLoadingMeta] = useState<boolean>(!videoThumbCache.get(entry.fullPath) && VID_EXTS.has(entry.ext))
   const isImg = IMG_EXTS.has(entry.ext)
   const isVid = VID_EXTS.has(entry.ext)
 
   useEffect(() => {
-    if (!isVid || thumb) return
-    let isCancelled = false
-    const v = document.createElement('video')
-    const mediaUrl = api?.toLocalResourceUrl ? api.toLocalResourceUrl(entry.fullPath) : entry.fullPath
-    v.src = mediaUrl
-    v.crossOrigin = 'anonymous'
-    v.preload = 'metadata'
-    v.muted = true
-
-    v.onloadedmetadata = () => {
-      if (isCancelled) return
-      const dur = v.duration || 0
-      setDuration(dur)
-      // Seek to 10% or 1 sec for best thumbnail frame
-      const seekTarget = Math.min(Math.max(1, dur * 0.1), dur > 1 ? dur - 0.5 : 0)
-      v.currentTime = seekTarget
+    if (!isVid) return
+    const cached = videoThumbCache.get(entry.fullPath)
+    if (cached && cached.thumb && cached.duration > 0) {
+      setThumb(cached.thumb)
+      setDuration(cached.duration)
+      setLoadingMeta(false)
+      return
     }
 
-    v.onseeked = () => {
-      if (isCancelled) return
-      try {
-        const canvas = document.createElement('canvas')
-        const w = v.videoWidth || 320
-        const h = v.videoHeight || 180
-        canvas.width = Math.min(320, w)
-        canvas.height = Math.round((canvas.width / w) * h)
-        const ctx = canvas.getContext('2d')
-        if (ctx) {
-          ctx.drawImage(v, 0, 0, canvas.width, canvas.height)
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.8)
-          setThumb(dataUrl)
-          videoThumbCache.set(entry.fullPath, { thumb: dataUrl, duration: v.duration || 0 })
+    let isCancelled = false
+    setLoadingMeta(true)
+
+    // 1. Native extraction via IPC (ffprobe/ffmpeg & Windows Shell COM)
+    if ((api as any)?.getVideoMetadata) {
+      (api as any).getVideoMetadata(entry.fullPath).then((res: any) => {
+        if (isCancelled) return
+        if (res && res.ok && (res.thumb || res.duration > 0)) {
+          setThumb(res.thumb)
+          setDuration(res.duration)
+          setLoadingMeta(false)
+          videoThumbCache.set(entry.fullPath, { thumb: res.thumb, duration: res.duration })
+          return
         }
-      } catch {
-        // non-fatal canvas taint fallback
-      } finally {
+        // Fallback to DOM video if native didn't produce result
+        runDomFallback()
+      }).catch(() => {
+        if (!isCancelled) runDomFallback()
+      })
+    } else {
+      runDomFallback()
+    }
+
+    function runDomFallback() {
+      const v = document.createElement('video')
+      const mediaUrl = api?.toLocalResourceUrl ? api.toLocalResourceUrl(entry.fullPath) : entry.fullPath
+      v.src = mediaUrl
+      v.preload = 'metadata'
+      v.muted = true
+
+      v.onloadedmetadata = () => {
+        if (isCancelled) return
+        const dur = v.duration || 0
+        setDuration(dur)
+        setLoadingMeta(false)
+        const seekTarget = Math.min(Math.max(1, dur * 0.1), dur > 1 ? dur - 0.5 : 0)
+        v.currentTime = seekTarget
+      }
+
+      v.onseeked = () => {
+        if (isCancelled) return
+        try {
+          const canvas = document.createElement('canvas')
+          const w = v.videoWidth || 320
+          const h = v.videoHeight || 180
+          canvas.width = Math.min(320, w)
+          canvas.height = Math.round((canvas.width / w) * h)
+          const ctx = canvas.getContext('2d')
+          if (ctx) {
+            ctx.drawImage(v, 0, 0, canvas.width, canvas.height)
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.8)
+            setThumb(dataUrl)
+            videoThumbCache.set(entry.fullPath, { thumb: dataUrl, duration: v.duration || 0 })
+          }
+        } catch {
+        } finally {
+          v.src = ''
+        }
+      }
+
+      v.onerror = () => {
+        if (!isCancelled) setLoadingMeta(false)
         v.src = ''
       }
     }
 
     return () => {
       isCancelled = true
-      v.src = ''
     }
-  }, [entry.fullPath, isVid, thumb])
+  }, [entry.fullPath, isVid])
 
   const imgUrl = isImg ? (api?.toLocalResourceUrl ? api.toLocalResourceUrl(entry.fullPath) : entry.fullPath) : null
 
@@ -165,10 +200,10 @@ function MediaThumbnailCard({
         )}
 
         {/* Video Duration / Timelapse Badge (e.g. 10s) */}
-        {isVid && duration > 0 && (
-          <span className="absolute bottom-1.5 right-1.5 bg-black/85 backdrop-blur-md text-amber-300 border border-amber-400/30 text-[11px] font-bold px-1.5 py-0.5 rounded shadow-lg flex items-center gap-1">
-            <Clock className="w-2.5 h-2.5" />
-            {formatTimelapse(duration)}
+        {isVid && (
+          <span className="absolute bottom-1.5 right-1.5 bg-black/90 backdrop-blur-md text-amber-300 border border-amber-400/40 text-[11px] font-bold px-2 py-0.5 rounded shadow-lg flex items-center gap-1 z-10 pointer-events-none">
+            <Clock className={`w-3 h-3 text-amber-400 ${loadingMeta ? 'animate-spin' : ''}`} />
+            <span>{duration > 0 ? formatTimelapse(duration) : loadingMeta ? '...' : 'VID'}</span>
           </span>
         )}
 
