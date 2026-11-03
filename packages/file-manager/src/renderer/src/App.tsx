@@ -122,6 +122,44 @@ function RawOrImgPreview({ entry, className }: { entry: FsEntry; className?: str
   return <img src={src} alt={entry.name} className={className || 'w-full h-full object-contain'} />
 }
 
+function FmVideoDuration({ entry }: { entry: FsEntry }) {
+  const isVid = isVidExt(entry.ext)
+  const cached = videoThumbCache.get(entry.fullPath)
+  const [duration, setDuration] = useState<number>(cached?.duration || 0)
+
+  useEffect(() => {
+    if (!isVid) return
+    const c = videoThumbCache.get(entry.fullPath)
+    if (c && c.duration > 0) {
+      setDuration(c.duration)
+      return
+    }
+    let isCancelled = false
+    if ((api as any)?.getVideoMetadata) {
+      (api as any).getVideoMetadata(entry.fullPath).then((res: any) => {
+        if (!isCancelled && res && res.duration > 0) {
+          setDuration(res.duration)
+          videoThumbCache.set(entry.fullPath, { thumb: res.thumb || '', duration: res.duration })
+        }
+      })
+    }
+    return () => {
+      isCancelled = true
+    }
+  }, [entry.fullPath, isVid])
+
+  if (!isVid) return <span className="text-gray-600">—</span>
+  if (duration > 0) {
+    return (
+      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-mono font-semibold">
+        <Clock className="w-3 h-3 text-amber-400" />
+        {formatTimelapse(duration)}
+      </span>
+    )
+  }
+  return <span className="text-[11px] text-gray-500 font-mono">...</span>
+}
+
 function MediaThumbnailCard({
   entry,
   onClick,
@@ -727,6 +765,80 @@ export default function App() {
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null)
   const newFolderInputRef = useRef<HTMLInputElement>(null)
 
+  // Resizable panel & column widths
+  const [columnsWidth, setColumnsWidth] = useState(340)
+  const [sidebarWidth, setSidebarWidth] = useState(240)
+  const [inspectorWidth, setInspectorWidth] = useState(300)
+  const [tableColWidths, setTableColWidths] = useState({
+    name: 400,
+    type: 85,
+    duration: 115,
+    size: 100,
+    date: 160
+  })
+
+  const startColWidthResize = (colKey: keyof typeof tableColWidths, e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const startX = e.clientX
+    const startW = tableColWidths[colKey]
+    const onMouseMove = (ev: MouseEvent) => {
+      const minW = colKey === 'name' ? 180 : 70
+      setTableColWidths(prev => ({ ...prev, [colKey]: Math.max(minW, startW + (ev.clientX - startX)) }))
+    }
+    const onMouseUp = () => {
+      window.removeEventListener('mousemove', onMouseMove)
+      window.removeEventListener('mouseup', onMouseUp)
+    }
+    window.addEventListener('mousemove', onMouseMove)
+    window.addEventListener('mouseup', onMouseUp)
+  }
+
+  const startMillerColResize = (e: React.MouseEvent) => {
+    e.preventDefault()
+    const startX = e.clientX
+    const startW = columnsWidth
+    const onMouseMove = (ev: MouseEvent) => {
+      setColumnsWidth(Math.max(220, Math.min(700, startW + (ev.clientX - startX))))
+    }
+    const onMouseUp = () => {
+      window.removeEventListener('mousemove', onMouseMove)
+      window.removeEventListener('mouseup', onMouseUp)
+    }
+    window.addEventListener('mousemove', onMouseMove)
+    window.addEventListener('mouseup', onMouseUp)
+  }
+
+  const startSidebarResize = (e: React.MouseEvent) => {
+    e.preventDefault()
+    const startX = e.clientX
+    const startW = sidebarWidth
+    const onMouseMove = (ev: MouseEvent) => {
+      setSidebarWidth(Math.max(180, Math.min(450, startW + (ev.clientX - startX))))
+    }
+    const onMouseUp = () => {
+      window.removeEventListener('mousemove', onMouseMove)
+      window.removeEventListener('mouseup', onMouseUp)
+    }
+    window.addEventListener('mousemove', onMouseMove)
+    window.addEventListener('mouseup', onMouseUp)
+  }
+
+  const startInspectorResize = (e: React.MouseEvent) => {
+    e.preventDefault()
+    const startX = e.clientX
+    const startW = inspectorWidth
+    const onMouseMove = (ev: MouseEvent) => {
+      setInspectorWidth(Math.max(220, Math.min(550, startW - (ev.clientX - startX))))
+    }
+    const onMouseUp = () => {
+      window.removeEventListener('mousemove', onMouseMove)
+      window.removeEventListener('mouseup', onMouseUp)
+    }
+    window.addEventListener('mousemove', onMouseMove)
+    window.addEventListener('mouseup', onMouseUp)
+  }
+
   // Selected item object
   const selectedEntry = useMemo(() => {
     return entries.find(e => e.fullPath === selected) || null
@@ -1126,8 +1238,11 @@ export default function App() {
       </div>
 
       <div className="flex flex-1 min-h-0">
-        {/* ── Left Sidebar (macOS Traffic Lights + Favorites + Windows Drive Bars) ── */}
-        <div className="w-64 flex-shrink-0 border-r border-white/10 bg-[#0e1017] overflow-y-auto flex flex-col p-3">
+        {/* ── Left Sidebar (macOS Traffic Lights + Favorites + Windows Drive Bars) with Resizable Width ── */}
+        <div
+          style={{ width: `${sidebarWidth}px` }}
+          className="flex-shrink-0 border-r border-white/10 bg-[#0e1017] overflow-y-auto flex flex-col p-3 select-none"
+        >
           {/* macOS Traffic Lights Header */}
           <div className="flex items-center gap-2 px-2 pt-1 pb-3 border-b border-white/5 mb-3">
             <div className="flex items-center gap-1.5">
@@ -1255,6 +1370,13 @@ export default function App() {
           </div>
         </div>
 
+        {/* Resizable Divider between Sidebar and Main Content */}
+        <div
+          onMouseDown={startSidebarResize}
+          className="w-1.5 hover:w-2 bg-transparent hover:bg-indigo-500/50 active:bg-indigo-500 cursor-col-resize z-20 flex-shrink-0 transition-colors"
+          title="Drag to resize sidebar"
+        />
+
         {/* ── Main Content Area ── */}
         <div className="flex-1 overflow-auto bg-[#0d0f15] p-3">
           {!currentPath ? (
@@ -1283,70 +1405,221 @@ export default function App() {
               ))}
             </div>
           ) : viewMode === 'table' ? (
-            /* 2. List / Details View */
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-[11px] text-gray-500 uppercase border-b border-white/10">
-                  <th className="text-left py-2 px-3 font-semibold cursor-pointer hover:text-white" onClick={() => handleSortToggle('name')}>Name</th>
-                  <th className="text-left py-2 px-3 font-semibold w-24 cursor-pointer hover:text-white" onClick={() => handleSortToggle('ext')}>Type</th>
-                  <th className="text-right py-2 px-3 font-semibold w-28 cursor-pointer hover:text-white" onClick={() => handleSortToggle('size')}>Size</th>
-                  <th className="text-right py-2 px-3 font-semibold w-44 cursor-pointer hover:text-white" onClick={() => handleSortToggle('date')}>Modified</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredEntries.map(e => (
-                  <tr
-                    key={e.fullPath}
-                    onClick={() => setSelected(e.fullPath)}
-                    onDoubleClick={() => handleEntryOpen(e)}
-                    onContextMenu={ev => {
-                      ev.preventDefault()
-                      ev.stopPropagation()
-                      setContextMenu({ x: ev.clientX, y: ev.clientY, entry: e })
-                    }}
-                    className={`cursor-pointer hover:bg-white/5 rounded-lg transition-colors ${selected === e.fullPath ? 'bg-indigo-600/20 text-indigo-200' : ''}`}
-                  >
-                    <td className="py-2 px-3">
-                      <div className="flex items-center gap-2.5">
-                        {e.isDir ? (
-                          <Folder className="w-4 h-4 text-amber-400 flex-shrink-0" />
-                        ) : IMG_EXTS.has(e.ext) ? (
-                          <ImageIcon className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                        ) : VID_EXTS.has(e.ext) ? (
-                          <Film className="w-4 h-4 text-purple-400 flex-shrink-0" />
-                        ) : (
-                          <File className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                        )}
-                        <span className="truncate max-w-[400px] font-medium">{e.name}</span>
+            /* 2. List / Details View with Resizable Columns & Video Timelapse */
+            <div className="w-full overflow-x-auto select-none">
+              <table className="w-full text-sm border-collapse table-fixed">
+                <thead>
+                  <tr className="text-[11px] text-gray-400 uppercase border-b border-white/10 bg-[#12141c]">
+                    <th
+                      style={{ width: `${tableColWidths.name}px` }}
+                      className="relative text-left py-2.5 px-3 font-semibold cursor-pointer hover:text-white"
+                      onClick={() => handleSortToggle('name')}
+                    >
+                      <span>Name</span>
+                      <div
+                        onMouseDown={e => startColWidthResize('name', e)}
+                        className="absolute right-0 top-0 w-2 h-full cursor-col-resize hover:bg-indigo-500/80 active:bg-indigo-500 transition-colors"
+                        title="Drag to resize column"
+                      />
+                    </th>
+
+                    <th
+                      style={{ width: `${tableColWidths.type}px` }}
+                      className="relative text-left py-2.5 px-3 font-semibold cursor-pointer hover:text-white"
+                      onClick={() => handleSortToggle('ext')}
+                    >
+                      <span>Type</span>
+                      <div
+                        onMouseDown={e => startColWidthResize('type', e)}
+                        className="absolute right-0 top-0 w-2 h-full cursor-col-resize hover:bg-indigo-500/80 active:bg-indigo-500 transition-colors"
+                        title="Drag to resize column"
+                      />
+                    </th>
+
+                    <th
+                      style={{ width: `${tableColWidths.duration}px` }}
+                      className="relative text-left py-2.5 px-3 font-semibold"
+                    >
+                      <div className="flex items-center gap-1 text-amber-300">
+                        <Clock className="w-3 h-3 text-amber-400" />
+                        <span>Timelapse</span>
                       </div>
-                    </td>
-                    <td className="py-2 px-3 text-xs uppercase text-gray-400">{e.isDir ? 'Folder' : e.ext}</td>
-                    <td className="py-2 px-3 text-right text-gray-400 text-xs tabular-nums">{e.isDir ? '—' : formatSize(e.size)}</td>
-                    <td className="py-2 px-3 text-right text-gray-400 text-xs tabular-nums">{formatDate(e.mtime)}</td>
+                      <div
+                        onMouseDown={e => startColWidthResize('duration', e)}
+                        className="absolute right-0 top-0 w-2 h-full cursor-col-resize hover:bg-indigo-500/80 active:bg-indigo-500 transition-colors"
+                        title="Drag to resize column"
+                      />
+                    </th>
+
+                    <th
+                      style={{ width: `${tableColWidths.size}px` }}
+                      className="relative text-right py-2.5 px-3 font-semibold cursor-pointer hover:text-white"
+                      onClick={() => handleSortToggle('size')}
+                    >
+                      <span>Size</span>
+                      <div
+                        onMouseDown={e => startColWidthResize('size', e)}
+                        className="absolute right-0 top-0 w-2 h-full cursor-col-resize hover:bg-indigo-500/80 active:bg-indigo-500 transition-colors"
+                        title="Drag to resize column"
+                      />
+                    </th>
+
+                    <th
+                      style={{ width: `${tableColWidths.date}px` }}
+                      className="relative text-right py-2.5 px-3 font-semibold cursor-pointer hover:text-white"
+                      onClick={() => handleSortToggle('date')}
+                    >
+                      <span>Modified</span>
+                      <div
+                        onMouseDown={e => startColWidthResize('date', e)}
+                        className="absolute right-0 top-0 w-2 h-full cursor-col-resize hover:bg-indigo-500/80 active:bg-indigo-500 transition-colors"
+                        title="Drag to resize column"
+                      />
+                    </th>
+
+                    <th style={{ width: '60px' }} className="text-center py-2.5 px-2 font-semibold">
+                      <span>Preview</span>
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {filteredEntries.map(e => {
+                    const isRaw = isRawExt(e.ext)
+                    return (
+                      <tr
+                        key={e.fullPath}
+                        onClick={() => setSelected(e.fullPath)}
+                        onDoubleClick={() => handleEntryOpen(e)}
+                        onContextMenu={ev => {
+                          ev.preventDefault()
+                          ev.stopPropagation()
+                          setContextMenu({ x: ev.clientX, y: ev.clientY, entry: e })
+                        }}
+                        className={`group cursor-pointer hover:bg-white/5 rounded-lg transition-colors border-b border-white/[0.03] ${selected === e.fullPath ? 'bg-indigo-600/20 text-indigo-200' : 'text-gray-300'}`}
+                      >
+                        <td className="py-2 px-3 truncate">
+                          <div className="flex items-center gap-2.5 truncate">
+                            {e.isDir ? (
+                              <Folder className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                            ) : isRaw ? (
+                              <div className="flex items-center gap-1 flex-shrink-0">
+                                <ImageIcon className="w-4 h-4 text-rose-400" />
+                                <span className="text-[9px] font-bold px-1 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30 uppercase">
+                                  RAW
+                                </span>
+                              </div>
+                            ) : isImgExt(e.ext) ? (
+                              <ImageIcon className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                            ) : isVidExt(e.ext) ? (
+                              <Film className="w-4 h-4 text-purple-400 flex-shrink-0" />
+                            ) : (
+                              <File className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                            )}
+                            <span className="truncate font-medium" title={e.name}>
+                              {e.name}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-2 px-3 text-xs uppercase text-gray-400 truncate">{e.isDir ? 'Folder' : e.ext}</td>
+                        <td className="py-2 px-3 text-xs">
+                          <FmVideoDuration entry={e} />
+                        </td>
+                        <td className="py-2 px-3 text-right text-gray-400 text-xs tabular-nums truncate">{e.isDir ? '—' : formatSize(e.size)}</td>
+                        <td className="py-2 px-3 text-right text-gray-400 text-xs tabular-nums truncate">{formatDate(e.mtime)}</td>
+                        <td className="py-1 px-2 text-center">
+                          {!e.isDir && (
+                            <button
+                              onClick={ev => {
+                                ev.stopPropagation()
+                                setSelected(e.fullPath)
+                                setIsQuickLookOpen(true)
+                              }}
+                              className="p-1.5 rounded-lg bg-white/5 hover:bg-indigo-600 text-gray-400 hover:text-white transition-colors"
+                              title="Quick Look (Space)"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
           ) : viewMode === 'columns' ? (
-            /* 3. macOS Miller Columns View */
+            /* 3. macOS Miller Columns View with Resizable Width */
             <div className="flex h-full overflow-x-auto gap-2">
-              <div className="w-64 min-w-[240px] border border-white/10 rounded-xl bg-[#12141c] overflow-y-auto p-1">
-                {filteredEntries.map(e => (
-                  <button
-                    key={e.fullPath}
-                    onClick={() => setSelected(e.fullPath)}
-                    onDoubleClick={() => handleEntryOpen(e)}
-                    className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors ${
-                      selected === e.fullPath ? 'bg-indigo-600 text-white font-medium' : 'text-gray-300 hover:bg-white/5'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 truncate">
-                      {e.isDir ? <Folder className="w-3.5 h-3.5 text-amber-400" /> : <File className="w-3.5 h-3.5 text-gray-400" />}
-                      <span className="truncate">{e.name}</span>
+              <div
+                style={{ width: `${columnsWidth}px`, minWidth: `${columnsWidth}px` }}
+                className="relative border border-white/10 rounded-xl bg-[#12141c] overflow-y-auto p-1 flex-shrink-0"
+              >
+                {filteredEntries.map(e => {
+                  const isSelected = selected === e.fullPath
+                  const isRaw = isRawExt(e.ext)
+                  const isVid = isVidExt(e.ext)
+                  return (
+                    <div
+                      key={e.fullPath}
+                      onClick={() => setSelected(e.fullPath)}
+                      onDoubleClick={() => handleEntryOpen(e)}
+                      className={`group w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs cursor-pointer transition-colors ${
+                        isSelected ? 'bg-indigo-600 text-white font-medium' : 'text-gray-300 hover:bg-white/5'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 truncate flex-1 min-w-0 mr-1.5">
+                        {e.isDir ? (
+                          <Folder className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+                        ) : isRaw ? (
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <ImageIcon className="w-3.5 h-3.5 text-rose-400" />
+                            <span className="text-[9px] font-bold px-1 rounded bg-rose-500/20 text-rose-300 uppercase">RAW</span>
+                          </div>
+                        ) : isImgExt(e.ext) ? (
+                          <ImageIcon className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+                        ) : isVid ? (
+                          <Film className="w-3.5 h-3.5 text-purple-400 flex-shrink-0" />
+                        ) : (
+                          <File className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                        )}
+                        <span className="truncate" title={e.name}>{e.name}</span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        {isVid && (
+                          <FmVideoDuration entry={e} />
+                        )}
+                        {e.isDir ? (
+                          <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+                        ) : (
+                          <span className={`text-[10px] font-mono ${isSelected ? 'text-indigo-200' : 'text-gray-500'}`}>
+                            {formatSize(e.size)}
+                          </span>
+                        )}
+                        {!e.isDir && (
+                          <button
+                            onClick={ev => {
+                              ev.stopPropagation()
+                              setSelected(e.fullPath)
+                              setIsQuickLookOpen(true)
+                            }}
+                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-white/20 rounded text-gray-300 hover:text-white transition-opacity"
+                            title="Quick Look (Space)"
+                          >
+                            <Eye className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    {e.isDir && <ChevronRight className="w-3.5 h-3.5 opacity-60" />}
-                  </button>
-                ))}
+                  )
+                })}
+
+                {/* Draggable Divider to resize column */}
+                <div
+                  onMouseDown={startMillerColResize}
+                  className="absolute top-0 right-0 w-2 h-full cursor-col-resize hover:bg-indigo-500/70 active:bg-indigo-500 z-20 transition-colors"
+                  title="Drag to resize column"
+                />
               </div>
             </div>
           ) : (
@@ -1392,9 +1665,18 @@ export default function App() {
           )}
         </div>
 
-        {/* ── Collapsible Right Inspector / Details Pane (Windows & Mac Info) ── */}
+        {/* ── Collapsible Right Inspector / Details Pane with Resizable Width ── */}
         {isInspectorOpen && (
-          <div className="w-72 flex-shrink-0 border-l border-white/10 bg-[#0e1017] flex flex-col p-4 overflow-y-auto">
+          <>
+            <div
+              onMouseDown={startInspectorResize}
+              className="w-1.5 hover:w-2 bg-transparent hover:bg-indigo-500/50 active:bg-indigo-500 cursor-col-resize z-20 flex-shrink-0 transition-colors"
+              title="Drag to resize inspector"
+            />
+            <div
+              style={{ width: `${inspectorWidth}px` }}
+              className="flex-shrink-0 border-l border-white/10 bg-[#0e1017] flex flex-col p-4 overflow-y-auto"
+            >
             <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-3">
               <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Details & Preview</span>
               <button onClick={() => setIsInspectorOpen(false)} className="text-gray-400 hover:text-white p-1 rounded">
@@ -1452,6 +1734,7 @@ export default function App() {
               </div>
             )}
           </div>
+          </>
         )}
       </div>
 
@@ -1464,23 +1747,64 @@ export default function App() {
       {/* ── macOS Spacebar Quick Look Modal ── */}
       {isQuickLookOpen && selectedEntry && (
         <div
-          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-6 select-none"
+          className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-6 select-none"
           onClick={() => setIsQuickLookOpen(false)}
         >
           <div
-            className="bg-[#141622]/95 border border-white/15 rounded-2xl max-w-4xl max-h-[85vh] w-full flex flex-col shadow-2xl overflow-hidden"
+            className="bg-[#141622]/95 border border-white/15 rounded-2xl max-w-4xl max-h-[85vh] w-full flex flex-col shadow-2xl overflow-hidden backdrop-blur-xl"
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/10 bg-[#181b2a]">
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-[#ff5f56] cursor-pointer" onClick={() => setIsQuickLookOpen(false)} />
+                <div className="w-3 h-3 rounded-full bg-[#ff5f56] cursor-pointer" onClick={() => setIsQuickLookOpen(false)} title="Close (Space or Esc)" />
                 <div className="w-3 h-3 rounded-full bg-[#ffbd2e]" />
-                <div className="w-3 h-3 rounded-full bg-[#27c93f]" />
-                <span className="text-xs font-semibold text-gray-300 ml-2 truncate max-w-md">{selectedEntry.name} — Quick Look</span>
+                <div className="w-3 h-3 rounded-full bg-[#27c93f] cursor-pointer" onClick={() => { setIsQuickLookOpen(false); handleEntryOpen(selectedEntry); }} title="Open Fullscreen Studio" />
+                <span className="text-xs font-semibold text-gray-200 ml-2 truncate max-w-md">{selectedEntry.name}</span>
+                <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                  Quick Look
+                </span>
               </div>
-              <button onClick={() => setIsQuickLookOpen(false)} className="text-gray-400 hover:text-white p-1">
-                <X className="w-4 h-4" />
-              </button>
+
+              <div className="flex items-center gap-2">
+                {/* Prev / Next buttons */}
+                <div className="flex items-center gap-1 bg-white/5 border border-white/10 rounded-lg p-0.5">
+                  <button
+                    onClick={() => {
+                      const idx = filteredEntries.findIndex(e => e.fullPath === selectedEntry.fullPath)
+                      if (idx > 0) setSelected(filteredEntries[idx - 1].fullPath)
+                    }}
+                    className="p-1 rounded hover:bg-white/10 text-gray-300 hover:text-white"
+                    title="Previous (Left Arrow)"
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      const idx = filteredEntries.findIndex(e => e.fullPath === selectedEntry.fullPath)
+                      if (idx < filteredEntries.length - 1) setSelected(filteredEntries[idx + 1].fullPath)
+                    }}
+                    className="p-1 rounded hover:bg-white/10 text-gray-300 hover:text-white"
+                    title="Next (Right Arrow)"
+                  >
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setIsQuickLookOpen(false)
+                    handleEntryOpen(selectedEntry)
+                  }}
+                  className="flex items-center gap-1.5 px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold shadow-md transition-all"
+                >
+                  <Maximize2 className="w-3.5 h-3.5" />
+                  <span>Studio</span>
+                </button>
+
+                <button onClick={() => setIsQuickLookOpen(false)} className="text-gray-400 hover:text-white p-1">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
             <div className="flex-1 bg-black flex items-center justify-center p-3 min-h-[400px] max-h-[60vh] overflow-hidden">
               {IMG_EXTS.has(selectedEntry.ext) ? (
@@ -1492,7 +1816,12 @@ export default function App() {
               )}
             </div>
             <div className="px-5 py-3 border-t border-white/10 bg-[#161826] flex items-center justify-between text-xs text-gray-400">
-              <span>{formatSize(selectedEntry.size)} — {formatDate(selectedEntry.mtime)}</span>
+              <div className="flex items-center gap-3">
+                <span>Size: <strong className="text-white font-mono">{formatSize(selectedEntry.size)}</strong></span>
+                <span>•</span>
+                <span>Modified: <strong className="text-white font-mono">{formatDate(selectedEntry.mtime)}</strong></span>
+                <span className="uppercase text-indigo-400 font-bold">{selectedEntry.ext}</span>
+              </div>
               <span>Press Space or Esc to dismiss</span>
             </div>
           </div>
