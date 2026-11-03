@@ -48,26 +48,39 @@ const InventoryMerger = React.lazy(() => import('./pages/InventoryMerger/Invento
 const TaskTracker = React.lazy(() => import('./pages/TaskTracker/TaskTracker'))
 const ArchiveVault = React.lazy(() => import('./pages/ArchiveVault/ArchiveVault'))
 
-const PAGE_COMPONENTS: Record<PageKey, React.LazyExoticComponent<() => JSX.Element>> = {
+const PAGE_COMPONENTS: Record<string, React.LazyExoticComponent<() => JSX.Element>> = {
   dashboard: Dashboard as any,
   archivevault: ArchiveVault as any,
+  'archive-vault': ArchiveVault as any,
   tracker: TaskTracker as any,
+  'task-tracker': TaskTracker as any,
   adder: TitleAdder as any,
+  'title-adder': TitleAdder as any,
+  'titleadder': TitleAdder as any,
+  'title_adder': TitleAdder as any,
   converter: Converter as any,
   drivesync: DriveSync as any,
+  'drive-sync': DriveSync as any,
   folder: FolderMaker as any,
+  'folder-maker': FolderMaker as any,
   stats: Stats as any,
   notes: StickyNotes as any,
+  'sticky-notes': StickyNotes as any,
   cloud: CloudPortal as any,
   gdrive: GDrivePortal as any,
   settings: Settings as any,
   utilities: Utilities as any,
   cameratransfer: CameraTransfer as any,
+  'camera-transfer': CameraTransfer as any,
   prproj: PrprojGenerator as any,
+  'pr-proj': PrprojGenerator as any,
   videotransfer: VideoTransfer as any,
+  'video-transfer': VideoTransfer as any,
   pvseparator: PVSeparator as any,
+  'pv-separator': PVSeparator as any,
   cleaner: Cleaner as any,
   excelmerger: InventoryMerger as any,
+  'excel-merger': InventoryMerger as any,
   admin: (() => (
     <div style={{ width: '100%', height: '100%', overflow: 'hidden' }}>
       <EmailBroadcastModal
@@ -80,6 +93,36 @@ const PAGE_COMPONENTS: Record<PageKey, React.LazyExoticComponent<() => JSX.Eleme
       />
     </div>
   )) as any
+}
+
+export function normalizePageKey(key: any): PageKey {
+  if (!key || typeof key !== 'string') return 'adder'
+  const lower = key.toLowerCase().trim()
+  if (lower === 'title-adder' || lower === 'titleadder' || lower === 'title_adder' || lower === 'title' || lower === 'adder') {
+    return 'adder'
+  }
+  if (lower === 'drive-sync' || lower === 'sync' || lower === 'drivesync') return 'drivesync'
+  if (lower === 'camera-transfer' || lower === 'cameratransfer') return 'cameratransfer'
+  if (lower === 'video-transfer' || lower === 'videotransfer') return 'videotransfer'
+  if (lower === 'pv-separator' || lower === 'pvseparator') return 'pvseparator'
+  if (lower === 'excel-merger' || lower === 'inventory-merger' || lower === 'excelmerger') return 'excelmerger'
+  if (lower === 'folder-maker' || lower === 'folder') return 'folder'
+  if (lower === 'sticky-notes' || lower === 'notes') return 'notes'
+  if (lower === 'pr-proj' || lower === 'prproj-generator' || lower === 'prproj') return 'prproj'
+  if (lower === 'archive-vault' || lower === 'archivevault') return 'archivevault'
+  if (lower === 'task-tracker' || lower === 'tracker') return 'tracker'
+  if (lower === 'dashboard') return 'dashboard'
+  if (lower === 'converter') return 'converter'
+  if (lower === 'stats') return 'stats'
+  if (lower === 'cloud') return 'cloud'
+  if (lower === 'gdrive') return 'gdrive'
+  if (lower === 'settings') return 'settings'
+  if (lower === 'utilities') return 'utilities'
+  if (lower === 'cleaner') return 'cleaner'
+  if (lower === 'admin') return 'admin'
+
+  if (PAGE_COMPONENTS[lower]) return lower as PageKey
+  return 'adder'
 }
 
 function AppInner(): JSX.Element {
@@ -221,11 +264,7 @@ function AppInner(): JSX.Element {
 
     if (api.titleAutomode?.onNavigate) {
       unsubs.push(api.titleAutomode.onNavigate((p: string) => {
-        if (p === 'title-adder' || p === 'adder') {
-          setActivePage('adder')
-        } else if (p in PAGE_COMPONENTS) {
-          setActivePage(p as PageKey)
-        }
+        setActivePage(normalizePageKey(p))
       }))
     }
 
@@ -376,7 +415,7 @@ function AppInner(): JSX.Element {
       if (apiObj?.system?.onNavigate) {
         unsubscribeNav = apiObj.system.onNavigate((page: string) => {
           if (page && typeof navigate === 'function') {
-            navigate(page as PageKey)
+            navigate(normalizePageKey(page))
           }
         })
       }
@@ -893,17 +932,18 @@ function AppInner(): JSX.Element {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [activePage, orderedNav, textOverrides])
 
-  function navigate(page: PageKey): void {
-    if (page === activePage) return
+  function navigate(page: PageKey | string): void {
+    const target = normalizePageKey(page)
+    if (target === activePage) return
     setPrevPage(activePage)
-    setActivePage(page)
+    setActivePage(target)
     setPageKey(k => k + 1)
   }
 
   // Expose file viewer and navigation globally so any page component can use them
   useEffect(() => {
     (window as any).openFileInViewer = (path: string) => setOpenFilePath(path)
-      ; (window as any).navigateToPage = (page: PageKey) => navigate(page)
+      ; (window as any).navigateToPage = (page: PageKey | string) => navigate(page)
     const handleNavEvent = (e: any) => {
       if (e?.detail) navigate(e.detail)
     }
@@ -951,7 +991,7 @@ function AppInner(): JSX.Element {
     }
   }
 
-  const ActivePage = PAGE_COMPONENTS[activePage]
+  const ActivePage = PAGE_COMPONENTS[activePage] || PAGE_COMPONENTS['adder'] || (TitleAdder as any)
 
   return (
     <>

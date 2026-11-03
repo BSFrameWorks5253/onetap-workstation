@@ -334,6 +334,7 @@ contextBridge.exposeInMainWorld('api', {
   // Universal File Viewer
   viewer: {
     readRaw:                (filePath: string) => ipcRenderer.invoke('viewer:readRaw', filePath),
+    readImageBase64:        (filePath: string) => ipcRenderer.invoke('viewer:readImageBase64', filePath),
     readFileBase64:         (filePath: string) => ipcRenderer.invoke('viewer:readFileBase64', filePath),
     readPdfBase64:          (filePath: string) => ipcRenderer.invoke('viewer:readPdfBase64', filePath),
     readText:               (filePath: string) => ipcRenderer.invoke('viewer:readText', filePath),

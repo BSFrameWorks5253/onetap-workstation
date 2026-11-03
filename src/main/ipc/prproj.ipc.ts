@@ -1220,8 +1220,8 @@ async function buildXmemlXmlNode(sequenceName: string, videoInputs: Array<string
     const info = videoInfos[idx]
     const tb = info.timebase
     const ntscStr = info.ntsc ? 'TRUE' : 'FALSE'
-    const sourceClipFrames = Math.max(1, Math.round(info.duration * tb))
-    const seqClipFrames = Math.max(1, Math.round(info.duration * seqTb))
+    const sourceClipFrames = Math.max(1, Math.floor(info.duration * tb))
+    const seqClipFrames = Math.max(1, Math.floor(info.duration * seqTb))
     const clipName = path.basename(vidPath)
     const fileId = `file-${idx + 1}`
     const masterId = `masterclip-${idx + 1}`
@@ -1307,12 +1307,12 @@ async function buildXmemlXmlNode(sequenceName: string, videoInputs: Array<string
           <masterclipid>${masterId}</masterclipid>
           <name>${escapeXml(clipName)}</name>
           <enabled>TRUE</enabled>
-          <duration>${sourceClipFrames}</duration>
+          <duration>${seqClipFrames}</duration>
           <rate><timebase>${seqTb}</timebase><ntsc>${seqNtscStr}</ntsc></rate>
           <start>${startFrame}</start>
           <end>${endFrame}</end>
           <in>0</in>
-          <out>${sourceClipFrames}</out>
+          <out>${seqClipFrames}</out>
           ${fileXml}
           <sourcetrack>
             <mediatype>video</mediatype>
@@ -1328,12 +1328,12 @@ async function buildXmemlXmlNode(sequenceName: string, videoInputs: Array<string
           <masterclipid>${masterId}</masterclipid>
           <name>${escapeXml(clipName)}</name>
           <enabled>TRUE</enabled>
-          <duration>${sourceClipFrames}</duration>
+          <duration>${seqClipFrames}</duration>
           <rate><timebase>${seqTb}</timebase><ntsc>${seqNtscStr}</ntsc></rate>
           <start>${startFrame}</start>
           <end>${endFrame}</end>
           <in>0</in>
-          <out>${sourceClipFrames}</out>
+          <out>${seqClipFrames}</out>
           <file id="${fileId}"/>
           <sourcetrack>
             <mediatype>audio</mediatype>

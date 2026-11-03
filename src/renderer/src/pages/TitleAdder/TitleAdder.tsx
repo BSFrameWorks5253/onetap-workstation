@@ -1273,6 +1273,7 @@ export default function TitleAdder(): JSX.Element {
   const [isDragActive, setIsDragActive] = useState(false)
   const dragCounter = useRef(0)
   const handleMediaEncoderSignalRef = useRef<((dvdPath: string, autoStart?: boolean) => Promise<void>) | null>(null)
+  const startJobRef = useRef<((overrides?: any) => Promise<void>) | null>(null)
 
   useEffect(() => {
     localStorage.setItem('ot_title_adder_width', String(controlsWidth))
@@ -1745,6 +1746,33 @@ export default function TitleAdder(): JSX.Element {
     setUserTitleImageSelections(initImageMap)
     setUserMuteSelections(initMuteMap)
 
+    const executeAutoRender = async (targetVideos: string[]) => {
+      const shouldAutoStart = Boolean(storeState.autoStartOnEncoderSignal)
+      if (shouldAutoStart && targetVideos.length > 0) {
+        setIsAudioModalOpen(false)
+        playSuccess()
+        showToast({
+          title: '⚡ Auto-Starting Batch Rendering',
+          message: `Title Automode active. Starting render for ${targetVideos.length} videos...`,
+          type: 'success'
+        })
+        const runJob = startJobRef.current || startJob
+        await runJob({
+          customAssignments: initAudioMap,
+          titleImageAssignments: initImageMap,
+          videoMuteSelections: initMuteMap,
+          watermarkedVideos: nextWatermarked,
+          mutedVideos: nextMuted,
+          availableVideos: targetVideos,
+          batchSource: cleanPath,
+          thumbnailMode: thumbnailMode,
+          thumbnailModeSelections: userThumbnailModeSelections
+        })
+        return true
+      }
+      return false
+    }
+
     // Open Pre-Render Setup & Confirmation dialog for pre-flight review
     try {
       const expVideos = titleAdderStore.getState().expectedVideos || []
@@ -1779,6 +1807,7 @@ export default function TitleAdder(): JSX.Element {
         setUserTitleImageSelections(initImageMap)
         setUserMuteSelections(initMuteMap)
         setWatermarkedVideos(nextWatermarked)
+        if (await executeAutoRender(res.assignments.map((a: any) => a.videoName))) return
 
         setIsAudioModalOpen(true)
         playSuccess()
@@ -1792,6 +1821,7 @@ export default function TitleAdder(): JSX.Element {
       }
     } catch (err: any) {
       console.warn('Error previewing audio assignments on AME signal:', err)
+      if (await executeAutoRender(videos)) return
       setIsAudioModalOpen(true)
     } finally {
       autoRenderLockRef.current = false
@@ -2571,6 +2601,8 @@ export default function TitleAdder(): JSX.Element {
       thumbnailModeSelections: effectiveThumbSelections
     })
   }
+
+  startJobRef.current = startJob
 
   function handleCancel(): void {
     const api = (window as any).api

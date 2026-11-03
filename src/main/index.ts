@@ -243,7 +243,7 @@ function notifyBatchReady(win: BrowserWindow | null, dvdOrBatchPath: string, cus
     if (win.isMinimized()) win.restore()
     win.show()
     win.focus()
-    win.webContents.send('app:navigate', 'title-adder')
+    win.webContents.send('app:navigate', 'adder')
   }
 
   if (Notification.isSupported()) {
@@ -256,7 +256,7 @@ function notifyBatchReady(win: BrowserWindow | null, dvdOrBatchPath: string, cus
         if (win.isMinimized()) win.restore()
         win.show()
         win.focus()
-        win.webContents.send('app:navigate', 'title-adder')
+        win.webContents.send('app:navigate', 'adder')
       }
     })
     notif.show()

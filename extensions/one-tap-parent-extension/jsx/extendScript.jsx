@@ -360,7 +360,7 @@ $.runScript.autoInOutMarkers = function (userChoice, addSeqPrefix) {
                 var ns = Number(list[i + 1].startSec || s);
                 e = ns - frameDuration;
             } else {
-                e = seqEndSec;
+                e = Math.max(s, seqEndSec - frameDuration);
             }
             if (!isFinite(e) || e < s) e = s;
 
@@ -2406,7 +2406,12 @@ function collectNikaahMarkers(seq) {
                     break;
                 }
             }
-            e = (nextStart !== null) ? nextStart : seqEndSec;
+            var nikaahFrameDur = 0.04;
+            try {
+                var nFps = getSequenceFps(seq);
+                if (nFps > 0) nikaahFrameDur = 1.0 / nFps;
+            } catch(eFps) {}
+            e = (nextStart !== null) ? Math.max(s, nextStart - nikaahFrameDur) : Math.max(s, seqEndSec - nikaahFrameDur);
             if (e <= s) e = s + 5;
         }
 

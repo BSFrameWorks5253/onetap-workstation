@@ -158,6 +158,7 @@ export function showChildAppSplash(
     alwaysOnTop: true,
     show: false,
     backgroundColor: '#00000000',
+    skipTaskbar: true,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true

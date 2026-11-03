@@ -495,8 +495,8 @@ def build_xmeml_xml(sequence_name, video_inputs):
         marker_key = f"{marker_name}||{marker_desc}"
         info = video_infos[idx]
         tb, ntsc_str = parse_tb_ntsc(info['fps'])
-        source_clip_frames = max(1, int(round(info['duration'] * tb)))
-        seq_clip_frames = max(1, int(round(info['duration'] * seq_tb)))
+        source_clip_frames = max(1, int(info['duration'] * tb))
+        seq_clip_frames = max(1, int(info['duration'] * seq_tb))
         clip_name = os.path.basename(vid_path)
         file_id = f"file-{idx + 1}"
         master_id = f"masterclip-{idx + 1}"
@@ -578,14 +578,14 @@ def build_xmeml_xml(sequence_name, video_inputs):
         ET.SubElement(v_clip, 'masterclipid').text = master_id
         ET.SubElement(v_clip, 'name').text = clip_name
         ET.SubElement(v_clip, 'enabled').text = 'TRUE'
-        ET.SubElement(v_clip, 'duration').text = str(source_clip_frames)
+        ET.SubElement(v_clip, 'duration').text = str(seq_clip_frames)
         v_rate = ET.SubElement(v_clip, 'rate')
         ET.SubElement(v_rate, 'timebase').text = str(seq_tb)
         ET.SubElement(v_rate, 'ntsc').text = seq_ntsc
         ET.SubElement(v_clip, 'start').text = str(start_frame)
         ET.SubElement(v_clip, 'end').text = str(end_frame)
         ET.SubElement(v_clip, 'in').text = '0'
-        ET.SubElement(v_clip, 'out').text = str(source_clip_frames)
+        ET.SubElement(v_clip, 'out').text = str(seq_clip_frames)
 
         add_file_elem(v_clip)
 
@@ -601,14 +601,14 @@ def build_xmeml_xml(sequence_name, video_inputs):
             ET.SubElement(a_clip, 'masterclipid').text = master_id
             ET.SubElement(a_clip, 'name').text = clip_name
             ET.SubElement(a_clip, 'enabled').text = 'TRUE'
-            ET.SubElement(a_clip, 'duration').text = str(source_clip_frames)
+            ET.SubElement(a_clip, 'duration').text = str(seq_clip_frames)
             a_rate = ET.SubElement(a_clip, 'rate')
             ET.SubElement(a_rate, 'timebase').text = str(seq_tb)
             ET.SubElement(a_rate, 'ntsc').text = seq_ntsc
             ET.SubElement(a_clip, 'start').text = str(start_frame)
             ET.SubElement(a_clip, 'end').text = str(end_frame)
             ET.SubElement(a_clip, 'in').text = '0'
-            ET.SubElement(a_clip, 'out').text = str(source_clip_frames)
+            ET.SubElement(a_clip, 'out').text = str(seq_clip_frames)
 
             ET.SubElement(a_clip, 'file', id=file_id)
 
