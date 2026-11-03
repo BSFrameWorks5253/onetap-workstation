@@ -78,6 +78,42 @@ ipcMain.handle('fm:getDrives', async () => {
   return drives
 })
 
+ipcMain.handle('fm:getDrivesWithSpace', async () => {
+  const drives: { drive: string; total: number; free: number; usedPercent: number }[] = []
+  for (let i = 65; i <= 90; i++) {
+    const drive = String.fromCharCode(i) + ':\\'
+    try {
+      if (fs.existsSync(drive)) {
+        let total = 0, free = 0, usedPercent = 0
+        try {
+          const stats = fs.statfsSync(drive)
+          total = stats.blocks * stats.bsize
+          free = stats.bavail * stats.bsize
+          usedPercent = total > 0 ? Math.round(((total - free) / total) * 100) : 0
+        } catch {}
+        drives.push({ drive, total, free, usedPercent })
+      }
+    } catch {}
+  }
+  return drives
+})
+
+ipcMain.handle('fm:getQuickAccess', async () => {
+  try {
+    const items = [
+      { name: 'Home', path: app.getPath('home'), icon: 'home' },
+      { name: 'Desktop', path: app.getPath('desktop'), icon: 'desktop' },
+      { name: 'Downloads', path: app.getPath('downloads'), icon: 'downloads' },
+      { name: 'Pictures', path: app.getPath('pictures'), icon: 'pictures' },
+      { name: 'Videos', path: app.getPath('videos'), icon: 'videos' },
+      { name: 'Documents', path: app.getPath('documents'), icon: 'documents' }
+    ]
+    return items.filter(i => fs.existsSync(i.path))
+  } catch {
+    return []
+  }
+})
+
 ipcMain.handle('fm:openExternal', async (_e, filePath: string) => {
   await shell.openPath(filePath)
   return true

@@ -3,6 +3,8 @@ import { contextBridge, ipcRenderer } from 'electron'
 contextBridge.exposeInMainWorld('fmApi', {
   listDir: (p: string) => ipcRenderer.invoke('fm:listDir', p),
   getDrives: () => ipcRenderer.invoke('fm:getDrives'),
+  getDrivesWithSpace: () => ipcRenderer.invoke('fm:getDrivesWithSpace'),
+  getQuickAccess: () => ipcRenderer.invoke('fm:getQuickAccess'),
   openExternal: (p: string) => ipcRenderer.invoke('fm:openExternal', p),
   openInExplorer: (p: string) => ipcRenderer.invoke('fm:openInExplorer', p),
   createFolder: (parent: string, name: string) => ipcRenderer.invoke('fm:createFolder', parent, name),

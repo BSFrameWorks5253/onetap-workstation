@@ -13,8 +13,12 @@ import {
   FolderOpen,
   ArrowLeft,
   ArrowRight,
+  ArrowUp,
   LayoutGrid,
   List,
+  Columns,
+  SquareCode,
+  PanelRight,
   Eye,
   Maximize2,
   X,
@@ -25,7 +29,15 @@ import {
   ZoomIn,
   ZoomOut,
   ChevronLeft,
-  Clock
+  Clock,
+  Monitor,
+  Download,
+  Image as ImageIcon,
+  Film,
+  FileText,
+  Check,
+  Edit2,
+  ArrowUpDown
 } from 'lucide-react'
 
 const api = (window as any).fmApi
@@ -595,9 +607,11 @@ function MediaViewerModal({
   )
 }
 
-// ── Main File Manager App ─────────────────────────────────────
+// ── Main File Manager App (macOS Finder + Windows Explorer Hybrid) ────
 export default function App() {
   const [drives, setDrives] = useState<string[]>([])
+  const [drivesWithSpace, setDrivesWithSpace] = useState<{ drive: string; total: number; free: number; usedPercent: number }[]>([])
+  const [quickAccess, setQuickAccess] = useState<{ name: string; path: string; icon: string }[]>([])
   const [currentPath, setCurrentPath] = useState('')
   const [entries, setEntries] = useState<FsEntry[]>([])
   const [loading, setLoading] = useState(false)
@@ -605,7 +619,14 @@ export default function App() {
   const [history, setHistory] = useState<string[]>([])
   const [historyIdx, setHistoryIdx] = useState(-1)
   const [search, setSearch] = useState('')
-  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid')
+  const [filterCategory, setFilterCategory] = useState<'all' | 'photo' | 'video' | 'doc'>('all')
+  const [viewMode, setViewMode] = useState<'grid' | 'table' | 'columns' | 'gallery'>('grid')
+  const [sortField, setSortField] = useState<'name' | 'date' | 'size' | 'ext'>('name')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
+  const [isInspectorOpen, setIsInspectorOpen] = useState(true)
+  const [isQuickLookOpen, setIsQuickLookOpen] = useState(false)
+  const [isEditingPath, setIsEditingPath] = useState(false)
+  const [pathInput, setPathInput] = useState('')
   const [activeMedia, setActiveMedia] = useState<FsEntry | null>(null)
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; entry: FsEntry } | null>(null)
   const [showNewFolder, setShowNewFolder] = useState(false)
@@ -614,8 +635,35 @@ export default function App() {
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null)
   const newFolderInputRef = useRef<HTMLInputElement>(null)
 
+  // Selected item object
+  const selectedEntry = useMemo(() => {
+    return entries.find(e => e.fullPath === selected) || null
+  }, [entries, selected])
+
   useEffect(() => {
-    api?.getDrives?.().then(setDrives)
+    setPathInput(currentPath)
+  }, [currentPath])
+
+  useEffect(() => {
+    api?.getDrivesWithSpace?.().then((res: any[]) => {
+      if (res && res.length > 0) {
+        setDrivesWithSpace(res)
+        setDrives(res.map(d => d.drive))
+      } else {
+        api?.getDrives?.().then(setDrives)
+      }
+    })
+
+    api?.getQuickAccess?.().then((qa: any[]) => {
+      if (qa && qa.length > 0) {
+        setQuickAccess(qa)
+        const defaultFolder = qa.find(q => q.icon === 'videos' || q.icon === 'pictures' || q.icon === 'desktop') || qa[0]
+        if (defaultFolder && !currentPath) {
+          navigate(defaultFolder.path)
+        }
+      }
+    })
+
     api?.getDeepLinkPath?.().then((p: string | null) => {
       if (p) navigate(p)
     })
@@ -624,6 +672,7 @@ export default function App() {
 
   const navigate = useCallback(
     async (path: string) => {
+      if (!path) return
       setLoading(true)
       setSearch('')
       const items = (await api?.listDir?.(path)) || []
@@ -656,7 +705,20 @@ export default function App() {
     }
   }
 
+  const goUp = () => {
+    if (!currentPath) return
+    const clean = currentPath.replace(/\\/g, '/').replace(/\/$/, '')
+    const lastSlash = clean.lastIndexOf('/')
+    if (lastSlash > 0) {
+      const parent = clean.substring(0, lastSlash)
+      navigate(parent.endsWith(':') ? parent + '\\' : parent)
+    } else if (clean.includes(':')) {
+      navigate(clean.substring(0, clean.indexOf(':') + 1) + '\\')
+    }
+  }
+
   const loadPath = async (path: string) => {
+    if (!path) return
     setLoading(true)
     setSearch('')
     const e = (await api?.listDir?.(path)) || []
@@ -666,10 +728,71 @@ export default function App() {
     setLoading(false)
   }
 
+  // Keyboard Shortcuts: Spacebar Quick Look & View Hotkeys
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return
+
+      if (e.code === 'Space') {
+        e.preventDefault()
+        if (selectedEntry) setIsQuickLookOpen(prev => !prev)
+      }
+
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === '1') { e.preventDefault(); setViewMode('grid') }
+        else if (e.key === '2') { e.preventDefault(); setViewMode('table') }
+        else if (e.key === '3') { e.preventDefault(); setViewMode('columns') }
+        else if (e.key === '4') { e.preventDefault(); setViewMode('gallery') }
+        else if (e.key.toLowerCase() === 'i') { e.preventDefault(); setIsInspectorOpen(prev => !prev) }
+      }
+
+      if (e.altKey && e.key === 'ArrowUp') {
+        e.preventDefault()
+        goUp()
+      }
+    }
+
+    window.addEventListener('keydown', handleGlobalKeyDown)
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown)
+  }, [selectedEntry])
+
   const breadcrumbs = currentPath.replace(/\\/g, '/').split('/').filter(Boolean)
-  const filteredEntries = search
-    ? entries.filter(e => e.name.toLowerCase().includes(search.toLowerCase()))
-    : entries
+
+  const handleSortToggle = (field: 'name' | 'date' | 'size' | 'ext') => {
+    if (sortField === field) {
+      setSortOrder(prev => (prev === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortField(field)
+      setSortOrder('asc')
+    }
+  }
+
+  // Filter & Sort entries
+  const filteredEntries = useMemo(() => {
+    let list = entries
+    if (search.trim()) {
+      const q = search.toLowerCase()
+      list = list.filter(e => e.name.toLowerCase().includes(q))
+    }
+    if (filterCategory === 'photo') {
+      list = list.filter(e => e.isDir || IMG_EXTS.has(e.ext))
+    } else if (filterCategory === 'video') {
+      list = list.filter(e => e.isDir || VID_EXTS.has(e.ext))
+    } else if (filterCategory === 'doc') {
+      list = list.filter(e => e.isDir || DOC_EXTS.has(e.ext))
+    }
+
+    return [...list].sort((a, b) => {
+      if (a.isDir !== b.isDir) return a.isDir ? -1 : 1
+      let cmp = 0
+      if (sortField === 'name') cmp = a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })
+      else if (sortField === 'date') cmp = a.mtime - b.mtime
+      else if (sortField === 'size') cmp = a.size - b.size
+      else if (sortField === 'ext') cmp = a.ext.localeCompare(b.ext)
+      return sortOrder === 'asc' ? cmp : -cmp
+    })
+  }, [entries, search, filterCategory, sortField, sortOrder])
 
   const openNewFolder = () => {
     setSuggestions(suggestFolderNames(entries))
@@ -691,11 +814,6 @@ export default function App() {
     setTimeout(() => setCopyFeedback(null), 1500)
   }
 
-  const buildBreadcrumbPath = (idx: number): string => {
-    const parts = currentPath.replace(/\\/g, '/').split('/').filter(Boolean)
-    return parts.slice(0, idx + 1).join('/') + '/'
-  }
-
   const handleEntryOpen = (e: FsEntry) => {
     if (e.isDir) {
       navigate(e.fullPath)
@@ -706,139 +824,362 @@ export default function App() {
     }
   }
 
+  const handlePathSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (pathInput.trim()) navigate(pathInput.trim())
+    setIsEditingPath(false)
+  }
+
+  const getQuickIcon = (icon: string) => {
+    switch (icon) {
+      case 'home': return <Home className="w-3.5 h-3.5 text-sky-400" />
+      case 'desktop': return <Monitor className="w-3.5 h-3.5 text-indigo-400" />
+      case 'downloads': return <Download className="w-3.5 h-3.5 text-emerald-400" />
+      case 'pictures': return <ImageIcon className="w-3.5 h-3.5 text-rose-400" />
+      case 'videos': return <Film className="w-3.5 h-3.5 text-purple-400" />
+      case 'documents': return <FileText className="w-3.5 h-3.5 text-amber-400" />
+      default: return <Folder className="w-3.5 h-3.5 text-gray-400" />
+    }
+  }
+
   return (
     <div
-      className="flex flex-col h-screen bg-[#0D0F14] text-gray-200 select-none"
+      className="flex flex-col h-screen bg-[#0A0C10] text-gray-200 select-none overflow-hidden"
       onClick={() => setContextMenu(null)}
     >
-      {/* Top bar */}
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-white/10 bg-[#161921]">
-        <button
-          onClick={goBack}
-          disabled={historyIdx <= 0}
-          className="p-1.5 rounded hover:bg-white/10 disabled:opacity-30"
-          title="Back"
-        >
-          <ArrowLeft className="w-4 h-4" />
-        </button>
-        <button
-          onClick={goForward}
-          disabled={historyIdx >= history.length - 1}
-          className="p-1.5 rounded hover:bg-white/10 disabled:opacity-30"
-          title="Forward"
-        >
-          <ArrowRight className="w-4 h-4" />
-        </button>
-        <button
-          onClick={() => loadPath(currentPath)}
-          className="p-1.5 rounded hover:bg-white/10"
-          title="Refresh"
-        >
-          <RefreshCw className="w-4 h-4" />
-        </button>
-
-        {/* Breadcrumb */}
-        <div className="flex items-center gap-1 flex-1 overflow-x-auto text-sm">
-          <button onClick={() => setCurrentPath('')} className="hover:text-white">
-            <Home className="w-3.5 h-3.5" />
+      {/* ── Top Windows Explorer + Mac Finder Hybrid Toolbar ── */}
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-white/10 bg-[#13151D]">
+        {/* History Nav */}
+        <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/5">
+          <button
+            onClick={goBack}
+            disabled={historyIdx <= 0}
+            className="p-1.5 rounded-lg hover:bg-white/10 disabled:opacity-30"
+            title="Back (Alt+Left)"
+          >
+            <ArrowLeft className="w-4 h-4" />
           </button>
-          {breadcrumbs.map((seg, i) => (
-            <React.Fragment key={i}>
-              <ChevronRight className="w-3 h-3 text-gray-600" />
-              <button
-                onClick={() => loadPath(buildBreadcrumbPath(i))}
-                className="hover:text-white whitespace-nowrap max-w-[160px] truncate"
-              >
-                {seg}
-              </button>
-            </React.Fragment>
-          ))}
+          <button
+            onClick={goForward}
+            disabled={historyIdx >= history.length - 1}
+            className="p-1.5 rounded-lg hover:bg-white/10 disabled:opacity-30"
+            title="Forward (Alt+Right)"
+          >
+            <ArrowRight className="w-4 h-4" />
+          </button>
+          <button
+            onClick={goUp}
+            disabled={!currentPath || currentPath.length <= 3}
+            className="p-1.5 rounded-lg hover:bg-white/10 disabled:opacity-30"
+            title="Up to Parent Folder (Alt+Up)"
+          >
+            <ArrowUp className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => loadPath(currentPath)}
+            className="p-1.5 rounded-lg hover:bg-white/10"
+            title="Refresh (F5)"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => quickAccess.length > 0 ? navigate(quickAccess[0].path) : drives.length > 0 && navigate(drives[0])}
+            className="p-1.5 rounded-lg hover:bg-white/10"
+            title="Home"
+          >
+            <Home className="w-4 h-4" />
+          </button>
         </div>
 
-        {/* View Mode Toggle */}
-        <div className="flex items-center bg-white/5 border border-white/10 rounded-lg p-0.5">
+        {/* Windows Explorer Address Bar + Editable Path */}
+        <div className="flex-1 flex items-center bg-black/40 border border-white/10 rounded-xl px-3 py-1.5 shadow-inner overflow-hidden">
+          {isEditingPath ? (
+            <form onSubmit={handlePathSubmit} className="flex items-center w-full gap-2">
+              <input
+                type="text"
+                value={pathInput}
+                onChange={e => setPathInput(e.target.value)}
+                autoFocus
+                className="w-full bg-transparent text-xs text-white outline-none font-mono"
+                placeholder="Type or paste path..."
+              />
+              <button type="submit" className="text-emerald-400 p-0.5"><Check className="w-4 h-4" /></button>
+              <button type="button" onClick={() => setIsEditingPath(false)} className="text-gray-400 p-0.5"><X className="w-4 h-4" /></button>
+            </form>
+          ) : (
+            <div
+              className="flex items-center gap-1 overflow-x-auto no-scrollbar w-full cursor-text"
+              onClick={() => setIsEditingPath(true)}
+              title="Click to edit path"
+            >
+              {breadcrumbs.length === 0 ? (
+                <span className="text-xs text-gray-500">Select a location...</span>
+              ) : (
+                breadcrumbs.map((crumb, idx) => {
+                  const pathUpTo = breadcrumbs.slice(0, idx + 1).join('\\')
+                  const isLast = idx === breadcrumbs.length - 1
+                  return (
+                    <React.Fragment key={pathUpTo}>
+                      <button
+                        type="button"
+                        onClick={e => {
+                          e.stopPropagation()
+                          navigate(pathUpTo.includes(':') && !pathUpTo.includes('\\') ? pathUpTo + '\\' : pathUpTo)
+                        }}
+                        className={`text-xs px-1.5 py-0.5 rounded hover:bg-white/10 truncate max-w-[150px] ${
+                          isLast ? 'text-white font-bold' : 'text-gray-400 hover:text-gray-200'
+                        }`}
+                      >
+                        {crumb}
+                      </button>
+                      {!isLast && <ChevronRight className="w-3.5 h-3.5 text-gray-600 flex-shrink-0" />}
+                    </React.Fragment>
+                  )
+                })
+              )}
+              <button
+                type="button"
+                onClick={e => {
+                  e.stopPropagation()
+                  setIsEditingPath(true)
+                }}
+                className="ml-auto text-gray-500 hover:text-gray-300 p-1"
+                title="Edit path"
+              >
+                <Edit2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Search */}
+        <div className="relative w-44 lg:w-56">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search..."
+            className="w-full bg-white/5 border border-white/10 rounded-xl pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-indigo-500 text-white"
+          />
+        </div>
+
+        {/* ── macOS Finder 4-Mode View Switcher ── */}
+        <div className="flex items-center bg-black/40 border border-white/10 rounded-xl p-1">
           <button
             onClick={() => setViewMode('grid')}
-            className={`p-1.5 rounded ${viewMode === 'grid' ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-white'}`}
-            title="Grid & Thumbnails View"
+            className={`p-1.5 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-400 hover:text-white'}`}
+            title="Icons / Grid View (Ctrl+1)"
           >
             <LayoutGrid className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={() => setViewMode('table')}
-            className={`p-1.5 rounded ${viewMode === 'table' ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-white'}`}
-            title="Table View"
+            className={`p-1.5 rounded-lg transition-all ${viewMode === 'table' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-400 hover:text-white'}`}
+            title="List / Details View (Ctrl+2)"
           >
             <List className="w-3.5 h-3.5" />
           </button>
+          <button
+            onClick={() => setViewMode('columns')}
+            className={`p-1.5 rounded-lg transition-all ${viewMode === 'columns' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-400 hover:text-white'}`}
+            title="Columns View (macOS Miller Columns - Ctrl+3)"
+          >
+            <Columns className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={() => setViewMode('gallery')}
+            className={`p-1.5 rounded-lg transition-all ${viewMode === 'gallery' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-400 hover:text-white'}`}
+            title="Gallery View (Filmstrip Stage - Ctrl+4)"
+          >
+            <SquareCode className="w-3.5 h-3.5" />
+          </button>
         </div>
 
-        <div className="relative">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search files..."
-            className="bg-white/5 border border-white/10 rounded-lg pl-7 pr-3 py-1 text-sm focus:outline-none focus:border-indigo-500"
-          />
+        {/* Sorting Dropdown */}
+        <div className="flex items-center bg-black/40 border border-white/10 rounded-xl px-2 py-1 gap-1 text-xs">
+          <ArrowUpDown className="w-3.5 h-3.5 text-indigo-400" />
+          <select
+            value={sortField}
+            onChange={e => handleSortToggle(e.target.value as any)}
+            className="bg-transparent text-xs text-gray-200 outline-none cursor-pointer"
+          >
+            <option value="name" className="bg-[#141620]">Name</option>
+            <option value="date" className="bg-[#141620]">Date</option>
+            <option value="size" className="bg-[#141620]">Size</option>
+            <option value="ext" className="bg-[#141620]">Type</option>
+          </select>
+          <span className="text-[10px] text-indigo-400 font-bold uppercase">{sortOrder}</span>
         </div>
 
+        {/* Inspector Toggle */}
+        <button
+          onClick={() => setIsInspectorOpen(prev => !prev)}
+          className={`p-1.5 rounded-xl border transition-all ${
+            isInspectorOpen ? 'bg-indigo-600/20 border-indigo-500/50 text-indigo-300' : 'border-white/10 bg-white/5 text-gray-400 hover:text-white'
+          }`}
+          title="Toggle Inspector / Details Pane (Alt+P or Ctrl+I)"
+        >
+          <PanelRight className="w-4 h-4" />
+        </button>
+
+        {/* New Folder */}
         <button
           onClick={openNewFolder}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/40 rounded-lg text-indigo-300 text-sm"
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-white text-xs font-semibold shadow-md"
         >
           <Plus className="w-3.5 h-3.5" />
           <span>New Folder</span>
         </button>
-        {copyFeedback && <span className="text-emerald-400 text-xs">{copyFeedback}</span>}
+        {copyFeedback && <span className="text-emerald-400 text-xs font-semibold">{copyFeedback}</span>}
       </div>
 
       <div className="flex flex-1 min-h-0">
-        {/* Left sidebar */}
-        <div className="w-64 flex-shrink-0 border-r border-white/10 bg-[#131519] overflow-y-auto flex flex-col">
-          <div className="px-3 pt-3 pb-1 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
-            Drives
+        {/* ── Left Sidebar (macOS Traffic Lights + Favorites + Windows Drive Bars) ── */}
+        <div className="w-64 flex-shrink-0 border-r border-white/10 bg-[#0e1017] overflow-y-auto flex flex-col p-3">
+          {/* macOS Traffic Lights Header */}
+          <div className="flex items-center gap-2 px-2 pt-1 pb-3 border-b border-white/5 mb-3">
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-full bg-[#ff5f56] border border-[#e0443e] cursor-pointer" />
+              <div className="w-3 h-3 rounded-full bg-[#ffbd2e] border border-[#dea123] cursor-pointer" />
+              <div className="w-3 h-3 rounded-full bg-[#27c93f] border border-[#1aab29] cursor-pointer" />
+            </div>
+            <span className="text-[11px] font-bold text-gray-400 tracking-wider ml-2 uppercase">
+              Finder & Explorer
+            </span>
           </div>
-          {drives.map(d => (
-            <button
-              key={d}
-              onClick={() => navigate(d)}
-              className={`flex items-center gap-2 px-3 py-2 text-sm hover:bg-white/5 ${currentPath.startsWith(d) ? 'text-indigo-300 bg-indigo-500/10' : 'text-gray-300'}`}
-            >
-              <HardDrive className="w-4 h-4 text-gray-500" />
-              {d}
-            </button>
-          ))}
 
-          <div className="mt-4 px-3 pb-1 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
-            Quick Nav
+          {/* Section 1: Favorites (macOS / Windows Quick Access) */}
+          {quickAccess.length > 0 && (
+            <>
+              <div className="px-2 pb-1 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+                Favorites
+              </div>
+              <div className="space-y-0.5 mb-4">
+                {quickAccess.map(qa => {
+                  const active = currentPath.toLowerCase() === qa.path.toLowerCase()
+                  return (
+                    <button
+                      key={qa.path}
+                      onClick={() => navigate(qa.path)}
+                      className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                        active ? 'bg-indigo-600 text-white shadow-md font-semibold' : 'text-gray-300 hover:bg-white/5 hover:text-white'
+                      }`}
+                    >
+                      {getQuickIcon(qa.icon)}
+                      <span className="truncate">{qa.name}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </>
+          )}
+
+          {/* Section 2: Locations & Drives (Windows Explorer Storage Bars) */}
+          <div className="px-2 pb-1 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+            Locations
           </div>
-          {entries
-            .filter(e => e.isDir)
-            .slice(0, 20)
-            .map(e => (
+          <div className="space-y-1.5 mb-4">
+            {(drivesWithSpace.length > 0 ? drivesWithSpace : drives.map(d => ({ drive: d, total: 0, free: 0, usedPercent: 0 }))).map(d => {
+              const active = currentPath.toLowerCase().startsWith(d.drive.toLowerCase())
+              return (
+                <button
+                  key={d.drive}
+                  onClick={() => navigate(d.drive)}
+                  className={`w-full flex flex-col p-2 rounded-xl text-xs transition-all ${
+                    active
+                      ? 'bg-indigo-600/15 border border-indigo-500/40 text-indigo-200'
+                      : 'border border-white/5 bg-white/[0.02] text-gray-400 hover:bg-white/5 hover:text-white'
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full mb-1">
+                    <div className="flex items-center gap-2 font-semibold">
+                      <HardDrive className={`w-4 h-4 ${active ? 'text-indigo-400' : 'text-gray-400'}`} />
+                      <span className="text-gray-200">Local Disk ({d.drive.replace(/\\/g, '')})</span>
+                    </div>
+                    {d.total > 0 && <span className="text-[10px] text-gray-500 font-mono">{d.usedPercent}%</span>}
+                  </div>
+                  {d.total > 0 && (
+                    <div className="w-full">
+                      <div className="w-full bg-white/10 h-1 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full ${d.usedPercent > 90 ? 'bg-rose-500' : d.usedPercent > 75 ? 'bg-amber-400' : 'bg-indigo-500'}`}
+                          style={{ width: `${d.usedPercent}%` }}
+                        />
+                      </div>
+                      <div className="flex justify-between text-[10px] text-gray-500 mt-1">
+                        <span>{formatSize(d.free)} free</span>
+                        <span>{formatSize(d.total)}</span>
+                      </div>
+                    </div>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Section 3: Smart Media Categories */}
+          <div className="px-2 pb-1 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+            Categories
+          </div>
+          <div className="space-y-0.5 mb-4">
+            <button
+              onClick={() => setFilterCategory('all')}
+              className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs ${filterCategory === 'all' ? 'bg-white/10 text-white font-semibold' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
+            >
+              <Folder className="w-3.5 h-3.5 text-indigo-400" />
+              <span>All Files</span>
+            </button>
+            <button
+              onClick={() => setFilterCategory('photo')}
+              className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs ${filterCategory === 'photo' ? 'bg-emerald-600/20 text-emerald-300 font-semibold border border-emerald-500/30' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
+            >
+              <ImageIcon className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Photos</span>
+            </button>
+            <button
+              onClick={() => setFilterCategory('video')}
+              className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs ${filterCategory === 'video' ? 'bg-purple-600/20 text-purple-300 font-semibold border border-purple-500/30' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
+            >
+              <Film className="w-3.5 h-3.5 text-purple-400" />
+              <span>Videos</span>
+            </button>
+          </div>
+
+          {/* Subfolders Quick Nav */}
+          <div className="px-2 pb-1 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+            Folders
+          </div>
+          <div className="space-y-0.5 overflow-y-auto max-h-40">
+            {entries.filter(e => e.isDir).map(e => (
               <button
                 key={e.fullPath}
                 onClick={() => navigate(e.fullPath)}
-                className="flex items-center gap-2 px-4 py-1.5 text-xs hover:bg-white/5 text-gray-400 hover:text-gray-200"
+                className="w-full flex items-center gap-2 px-2.5 py-1 text-xs hover:bg-white/5 text-gray-400 hover:text-gray-200 truncate"
               >
-                <Folder className="w-3.5 h-3.5 text-amber-400/70" />
+                <Folder className="w-3.5 h-3.5 text-amber-400/70 flex-shrink-0" />
                 <span className="truncate">{e.name}</span>
               </button>
             ))}
+          </div>
         </div>
 
-        {/* Main content */}
-        <div className="flex-1 overflow-auto p-3">
+        {/* ── Main Content Area ── */}
+        <div className="flex-1 overflow-auto bg-[#0d0f15] p-3">
           {!currentPath ? (
             <div className="flex flex-col items-center justify-center h-full text-gray-500">
               <HardDrive className="w-16 h-16 mb-4 opacity-30" />
-              <p>Select a drive to browse files and view media</p>
+              <p>Select a drive or location to browse files</p>
             </div>
           ) : loading ? (
-            <div className="flex items-center justify-center h-full text-gray-500">Loading files...</div>
+            <div className="flex items-center justify-center h-full text-gray-500">
+              <RefreshCw className="w-5 h-5 animate-spin mr-2" /> Loading assets...
+            </div>
+          ) : filteredEntries.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-gray-500">
+              <p className="text-sm">No items in this folder</p>
+            </div>
           ) : viewMode === 'grid' ? (
-            /* ── GRID / THUMBNAILS VIEW ── */
+            /* 1. Icons / Grid View */
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
               {filteredEntries.map(e => (
                 <MediaThumbnailCard
@@ -849,14 +1190,15 @@ export default function App() {
                 />
               ))}
             </div>
-          ) : (
-            /* ── DETAILS / TABLE VIEW ── */
+          ) : viewMode === 'table' ? (
+            /* 2. List / Details View */
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-[11px] text-gray-500 uppercase border-b border-white/10">
-                  <th className="text-left py-1.5 px-2 font-medium">Name</th>
-                  <th className="text-right py-1.5 px-2 font-medium w-24">Size</th>
-                  <th className="text-right py-1.5 px-2 font-medium w-44">Modified</th>
+                  <th className="text-left py-2 px-3 font-semibold cursor-pointer hover:text-white" onClick={() => handleSortToggle('name')}>Name</th>
+                  <th className="text-left py-2 px-3 font-semibold w-24 cursor-pointer hover:text-white" onClick={() => handleSortToggle('ext')}>Type</th>
+                  <th className="text-right py-2 px-3 font-semibold w-28 cursor-pointer hover:text-white" onClick={() => handleSortToggle('size')}>Size</th>
+                  <th className="text-right py-2 px-3 font-semibold w-44 cursor-pointer hover:text-white" onClick={() => handleSortToggle('date')}>Modified</th>
                 </tr>
               </thead>
               <tbody>
@@ -870,39 +1212,204 @@ export default function App() {
                       ev.stopPropagation()
                       setContextMenu({ x: ev.clientX, y: ev.clientY, entry: e })
                     }}
-                    className={`cursor-pointer hover:bg-white/5 rounded ${selected === e.fullPath ? 'bg-indigo-500/10 text-indigo-200' : ''}`}
+                    className={`cursor-pointer hover:bg-white/5 rounded-lg transition-colors ${selected === e.fullPath ? 'bg-indigo-600/20 text-indigo-200' : ''}`}
                   >
-                    <td className="py-1.5 px-2">
-                      <div className="flex items-center gap-2">
+                    <td className="py-2 px-3">
+                      <div className="flex items-center gap-2.5">
                         {e.isDir ? (
                           <Folder className="w-4 h-4 text-amber-400 flex-shrink-0" />
                         ) : IMG_EXTS.has(e.ext) ? (
-                          <File className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                          <ImageIcon className="w-4 h-4 text-emerald-400 flex-shrink-0" />
                         ) : VID_EXTS.has(e.ext) ? (
-                          <File className="w-4 h-4 text-purple-400 flex-shrink-0" />
+                          <Film className="w-4 h-4 text-purple-400 flex-shrink-0" />
                         ) : (
                           <File className="w-4 h-4 text-gray-400 flex-shrink-0" />
                         )}
-                        <span className="truncate max-w-[400px]">{e.name}</span>
+                        <span className="truncate max-w-[400px] font-medium">{e.name}</span>
                       </div>
                     </td>
-                    <td className="py-1.5 px-2 text-right text-gray-400 tabular-nums">
-                      {e.isDir ? '—' : formatSize(e.size)}
-                    </td>
-                    <td className="py-1.5 px-2 text-right text-gray-400 tabular-nums">{formatDate(e.mtime)}</td>
+                    <td className="py-2 px-3 text-xs uppercase text-gray-400">{e.isDir ? 'Folder' : e.ext}</td>
+                    <td className="py-2 px-3 text-right text-gray-400 text-xs tabular-nums">{e.isDir ? '—' : formatSize(e.size)}</td>
+                    <td className="py-2 px-3 text-right text-gray-400 text-xs tabular-nums">{formatDate(e.mtime)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
+          ) : viewMode === 'columns' ? (
+            /* 3. macOS Miller Columns View */
+            <div className="flex h-full overflow-x-auto gap-2">
+              <div className="w-64 min-w-[240px] border border-white/10 rounded-xl bg-[#12141c] overflow-y-auto p-1">
+                {filteredEntries.map(e => (
+                  <button
+                    key={e.fullPath}
+                    onClick={() => setSelected(e.fullPath)}
+                    onDoubleClick={() => handleEntryOpen(e)}
+                    className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors ${
+                      selected === e.fullPath ? 'bg-indigo-600 text-white font-medium' : 'text-gray-300 hover:bg-white/5'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 truncate">
+                      {e.isDir ? <Folder className="w-3.5 h-3.5 text-amber-400" /> : <File className="w-3.5 h-3.5 text-gray-400" />}
+                      <span className="truncate">{e.name}</span>
+                    </div>
+                    {e.isDir && <ChevronRight className="w-3.5 h-3.5 opacity-60" />}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            /* 4. macOS Gallery View (Stage + Filmstrip) */
+            <div className="flex flex-col h-full overflow-hidden">
+              <div className="flex-1 bg-black rounded-xl overflow-hidden flex items-center justify-center relative p-4 mb-3 border border-white/10">
+                {selectedEntry ? (
+                  IMG_EXTS.has(selectedEntry.ext) ? (
+                    <img
+                      src={api?.toLocalResourceUrl ? api.toLocalResourceUrl(selectedEntry.fullPath) : selectedEntry.fullPath}
+                      alt={selectedEntry.name}
+                      className="max-h-full max-w-full object-contain"
+                    />
+                  ) : VID_EXTS.has(selectedEntry.ext) ? (
+                    <video
+                      src={api?.toLocalResourceUrl ? api.toLocalResourceUrl(selectedEntry.fullPath) : selectedEntry.fullPath}
+                      autoPlay
+                      controls
+                      loop
+                      className="max-h-full max-w-full object-contain"
+                    />
+                  ) : (
+                    <div className="text-center text-gray-500">
+                      <File className="w-16 h-16 mx-auto mb-2 opacity-30" />
+                      <p className="text-sm font-semibold">{selectedEntry.name}</p>
+                    </div>
+                  )
+                ) : (
+                  <p className="text-gray-500 text-sm">Select an item below to view</p>
+                )}
+              </div>
+              <div className="h-24 overflow-x-auto flex items-center gap-2 px-1">
+                {filteredEntries.map(e => (
+                  <div
+                    key={e.fullPath}
+                    onClick={() => setSelected(e.fullPath)}
+                    onDoubleClick={() => handleEntryOpen(e)}
+                    className={`h-20 aspect-video rounded-lg overflow-hidden cursor-pointer flex-shrink-0 border transition-all ${
+                      selected === e.fullPath ? 'border-indigo-500 scale-105 shadow-lg' : 'border-white/10 opacity-70 hover:opacity-100'
+                    }`}
+                  >
+                    <MediaThumbnailCard entry={e} onClick={() => setSelected(e.fullPath)} onDoubleClick={() => handleEntryOpen(e)} />
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </div>
+
+        {/* ── Collapsible Right Inspector / Details Pane (Windows & Mac Info) ── */}
+        {isInspectorOpen && (
+          <div className="w-72 flex-shrink-0 border-l border-white/10 bg-[#0e1017] flex flex-col p-4 overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-3">
+              <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Details & Preview</span>
+              <button onClick={() => setIsInspectorOpen(false)} className="text-gray-400 hover:text-white p-1 rounded">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            {selectedEntry ? (
+              <div className="space-y-4">
+                <div className="aspect-video bg-black/60 rounded-xl overflow-hidden flex items-center justify-center border border-white/10">
+                  {IMG_EXTS.has(selectedEntry.ext) ? (
+                    <img src={api?.toLocalResourceUrl ? api.toLocalResourceUrl(selectedEntry.fullPath) : selectedEntry.fullPath} className="w-full h-full object-contain" />
+                  ) : (
+                    <File className="w-12 h-12 text-indigo-400 opacity-60" />
+                  )}
+                </div>
+                <div>
+                  <span className="text-[10px] text-gray-500 uppercase font-bold">Name</span>
+                  <p className="text-xs font-semibold text-white break-words mt-0.5">{selectedEntry.name}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span className="text-[10px] text-gray-500 uppercase font-bold">Size</span>
+                    <p className="font-mono text-gray-200 mt-0.5">{selectedEntry.isDir ? '—' : formatSize(selectedEntry.size)}</p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-gray-500 uppercase font-bold">Type</span>
+                    <p className="uppercase text-gray-200 mt-0.5">{selectedEntry.ext || 'Folder'}</p>
+                  </div>
+                </div>
+                <div>
+                  <span className="text-[10px] text-gray-500 uppercase font-bold">Modified</span>
+                  <p className="text-xs font-mono text-gray-300 mt-0.5">{formatDate(selectedEntry.mtime)}</p>
+                </div>
+                <div className="pt-2 border-t border-white/10 flex flex-col gap-2">
+                  <button
+                    onClick={() => handleEntryOpen(selectedEntry)}
+                    className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-md"
+                  >
+                    <Maximize2 className="w-3.5 h-3.5" />
+                    <span>Open Media</span>
+                  </button>
+                  <button
+                    onClick={() => api?.openInExplorer?.(selectedEntry.fullPath)}
+                    className="w-full py-1.5 bg-white/5 hover:bg-white/10 text-gray-300 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 border border-white/10"
+                  >
+                    <FolderOpen className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Show in Explorer</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-48 text-gray-500 text-xs">
+                <File className="w-8 h-8 mb-2 opacity-30" />
+                <span>Select a file to inspect</span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Bottom status bar */}
-      <div className="flex items-center justify-between px-3 py-1.5 border-t border-white/10 bg-[#161921] text-[11px] text-gray-500">
+      <div className="flex items-center justify-between px-3 py-1.5 border-t border-white/10 bg-[#12141c] text-[11px] text-gray-500">
         <span>{filteredEntries.length} items</span>
         {selected && <span className="truncate max-w-[500px] text-gray-300">{selected}</span>}
       </div>
+
+      {/* ── macOS Spacebar Quick Look Modal ── */}
+      {isQuickLookOpen && selectedEntry && (
+        <div
+          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-6 select-none"
+          onClick={() => setIsQuickLookOpen(false)}
+        >
+          <div
+            className="bg-[#141622]/95 border border-white/15 rounded-2xl max-w-4xl max-h-[85vh] w-full flex flex-col shadow-2xl overflow-hidden"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/10 bg-[#181b2a]">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-[#ff5f56] cursor-pointer" onClick={() => setIsQuickLookOpen(false)} />
+                <div className="w-3 h-3 rounded-full bg-[#ffbd2e]" />
+                <div className="w-3 h-3 rounded-full bg-[#27c93f]" />
+                <span className="text-xs font-semibold text-gray-300 ml-2 truncate max-w-md">{selectedEntry.name} — Quick Look</span>
+              </div>
+              <button onClick={() => setIsQuickLookOpen(false)} className="text-gray-400 hover:text-white p-1">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="flex-1 bg-black flex items-center justify-center p-3 min-h-[400px] max-h-[60vh] overflow-hidden">
+              {IMG_EXTS.has(selectedEntry.ext) ? (
+                <img src={api?.toLocalResourceUrl ? api.toLocalResourceUrl(selectedEntry.fullPath) : selectedEntry.fullPath} alt={selectedEntry.name} className="max-h-full max-w-full object-contain" />
+              ) : VID_EXTS.has(selectedEntry.ext) ? (
+                <video src={api?.toLocalResourceUrl ? api.toLocalResourceUrl(selectedEntry.fullPath) : selectedEntry.fullPath} autoPlay controls loop className="max-h-full max-w-full object-contain" />
+              ) : (
+                <File className="w-16 h-16 text-gray-500" />
+              )}
+            </div>
+            <div className="px-5 py-3 border-t border-white/10 bg-[#161826] flex items-center justify-between text-xs text-gray-400">
+              <span>{formatSize(selectedEntry.size)} — {formatDate(selectedEntry.mtime)}</span>
+              <span>Press Space or Esc to dismiss</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Media Viewer Modal */}
       {activeMedia && (
