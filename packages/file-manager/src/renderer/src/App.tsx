@@ -1182,96 +1182,114 @@ export default function App() {
 
         {/* Search */}
         <div className="relative w-44 lg:w-56">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search..."
-            className="w-full bg-white/5 border border-white/10 rounded-xl pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-indigo-500 text-white"
+            placeholder="Search"
+            className="w-full bg-black/5 dark:bg-white/[0.06] border border-black/10 dark:border-white/10 rounded-lg pl-8 pr-3 h-8 text-xs text-[var(--mac-text-primary)] placeholder-gray-400 outline-none focus:border-[var(--mac-accent)] transition-all"
           />
         </div>
 
-        {/* ── macOS Finder 4-Mode View Switcher ── */}
-        <div className="flex items-center bg-black/40 border border-white/10 rounded-xl p-1">
+        {/* ── Native macOS Segmented View Control ── */}
+        <div className="flex items-center bg-black/5 dark:bg-white/[0.06] border border-black/10 dark:border-white/10 p-0.5 rounded-lg">
           <button
             onClick={() => setViewMode('grid')}
-            className={`p-1.5 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-400 hover:text-white'}`}
-            title="Icons / Grid View (Ctrl+1)"
+            className={`p-1 rounded-md transition-all ${
+              viewMode === 'grid'
+                ? 'bg-white dark:bg-white/20 text-gray-900 dark:text-white shadow-sm'
+                : 'text-gray-400 hover:text-[var(--mac-text-primary)]'
+            }`}
+            title="Icons / Grid (Ctrl+1)"
           >
             <LayoutGrid className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={() => setViewMode('table')}
-            className={`p-1.5 rounded-lg transition-all ${viewMode === 'table' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-400 hover:text-white'}`}
-            title="List / Details View (Ctrl+2)"
+            className={`p-1 rounded-md transition-all ${
+              viewMode === 'table'
+                ? 'bg-white dark:bg-white/20 text-gray-900 dark:text-white shadow-sm'
+                : 'text-gray-400 hover:text-[var(--mac-text-primary)]'
+            }`}
+            title="List / Details (Ctrl+2)"
           >
             <List className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={() => setViewMode('columns')}
-            className={`p-1.5 rounded-lg transition-all ${viewMode === 'columns' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-400 hover:text-white'}`}
-            title="Columns View (macOS Miller Columns - Ctrl+3)"
+            className={`p-1 rounded-md transition-all ${
+              viewMode === 'columns'
+                ? 'bg-white dark:bg-white/20 text-gray-900 dark:text-white shadow-sm'
+                : 'text-gray-400 hover:text-[var(--mac-text-primary)]'
+            }`}
+            title="Columns (Ctrl+3)"
           >
             <Columns className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={() => setViewMode('gallery')}
-            className={`p-1.5 rounded-lg transition-all ${viewMode === 'gallery' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-400 hover:text-white'}`}
-            title="Gallery View (Filmstrip Stage - Ctrl+4)"
+            className={`p-1 rounded-md transition-all ${
+              viewMode === 'gallery'
+                ? 'bg-white dark:bg-white/20 text-gray-900 dark:text-white shadow-sm'
+                : 'text-gray-400 hover:text-[var(--mac-text-primary)]'
+            }`}
+            title="Gallery (Ctrl+4)"
           >
             <SquareCode className="w-3.5 h-3.5" />
           </button>
         </div>
 
         {/* Sorting Dropdown */}
-        <div className="flex items-center bg-black/40 border border-white/10 rounded-xl px-2 py-1 gap-1 text-xs">
-          <ArrowUpDown className="w-3.5 h-3.5 text-indigo-400" />
+        <div className="flex items-center bg-black/5 dark:bg-white/[0.06] border border-black/10 dark:border-white/10 rounded-lg px-2 h-8 gap-1 text-xs">
+          <ArrowUpDown className="w-3 h-3 text-gray-400" />
           <select
             value={sortField}
             onChange={e => handleSortToggle(e.target.value as any)}
-            className="bg-transparent text-xs text-gray-200 outline-none cursor-pointer"
+            className="bg-transparent text-xs text-[var(--mac-text-primary)] outline-none cursor-pointer"
           >
             <option value="name" className="bg-[#141620]">Name</option>
             <option value="date" className="bg-[#141620]">Date</option>
             <option value="size" className="bg-[#141620]">Size</option>
             <option value="ext" className="bg-[#141620]">Type</option>
           </select>
-          <span className="text-[10px] text-indigo-400 font-bold uppercase">{sortOrder}</span>
+          <span className="text-[10px] text-gray-400 font-mono uppercase">{sortOrder}</span>
         </div>
 
         {/* Inspector Toggle */}
         <button
           onClick={() => setIsInspectorOpen(prev => !prev)}
-          className={`p-1.5 rounded-xl border transition-all ${
-            isInspectorOpen ? 'bg-indigo-600/20 border-indigo-500/50 text-indigo-300' : 'border-white/10 bg-white/5 text-gray-400 hover:text-white'
+          className={`p-1.5 h-8 w-8 flex items-center justify-center rounded-lg border transition-all ${
+            isInspectorOpen
+              ? 'bg-black/10 dark:bg-white/15 border-black/15 dark:border-white/20 text-[var(--mac-text-primary)] shadow-sm'
+              : 'border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/[0.06] text-gray-400 hover:text-[var(--mac-text-primary)]'
           }`}
-          title="Toggle Inspector / Details Pane (Alt+P or Ctrl+I)"
+          title="Toggle Inspector (Alt+P or Ctrl+I)"
         >
-          <PanelRight className="w-4 h-4" />
+          <PanelRight className="w-3.5 h-3.5" />
         </button>
 
         {/* macOS Theme Toggle (Light / Dark) */}
         <button
           onClick={toggleTheme}
-          className="p-1.5 rounded-xl border border-white/10 bg-white/5 text-gray-300 hover:text-white hover:bg-white/10 transition-colors"
+          className="p-1.5 h-8 w-8 flex items-center justify-center rounded-lg border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/[0.06] text-gray-400 hover:text-[var(--mac-text-primary)] hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
           title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
         >
           {theme === 'dark' ? (
-            <Sun className="w-4 h-4 text-amber-400" />
+            <Sun className="w-3.5 h-3.5 text-amber-400" />
           ) : (
-            <Moon className="w-4 h-4 text-indigo-600" />
+            <Moon className="w-3.5 h-3.5 text-slate-700" />
           )}
         </button>
 
         {/* New Folder */}
         <button
           onClick={openNewFolder}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-white text-xs font-semibold shadow-md"
+          className="flex items-center gap-1.5 px-2.5 h-8 bg-black/5 dark:bg-white/[0.08] hover:bg-black/10 dark:hover:bg-white/15 text-[var(--mac-text-primary)] border border-black/10 dark:border-white/10 rounded-lg text-xs font-medium transition-colors"
         >
           <Plus className="w-3.5 h-3.5" />
-          <span>New Folder</span>
+          <span>New</span>
         </button>
-        {copyFeedback && <span className="text-emerald-400 text-xs font-semibold">{copyFeedback}</span>}
+        {copyFeedback && <span className="text-emerald-500 text-xs font-semibold">{copyFeedback}</span>}
       </div>
 
       <div className="flex flex-1 min-h-0">
