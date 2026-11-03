@@ -100,6 +100,9 @@ export function closeChildAppSplash(): void {
     const cb = splashFinishCallback
     splashFinishCallback = null
     cb()
+  } else if (splashWindow && !splashWindow.isDestroyed()) {
+    splashWindow.destroy()
+    splashWindow = null
   }
 }
 
@@ -347,7 +350,7 @@ export function showChildAppSplash(
     hasFinished = true
     splashFinishCallback = null
     if (splashWindow && !splashWindow.isDestroyed()) {
-      splashWindow.close()
+      splashWindow.destroy()
       splashWindow = null
     }
     onFinished()

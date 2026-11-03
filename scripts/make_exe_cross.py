@@ -43,6 +43,7 @@ NPM_CMD  = 'npm.cmd' if IS_WIN else 'npm'
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) if os.path.basename(os.path.dirname(os.path.abspath(__file__))) in ('scripts', 'bin') else os.path.dirname(os.path.abspath(__file__))
 os.chdir(ROOT_DIR)
+os.environ.pop('ELECTRON_RUN_AS_NODE', None)
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  ENVIRONMENT & TOKEN MANAGEMENT

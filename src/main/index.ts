@@ -76,7 +76,24 @@ protocol.registerSchemesAsPrivileged([
 const gotLock = app.requestSingleInstanceLock()
 if (!gotLock) {
   app.quit()
+  process.exit(0)
 }
+
+app.on('second-instance', (_event, argv) => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    if (mainWindow.isMinimized()) mainWindow.restore()
+    revealMainWindow()
+    const filePath = extractFileFromArgv(argv)
+    if (filePath) {
+      mainWindow.webContents.send('viewer:openFile', filePath)
+    }
+    const pageArg = argv.find(a => a.startsWith('--page='))
+    if (pageArg) {
+      const pageKey = pageArg.split('=')[1]
+      mainWindow.webContents.send('app:navigate', pageKey)
+    }
+  }
+})
 
 // Extract a supported file path from argv (for Explorer double-click launch)
 const SUPPORTED_VIEWER_EXTS = new Set([
@@ -534,11 +551,11 @@ let activeLoaderConfig: ChildAppLoaderConfig | null = null
 
 function revealMainWindow(): void {
   if (mainWindow && !mainWindow.isDestroyed()) {
-    if (!mainWindow.isVisible()) {
-      mainWindow.show()
+    mainWindow.show()
+    if (!mainWindow.isMaximized()) {
       mainWindow.maximize()
-      mainWindow.focus()
     }
+    mainWindow.focus()
     createTray(mainWindow)
   }
 }

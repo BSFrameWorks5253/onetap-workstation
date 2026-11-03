@@ -3,7 +3,22 @@ import fs from 'fs'
 import path from 'path'
 import os from 'os'
 import { spawn } from 'child_process'
-import sharp from 'sharp'
+let sharpModule: any = null
+let sharpLoadAttempted = false
+
+async function getSharp() {
+  if (sharpModule) return sharpModule
+  if (sharpLoadAttempted) return null
+  sharpLoadAttempted = true
+  try {
+    const s = await import('sharp')
+    sharpModule = s.default || s
+    return sharpModule
+  } catch (err: any) {
+    console.warn('[Folder Watcher] Sharp native binary not available, falling back to FFmpeg:', err?.message || err)
+    return null
+  }
+}
 import { get, setAndSave } from './settingsManager'
 import { getFfmpegExePath } from './gpuDetector'
 
@@ -214,15 +229,18 @@ async function processFile(srcPath: string, outDir: string, filename: string): P
 
   // 1. Primary Engine: High-performance Sharp (native C++ libvips, ~10ms execution)
   try {
-    await sharp(srcPath)
-      .jpeg({
-        quality: 95,
-        chromaSubsampling: '4:4:4',
-        mozjpeg: false
-      })
-      .toFile(dstPath)
+    const sharpInstance = await getSharp()
+    if (sharpInstance) {
+      await sharpInstance(srcPath)
+        .jpeg({
+          quality: 95,
+          chromaSubsampling: '4:4:4',
+          mozjpeg: false
+        })
+        .toFile(dstPath)
 
-    converted = true
+      converted = true
+    }
   } catch (sharpErr) {
     console.warn(`[Folder Watcher] Sharp conversion warning for ${filename}:`, sharpErr)
   }

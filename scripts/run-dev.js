@@ -96,6 +96,9 @@ function ensureWinDependencies() {
 
 ensureWinDependencies()
 
+// Ensure ELECTRON_RUN_AS_NODE is stripped so electron.exe runs as full Electron, not bare Node
+delete process.env.ELECTRON_RUN_AS_NODE
+
 const execPath = resolveElectronExec()
 process.env.ELECTRON_EXEC_PATH = execPath
 

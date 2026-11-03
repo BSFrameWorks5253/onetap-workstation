@@ -15,6 +15,7 @@ const { execSync, spawnSync } = require('child_process')
 const fs = require('fs')
 const path = require('path')
 const os = require('os')
+delete process.env.ELECTRON_RUN_AS_NODE
 
 function log(msg) {
   console.log(`\x1b[36m[UniDesk WinBuild]\x1b[0m ${msg}`)

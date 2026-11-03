@@ -52,7 +52,8 @@
     "marked": "^18.0.5",
     "pdf-lib": "^1.17.1",
     "sharp": "^0.35.3",
-    "xlsx": "^0.18.5"
+    "xlsx": "^0.18.5",
+    "@img/sharp-win32-x64": "^0.35.3"
   },
   "devDependencies": {
     "@electron-toolkit/tsconfig": "^1.0.1",
@@ -300,6 +301,11 @@
       "backgroundColor": "#0c1017",
       "showNameOnTiles": true,
       "artifactName": "OneTap-Store-V-${version}.${ext}"
-    }
+    },
+    "asar": true,
+    "asarUnpack": [
+      "**/node_modules/sharp/**/*",
+      "**/node_modules/@img/**/*"
+    ]
   }
 }
