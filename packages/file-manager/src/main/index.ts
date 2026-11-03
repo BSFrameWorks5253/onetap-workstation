@@ -47,7 +47,7 @@ function getCacheKey(filePath: string, stat: fs.Stats): string {
 function extractEmbeddedRawJpeg(filePath: string, forThumbnail = true): Buffer | null {
   try {
     const fd = fs.openSync(filePath, 'r')
-    const READ_SIZE = forThumbnail ? 4 * 1024 * 1024 : 10 * 1024 * 1024
+    const READ_SIZE = forThumbnail ? 8 * 1024 * 1024 : 16 * 1024 * 1024
     const buf = Buffer.alloc(READ_SIZE)
     const bytesRead = fs.readSync(fd, buf, 0, READ_SIZE, 0)
     fs.closeSync(fd)

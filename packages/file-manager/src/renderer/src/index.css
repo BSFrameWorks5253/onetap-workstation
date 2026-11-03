@@ -1,8 +1,53 @@
 @import "tailwindcss";
 
-:root { --bg: #0D0F14; --panel: #161921; --border: rgba(255,255,255,0.08); }
-body { margin: 0; background: var(--bg); color: #e2e8f0; font-family: 'Inter', system-ui, sans-serif; overflow: hidden; }
-* { box-sizing: border-box; }
-::-webkit-scrollbar { width: 6px; } 
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 3px; }
+:root {
+  --mac-accent: #0071e3;
+  --mac-bg-window: #131419;
+  --mac-bg-sidebar: #161821;
+  --mac-bg-header: #1a1c26;
+  --mac-bg-content: #0d0f15;
+  --mac-bg-card: #151824;
+  --mac-border: rgba(255, 255, 255, 0.08);
+  --mac-text-primary: #f5f5f7;
+  --mac-text-secondary: #a1a1a6;
+  --mac-text-muted: #6e6e73;
+}
+
+html[data-theme="light"],
+.light-mode {
+  --mac-bg-window: #e8e8ed;
+  --mac-bg-sidebar: #ececf1;
+  --mac-bg-header: #f4f4f7;
+  --mac-bg-content: #ffffff;
+  --mac-bg-card: #ffffff;
+  --mac-border: rgba(0, 0, 0, 0.1);
+  --mac-text-primary: #1d1d1f;
+  --mac-text-secondary: #515154;
+  --mac-text-muted: #86868b;
+}
+
+body {
+  margin: 0;
+  background-color: var(--mac-bg-window);
+  color: var(--mac-text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+  overflow: hidden;
+  user-select: none;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--mac-border);
+  border-radius: 999px;
+}

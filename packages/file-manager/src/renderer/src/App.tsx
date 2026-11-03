@@ -37,7 +37,10 @@ import {
   FileText,
   Check,
   Edit2,
-  ArrowUpDown
+  ArrowUpDown,
+  Sun,
+  Moon,
+  Settings
 } from 'lucide-react'
 
 const api = (window as any).fmApi
@@ -765,6 +768,25 @@ export default function App() {
   const [isInspectorOpen, setIsInspectorOpen] = useState(true)
   const [isQuickLookOpen, setIsQuickLookOpen] = useState(false)
   const [isEditingPath, setIsEditingPath] = useState(false)
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    return (localStorage.getItem('fm-theme') as 'dark' | 'light') || 'dark'
+  })
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    if (theme === 'light') {
+      document.documentElement.classList.add('light-mode')
+      document.documentElement.classList.remove('dark-mode')
+    } else {
+      document.documentElement.classList.add('dark-mode')
+      document.documentElement.classList.remove('light-mode')
+    }
+    localStorage.setItem('fm-theme', theme)
+  }, [theme])
+
+  const toggleTheme = () => {
+    setTheme(prev => (prev === 'dark' ? 'light' : 'dark'))
+  }
   const [pathInput, setPathInput] = useState('')
   const [activeMedia, setActiveMedia] = useState<FsEntry | null>(null)
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; entry: FsEntry } | null>(null)
@@ -1233,6 +1255,19 @@ export default function App() {
           title="Toggle Inspector / Details Pane (Alt+P or Ctrl+I)"
         >
           <PanelRight className="w-4 h-4" />
+        </button>
+
+        {/* macOS Theme Toggle (Light / Dark) */}
+        <button
+          onClick={toggleTheme}
+          className="p-1.5 rounded-xl border border-white/10 bg-white/5 text-gray-300 hover:text-white hover:bg-white/10 transition-colors"
+          title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
+        >
+          {theme === 'dark' ? (
+            <Sun className="w-4 h-4 text-amber-400" />
+          ) : (
+            <Moon className="w-4 h-4 text-indigo-600" />
+          )}
         </button>
 
         {/* New Folder */}
