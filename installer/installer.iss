@@ -4,7 +4,7 @@
 [Setup]
 AppId={{com.bsframework.onetap}}
 AppName=One Tap
-AppVersion=26.11.04
+AppVersion=26.11.6
 AppPublisher=BS Framework
 AppPublisherURL=https://bsframework.com/
 DefaultDirName={autopf}\One Tap
@@ -19,7 +19,7 @@ Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
 OutputDir=..\release
-OutputBaseFilename=OneTap-Setup-V-26.11.04
+OutputBaseFilename=OneTap-Setup-V-26.11.6
 PrivilegesRequired=lowest
 SetupMutex=OneTap_Setup_Mutex
 AppMutex=OneTap_App_Mutex
