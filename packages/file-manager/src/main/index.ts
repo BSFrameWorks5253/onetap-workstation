@@ -115,6 +115,37 @@ function createWindow(): void {
   }
 }
 
+// Well-known system hidden folders and files
+const KNOWN_HIDDEN_NAMES = new Set([
+  'system volume information',
+  'recovery',
+  'config.msi',
+  'onedrivetemp',
+  'perflogs',
+  'documents and settings',
+  'ahcache',
+  'msocache',
+  'programdata',
+  'inteloptanedata',
+  'desktop.ini',
+  'thumbs.db',
+  'hiberfil.sys',
+  'pagefile.sys',
+  'swapfile.sys',
+  'dumpstack.log.tmp',
+  'boottel.dat'
+])
+
+function isItemHidden(name: string): boolean {
+  if (!name) return false
+  if (name.startsWith('.') || name.startsWith('$')) return true
+  const lower = name.toLowerCase()
+  if (KNOWN_HIDDEN_NAMES.has(lower)) return true
+  if (/^found\.\d+$/i.test(name)) return true
+  if (lower.startsWith('ntuser.dat') || lower.startsWith('usrclass.dat')) return true
+  return false
+}
+
 // IPC: list directory contents
 ipcMain.handle('fm:listDir', async (_e, dirPath: string) => {
   try {
@@ -128,7 +159,8 @@ ipcMain.handle('fm:listDir', async (_e, dirPath: string) => {
         mtime = stat.mtimeMs
       } catch {}
       const ext = e.isDirectory() ? '' : (e.name.split('.').pop() || '').toLowerCase()
-      return { name: e.name, isDir: e.isDirectory(), size, mtime, ext, fullPath }
+      const isHidden = isItemHidden(e.name)
+      return { name: e.name, isDir: e.isDirectory(), size, mtime, ext, fullPath, isHidden }
     }).sort((a, b) => {
       // Folders first, then files
       if (a.isDir !== b.isDir) return a.isDir ? -1 : 1

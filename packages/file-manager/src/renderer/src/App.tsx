@@ -20,6 +20,7 @@ import {
   SquareCode,
   PanelRight,
   Eye,
+  EyeOff,
   Maximize2,
   X,
   Play,
@@ -52,6 +53,7 @@ interface FsEntry {
   mtime: number
   ext: string
   fullPath: string
+  isHidden?: boolean
 }
 
 const RAW_EXTS = new Set(['cr2', 'cr3', 'nef', 'arw', 'dng', 'raf', 'raw', 'orf', 'rw2', 'pef', 'sr2', 'srf'])
@@ -284,7 +286,9 @@ function MediaThumbnailCard({
     <div
       onClick={onClick}
       onDoubleClick={onDoubleClick}
-      className="group relative flex flex-col bg-[#161922] hover:bg-[#1d212c] border border-white/10 hover:border-indigo-500/50 rounded-xl overflow-hidden cursor-pointer transition-all shadow-md hover:shadow-indigo-500/10"
+      className={`group relative flex flex-col bg-[#161922] hover:bg-[#1d212c] border border-white/10 hover:border-indigo-500/50 rounded-xl overflow-hidden cursor-pointer transition-all shadow-md hover:shadow-indigo-500/10 ${
+        entry.isHidden ? 'opacity-55 hover:opacity-100 border-dashed border-gray-500/40' : ''
+      }`}
     >
       {/* Thumbnail viewport */}
       <div className="relative aspect-video w-full bg-black/40 flex items-center justify-center overflow-hidden">
@@ -802,6 +806,18 @@ export default function App() {
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null)
   const newFolderInputRef = useRef<HTMLInputElement>(null)
 
+  const [showHidden, setShowHidden] = useState<boolean>(() => {
+    return localStorage.getItem('fm-show-hidden') === 'true'
+  })
+
+  const toggleShowHidden = () => {
+    setShowHidden(prev => {
+      const next = !prev
+      localStorage.setItem('fm-show-hidden', String(next))
+      return next
+    })
+  }
+
   // Resizable panel & column widths
   const [columnsWidth, setColumnsWidth] = useState(340)
   const [sidebarWidth, setSidebarWidth] = useState(240)
@@ -988,6 +1004,11 @@ export default function App() {
         else if (e.key.toLowerCase() === 'i') { e.preventDefault(); setIsInspectorOpen(prev => !prev) }
       }
 
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === '.' || e.key === '>')) {
+        e.preventDefault()
+        toggleShowHidden()
+      }
+
       if (e.altKey && e.key === 'ArrowUp') {
         e.preventDefault()
         goUp()
@@ -1012,6 +1033,9 @@ export default function App() {
   // Filter & Sort entries
   const filteredEntries = useMemo(() => {
     let list = entries
+    if (!showHidden) {
+      list = list.filter(e => !e.isHidden)
+    }
     if (search.trim()) {
       const q = search.toLowerCase()
       list = list.filter(e => e.name.toLowerCase().includes(q))
@@ -1279,6 +1303,19 @@ export default function App() {
           title="Toggle Inspector (Alt+P or Ctrl+I)"
         >
           <PanelRight className="w-3.5 h-3.5" />
+        </button>
+
+        {/* Toggle Hidden Items */}
+        <button
+          onClick={toggleShowHidden}
+          className={`p-1.5 h-8 w-8 flex items-center justify-center rounded-lg border transition-all ${
+            showHidden
+              ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
+              : 'border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/[0.06] text-gray-400 hover:text-[var(--mac-text-primary)] hover:bg-black/10 dark:hover:bg-white/10'
+          }`}
+          title={showHidden ? 'Hide Hidden Items (Ctrl+Shift+.)' : 'Show Hidden Items (Ctrl+Shift+.)'}
+        >
+          {showHidden ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
         </button>
 
         {/* macOS Theme Toggle (Light / Dark) */}
