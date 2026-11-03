@@ -24,7 +24,7 @@ import zenLogo from './assets/zen_final_nobg.png'
 import { ToastProvider, useToast } from './components/Toast'
 import { CursorProvider } from './cursor'
 import { parseFolderName, detectCity } from './utils/cityUtils'
-import { parseSafarHierarchy } from './utils/safarUtils'
+import { parseSafarHierarchy, isBogusSafar } from './utils/safarUtils'
 import { prprojStore } from './stores/prprojStore'
 
 // Truly code-split pages — evaluated on-demand upon first navigation
@@ -90,7 +90,7 @@ function AppInner(): JSX.Element {
   const { pageTransition, textOverrides, orderedNav, theme } = useTheme()
   const { showToast } = useToast()
   const { playSuccess } = useSound()
-  const [appVersion, setAppVersion] = useState<string>('26.10.12')
+  const [appVersion, setAppVersion] = useState<string>('26.11.03')
 
   // Detect if this session previously showed the splash, or if the page was refreshed (F5 / Ctrl+R)
   const isReload = useRef((() => {
@@ -392,7 +392,7 @@ function AppInner(): JSX.Element {
         if (!api) return
 
         // 1. Resolve current application version & check first startup
-        let curVer = '26.10.12'
+        let curVer = '26.11.03'
         try {
           if (api.update && typeof api.update.getCurrentVersion === 'function') {
             curVer = await api.update.getCurrentVersion()
@@ -433,21 +433,7 @@ function AppInner(): JSX.Element {
           })
         }
 
-        // 4. Auto Check Updates on startup
-        const allSettings = await api.settings.getAll()
-        if (allSettings.auto_check_updates !== false) {
-          setTimeout(async () => {
-            try {
-              const res = await api.update.check()
-              if (res && res.updateAvailable) {
-                setUpdateManifest(res)
-                setUpdateBannerVersion(res.latestVersion)
-              }
-            } catch (e) {
-              console.warn('[Updater] Startup update check failed:', e)
-            }
-          }, 3000)
-        }
+        // Auto update startup check is coordinated via main process triggerSilentStartupCheck
 
         // 4. Deferred non-blocking background migration for legacy stats
         setTimeout(async () => {
@@ -477,7 +463,7 @@ function AppInner(): JSX.Element {
                 }
 
                 const safarHierarchy = parseSafarHierarchy(r.filePath || r.folder || '')
-                const isBogusSafar = r.safar && (/^\d{4}[\s-_.]\d{1,2}[\s-_.]\d{1,2}/.test(r.safar) || (/^\d{4}[\s-_.]\d{1,2}/.test(r.safar) && !/[a-zA-Z]{2,}/.test(r.safar)))
+                const isBogus = isBogusSafar(r.safar, r.name)
 
                 const isMumbai = (r.city && r.city.toLowerCase() === 'mumbai') ||
                   (r.safar && r.safar.toLowerCase().includes('mumbai')) ||
@@ -492,21 +478,21 @@ function AppInner(): JSX.Element {
 
                 if (isMumbai) {
                   resolvedCity = 'Mumbai'
-                  if (r.safar && r.safar !== 'Unassigned' && !isBogusSafar) {
+                  if (r.safar && r.safar !== 'Unassigned' && !isBogus) {
                     resolvedSafar = r.safar
-                  } else if (safarHierarchy.safar && safarHierarchy.safar !== 'Unassigned') {
+                  } else if (safarHierarchy.safar && safarHierarchy.safar !== 'Unassigned' && !isBogusSafar(safarHierarchy.safar, r.name)) {
                     resolvedSafar = safarHierarchy.safar
                   } else {
                     resolvedSafar = '1448-03 Mumbai'
                   }
-                  resolvedSafarSerial = (r.safarSerial && !isBogusSafar) ? r.safarSerial : (safarHierarchy.safarSerial || '03')
-                  resolvedSafarYear = (r.safarYear && !isBogusSafar) ? r.safarYear : (safarHierarchy.safarYear || 1448)
-                } else if (safarHierarchy.safar && safarHierarchy.safar !== 'Unassigned') {
+                  resolvedSafarSerial = (r.safarSerial && !isBogus) ? r.safarSerial : (safarHierarchy.safarSerial || '03')
+                  resolvedSafarYear = (r.safarYear && !isBogus) ? r.safarYear : (safarHierarchy.safarYear || 1448)
+                } else if (safarHierarchy.safar && safarHierarchy.safar !== 'Unassigned' && !isBogusSafar(safarHierarchy.safar, r.name)) {
                   resolvedSafar = safarHierarchy.safar
                   resolvedCity = safarHierarchy.city !== 'Unassigned' ? safarHierarchy.city : (r.city || 'Unassigned')
                   resolvedSafarSerial = safarHierarchy.safarSerial || r.safarSerial
                   resolvedSafarYear = safarHierarchy.safarYear || r.safarYear
-                } else if (r.safar && r.safar !== 'Unassigned' && !isBogusSafar) {
+                } else if (r.safar && r.safar !== 'Unassigned' && !isBogus) {
                   resolvedSafar = r.safar
                   resolvedCity = r.city || 'Unassigned'
                   resolvedSafarSerial = r.safarSerial
@@ -726,7 +712,13 @@ function AppInner(): JSX.Element {
       const parseTarget = d.videoPath || d.outputPath || d.folder || ''
       const safarHierarchy = parseSafarHierarchy(parseTarget)
 
-      const resolvedSafar = d.safar || (safarHierarchy.safar !== 'Unassigned' ? safarHierarchy.safar : 'Unassigned')
+      let resolvedSafar = 'Unassigned'
+      if (d.safar && !isBogusSafar(d.safar, d.stem) && d.safar !== 'Unassigned') {
+        resolvedSafar = d.safar
+      } else if (safarHierarchy.safar && !isBogusSafar(safarHierarchy.safar, d.stem) && safarHierarchy.safar !== 'Unassigned') {
+        resolvedSafar = safarHierarchy.safar
+      }
+
       const resolvedSafarSerial = d.safarSerial || safarHierarchy.safarSerial
       const resolvedSafarYear = d.safarYear || safarHierarchy.safarYear
 
@@ -837,10 +829,15 @@ function AppInner(): JSX.Element {
     const unsubAvailable = typeof api.update.onUpdateAvailable === 'function'
       ? api.update.onUpdateAvailable((manifest: any) => {
         console.log('[AutoUpdater] Received update:available push from main:', manifest)
+        if (!manifest || !manifest.updateAvailable) return
+        const dismissed = localStorage.getItem('ot_dismissed_update_version')
+        if (dismissed && dismissed === manifest.latestVersion) {
+          console.log(`[AutoUpdater] Update v${manifest.latestVersion} previously dismissed. Suppressing banner.`)
+          return
+        }
         setUpdateManifest(manifest)
         setUpdateBannerVersion(manifest?.latestVersion || 'latest')
         setUpdateStatus('available')
-        setUpdateModalOpen(true)
       })
       : undefined
 
@@ -1209,7 +1206,12 @@ function AppInner(): JSX.Element {
               </span>
             </div>
             <button
-              onClick={() => setUpdateBannerVersion(null)}
+              onClick={() => {
+                if (updateBannerVersion) {
+                  localStorage.setItem('ot_dismissed_update_version', updateBannerVersion)
+                }
+                setUpdateBannerVersion(null)
+              }}
               style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px' }}
               title="Dismiss"
               aria-label="Dismiss"
@@ -1242,7 +1244,7 @@ function AppInner(): JSX.Element {
               <>
                 <button
                   onClick={() => {
-                    navigate('settings')
+                    setUpdateModalOpen(true)
                   }}
                   style={{
                     padding: '7px 16px',
@@ -1320,7 +1322,12 @@ function AppInner(): JSX.Element {
         status={updateStatus}
         progress={updateProgress}
         errorMsg={updateError}
-        onClose={() => setUpdateModalOpen(false)}
+        onClose={() => {
+          if (updateManifest?.latestVersion) {
+            localStorage.setItem('ot_dismissed_update_version', updateManifest.latestVersion)
+          }
+          setUpdateModalOpen(false)
+        }}
         onStartDownload={handleStartDownload}
         onApplyUpdate={handleApplyUpdate}
       />

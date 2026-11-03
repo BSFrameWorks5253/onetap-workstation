@@ -27,7 +27,7 @@ export function resolveChildAppLoaderConfig(appId: string, fallbackAppName: stri
     appId,
     enabled: true,
     productName: fallbackAppName,
-    versionText: `v${app.getVersion() || '26.10.30'}`,
+    versionText: `v${app.getVersion() || '26.11.03'}`,
     tagline: 'Autonomous Video & Media Production Workstation',
     artistName: 'Anything Creative Ecosystem',
     artworkTitle: 'Master Studio Edition',
@@ -298,7 +298,7 @@ export function showChildAppSplash(
         <div class="title-group">
           <h1>
             <span>${config.productName || 'One Tap'}</span>
-            <span class="version-pill">${config.versionText || 'v26.10.30'}</span>
+            <span class="version-pill">${config.versionText || 'v26.11.03'}</span>
           </h1>
           <p>${config.tagline || 'Autonomous Video & Media Production Workstation'}</p>
         </div>

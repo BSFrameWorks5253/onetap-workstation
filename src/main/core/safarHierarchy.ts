@@ -145,7 +145,7 @@ export function extractSafarFromContainerPath(fullPath: string): {
     if (CONTAINER_ROOTS.has(segUpper) && i + 1 < segments.length) {
       const candidate = segments[i + 1].trim()
       const candUpper = candidate.toUpperCase()
-      if (['FINAL', 'FINAL TITLES', 'OUTPUT', 'EXPORTS', 'DVD', 'NEW FOLDER', '$RECYCLE.BIN'].includes(candUpper)) {
+      if (['FINAL', 'FINAL TITLES', 'OUTPUT', 'EXPORTS', 'DVD', 'NEW FOLDER', '$RECYCLE.BIN'].includes(candUpper) || /\.[a-z0-9]{2,5}$/i.test(candidate)) {
         continue
       }
 
@@ -237,7 +237,9 @@ export function parseSafarFromPath(fullPath: string): SafarParsedInfo {
     }
   } catch {}
 
-  const segments = fullPath.split(/[/\\]/).filter(Boolean)
+  const rawSegments = fullPath.split(/[/\\]/).filter(Boolean)
+  const hasFileExt = rawSegments.length > 0 && /\.[a-z0-9]{2,5}$/i.test(rawSegments[rawSegments.length - 1])
+  const segments = hasFileExt ? rawSegments.slice(0, -1) : rawSegments
 
   for (let i = segments.length - 1; i >= 0; i--) {
     const seg = segments[i]
@@ -288,64 +290,84 @@ export function parseSafarFromPath(fullPath: string): SafarParsedInfo {
 
     // Safar root folder
     if (result.safar === 'Unassigned') {
+      // 1. Files with extension are NEVER safar folders
+      if (/\.[a-z0-9]{2,5}$/i.test(seg)) continue
+
+      // 2. Reject session tags in date folders (e.g. "_01M", "_02E", "1448-04-20 _02E")
+      if (/_\d{1,2}[A-Za-z]/i.test(seg)) continue
+
+      // 3. Reject clip item folders (e.g. "-02-01AQ-", "-18-01N-", "1448-04-20 _02E-02-Z-")
+      if (/[-_]\d{1,4}[a-z]?[-_]\d*[A-Za-z]+[-_]/i.test(seg)) continue
+
+      // 4. Reject pure event codes or ITS numbers
+      if (/^[A-Za-z]{1,4}$/.test(seg)) continue
+      if (/^\d{5,8}$/.test(seg)) continue
+
       // ── Date folder detection ──────────────────────────────────────────────
       // CRITICAL: "1447-08 Mumbai", "2024-09 Surat" are SAFAR roots, NOT date folders.
-      // A segment is a pure date folder ONLY when it has NO city name or meaningful
-      // word after the numeric portion. If a word/city follows → it's a Safar root.
-
-      // Does the segment have a real word (2+ letters) after the date numbers?
       const hasMeaningfulWordAfterNumbers = /^\d{4}[\s-_.]\d{1,2}[\s-_.]+[A-Za-z]{2,}/.test(seg) ||
         /^\d{1,3}[\s-_.]+[A-Za-z]{2,}/.test(seg)
 
-      // Does the segment contain any known city name?
       const segLower = seg.toLowerCase()
       const hasCityInSegment = COMMON_CITIES.some(city =>
         segLower.includes(city.toLowerCase())
       )
 
-      // Pure date-only patterns (exact match, no trailing text)
       const isPureDateFolder =
         /^\d{4}[\s-_.]\d{1,2}[\s-_.]\d{1,2}$/.test(seg) ||        // YYYY-MM-DD
         /^\d{4}[\s-_.]\d{1,2}[\s_]+_\d{1,2}[A-Za-z]/.test(seg) || // YYYY-MM _01M
         /^\d{4}[\s-_.]\d{1,2}$/.test(seg)                           // YYYY-MM (exact)
 
-      // Only skip as date folder if purely numeric — if it has a city or word, it's a Safar root
       const isDateFolderPattern = isPureDateFolder && !hasMeaningfulWordAfterNumbers && !hasCityInSegment
 
       if (isDateFolderPattern) {
         if (!result.dateFolder) result.dateFolder = seg
         continue
       }
-      if (/^\d{2}[-_][A-Za-z]+[-_](?:Bethak|QMZ|Majlis|Namaz|Ziyarat|Sermon)$/i.test(seg)) {
+      if (/^\d{1,3}[-_][A-Za-z]+[-_](?:Bethak|QMZ|Majlis|Namaz|Ziyarat|Sermon)$/i.test(seg)) {
+        continue
+      }
+      if (/^(?:Bethak|QMZ|Majlis|Namaz|Ziyarat|Waaz|Sermon)$/i.test(seg)) {
         continue
       }
 
       const p1 = seg.match(/^(\d{4})[\s-_]+(\d{1,3})[\s-_]+([A-Za-z].+)$/)
       if (p1) {
-        result.safar = seg
-        result.safarYear = parseInt(p1[1])
-        result.safarSerial = p1[2].padStart(2, '0')
-        result.safarName = p1[3].trim()
-        result.city = extractCity(result.safarName) || extractCity(seg) || 'Unassigned'
-        continue
+        const name = p1[3].trim()
+        if (!/^[A-Za-z]{1,4}(?:[-_]\d+)?$/i.test(name) && !/^(?:Bethak|QMZ|Majlis|Namaz|Ziyarat|Waaz)$/i.test(name)) {
+          result.safar = seg
+          result.safarYear = parseInt(p1[1])
+          result.safarSerial = p1[2].padStart(2, '0')
+          result.safarName = name
+          result.city = extractCity(result.safarName) || extractCity(seg) || 'Unassigned'
+          continue
+        }
       }
 
       const p2 = seg.match(/^(\d{1,3})[\s-_]+([A-Za-z].+)$/)
       if (p2) {
-        result.safar = seg
-        result.safarSerial = p2[1].padStart(2, '0')
-        result.safarName = p2[2].trim()
-        result.city = extractCity(result.safarName) || extractCity(seg) || 'Unassigned'
-        continue
+        const name = p2[2].trim()
+        const isClip = /^[A-Za-z]{1,4}(?:[-_]\d+)?$/i.test(name) || ['Z', 'AQ', 'N', 'ID', 'QMZ', 'BM', 'BQ', 'BZ', 'H', 'WAAZ', 'NAMAZ', 'ZO', 'MZ', 'Q', 'MF'].includes(name.toUpperCase())
+        const detectedCity = extractCity(name) || extractCity(seg)
+        if (!isClip && (detectedCity || (name.length >= 4 && !/^\d+/.test(name)))) {
+          result.safar = seg
+          result.safarSerial = p2[1].padStart(2, '0')
+          result.safarName = name
+          result.city = detectedCity || 'Unassigned'
+          continue
+        }
       }
 
       const p3 = seg.match(/^(\d{4})[\s-_]+([A-Za-z].+)$/)
       if (p3) {
-        result.safar = seg
-        result.safarYear = parseInt(p3[1])
-        result.safarName = p3[2].trim()
-        result.city = extractCity(result.safarName) || extractCity(seg) || 'Unassigned'
-        continue
+        const name = p3[2].trim()
+        if (!/^[A-Za-z]{1,4}$/.test(name) && !/^(?:Bethak|QMZ|Majlis|Namaz|Ziyarat|Waaz)$/i.test(name)) {
+          result.safar = seg
+          result.safarYear = parseInt(p3[1])
+          result.safarName = name
+          result.city = extractCity(result.safarName) || extractCity(seg) || 'Unassigned'
+          continue
+        }
       }
 
       const c = extractCity(seg)

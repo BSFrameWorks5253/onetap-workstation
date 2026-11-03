@@ -7,7 +7,7 @@ import { toMisriHijri, HIJRI_MONTH_NAMES_SHORT, HIJRI_MONTH_NAMES_LONG, hijriFro
 import './Stats.css'
 import { useToast } from '../../components/Toast'
 import { parseFolderName, detectCity } from '../../utils/cityUtils'
-import { parseSafarHierarchy, getPrefixColorTheme, formatPrefixName, KNOWN_PREFIX_NAMES } from '../../utils/safarUtils'
+import { parseSafarHierarchy, getPrefixColorTheme, formatPrefixName, KNOWN_PREFIX_NAMES, isBogusSafar } from '../../utils/safarUtils'
 import { GhostButton } from '../../components/Button'
 
 const meta = PAGE_META['stats']
@@ -56,12 +56,12 @@ const formatDuration = (seconds: number): string => {
 function resolveSafar(r: StatRecord, folderSafars?: Record<string, string>): string {
   // 1. Check user custom folder mapping
   if (folderSafars) {
-    if (r.folder && folderSafars[r.folder]) return folderSafars[r.folder]
+    if (r.folder && folderSafars[r.folder] && !isBogusSafar(folderSafars[r.folder])) return folderSafars[r.folder]
     if (r.filePath) {
       const parts = r.filePath.split(/[\\/]/)
       for (let i = parts.length - 2; i >= 0; i--) {
         const seg = parts[i]
-        if (seg && folderSafars[seg]) return folderSafars[seg]
+        if (seg && folderSafars[seg] && !isBogusSafar(folderSafars[seg])) return folderSafars[seg]
       }
     }
   }
@@ -72,7 +72,7 @@ function resolveSafar(r: StatRecord, folderSafars?: Record<string, string>): str
   }
 
   // Only video file extensions or pure date strings are bogus
-  const isBogus = r.safar && (
+  const isBogus = isBogusSafar(r.safar, r.name) || Boolean(
     /^\d{4}[\s-_.]\d{1,2}[\s-_.]\d{1,2}$/.test(r.safar.trim()) ||
     /\.(mp4|mov|mkv|avi|m4v|wmv)$/i.test(r.safar)
   )
@@ -83,16 +83,20 @@ function resolveSafar(r: StatRecord, folderSafars?: Record<string, string>): str
   }
 
   // 3. Read folder hierarchy using Title Adder's parser
+  const parsedH = parseSafarHierarchy(r.filePath || r.folder || '')
+  if (parsedH.safar && parsedH.safar !== 'Unassigned' && !isBogusSafar(parsedH.safar, r.name)) {
+    return parsedH.safar
+  }
   const hierarchy = parseSafarHierarchy(r.filePath || r.folder || '')
-  if (hierarchy.safar && hierarchy.safar !== 'Unassigned') {
+  if (hierarchy.safar && hierarchy.safar !== 'Unassigned' && !isBogusSafar(hierarchy.safar, r.name)) {
     return hierarchy.safar
   }
 
   // 4. Check if record belongs to a known city
-  if (r.city && r.city !== 'Unassigned') {
+  if (r.city && r.city !== 'Unassigned' && !isBogusSafar(r.city, r.name)) {
     return r.city
   }
-  if (hierarchy.city && hierarchy.city !== 'Unassigned') {
+  if (hierarchy.city && hierarchy.city !== 'Unassigned' && !isBogusSafar(hierarchy.city, r.name)) {
     return hierarchy.city
   }
 
@@ -123,12 +127,12 @@ function resolveCity(r: StatRecord, folderCities?: Record<string, string>): stri
                    (r.filePath && r.filePath.toLowerCase().includes('mumbai'))
   if (isMumbai) return 'Mumbai'
 
-  if (r.city && r.city !== 'Unassigned') {
+  if (r.city && r.city !== 'Unassigned' && !isBogusSafar(r.city, r.name)) {
     return r.city
   }
 
   const hierarchy = parseSafarHierarchy(r.filePath || r.folder || '')
-  if (hierarchy.city && hierarchy.city !== 'Unassigned') {
+  if (hierarchy.city && hierarchy.city !== 'Unassigned' && !isBogusSafar(hierarchy.city, r.name)) {
     return hierarchy.city
   }
 
@@ -369,19 +373,27 @@ export default function Stats(): JSX.Element {
             }
 
             const hierarchy = parseSafarHierarchy(r.filePath || r.folder || '')
-            const isBogusSafar = r.safar && (/^\d{4}[\s-_.]\d{1,2}[\s-_.]\d{1,2}/.test(r.safar) || (/^\d{4}[\s-_.]\d{1,2}/.test(r.safar) && !/[a-zA-Z]{2,}/.test(r.safar)))
+            const isBogus = isBogusSafar(r.safar, r.name)
 
-            let resolvedSafar = r.safar || hierarchy.safar || 'Unassigned'
+            let resolvedSafar = (r.safar && !isBogus) ? r.safar : (hierarchy.safar !== 'Unassigned' && !isBogusSafar(hierarchy.safar, r.name) ? hierarchy.safar : 'Unassigned')
             let resolvedCity = r.city || hierarchy.city || 'Unassigned'
             let resolvedSerial: string | undefined = r.safarSerial || hierarchy.safarSerial
             let resolvedYear: number | undefined = r.safarYear || hierarchy.safarYear
 
-            if (isBogusSafar) {
-              if (hierarchy.safar && hierarchy.safar !== 'Unassigned') {
+            if (isBogus) {
+              if (hierarchy.safar && hierarchy.safar !== 'Unassigned' && !isBogusSafar(hierarchy.safar, r.name)) {
                 resolvedSafar = hierarchy.safar
                 resolvedSerial = hierarchy.safarSerial
                 resolvedYear = hierarchy.safarYear
                 resolvedCity = hierarchy.city || resolvedCity
+              } else if (r.city && r.city !== 'Unassigned' && !isBogusSafar(r.city, r.name)) {
+                resolvedSafar = r.city
+                resolvedSerial = undefined
+                resolvedYear = undefined
+              } else {
+                resolvedSafar = 'Unassigned'
+                resolvedSerial = undefined
+                resolvedYear = undefined
               }
             }
 
@@ -563,14 +575,14 @@ export default function Stats(): JSX.Element {
       const safarName = resolveSafar(r, folderSafars)
       if (safarName === 'Unassigned') {
         hasUnassigned = true
-      } else if (safarName) {
+      } else if (safarName && !isBogusSafar(safarName)) {
         s.add(safarName)
       }
     })
     Object.values(folderSafars).forEach(safarName => {
       if (safarName === 'Unassigned') {
         hasUnassigned = true
-      } else if (safarName) {
+      } else if (safarName && !isBogusSafar(safarName)) {
         s.add(safarName)
       }
     })
@@ -3822,14 +3834,14 @@ export default function Stats(): JSX.Element {
                         {folders.map((f, idx) => {
                           const folderSafar = (() => {
                             const override = folderSafars[f.folder]
-                            if (override && override !== 'Unassigned') return override
+                            if (override && override !== 'Unassigned' && !isBogusSafar(override)) return override
                             const info = parseSafarHierarchy(f.folder)
-                            if (info.safar && info.safar !== 'Unassigned') return info.safar
+                            if (info.safar && info.safar !== 'Unassigned' && !isBogusSafar(info.safar)) return info.safar
                             return 'Unassigned'
                           })()
                           const folderCity = (() => {
                             const override = folderCities[f.folder]
-                            if (override && override !== 'Unassigned') return override
+                            if (override && override !== 'Unassigned' && !isBogusSafar(override)) return override
                             const info = parseFolderName(f.folder)
                             if (info.city) return info.city
                             return detectCity('', f.folder)

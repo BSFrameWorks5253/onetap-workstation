@@ -292,6 +292,56 @@ function parseDateSegment(segment: string): {
 }
 
 /**
+ * Detects whether a string is a bogus Safar name (e.g. video filename, event code, date folder, session folder, or ITS number).
+ * Genuine Safars represent complete event blocks or cities: e.g. "1448-10-Istefada ilmiyah", "1448-03 Mumbai", "08 Mumbai - Urs Mubarak", "Surat".
+ */
+export function isBogusSafar(safar: string | undefined | null, recordName?: string): boolean {
+  if (!safar) return true
+  const s = safar.trim()
+  if (!s || s === 'Unassigned') return false
+
+  // 1. Any video, audio, or project file extensions
+  if (/\.(mp4|mov|mkv|avi|m4v|wmv|mts|m2ts|ts|flv|webm|mpg|mpeg|mxf|prproj|aep|tmp|temp|json|csv|xlsx|txt)$/i.test(s)) {
+    return true
+  }
+
+  // 2. Exact match with the video record name or stem
+  if (recordName) {
+    const cleanRec = recordName.replace(/\.[a-z0-9]{2,5}$/i, '').trim().toLowerCase()
+    const cleanS = s.replace(/\.[a-z0-9]{2,5}$/i, '').trim().toLowerCase()
+    if (cleanS === cleanRec) return true
+  }
+
+  // 3. Pure date strings (e.g. "1448-04-20", "1448-03-13", "06-12", "2024-05-10")
+  if (/^\d{4}[\s-_.]\d{1,2}[\s-_.]\d{1,2}$/.test(s)) return true
+  if (/^\d{1,2}[\s-_.]\d{1,2}[\s-_.]\d{4}$/.test(s)) return true
+  if (/^\d{4}[\s-_.]\d{1,2}$/.test(s)) return true
+  if (/^\d{1,2}[\s-_.]\d{1,2}$/.test(s)) return true
+
+  // 4. Session tags in date folders (e.g. "1448-04-20 _02E", "_01M", "_02E")
+  if (/_\d{1,2}[A-Za-z]/i.test(s)) return true
+
+  // 5. Sequence item folder pattern or clip format (e.g. "-02-01AQ-", "-18-01N-", "1448-04-20 _02E-02-Z-")
+  if (/[-_]\d{1,4}[a-z]?[-_]\d*[A-Za-z]+[-_]/i.test(s)) return true
+
+  // 6. Event prefix / clip sequence alone (e.g. "02-Z", "01-AQ", "03-ID", "16-Q", "07b-N", "01-01AQ-30338708")
+  if (/^\d{1,3}[a-z]?[\s-_]+[A-Za-z]{1,4}(?:[-_]\d+)?$/i.test(s)) return true
+
+  // 7. Event code prefix alone (e.g. "Z", "AQ", "N", "ID", "QMZ", "BM", "BQ", "BZ", "H", "WAAZ", "NAMAZ", "ZO", "MZ")
+  const upper = s.toUpperCase()
+  if (KNOWN_PREFIX_NAMES[upper] || /^[A-Z]{1,4}$/.test(upper)) return true
+
+  // 8. ITS numbers alone (e.g. "30338708", "50414968")
+  if (/^\d{5,8}$/.test(s)) return true
+
+  // 9. Session folder alone (e.g. "01-Mumbai-Bethak", "Bethak", "Majlis", "QMZ")
+  if (/^\d{2}[-_][A-Za-z]+[-_](?:Bethak|QMZ|Majlis|Namaz|Ziyarat|Waaz|Sermon)$/i.test(s)) return true
+  if (/^(?:Bethak|QMZ|Majlis|Namaz|Ziyarat|Waaz|Sermon)$/i.test(s)) return true
+
+  return false
+}
+
+/**
  * Detects whether a segment is a main Safar folder.
  * Matches:
  *   "1447-08 Mumbai - Urs Mubarak Syedna Mohammed Burhanuddin RA"
@@ -307,47 +357,73 @@ function parseSafarSegment(segment: string): {
   city: string
 } | null {
   if (!segment) return null
-  const upper = segment.toUpperCase()
+  const upper = segment.toUpperCase().trim()
   if (IGNORED_PATH_SEGMENTS.has(upper)) return null
 
-  // Skip ONLY if it's a pure date folder like "1448-03-13 _01M", "1448-03-13", or "06-12"
-  // A Safar like "1448-03 Mumbai" must NOT be skipped — it has city text after the serial
-  // Rule: skip if year-month-day (3 numeric parts) OR if year-month ends with session tag, 
-  //       but NOT if year-serial is followed by a city name (text starting with a letter)
+  // 1. Files with extension are NEVER safar folders
+  if (/\.[a-z0-9]{2,5}$/i.test(segment)) return null
+
+  // 2. Reject session tags in date folders (e.g. "_01M", "_02E", "1448-04-20 _02E")
+  if (/_\d{1,2}[A-Za-z]/i.test(segment)) return null
+
+  // 3. Reject clip item folders (e.g. "-02-01AQ-", "-18-01N-", "1448-04-20 _02E-02-Z-")
+  if (/[-_]\d{1,4}[a-z]?[-_]\d*[A-Za-z]+[-_]/i.test(segment)) return null
+
+  // 4. Skip pure date folders: "1448-03-13 _01M", "1448-03-13", "06-12", "1448-03"
   const isDateFolderPattern =
-    /^\d{4}[\s-_.]\d{1,2}[\s-_.]\d{1,2}/.test(segment) ||          // YYYY-MM-DD
-    /^\d{4}[\s-_.]\d{1,2}[\s_]+_\d{1,2}[A-Za-z]/.test(segment) ||  // YYYY-MM _01M (session tag)
-    (/^\d{4}[\s-_.]\d{1,2}$/.test(segment))                          // YYYY-MM (exactly, nothing after)
-  // IMPORTANT: "1448-03 Mumbai" must pass through (serial followed by city name)
+    /^\d{4}[\s-_.]\d{1,2}[\s-_.]\d{1,2}/.test(segment) ||
+    /^\d{1,2}[\s-_.]\d{1,2}[\s-_.]\d{4}/.test(segment) ||
+    /^\d{4}[\s-_.]\d{1,2}$/.test(segment) ||
+    /^\d{1,2}[\s-_.]\d{1,2}$/.test(segment)
+
   const hasCityAfterSerial = /^\d{4}[\s-_.]\d{1,2}[\s-_.]+[A-Za-z]/.test(segment)
   if (isDateFolderPattern && !hasCityAfterSerial) {
     return null
-  }  // Skip if it's a session folder like "01-Mumbai-Bethak"
-  if (/^\d{2}[-_][A-Za-z]+[-_](?:Bethak|QMZ|Majlis|Namaz|Ziyarat|Waaz|Sermon)$/i.test(segment)) {
+  }
+
+  // 5. Reject session folders like "01-Mumbai-Bethak", "Bethak", "QMZ"
+  if (/^\d{1,3}[-_][A-Za-z]+[-_](?:Bethak|QMZ|Majlis|Namaz|Ziyarat|Waaz|Sermon)$/i.test(segment)) {
     return null
   }
+  if (/^(?:Bethak|QMZ|Majlis|Namaz|Ziyarat|Waaz|Sermon)$/i.test(segment)) {
+    return null
+  }
+
+  // 6. Reject pure event codes or ITS numbers
+  if (/^[A-Za-z]{1,4}$/.test(segment)) return null
+  if (/^\d{5,8}$/.test(segment)) return null
 
   // Pattern 1: [Year]-[Serial] [Safar Name]
   // e.g. "1447-08 Mumbai - Urs Mubarak Syedna Mohammed Burhanuddin RA"
   // or "1448-10-Istefada ilmiyah"
+  // or "1448-03 Mumbai"
   const p1 = segment.match(/^(\d{4})[\s-_]+(\d{1,3})[\s-_]+([A-Za-z].+)$/)
   if (p1) {
     const y = parseInt(p1[1])
     const serial = p1[2].padStart(2, '0')
     const name = p1[3].trim()
-    const detectedCity = extractCity(name) || extractCity(segment)
-    const city = (detectedCity && detectedCity !== 'Unassigned') ? detectedCity : name
-    return { isSafar: true, year: y, serial, safarName: name, city }
+    const nameUpper = name.toUpperCase()
+    // Ensure name is not a clip token or pure session alone
+    if (!/^[A-Za-z]{1,4}(?:[-_]\d+)?$/i.test(name) && !/^(?:Bethak|QMZ|Majlis|Namaz|Ziyarat|Waaz)$/i.test(name)) {
+      const detectedCity = extractCity(name) || extractCity(segment)
+      const city = (detectedCity && detectedCity !== 'Unassigned') ? detectedCity : name
+      return { isSafar: true, year: y, serial, safarName: name, city }
+    }
   }
 
-  // Pattern 2: [Serial] [Safar Name] e.g. "08 Mumbai - Urs Mubarak"
+  // Pattern 2: [Serial] [Safar Name] e.g. "08 Mumbai - Urs Mubarak" or "02 Khandala"
+  // MUST NOT match clip names like "02-Z", "01-AQ", "03-ID", "16-Q", "07b-N", "01-01AQ-30338708"
   const p2 = segment.match(/^(\d{1,3})[\s-_]+([A-Za-z].+)$/)
   if (p2) {
     const serial = p2[1].padStart(2, '0')
     const name = p2[2].trim()
+    const nameUpper = name.toUpperCase()
+    const isClipPrefix = KNOWN_PREFIX_NAMES[nameUpper] || /^[A-Za-z]{1,4}(?:[-_]\d+)?$/i.test(name)
     const detectedCity = extractCity(name) || extractCity(segment)
-    const city = (detectedCity && detectedCity !== 'Unassigned') ? detectedCity : name
-    return { isSafar: true, serial, safarName: name, city }
+    if (!isClipPrefix && (detectedCity || (name.length >= 4 && !/^\d+/.test(name)))) {
+      const city = (detectedCity && detectedCity !== 'Unassigned') ? detectedCity : name
+      return { isSafar: true, serial, safarName: name, city }
+    }
   }
 
   // Pattern 3: [Year] [Safar Name] e.g. "1447 Mumbai - Urs Mubarak"
@@ -355,14 +431,16 @@ function parseSafarSegment(segment: string): {
   if (p3) {
     const y = parseInt(p3[1])
     const name = p3[2].trim()
-    const detectedCity = extractCity(name) || extractCity(segment)
-    const city = (detectedCity && detectedCity !== 'Unassigned') ? detectedCity : name
-    return { isSafar: true, year: y, safarName: name, city }
+    if (!/^[A-Za-z]{1,4}$/.test(name) && !/^(?:Bethak|QMZ|Majlis|Namaz|Ziyarat|Waaz)$/i.test(name)) {
+      const detectedCity = extractCity(name) || extractCity(segment)
+      const city = (detectedCity && detectedCity !== 'Unassigned') ? detectedCity : name
+      return { isSafar: true, year: y, safarName: name, city }
+    }
   }
 
   // Pattern 4: Standalone City or Recognized Safar Name
   const city = extractCity(segment)
-  if (city && city !== 'Unassigned') {
+  if (city && city !== 'Unassigned' && segment.length >= 3) {
     return { isSafar: true, safarName: segment, city }
   }
 
@@ -402,7 +480,13 @@ export function parseSafarHierarchy(fullPathOrFolder: string): ParsedSafarHierar
 
   if (!fullPathOrFolder) return result
 
-  const segments = fullPathOrFolder.split(/[/\\]/).filter(Boolean)
+  const rawSegments = fullPathOrFolder.split(/[/\\]/).filter(Boolean)
+  if (rawSegments.length === 0) return result
+
+  // CRITICAL: If path ends with a video/media file (has extension), strip it!
+  // A video file (e.g. "02-Z.mp4", "video.mp4") must NEVER be treated as a Safar or folder segment!
+  const hasFileExt = /\.[a-z0-9]{2,5}$/i.test(rawSegments[rawSegments.length - 1])
+  const segments = hasFileExt ? rawSegments.slice(0, -1) : rawSegments
   if (segments.length === 0) return result
 
   // Step 0: Priority check: folder one step inside IN PROCESS / TO UPLOAD / TO DELETE
@@ -411,7 +495,7 @@ export function parseSafarHierarchy(fullPathOrFolder: string): ParsedSafarHierar
     if (CONTAINER_ROOTS.has(segUpper) && i + 1 < segments.length) {
       const candidate = segments[i + 1].trim()
       const candUpper = candidate.toUpperCase()
-      if (!['FINAL', 'FINAL TITLES', 'OUTPUT', 'EXPORTS', 'DVD', 'NEW FOLDER', '$RECYCLE.BIN'].includes(candUpper)) {
+      if (!['FINAL', 'FINAL TITLES', 'OUTPUT', 'EXPORTS', 'DVD', 'NEW FOLDER', '$RECYCLE.BIN'].includes(candUpper) && !isBogusSafar(candidate)) {
         result.safar = candidate
         const m1 = candidate.match(/^(\d{4})[\s\-_]+(\d{1,3})[\s\-_]+(.*)$/)
         const m2 = candidate.match(/^(\d{1,3})[\s\-_]+(.*)$/)
@@ -498,7 +582,7 @@ export function parseSafarHierarchy(fullPathOrFolder: string): ParsedSafarHierar
     // D. Check for Safar root folder
     if (result.safar === 'Unassigned') {
       const safarInfo = parseSafarSegment(seg)
-      if (safarInfo && safarInfo.isSafar) {
+      if (safarInfo && safarInfo.isSafar && !isBogusSafar(seg)) {
         result.safar = seg
         result.safarName = safarInfo.safarName
         result.safarYear = safarInfo.year

@@ -46,7 +46,7 @@ import { registerFolderMakerIPC } from './ipc/folderMaker.ipc'
 import { registerAudioIPC } from './ipc/audio.ipc'
 import { registerSystemIPC } from './ipc/system.ipc'
 import { registerTaskTrackerIPC, getProductionSummary } from './ipc/taskTracker.ipc'
-import { registerUpdateIPC, triggerSilentStartupCheck } from './ipc/update.ipc'
+import { registerUpdateIPC, triggerSilentStartupCheck, getWorkstationVersion } from './ipc/update.ipc'
 import { registerPdfIPC } from './ipc/pdf.ipc'
 import { registerViewerIPC } from './ipc/viewer.ipc'
 import { registerCameraTransferIPC } from './ipc/cameraTransfer.ipc'
@@ -655,6 +655,9 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  // Set app metadata
+  app.setName('One Tap')
+  try { app.setVersion(getWorkstationVersion()) } catch {}
   // Set app id for windows taskbar grouping
   app.setAppUserModelId('com.bsframework.onetap')
 

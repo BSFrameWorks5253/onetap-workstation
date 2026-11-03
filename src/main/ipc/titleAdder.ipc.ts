@@ -734,7 +734,9 @@ function parseSafarFromCandidatePaths(paths: (string | undefined)[]): SafarParse
   let best: SafarParsedInfo = { safar: 'Unassigned', safarName: 'Unassigned', city: 'Unassigned' }
   for (const p of paths) {
     if (!p) continue
-    const info = parseSafarFromPath(p)
+    // Strip file name if a full video file path was passed
+    const cleanPath = /\.[a-z0-9]{2,5}$/i.test(p) ? path.dirname(p) : p
+    const info = parseSafarFromPath(cleanPath)
     if (info.safar && info.safar !== 'Unassigned') {
       best.safar = info.safar
       best.safarName = info.safarName
@@ -1746,7 +1748,7 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
         folderName = stdFolder
       }
         
-      const safarInfo = parseSafarFromCandidatePaths([videoPath, params.batchSource, outputPath, actualOutputDir, params.outputFolder])
+      const safarInfo = parseSafarFromCandidatePaths([params.batchSource, actualOutputDir, params.outputFolder, videoPath ? path.dirname(videoPath) : undefined, outputPath ? path.dirname(outputPath) : undefined])
       if (safarInfo.dateFolder) {
         folderName = safarInfo.dateFolder
       }

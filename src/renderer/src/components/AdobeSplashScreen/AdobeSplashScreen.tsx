@@ -28,7 +28,7 @@ export const AdobeSplashScreen: React.FC<AdobeSplashScreenProps> = ({
   onDone,
   isPreview = false,
   isBootScreen = true,
-  version = '26.10.12',
+  version = '26.11.03',
   durationMs = 2800,
   artworkUrl
 }) => {

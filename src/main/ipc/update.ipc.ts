@@ -14,6 +14,7 @@ import http from 'http'
 import crypto from 'crypto'
 import { URL } from 'url'
 import { get } from '../core/settingsManager'
+import appPackageJson from '../../../package.json'
 
 // Target GitHub Repository & Default Anything Ecosystem Directory
 const GITHUB_REPO = process.env.GITHUB_REPO || 'BSFrameWorks5253/onetap-workstation'
@@ -42,6 +43,9 @@ let lastDownloadedInstallerPath: string | null = null
 
 // Current workstation version from app / package.json
 export function getWorkstationVersion(): string {
+  if (appPackageJson?.version) {
+    return String(appPackageJson.version).trim()
+  }
   try {
     const pkgPath = path.join(app.getAppPath(), 'package.json')
     if (fs.existsSync(pkgPath)) {
@@ -50,9 +54,9 @@ export function getWorkstationVersion(): string {
     }
   } catch {}
   try {
-    return (app.getVersion() || '26.10.21').trim()
+    return (app.getVersion() || (appPackageJson?.version as string) || '26.11.03').trim()
   } catch {
-    return '26.10.5'
+    return (appPackageJson?.version as string) || '26.11.03'
   }
 }
 
@@ -96,8 +100,10 @@ function getUrlStream(targetUrl: string, options: any = {}): Promise<http.Incomi
  * Compare two semver-like version strings (e.g. "26.8.9" vs "20.6.5")
  */
 export function compareVersions(vA: string, vB: string): number {
-  const partsA = vA.replace(/^v/i, '').split('.').map(n => parseInt(n, 10) || 0)
-  const partsB = vB.replace(/^v/i, '').split('.').map(n => parseInt(n, 10) || 0)
+  const cleanA = (String(vA || '').match(/\d+(\.\d+)*/)?.[0] || String(vA || '').replace(/^v/i, '')).trim()
+  const cleanB = (String(vB || '').match(/\d+(\.\d+)*/)?.[0] || String(vB || '').replace(/^v/i, '')).trim()
+  const partsA = cleanA.split('.').map(n => parseInt(n, 10) || 0)
+  const partsB = cleanB.split('.').map(n => parseInt(n, 10) || 0)
   for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
     const a = partsA[i] || 0
     const b = partsB[i] || 0
