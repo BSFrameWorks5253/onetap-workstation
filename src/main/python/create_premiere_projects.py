@@ -14,6 +14,7 @@ import argparse
 import json
 import subprocess
 import gzip
+import math
 from xml.etree import ElementTree as ET
 
 VIDEO_EXTS = {
@@ -71,7 +72,7 @@ def get_video_info(file_path):
         ffprobe_bin = find_ffprobe()
         cmd = [
             ffprobe_bin, '-v', 'error',
-            '-show_entries', 'stream=width,height,duration,r_frame_rate,avg_frame_rate,channels,codec_type:format=duration',
+            '-show_entries', 'stream=width,height,duration,nb_frames,r_frame_rate,avg_frame_rate,channels,codec_type:format=duration',
             '-of', 'json', file_path
         ]
         out = subprocess.check_output(cmd, stderr=subprocess.STDOUT, windows_hide=True, timeout=15).decode('utf-8')
@@ -85,14 +86,6 @@ def get_video_info(file_path):
         h = int(stream.get('height') or 1080) if stream else 1080
         channels = int(astream.get('channels') or 2)
 
-        dur_raw = (stream.get('duration') if stream else None) or fmt.get('duration')
-        try:
-            dur_sec = float(dur_raw)
-            if dur_sec <= 0:
-                dur_sec = 10.0
-        except (TypeError, ValueError):
-            dur_sec = 10.0
-
         fps_str = (stream.get('r_frame_rate') or stream.get('avg_frame_rate') or '30/1') if stream else '30/1'
         if '/' in fps_str and fps_str != '0/0':
             num, den = fps_str.split('/')
@@ -103,7 +96,25 @@ def get_video_info(file_path):
             except ValueError:
                 fps = 30.0
 
-        return {"width": w, "height": h, "duration": max(dur_sec, 0.1), "fps": round(fps, 2), "audioChannels": channels, "isValid": True}
+        nb_frames = 0
+        if stream and stream.get('nb_frames'):
+            try:
+                nb_frames = int(stream.get('nb_frames'))
+            except (TypeError, ValueError):
+                nb_frames = 0
+
+        dur_raw = (stream.get('duration') if stream else None) or fmt.get('duration')
+        try:
+            dur_sec = float(dur_raw)
+            if dur_sec <= 0:
+                dur_sec = 10.0
+        except (TypeError, ValueError):
+            dur_sec = 10.0
+
+        if nb_frames > 0 and fps > 0:
+            dur_sec = float(nb_frames) / fps
+
+        return {"width": w, "height": h, "duration": max(dur_sec, 0.1), "fps": round(fps, 2), "audioChannels": channels, "nb_frames": nb_frames, "isValid": True}
     except Exception:
         return fallback_res
 
@@ -495,8 +506,10 @@ def build_xmeml_xml(sequence_name, video_inputs):
         marker_key = f"{marker_name}||{marker_desc}"
         info = video_infos[idx]
         tb, ntsc_str = parse_tb_ntsc(info['fps'])
-        source_clip_frames = max(1, int(info['duration'] * tb))
-        seq_clip_frames = max(1, int(info['duration'] * seq_tb))
+        if tb == seq_tb and info.get('nb_frames', 0) > 0:
+            clip_frames = info['nb_frames']
+        else:
+            clip_frames = max(1, int(math.floor(info['duration'] * seq_tb)))
         clip_name = os.path.basename(vid_path)
         file_id = f"file-{idx + 1}"
         master_id = f"masterclip-{idx + 1}"
@@ -504,7 +517,7 @@ def build_xmeml_xml(sequence_name, video_inputs):
         a_clip_id = f"aclip-{idx + 1}"
 
         start_frame = current_frame
-        end_frame = current_frame + seq_clip_frames
+        end_frame = current_frame + clip_frames
 
         # Sequence timeline marker for every new folder/group start
         if marker_name and marker_key != current_marker_key:
@@ -529,17 +542,9 @@ def build_xmeml_xml(sequence_name, video_inputs):
             ET.SubElement(f_elem, 'name').text = clip_name
             ET.SubElement(f_elem, 'pathurl').text = path_to_path_url(vid_path)
             vf_rate = ET.SubElement(f_elem, 'rate')
-            ET.SubElement(vf_rate, 'timebase').text = str(tb)
-            ET.SubElement(vf_rate, 'ntsc').text = ntsc_str
-            ET.SubElement(f_elem, 'duration').text = str(source_clip_frames)
-
-            f_tc = ET.SubElement(f_elem, 'timecode')
-            f_tc_rate = ET.SubElement(f_tc, 'rate')
-            ET.SubElement(f_tc_rate, 'timebase').text = str(tb)
-            ET.SubElement(f_tc_rate, 'ntsc').text = ntsc_str
-            ET.SubElement(f_tc, 'string').text = '00:00:00:00'
-            ET.SubElement(f_tc, 'frame').text = '0'
-            ET.SubElement(f_tc, 'displayformat').text = 'NDF'
+            ET.SubElement(vf_rate, 'timebase').text = str(seq_tb)
+            ET.SubElement(vf_rate, 'ntsc').text = seq_ntsc
+            ET.SubElement(f_elem, 'duration').text = str(clip_frames)
 
             f_media = ET.SubElement(f_elem, 'media')
             f_video = ET.SubElement(f_media, 'video')
@@ -578,14 +583,14 @@ def build_xmeml_xml(sequence_name, video_inputs):
         ET.SubElement(v_clip, 'masterclipid').text = master_id
         ET.SubElement(v_clip, 'name').text = clip_name
         ET.SubElement(v_clip, 'enabled').text = 'TRUE'
-        ET.SubElement(v_clip, 'duration').text = str(seq_clip_frames)
+        ET.SubElement(v_clip, 'duration').text = str(clip_frames)
         v_rate = ET.SubElement(v_clip, 'rate')
         ET.SubElement(v_rate, 'timebase').text = str(seq_tb)
         ET.SubElement(v_rate, 'ntsc').text = seq_ntsc
         ET.SubElement(v_clip, 'start').text = str(start_frame)
         ET.SubElement(v_clip, 'end').text = str(end_frame)
         ET.SubElement(v_clip, 'in').text = '0'
-        ET.SubElement(v_clip, 'out').text = str(seq_clip_frames)
+        ET.SubElement(v_clip, 'out').text = str(clip_frames)
 
         add_file_elem(v_clip)
 
@@ -601,14 +606,14 @@ def build_xmeml_xml(sequence_name, video_inputs):
             ET.SubElement(a_clip, 'masterclipid').text = master_id
             ET.SubElement(a_clip, 'name').text = clip_name
             ET.SubElement(a_clip, 'enabled').text = 'TRUE'
-            ET.SubElement(a_clip, 'duration').text = str(seq_clip_frames)
+            ET.SubElement(a_clip, 'duration').text = str(clip_frames)
             a_rate = ET.SubElement(a_clip, 'rate')
             ET.SubElement(a_rate, 'timebase').text = str(seq_tb)
             ET.SubElement(a_rate, 'ntsc').text = seq_ntsc
             ET.SubElement(a_clip, 'start').text = str(start_frame)
             ET.SubElement(a_clip, 'end').text = str(end_frame)
             ET.SubElement(a_clip, 'in').text = '0'
-            ET.SubElement(a_clip, 'out').text = str(seq_clip_frames)
+            ET.SubElement(a_clip, 'out').text = str(clip_frames)
 
             ET.SubElement(a_clip, 'file', id=file_id)
 

@@ -60,6 +60,7 @@ interface VideoStreamInfo {
   timebase: number
   ntsc: boolean
   audioChannels: number
+  nbFrames: number
   isValid: boolean
 }
 
@@ -67,7 +68,7 @@ const ffprobeCache = new Map<string, VideoStreamInfo>()
 
 async function getVideoInfoNodeAsync(filePath: string): Promise<VideoStreamInfo> {
   const FALLBACK_RES: VideoStreamInfo = {
-    width: 1920, height: 1080, duration: 10.0, fpsNum: 30, fpsDen: 1, fps: 30, timebase: 30, ntsc: false, audioChannels: 2, isValid: true
+    width: 1920, height: 1080, duration: 10.0, fpsNum: 30, fpsDen: 1, fps: 30, timebase: 30, ntsc: false, audioChannels: 2, nbFrames: 300, isValid: true
   }
 
   try {
@@ -95,7 +96,7 @@ async function getVideoInfoNodeAsync(filePath: string): Promise<VideoStreamInfo>
     return new Promise((resolve) => {
       execFile(ffprobeExe, [
         '-v', 'error',
-        '-show_entries', 'stream=width,height,duration,r_frame_rate,avg_frame_rate,channels,codec_type:format=duration',
+        '-show_entries', 'stream=width,height,duration,nb_frames,r_frame_rate,avg_frame_rate,channels,codec_type:format=duration',
         '-of', 'json', filePath
       ], { windowsHide: true, timeout: 15000 }, (error, stdout) => {
         if (error || !stdout) {
@@ -113,7 +114,15 @@ async function getVideoInfoNodeAsync(filePath: string): Promise<VideoStreamInfo>
           const width = parseInt(s?.width) || 1920
           const height = parseInt(s?.height) || 1080
 
-          let durSec = parseFloat(s?.duration)
+          const rateStr = (s?.r_frame_rate && s.r_frame_rate !== '0/0') ? s.r_frame_rate : (s?.avg_frame_rate || '30/1')
+          const parts = rateStr.split('/')
+          let num = parseInt(parts[0]) || 30
+          let den = parseInt(parts[1]) || 1
+          let rawFps = den > 0 ? num / den : 30
+          if (rawFps <= 0 || !isFinite(rawFps)) rawFps = 30
+
+          const nbFrames = parseInt(s?.nb_frames) || 0
+          let durSec = (nbFrames > 0 && rawFps > 0) ? (nbFrames / rawFps) : parseFloat(s?.duration)
           if (isNaN(durSec) || durSec <= 0) {
             durSec = parseFloat(f?.duration)
           }
@@ -121,13 +130,6 @@ async function getVideoInfoNodeAsync(filePath: string): Promise<VideoStreamInfo>
             durSec = 10.0
           }
           const duration = Math.max(durSec, 0.1)
-
-          const rateStr = (s?.r_frame_rate && s.r_frame_rate !== '0/0') ? s.r_frame_rate : (s?.avg_frame_rate || '30/1')
-          const parts = rateStr.split('/')
-          let num = parseInt(parts[0]) || 30
-          let den = parseInt(parts[1]) || 1
-          let rawFps = den > 0 ? num / den : 30
-          if (rawFps <= 0 || !isFinite(rawFps)) rawFps = 30
 
           let timebase = 30
           let ntsc = false
@@ -153,7 +155,7 @@ async function getVideoInfoNodeAsync(filePath: string): Promise<VideoStreamInfo>
             ntsc = false
           }
 
-          const res: VideoStreamInfo = { width, height, duration, fpsNum: num, fpsDen: den, fps: rawFps, timebase, ntsc, audioChannels, isValid: true }
+          const res: VideoStreamInfo = { width, height, duration, fpsNum: num, fpsDen: den, fps: rawFps, timebase, ntsc, audioChannels, nbFrames, isValid: true }
           ffprobeCache.set(cacheKey, res)
           return resolve(res)
         } catch {
@@ -1199,6 +1201,7 @@ async function buildXmemlXmlNode(sequenceName: string, videoInputs: Array<string
         fps: (info && info.fps > 0) ? info.fps : primary.fps,
         timebase: (info && info.timebase > 0) ? info.timebase : seqTb,
         ntsc: (info && typeof info.ntsc === 'boolean') ? info.ntsc : primary.ntsc,
+        nbFrames: (info && typeof info.nbFrames === 'number') ? info.nbFrames : Math.max(1, Math.floor(10.0 * seqTb)),
         audioChannels: (info && typeof info.audioChannels === 'number') ? info.audioChannels : primary.audioChannels,
         isValid: true
       }
@@ -1220,15 +1223,16 @@ async function buildXmemlXmlNode(sequenceName: string, videoInputs: Array<string
     const info = videoInfos[idx]
     const tb = info.timebase
     const ntscStr = info.ntsc ? 'TRUE' : 'FALSE'
-    const sourceClipFrames = Math.max(1, Math.floor(info.duration * tb))
-    const seqClipFrames = Math.max(1, Math.floor(info.duration * seqTb))
+    const clipFramesOnTimeline = (info.timebase === seqTb && info.nbFrames && info.nbFrames > 0)
+      ? info.nbFrames
+      : Math.max(1, Math.floor(info.duration * seqTb))
     const clipName = path.basename(vidPath)
     const fileId = `file-${idx + 1}`
     const masterId = `masterclip-${idx + 1}`
     const vClipId = `vclip-${idx + 1}`
     const aClipId = `aclip-${idx + 1}`
     const startFrame = currentFrame
-    const endFrame = currentFrame + seqClipFrames
+    const endFrame = currentFrame + clipFramesOnTimeline
     const pathUrlStr = pathToPathUrl(vidPath)
 
     // Sequence-level timeline marker for every new marker group start
@@ -1249,19 +1253,13 @@ async function buildXmemlXmlNode(sequenceName: string, videoInputs: Array<string
     </marker>`
     }
 
-    // Full <file> definition on V1
+    // Full <file> definition on V1 (omit synthetic timecode so Premiere Pro binds natively to camera embedded timecode)
     const fileXml = `
           <file id="${fileId}">
             <name>${escapeXml(clipName)}</name>
             <pathurl>${pathUrlStr}</pathurl>
-            <rate><timebase>${tb}</timebase><ntsc>${ntscStr}</ntsc></rate>
-            <duration>${sourceClipFrames}</duration>
-            <timecode>
-              <rate><timebase>${tb}</timebase><ntsc>${ntscStr}</ntsc></rate>
-              <string>00:00:00:00</string>
-              <frame>0</frame>
-              <displayformat>NDF</displayformat>
-            </timecode>
+            <rate><timebase>${seqTb}</timebase><ntsc>${seqNtscStr}</ntsc></rate>
+            <duration>${clipFramesOnTimeline}</duration>
             <media>
               <video>
                 <samplecharacteristics>
@@ -1307,12 +1305,12 @@ async function buildXmemlXmlNode(sequenceName: string, videoInputs: Array<string
           <masterclipid>${masterId}</masterclipid>
           <name>${escapeXml(clipName)}</name>
           <enabled>TRUE</enabled>
-          <duration>${seqClipFrames}</duration>
+          <duration>${clipFramesOnTimeline}</duration>
           <rate><timebase>${seqTb}</timebase><ntsc>${seqNtscStr}</ntsc></rate>
           <start>${startFrame}</start>
           <end>${endFrame}</end>
           <in>0</in>
-          <out>${seqClipFrames}</out>
+          <out>${clipFramesOnTimeline}</out>
           ${fileXml}
           <sourcetrack>
             <mediatype>video</mediatype>
@@ -1328,12 +1326,12 @@ async function buildXmemlXmlNode(sequenceName: string, videoInputs: Array<string
           <masterclipid>${masterId}</masterclipid>
           <name>${escapeXml(clipName)}</name>
           <enabled>TRUE</enabled>
-          <duration>${seqClipFrames}</duration>
+          <duration>${clipFramesOnTimeline}</duration>
           <rate><timebase>${seqTb}</timebase><ntsc>${seqNtscStr}</ntsc></rate>
           <start>${startFrame}</start>
           <end>${endFrame}</end>
           <in>0</in>
-          <out>${seqClipFrames}</out>
+          <out>${clipFramesOnTimeline}</out>
           <file id="${fileId}"/>
           <sourcetrack>
             <mediatype>audio</mediatype>
