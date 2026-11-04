@@ -9,6 +9,7 @@ Backed by SQLite (tracker.db) for drive-independent persistence.
 */
 
 import { ipcMain, BrowserWindow, shell, dialog, app } from 'electron'
+import { openInEcosystemExplorer } from '../core/ecosystemExplorer'
 import fs from 'fs'
 import path from 'path'
 import os from 'os'
@@ -2057,23 +2058,23 @@ export function registerTaskTrackerIPC(): void {
     return { success: true }
   })
 
-  // 4. Open file or directory in Windows Explorer / Premiere Pro
+  // 4. Open file or directory in Anything File Manager / Ecosystem Explorer
   ipcMain.handle('taskTracker:openPath', async (_e, targetPath: string) => {
     if (!targetPath || !fs.existsSync(targetPath)) {
       return { success: false, error: 'Path not found' }
     }
     try {
-      await shell.openPath(targetPath)
+      await openInEcosystemExplorer(targetPath)
       return { success: true }
     } catch (err: any) {
       return { success: false, error: err.message }
     }
   })
 
-  // 5. Reveal in Explorer
+  // 5. Reveal in Explorer / AFM
   ipcMain.handle('taskTracker:showInFolder', async (_e, targetPath: string) => {
     if (!targetPath || !fs.existsSync(targetPath)) return { success: false }
-    shell.showItemInFolder(targetPath)
+    await openInEcosystemExplorer(targetPath)
     return { success: true }
   })
 

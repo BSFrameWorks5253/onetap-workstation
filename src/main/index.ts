@@ -1,4 +1,5 @@
 import { app, BrowserWindow, shell, protocol, session, Tray, Menu, globalShortcut, Notification, dialog } from 'electron'
+import './core/preflightGuards'
 import path, { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import { loadEnv } from './core/envLoader'
@@ -1230,7 +1231,7 @@ function normalizeFolderPath(folderPath: any): string {
         'Access-Control-Allow-Origin': '*',
         'Content-Type': 'application/json'
       })
-      res.end(JSON.stringify({ status: 'online', app: 'One Tap', version: 'v26.11.6' }))
+      res.end(JSON.stringify({ status: 'online', app: 'One Tap', version: 'v26.11.07' }))
     } else if (req.method === 'GET' && req.url === '/final-titles') {
       try {
         const info = getFinalTitlesInfo()

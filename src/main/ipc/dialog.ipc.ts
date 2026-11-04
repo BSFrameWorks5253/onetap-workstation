@@ -1,5 +1,6 @@
 import { ipcMain, dialog, BrowserWindow, shell } from 'electron'
 import fs from 'fs'
+import { openInEcosystemExplorer } from '../core/ecosystemExplorer'
 
 type WinGetter = () => BrowserWindow | null
 
@@ -60,7 +61,7 @@ export function registerDialogIPC(getWin: WinGetter): void {
   ipcMain.handle('shell:openFolder', async (_e, folderPath: string) => {
     if (!folderPath || typeof folderPath !== 'string') return
     try {
-      await shell.openPath(folderPath.trim())
+      await openInEcosystemExplorer(folderPath.trim())
     } catch (e) {
       console.warn('[shell:openFolder] Error opening folder:', folderPath, e)
     }

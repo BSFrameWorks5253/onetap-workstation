@@ -1,4 +1,4 @@
-Version:    26.11.6
+Version:    26.11.07
 Build Date: 2026-11-03 12:53:43
 
 === What's New ===

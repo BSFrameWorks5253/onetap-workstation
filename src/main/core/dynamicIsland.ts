@@ -12,6 +12,7 @@
  */
 
 import { app, BrowserWindow, screen, ipcMain, shell, Notification } from 'electron'
+import { openInEcosystemExplorer } from './ecosystemExplorer'
 import path, { join } from 'path'
 import fs from 'fs'
 import { is } from '@electron-toolkit/utils'
@@ -208,7 +209,7 @@ function handleQueueCompletion(): void {
 
     notif.on('click', () => {
       if (state.outputFolder && fs.existsSync(state.outputFolder)) {
-        shell.openPath(state.outputFolder)
+        openInEcosystemExplorer(state.outputFolder)
       } else {
         const mainWin = mainWindowRef ? mainWindowRef() : null
         if (mainWin && !mainWin.isDestroyed()) {
@@ -334,7 +335,7 @@ function registerIslandIPC(): void {
       }
     } else if (action === 'open-folder') {
       if (state.outputFolder && fs.existsSync(state.outputFolder)) {
-        shell.openPath(state.outputFolder)
+        openInEcosystemExplorer(state.outputFolder)
       }
     } else if (action === 'focus-app') {
       const mainWin = mainWindowRef ? mainWindowRef() : null

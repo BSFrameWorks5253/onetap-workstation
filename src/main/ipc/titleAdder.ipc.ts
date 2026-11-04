@@ -15,6 +15,7 @@
  */
 
 import { ipcMain, BrowserWindow, shell } from 'electron'
+import { openInEcosystemExplorer } from '../core/ecosystemExplorer'
 import { spawnSync, execFileSync } from 'child_process'
 import fs from 'fs'
 import path from 'path'
@@ -2098,7 +2099,7 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
   ipcMain.handle('titleAdder:openFinalTitlesFolder', async (_e, customPath?: string) => {
     const info = getFinalTitlesInfo(customPath)
     if (info && info.folderPath && fs.existsSync(info.folderPath)) {
-      await shell.openPath(info.folderPath)
+      await openInEcosystemExplorer(info.folderPath)
       return { success: true, folderPath: info.folderPath }
     }
     return { success: false, error: 'Folder does not exist' }
@@ -2106,7 +2107,7 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
 
   ipcMain.handle('titleAdder:showFileInFolder', async (_e, filePath: string) => {
     if (filePath && fs.existsSync(filePath)) {
-      shell.showItemInFolder(filePath)
+      await openInEcosystemExplorer(filePath)
       return { success: true }
     }
     return { success: false, error: 'File does not exist' }
