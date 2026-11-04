@@ -194,29 +194,32 @@ async function publishToGitHubReleases(version, exePath, releaseNotes) {
       throw new Error('Missing upload_url in GitHub release response')
     }
 
-    // 3. Upload Setup Executable binary
-    if (fs.existsSync(exePath)) {
-      const assetName = path.basename(exePath)
-      const existingAsset = (releaseData.assets || []).find((a) => a.name === assetName)
+    // 3. Upload Executable binaries (both Setup and standard artifacts)
+    const filesToUpload = Array.isArray(exePath) ? exePath : [exePath]
+    for (const file of filesToUpload) {
+      if (file && fs.existsSync(file)) {
+        const assetName = path.basename(file)
+        const existingAsset = (releaseData.assets || []).find((a) => a.name === assetName)
 
-      if (existingAsset) {
-        log(`Replacing existing asset ${assetName} on GitHub Release...`)
-        await httpsRequest({
-          hostname: 'api.github.com',
-          path: `/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/assets/${existingAsset.id}`,
-          method: 'DELETE',
-          headers: {
-            'User-Agent': 'OneTap-Release-Publisher',
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/vnd.github.v3+json'
-          }
-        })
+        if (existingAsset) {
+          log(`Replacing existing asset ${assetName} on GitHub Release...`)
+          await httpsRequest({
+            hostname: 'api.github.com',
+            path: `/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/assets/${existingAsset.id}`,
+            method: 'DELETE',
+            headers: {
+              'User-Agent': 'OneTap-Release-Publisher',
+              'Authorization': `Bearer ${token}`,
+              'Accept': 'application/vnd.github.v3+json'
+            }
+          })
+        }
+
+        log(`Uploading ${assetName} (${(fs.statSync(file).size / (1024 * 1024)).toFixed(1)} MB) to GitHub Releases...`)
+        await uploadReleaseAsset(releaseData.upload_url, file, assetName, token)
+        logSuccess(`Executable ${assetName} successfully pushed to GitHub Releases!`)
+        logSuccess(`Direct Download URL: https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/download/${tagName}/${assetName}`)
       }
-
-      log(`Uploading ${assetName} (${(fs.statSync(exePath).size / (1024 * 1024)).toFixed(1)} MB) to GitHub Releases...`)
-      await uploadReleaseAsset(releaseData.upload_url, exePath, assetName, token)
-      logSuccess(`Setup Executable successfully pushed to GitHub Releases!`)
-      logSuccess(`Direct Download URL: https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/download/${tagName}/${assetName}`)
     }
 
     // 4. Also upload latest.yml if present
@@ -351,6 +354,7 @@ async function publishRelease(options = {}) {
   const flatTargetPath = path.join(flatReleaseDir, targetExeName)
   const flatSetupPath = path.join(flatReleaseDir, setupExeName)
   const targetExePath = path.join(versionDir, targetExeName)
+  const setupExePath = path.join(versionDir, setupExeName)
 
   if (detectedExe && fs.existsSync(detectedExe)) {
     if (detectedExe !== targetExePath) {
@@ -358,9 +362,6 @@ async function publishRelease(options = {}) {
 
       logSuccess(`Organized setup executable into: release/One Tap/V-${version}/${targetExeName}`)
     }
-    const setupExeName = `OneTap-Setup-V-${version}.exe`
-    const setupExePath = path.join(versionDir, setupExeName)
-    const flatSetupPath = path.join(flatReleaseDir, setupExeName)
     if (fs.existsSync(flatSetupPath)) {
       if (!fs.existsSync(setupExePath) || fs.statSync(flatSetupPath).mtimeMs > fs.statSync(setupExePath).mtimeMs) {
         fs.copyFileSync(flatSetupPath, setupExePath)
@@ -405,8 +406,10 @@ async function publishRelease(options = {}) {
 
   // 4. Push directly to GitHub Releases via REST API
   let githubApiUploaded = false
-  if (fs.existsSync(targetExePath)) {
-    githubApiUploaded = await publishToGitHubReleases(version, targetExePath, releaseNotes)
+  const exesToUpload = [targetExePath, setupExePath].filter((p) => p && fs.existsSync(p))
+  const uniqueExes = [...new Set(exesToUpload)]
+  if (uniqueExes.length > 0) {
+    githubApiUploaded = await publishToGitHubReleases(version, uniqueExes, releaseNotes)
   }
 
   // 5. Push Git Tag & Commit to trigger GitHub Actions release pipeline
