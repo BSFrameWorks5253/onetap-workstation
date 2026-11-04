@@ -33,7 +33,10 @@ export default function InventoryMerger(): JSX.Element {
       }
       const res = await api.dialog.openFile({
         title: 'Select Video Inventory Report (.xlsx)',
-        filters: [{ name: 'Excel Files', extensions: ['xlsx', 'xls'] }]
+        filters: [
+          { name: 'Excel Spreadsheets (*.xlsx, *.xls, *.xlsm, *.csv)', extensions: ['xlsx', 'xls', 'xlsm', 'csv'] },
+          { name: 'All Files (*.*)', extensions: ['*'] }
+        ]
       })
       
       const selected = typeof res === 'string' ? res : (res && res.filePaths ? res.filePaths[0] : null)
@@ -55,7 +58,10 @@ export default function InventoryMerger(): JSX.Element {
       }
       const res = await api.dialog.openFile({
         title: 'Select Photo Inventory Report (.xlsx)',
-        filters: [{ name: 'Excel Files', extensions: ['xlsx', 'xls'] }]
+        filters: [
+          { name: 'Excel Spreadsheets (*.xlsx, *.xls, *.xlsm, *.csv)', extensions: ['xlsx', 'xls', 'xlsm', 'csv'] },
+          { name: 'All Files (*.*)', extensions: ['*'] }
+        ]
       })
 
       const selected = typeof res === 'string' ? res : (res && res.filePaths ? res.filePaths[0] : null)

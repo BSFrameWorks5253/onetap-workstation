@@ -5,9 +5,21 @@ import { openInEcosystemExplorer } from '../core/ecosystemExplorer'
 type WinGetter = () => BrowserWindow | null
 
 export function registerDialogIPC(getWin: WinGetter): void {
+  const resolveTargetWin = (e?: Electron.IpcMainInvokeEvent): BrowserWindow | undefined => {
+    if (e?.sender) {
+      const fromSender = BrowserWindow.fromWebContents(e.sender);
+      if (fromSender && !fromSender.isDestroyed()) return fromSender;
+    }
+    const win = getWin();
+    if (win && !win.isDestroyed()) return win;
+    const focused = BrowserWindow.getFocusedWindow();
+    return (focused && !focused.isDestroyed()) ? focused : undefined;
+  };
+
   ipcMain.handle('dialog:openFolder', async (_e, options?: Electron.OpenDialogOptions) => {
-    const win = getWin()
-    const result = await dialog.showOpenDialog(win ?? new BrowserWindow(), {
+    const win = resolveTargetWin(_e);
+    if (win && !win.isDestroyed()) win.focus();
+    const result = await dialog.showOpenDialog(win as any, {
       properties: ['openDirectory'],
       ...options
     })
@@ -15,8 +27,9 @@ export function registerDialogIPC(getWin: WinGetter): void {
   })
 
   ipcMain.handle('dialog:openFolders', async (_e, options?: Electron.OpenDialogOptions) => {
-    const win = getWin()
-    const result = await dialog.showOpenDialog(win ?? new BrowserWindow(), {
+    const win = resolveTargetWin(_e);
+    if (win && !win.isDestroyed()) win.focus();
+    const result = await dialog.showOpenDialog(win as any, {
       properties: ['openDirectory', 'multiSelections'],
       ...options
     })
@@ -24,8 +37,9 @@ export function registerDialogIPC(getWin: WinGetter): void {
   })
 
   ipcMain.handle('dialog:openFile', async (_e, options?: Electron.OpenDialogOptions) => {
-    const win = getWin()
-    const result = await dialog.showOpenDialog(win ?? new BrowserWindow(), {
+    const win = resolveTargetWin(_e);
+    if (win && !win.isDestroyed()) win.focus();
+    const result = await dialog.showOpenDialog(win as any, {
       properties: ['openFile'],
       ...options
     })
@@ -33,8 +47,9 @@ export function registerDialogIPC(getWin: WinGetter): void {
   })
 
   ipcMain.handle('dialog:openFiles', async (_e, options?: Electron.OpenDialogOptions) => {
-    const win = getWin()
-    const result = await dialog.showOpenDialog(win ?? new BrowserWindow(), {
+    const win = resolveTargetWin(_e);
+    if (win && !win.isDestroyed()) win.focus();
+    const result = await dialog.showOpenDialog(win as any, {
       properties: ['openFile', 'multiSelections'],
       ...options
     })
@@ -42,8 +57,9 @@ export function registerDialogIPC(getWin: WinGetter): void {
   })
 
   ipcMain.handle('dialog:saveFile', async (_e, options?: Electron.SaveDialogOptions) => {
-    const win = getWin()
-    const result = await dialog.showSaveDialog(win ?? new BrowserWindow(), {
+    const win = resolveTargetWin(_e);
+    if (win && !win.isDestroyed()) win.focus();
+    const result = await dialog.showSaveDialog(win as any, {
       ...options
     })
     return result.canceled ? null : result.filePath
