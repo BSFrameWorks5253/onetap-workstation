@@ -15,6 +15,7 @@ import { app, BrowserWindow, Notification } from 'electron';
 import fs from 'fs';
 import path from 'path';
 import http from 'http';
+import QRCode from 'qrcode';
 import { updateIslandState } from './dynamicIsland';
 import { verifyFileHash } from './hashVerifier';
 
@@ -87,6 +88,9 @@ export function initAnyShareBridge(window: BrowserWindow | null) {
   // Run initial poll
   pollPendingMobileCommands();
 }
+
+// Ephemeral in-memory pairing sessions map
+const activePairingSessions = new Map<string, any>();
 
 /**
  * Starts a native local HTTP Bridge server allowing AnyShare web/PWA
@@ -167,6 +171,144 @@ function startLocalBridgeServer() {
         } catch (err: any) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ success: false, error: err?.message || 'Invalid JSON' }));
+        }
+      });
+      return;
+    }
+
+    // GET /api/auth-qr -> Generate dynamic One-Time Login QR code for AnyShare Website Scanner
+    if (req.method === 'GET' && url.pathname === '/api/auth-qr') {
+      const pairingToken = 'pair_ot_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+      const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+      const pairingPayload = {
+        type: 'ANYSHARE_ONE_TIME_LOGIN',
+        version: '1.0.0',
+        token: pairingToken,
+        createdAt: new Date().toISOString(),
+        expiresAt: new Date(expiresAt).toISOString(),
+        user: {
+          id: 'user_master_01',
+          name: 'Master Architect',
+          username: 'admin',
+          email: 'admin@anything.local',
+          role: 'admin',
+          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80',
+          provider: 'onetap_workstation'
+        },
+        workstation: {
+          nodeId: 'node_studio_pc_01',
+          label: 'Studio-PC-01 (Primary One Tap Node)',
+          appVersion: `One Tap v${app.getVersion() || '2.4.1'}`,
+          bridgePort: PORT,
+          localIp: '127.0.0.1',
+          gpu: 'NVIDIA RTX 4090 (24GB VRAM)',
+          storageFreeGB: 482.4
+        }
+      };
+
+      activePairingSessions.set(pairingToken, {
+        token: pairingToken,
+        status: 'pending',
+        user: pairingPayload.user,
+        workstation: pairingPayload.workstation,
+        createdAt: Date.now(),
+        expiresAt
+      });
+
+      QRCode.toDataURL(JSON.stringify(pairingPayload), {
+        errorCorrectionLevel: 'M',
+        margin: 2,
+        scale: 7,
+        color: {
+          dark: '#111827',
+          light: '#FAF8F5'
+        }
+      }).then(dataUrl => {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          success: true,
+          token: pairingToken,
+          expiresAt: pairingPayload.expiresAt,
+          qrDataUrl: dataUrl,
+          payload: pairingPayload
+        }));
+      }).catch(err => {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: err?.message || 'QR generation failed' }));
+      });
+      return;
+    }
+
+    // GET /api/pairing-status -> Check if website has claimed the token
+    if (req.method === 'GET' && url.pathname === '/api/pairing-status') {
+      const token = url.searchParams.get('token');
+      if (!token) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: 'Missing token' }));
+        return;
+      }
+
+      const session = activePairingSessions.get(token);
+      if (!session) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: 'Session not found or expired' }));
+        return;
+      }
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        success: true,
+        status: session.status,
+        claimedAt: session.claimedAt || null,
+        claimedBy: session.claimedBy || null
+      }));
+      return;
+    }
+
+    // POST /api/claim-pairing -> Website Scanner reports claim
+    if (req.method === 'POST' && url.pathname === '/api/claim-pairing') {
+      let bodyStr = '';
+      req.on('data', chunk => { bodyStr += chunk; });
+      req.on('end', () => {
+        try {
+          const body = JSON.parse(bodyStr || '{}');
+          const token = body.token;
+          const session = token ? activePairingSessions.get(token) : null;
+
+          if (session) {
+            session.status = 'claimed';
+            session.claimedAt = new Date().toISOString();
+            session.claimedBy = body.claimedBy || 'anyshare_website';
+          }
+
+          // Desktop alert and Dynamic Island pulse
+          updateIslandState({
+            active: true,
+            done: false,
+            success: true,
+            percent: 100,
+            task: `AnyShare Synced: @${body.username || 'admin'}`
+          });
+          setTimeout(() => {
+            updateIslandState({ active: false, done: true, success: true, percent: 0, task: 'One Tap Workstation Ready' });
+          }, 3500);
+
+          if (Notification.isSupported()) {
+            new Notification({
+              title: 'AnyShare Website Linked!',
+              body: `Synced with @${body.username || 'admin'}. Remote rendering enabled.`
+            }).show();
+          }
+
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({
+            success: true,
+            message: 'Pairing successfully claimed on workstation node'
+          }));
+        } catch (e: any) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: false, error: e?.message || 'Invalid JSON' }));
         }
       });
       return;
