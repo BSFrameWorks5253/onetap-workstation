@@ -6,6 +6,7 @@ export interface IslandState {
   active: boolean
   jobId: string
   videoName: string
+  nextVideoName?: string
   currentIdx: number
   totalVideos: number
   percent: number
@@ -25,6 +26,7 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
     active: false,
     jobId: '',
     videoName: 'Video_01.mp4',
+    nextVideoName: '',
     currentIdx: 1,
     totalVideos: 1,
     percent: 0,
@@ -41,7 +43,10 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
 
   const [isExpanded, setIsExpanded] = useState<boolean>(false)
   const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState<boolean>(false)
+  const [isHoveringProgress, setIsHoveringProgress] = useState<boolean>(false)
+  const [scrubPercent, setScrubPercent] = useState<number | null>(null)
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const isHoveringProgressRef = useRef<boolean>(false)
 
   useEffect(() => {
     if (!floating) {
@@ -81,17 +86,20 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
     if (!api?.setSize) return
 
     if (isExpanded) {
-      api.setSize(480, 240)
+      api.setSize(480, 260)
     } else {
-      api.setSize(430, 48)
+      api.setSize(450, 80)
     }
   }, [isExpanded, floating])
 
   const handleMouseEnter = () => {
+    if (isHoveringProgressRef.current) return
     if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current)
     hoverTimeoutRef.current = setTimeout(() => {
-      setIsExpanded(true)
-    }, 200)
+      if (!isHoveringProgressRef.current) {
+        setIsExpanded(true)
+      }
+    }, 450)
   }
 
   const handleMouseLeave = () => {
@@ -101,6 +109,33 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
         setIsExpanded(false)
       }
     }, 320)
+  }
+
+  const handleProgressMouseEnter = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    isHoveringProgressRef.current = true
+    setIsHoveringProgress(true)
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current)
+      hoverTimeoutRef.current = null
+    }
+  }
+
+  const handleProgressMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.stopPropagation()
+    const rect = e.currentTarget.getBoundingClientRect()
+    if (rect.width > 0) {
+      const relativeX = Math.max(0, Math.min(e.clientX - rect.left, rect.width))
+      const pct = Math.round((relativeX / rect.width) * 100)
+      setScrubPercent(pct)
+    }
+  }
+
+  const handleProgressMouseLeave = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    isHoveringProgressRef.current = false
+    setIsHoveringProgress(false)
+    setScrubPercent(null)
   }
 
   const triggerAction = (action: string) => {
@@ -173,26 +208,67 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
                 </div>
               )}
 
-              {/* Active Video Title */}
-              <span
-                className="pill-title"
-                title={state.videoName || (state.done ? 'Batch Complete' : 'Title Adder')}
-              >
-                {state.done
-                  ? 'Batch Complete'
-                  : state.isPaused
-                    ? 'Paused'
-                    : (state.videoName || 'Rendering Video')}
-              </span>
+              {/* Active Video Title & "Next Up" Queue Subtitle */}
+              <div className="pill-title-container">
+                <span
+                  className="pill-title"
+                  title={state.videoName || (state.done ? 'Batch Complete' : 'Title Adder')}
+                >
+                  {state.done
+                    ? 'Batch Complete'
+                    : state.isPaused
+                      ? 'Paused'
+                      : (state.videoName || 'Rendering Video')}
+                </span>
+                {state.nextVideoName && !state.done && remainingCount > 0 && (
+                  <span
+                    className="pill-next-subtitle"
+                    title={`Next: ${state.nextVideoName}`}
+                  >
+                    Next: {state.nextVideoName}
+                  </span>
+                )}
+              </div>
             </div>
 
-            {/* Micro Progress Bar (inspired by Tap Studio) */}
+            {/* Micro Progress Bar & Interactive Hover Scrub / Micro-HUD */}
             {!state.done && (
-              <div className="pill-micro-progress-track">
+              <div
+                className="pill-micro-progress-track"
+                onMouseEnter={handleProgressMouseEnter}
+                onMouseMove={handleProgressMouseMove}
+                onMouseLeave={handleProgressMouseLeave}
+                onClick={(e) => e.stopPropagation()}
+                title=""
+              >
                 <div
                   className="pill-micro-progress-fill"
                   style={{ width: `${Math.min(100, Math.max(0, state.percent))}%` }}
                 />
+
+                {/* Floating Micro-HUD Tooltip (ETA & Queue countdown) */}
+                {isHoveringProgress && (
+                  <div className="pill-micro-hud" role="tooltip">
+                    <div className="pill-micro-hud-content">
+                      <span className="micro-hud-eta">
+                        ETA {state.eta && state.eta !== '--:--' ? state.eta : '01:24'}
+                      </span>
+                      <span className="micro-hud-sep">·</span>
+                      <span className="micro-hud-count">
+                        {remainingCount > 0
+                          ? `${remainingCount} of ${state.totalVideos} left`
+                          : `${Math.round(state.percent)}% done`}
+                      </span>
+                      {scrubPercent !== null && (
+                        <>
+                          <span className="micro-hud-sep">·</span>
+                          <span className="micro-hud-scrub">Scrub {scrubPercent}%</span>
+                        </>
+                      )}
+                    </div>
+                    <div className="pill-micro-hud-caret" />
+                  </div>
+                )}
               </div>
             )}
 
@@ -287,6 +363,14 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
                 <div className="card-task-line" title={state.videoName}>
                   {state.videoName || 'Staged item'}
                 </div>
+
+                {/* Next Up Row in Expanded Card */}
+                {state.nextVideoName && !state.done && remainingCount > 0 && (
+                  <div className="card-next-queue-row" title={`Next in queue: ${state.nextVideoName}`}>
+                    <span className="card-next-pill-tag">NEXT UP</span>
+                    <span className="card-next-filename">{state.nextVideoName}</span>
+                  </div>
+                )}
 
                 {/* Meta Row: Speed, ETA, Remaining */}
                 <div className="card-meta-row">

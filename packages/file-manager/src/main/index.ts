@@ -147,11 +147,18 @@ function isItemHidden(name: string): boolean {
 }
 
 // IPC: list directory contents
-ipcMain.handle('fm:listDir', async (_e, dirPath: string) => {
+ipcMain.handle('fm:listDir', async (event, dirPath: string) => {
   try {
-    const entries = fs.readdirSync(dirPath, { withFileTypes: true })
+    if (!event.senderFrame) return []
+    if (!dirPath || typeof dirPath !== 'string') return []
+    const resolvedPath = path.resolve(dirPath)
+    if (!fs.existsSync(resolvedPath)) return []
+    const dirStat = fs.statSync(resolvedPath)
+    if (!dirStat.isDirectory()) return []
+
+    const entries = fs.readdirSync(resolvedPath, { withFileTypes: true })
     return entries.map(e => {
-      const fullPath = join(dirPath, e.name)
+      const fullPath = join(resolvedPath, e.name)
       let size = 0, mtime = 0
       try {
         const stat = fs.statSync(fullPath)
@@ -162,7 +169,6 @@ ipcMain.handle('fm:listDir', async (_e, dirPath: string) => {
       const isHidden = isItemHidden(e.name)
       return { name: e.name, isDir: e.isDirectory(), size, mtime, ext, fullPath, isHidden }
     }).sort((a, b) => {
-      // Folders first, then files
       if (a.isDir !== b.isDir) return a.isDir ? -1 : 1
       return a.name.localeCompare(b.name)
     })
@@ -227,9 +233,26 @@ ipcMain.handle('fm:openInExplorer', async (_e, dirPath: string) => {
   return true
 })
 
-ipcMain.handle('fm:createFolder', async (_e, parentPath: string, name: string) => {
+ipcMain.handle('fm:createFolder', async (event, parentPath: string, name: string) => {
   try {
-    const newPath = join(parentPath, name)
+    if (!event.senderFrame) return { success: false, error: 'Unauthorized sender' }
+    if (!parentPath || typeof parentPath !== 'string' || !name || typeof name !== 'string') {
+      return { success: false, error: 'Invalid parent path or folder name' }
+    }
+    // Block path traversal / separators in folder name
+    const sanitizedName = name.trim()
+    if (!sanitizedName || /[\\\/]/.test(sanitizedName) || sanitizedName === '.' || sanitizedName === '..') {
+      return { success: false, error: 'Invalid folder name characters' }
+    }
+    const resolvedParent = path.resolve(parentPath)
+    if (!fs.existsSync(resolvedParent)) {
+      return { success: false, error: 'Parent directory does not exist' }
+    }
+    const newPath = path.resolve(resolvedParent, sanitizedName)
+    // Enforce parent containment
+    if (!newPath.startsWith(resolvedParent + path.sep)) {
+      return { success: false, error: 'Path traversal denied: target must be inside parent directory' }
+    }
     if (!fs.existsSync(newPath)) fs.mkdirSync(newPath, { recursive: true })
     return { success: true, path: newPath }
   } catch (e: any) {
@@ -237,13 +260,25 @@ ipcMain.handle('fm:createFolder', async (_e, parentPath: string, name: string) =
   }
 })
 
-ipcMain.handle('fm:readImageBase64', async (_e, filePath: string) => {
+ipcMain.handle('fm:readImageBase64', async (event, filePath: string) => {
   try {
-    if (!filePath || !fs.existsSync(filePath)) {
+    if (!event.senderFrame) return { ok: false, error: 'Unauthorized sender' }
+    if (!filePath || typeof filePath !== 'string') {
+      return { ok: false, error: 'Invalid path' }
+    }
+    const resolvedPath = path.resolve(filePath)
+    if (!fs.existsSync(resolvedPath)) {
       return { ok: false, error: 'File not found' }
     }
+    const stat = fs.statSync(resolvedPath)
+    if (!stat.isFile()) {
+      return { ok: false, error: 'Target is not a regular file' }
+    }
+    if (stat.size > 60 * 1024 * 1024) {
+      return { ok: false, error: 'File exceeds maximum allowed preview size (60MB)' }
+    }
 
-    const ext = (filePath.split('.').pop() || '').toLowerCase()
+    const ext = (resolvedPath.split('.').pop() || '').toLowerCase()
 
     // Camera RAW files: extract high-res preview
     if (RAW_EXTS.has(ext)) {
@@ -291,10 +326,19 @@ ipcMain.handle('fm:readImageBase64', async (_e, filePath: string) => {
 
 const fmVideoCache = new Map<string, { duration: number; thumb: string }>()
 
-ipcMain.handle('fm:getVideoMetadata', async (_e, filePath: string) => {
+ipcMain.handle('fm:getVideoMetadata', async (event, filePath: string) => {
   try {
-    if (!filePath || !fs.existsSync(filePath)) {
+    if (!event.senderFrame) return { ok: false, error: 'Unauthorized sender', duration: 0, thumb: '' }
+    if (!filePath || typeof filePath !== 'string') {
+      return { ok: false, error: 'Invalid path', duration: 0, thumb: '' }
+    }
+    const resolvedPath = path.resolve(filePath)
+    if (!fs.existsSync(resolvedPath)) {
       return { ok: false, error: 'File not found', duration: 0, thumb: '' }
+    }
+    const stat = fs.statSync(resolvedPath)
+    if (!stat.isFile()) {
+      return { ok: false, error: 'Target is not a regular file', duration: 0, thumb: '' }
     }
 
     const stat = fs.statSync(filePath)

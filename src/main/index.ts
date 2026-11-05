@@ -2,6 +2,7 @@ import { app, BrowserWindow, shell, protocol, session, Tray, Menu, globalShortcu
 import './core/preflightGuards'
 import path, { join } from 'path'
 import { is } from '@electron-toolkit/utils'
+import { pathToFileURL } from 'url'
 import { loadEnv } from './core/envLoader'
 import { findAndEnsureFfmpegPath } from './core/gpuDetector'
 
@@ -36,6 +37,13 @@ process.on('unhandledRejection', (reason: any) => {
 // Load environment variables before doing anything else
 loadEnv()
 
+// Enable GPU Hardware Acceleration & Instant Window Compositing
+app.commandLine.appendSwitch('enable-gpu-rasterization')
+app.commandLine.appendSwitch('enable-zero-copy')
+app.commandLine.appendSwitch('ignore-gpu-blocklist')
+app.commandLine.appendSwitch('enable-accelerated-2d-canvas')
+app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion')
+
 import { initSettings, getAll, flushSaveSync } from './core/settingsManager'
 import { initWatcher, startWatcher } from './core/folderWatcher'
 import { applyFolderIcon } from './core/folderIconHelper'
@@ -62,6 +70,8 @@ import { registerArchiveCatalogIPC } from './ipc/archiveCatalog.ipc'
 import { registerUserProfileIPC } from './ipc/userProfile.ipc'
 import { startDriveWatcherDaemon, stopDriveWatcherDaemon } from './core/driveWatcherDaemon'
 import { registerTitleAutomodeIPC } from './ipc/titleAutomode.ipc'
+import { registerAnyShareIPC } from './ipc/anyshare.ipc'
+import { initAnyShareBridge } from './core/anyshareBridge'
 import { initDynamicIsland } from './core/dynamicIsland'
 import { resolveChildAppLoaderConfig, showChildAppSplash, closeChildAppSplash, ChildAppLoaderConfig } from './core/splash'
 import http from 'http'
@@ -670,10 +680,32 @@ function createWindow(): void {
     console.error(`[Main Window] Failed to load ${validatedURL}: [${errorCode}] ${errorDescription}`)
   })
 
-  // Open external links in system browser
+  // Open external links safely in system browser with protocol verification
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url)
+    try {
+      const parsed = new URL(url)
+      if (parsed.protocol === 'https:' || parsed.protocol === 'http:' || parsed.protocol === 'mailto:') {
+        shell.openExternal(url)
+      }
+    } catch {}
     return { action: 'deny' }
+  })
+
+  // Prevent unauthorized navigations in main window
+  mainWindow.webContents.on('will-navigate', (event, navigationUrl) => {
+    const isDev = is.dev && !!process.env['ELECTRON_RENDERER_URL']
+    const isLocalDev = isDev && (navigationUrl.includes('localhost') || navigationUrl.includes('127.0.0.1'))
+    const expectedFileUrl = pathToFileURL(join(__dirname, '../renderer/index.html')).toString().toLowerCase()
+    const isAppEntry = navigationUrl.toLowerCase() === expectedFileUrl || navigationUrl.toLowerCase().startsWith(expectedFileUrl + '#')
+    if (!isLocalDev && !isAppEntry) {
+      event.preventDefault()
+      try {
+        const parsed = new URL(navigationUrl)
+        if (parsed.protocol === 'https:' || parsed.protocol === 'http:' || parsed.protocol === 'mailto:') {
+          shell.openExternal(navigationUrl)
+        }
+      } catch {}
+    }
   })
 
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
@@ -757,11 +789,20 @@ app.whenReady().then(() => {
       if (/^\/?[a-zA-Z]:[\\\/]/.test(rawPath)) {
         rawPath = rawPath.replace(/^\//, '');
       }
-      rawPath = rawPath.replace(/\//g, '\\');
+      rawPath = path.resolve(rawPath.replace(/\//g, '\\'));
 
-      console.log('[local-resource] Request URL:', request.url, '→ Resolved path:', rawPath)
+      // Security hardening: disallow access to system directory / sensitive files
+      const sensitivePattern = /\\(windows|system32|system volume information|\.ssh|\.git|\.env|sam|security|software|system)\b/i;
+      if (sensitivePattern.test(rawPath)) {
+        return new Response('Access Denied', { status: 403 });
+      }
 
-      // 5. Determine MIME type from extension
+      // Security: Only log in development mode to avoid leaking filesystem layout in production
+      if (is.dev) {
+        console.log('[local-resource] Request URL:', request.url, '→ Resolved path:', rawPath);
+      }
+
+      // Determine MIME type from extension
       const extname = rawPath.includes('.')
         ? rawPath.slice(rawPath.lastIndexOf('.')).toLowerCase()
         : ''
@@ -780,18 +821,23 @@ app.whenReady().then(() => {
         '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         '.md': 'text/plain', '.txt': 'text/plain',
       }
-      const contentType = MIME[extname] || 'application/octet-stream'
+      const contentType = MIME[extname]
+      if (!contentType) {
+        return new Response('Forbidden resource type', { status: 403 })
+      }
 
-      // 6. Read file from disk and return as Response
+      // Read file from disk and return as Response
       const { readFile, stat } = await import('fs/promises')
       const { existsSync } = await import('fs')
 
       if (!existsSync(rawPath)) {
-        console.error('[local-resource] File not found:', rawPath)
         return new Response('File not found', { status: 404 })
       }
 
       const fileStat = await stat(rawPath)
+      if (!fileStat.isFile()) {
+        return new Response('Target is not a file', { status: 400 })
+      }
       const fileSize = fileStat.size
 
       // Handle Range requests for video seeking (byte-range streaming)
@@ -954,7 +1000,12 @@ app.whenReady().then(() => {
           }
         }
       }
-      shell.openExternal(url)
+      try {
+        const parsed = new URL(url)
+        if (parsed.protocol === 'https:' || parsed.protocol === 'http:' || parsed.protocol === 'mailto:') {
+          shell.openExternal(url)
+        }
+      } catch {}
       return { action: 'deny' }
     })
   })
@@ -988,6 +1039,7 @@ app.whenReady().then(() => {
   registerArchiveCatalogIPC(() => mainWindow)
   registerUserProfileIPC()
   registerTitleAutomodeIPC()
+  registerAnyShareIPC()
 
   // ── Universal Child App Loader & Splash Screen Synchronization ──
   const APP_ID = 'one-tap'
@@ -1005,6 +1057,7 @@ app.whenReady().then(() => {
   createWindow()
   initDynamicIsland(() => mainWindow)
   startDriveWatcherDaemon(() => mainWindow)
+  initAnyShareBridge(mainWindow)
 
   // Apply Adobe-style custom folder icon branding to program folder in production
   if (app.isPackaged) {
@@ -1265,6 +1318,8 @@ function normalizeFolderPath(folderPath: any): string {
               folderPath,
               folderName,
               isMaster,
+              isSlot: Boolean(payload.isSlot),
+              mode: payload.mode || (isMaster ? 'master' : 'single'),
               excludedFolders
             })
           }
@@ -1287,7 +1342,7 @@ function normalizeFolderPath(folderPath: any): string {
         'Access-Control-Allow-Origin': '*',
         'Content-Type': 'application/json'
       })
-      res.end(JSON.stringify({ status: 'online', app: 'One Tap', version: 'v26.11.08' }))
+      res.end(JSON.stringify({ status: 'online', app: 'One Tap', version: 'v26.11.11' }))
     } else if (req.method === 'GET' && req.url === '/final-titles') {
       try {
         const info = getFinalTitlesInfo()

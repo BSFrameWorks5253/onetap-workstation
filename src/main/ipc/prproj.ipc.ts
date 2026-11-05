@@ -1587,39 +1587,45 @@ export function getCameramanFoldersInFolder(folderPath: string): CameramanFolder
 export function detectFolderMode(parentFolder: string): 'master' | 'single' {
   if (!parentFolder || !fs.existsSync(parentFolder)) return 'single'
 
+  const folderName = path.basename(parentFolder).trim()
+
+  // 1. Slot folders (both full and short formats) are ALWAYS single mode
+  const isSlot =
+    /^(\d{4}[-_]\d{2}[-_]\d{2}\s*_?\d{2}[ME])-(\d{1,3}[a-zA-Z]?)-(?:(\d{1,3})?([A-Za-z]+))(?:-(\d{5,8}))?/i.test(folderName) ||
+    /^(\d{4}[-_]\d{2}(?:[-_]\d{2})?\s+[A-Za-z\s]+)-(\d{1,3}[a-zA-Z]?)-([A-Za-z]+)-?/i.test(folderName) ||
+    /^(\d{1,3}[a-zA-Z]?)-(?:(\d{1,3})?([A-Za-z]+))(?:-(\d{5,8}))?$/i.test(folderName)
+
+  if (isSlot) return 'single'
+
   try {
     const entries = fs.readdirSync(parentFolder)
-    const validDirs: string[] = []
+    const validDirs = []
 
     for (const entry of entries) {
       const fullP = path.join(parentFolder, entry)
       try {
-        if (fs.statSync(fullP).isDirectory() && !OUTPUT_FOLDER_NAMES.has(entry.toLowerCase())) {
-          validDirs.push(fullP)
+        if (fs.statSync(fullP).isDirectory() && !OUTPUT_FOLDER_NAMES.has(entry.toLowerCase()) && !SYSTEM_IGNORE_FOLDERS.has(entry.toLowerCase())) {
+          validDirs.push(entry)
         }
       } catch {}
     }
 
     if (validDirs.length === 0) return 'single'
 
-    // Check if any child directory has nested child directories that contain videos (Level 3 depth = Master -> Date -> Cameraman -> Video)
-    for (const dirPath of validDirs) {
-      try {
-        const childEntries = fs.readdirSync(dirPath)
-        for (const child of childEntries) {
-          const childFullP = path.join(dirPath, child)
-          if (fs.statSync(childFullP).isDirectory() && !OUTPUT_FOLDER_NAMES.has(child.toLowerCase())) {
-            const nestedVideos = discoverSubfolderVideosNode(childFullP)
-            if (nestedVideos.length > 0) {
-              return 'master' // Detected date subfolders containing cameraman folders!
-            }
-          }
-        }
-      } catch {}
+    // 2. A Master folder MUST contain genuine date session subfolders (e.g. 1448-05-09 _01M or 1448-05-09)
+    const hasDateSubfolders = validDirs.some(name =>
+      /^(\d{4}[-_]\d{2}[-_]\d{2})\s*_?(\d{2})([ME])?$/i.test(name) ||
+      /^(\d{4}[-_]\d{2}[-_]\d{2})$/i.test(name)
+    )
+
+    if (hasDateSubfolders) {
+      return 'master'
     }
+
+    return 'single'
   } catch {}
 
-  return 'single' // Folder contains cameraman folders or direct video files
+  return 'single'
 }
 
 function formatBytes(bytes: number): string {

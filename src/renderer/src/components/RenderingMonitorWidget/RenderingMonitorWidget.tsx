@@ -5,6 +5,7 @@ export interface RenderMonitorState {
   active: boolean
   jobId: string
   videoName: string
+  nextVideoName?: string
   currentIdx: number
   totalVideos: number
   percent: number
@@ -24,6 +25,7 @@ export function RenderingMonitorWidget(): JSX.Element | null {
     active: false,
     jobId: '',
     videoName: '',
+    nextVideoName: '',
     currentIdx: 0,
     totalVideos: 0,
     percent: 0,

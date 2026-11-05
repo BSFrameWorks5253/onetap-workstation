@@ -1,6 +1,6 @@
 import fs from 'fs'
 import path from 'path'
-import { exec } from 'child_process'
+import { execFile } from 'child_process'
 import { app } from 'electron'
 
 /**
@@ -34,17 +34,17 @@ export function applyFolderIcon(folderPath: string, customIconPath?: string): bo
     // Remove existing hidden/system attributes on desktop.ini if it exists
     if (fs.existsSync(iniPath)) {
       try {
-        exec(`attrib -h -s "${iniPath}"`, { windowsHide: true })
+        execFile('attrib', ['-h', '-s', iniPath], { windowsHide: true })
       } catch {}
     }
 
     fs.writeFileSync(iniPath, iniContent, 'utf-8')
 
     // Set desktop.ini to hidden + system, and folder to read-only (which tells Windows Explorer to read desktop.ini)
-    exec(`attrib +h +s "${iniPath}" & attrib +r "${folderPath}"`, { windowsHide: true }, (err) => {
-      if (err) {
-        console.error('[FolderIcon] Failed to set attrib on folder:', err)
-      }
+    execFile('attrib', ['+h', '+s', iniPath], { windowsHide: true }, () => {
+      execFile('attrib', ['+r', folderPath], { windowsHide: true }, (err) => {
+        if (err) console.error('[FolderIcon] Failed to set attrib on folder:', err)
+      })
     })
 
     return true

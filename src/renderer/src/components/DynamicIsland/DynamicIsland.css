@@ -26,6 +26,11 @@ body, html, #root {
   transition: all 0.32s cubic-bezier(0.16, 1, 0.3, 1);
   -webkit-app-region: drag;
   pointer-events: auto;
+  padding-top: 26px;
+}
+
+.dynamic-island-container.is-expanded {
+  padding-top: 6px;
 }
 
 /* When embedded directly floating inside the main workstation shell */
@@ -38,11 +43,12 @@ body, html, #root {
   height: auto;
   z-index: 9000;
   -webkit-app-region: no-drag;
+  padding-top: 0;
 }
 
 /* ── Compact Apple Pill State ───────────────────────────────────── */
 .dynamic-island-pill {
-  width: 424px;
+  width: 434px;
   height: 44px;
   border-radius: 9999px;
   background: #000000;
@@ -78,7 +84,7 @@ body, html, #root {
   align-items: center;
   gap: 10px;
   flex-shrink: 0;
-  max-width: 220px;
+  max-width: 215px;
 }
 
 /* Glowing Activity Beacon */
@@ -144,34 +150,139 @@ body, html, #root {
   50% { height: 12px; }
 }
 
+/* Title & Next Up Queue Subtitle Block */
+.pill-title-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  max-width: 165px;
+  overflow: hidden;
+}
+
 .pill-title {
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 600;
   color: #FFFFFF;
   letter-spacing: -0.01em;
   white-space: nowrap;
-  max-width: 150px;
   overflow: hidden;
   text-overflow: ellipsis;
-  display: inline-block;
+  display: block;
+  line-height: 1.25;
 }
 
-/* Inline Micro Progress Bar */
-.pill-micro-progress-track {
-  width: 76px;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 2px;
+.pill-next-subtitle {
+  font-size: 9.5px;
+  font-weight: 500;
+  color: #94A3B8;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+  line-height: 1.2;
+  margin-top: 1px;
+}
+
+/* Inline Micro Progress Bar & Interactive Hover Scrub */
+.pill-micro-progress-track {
+  position: relative;
+  width: 80px;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 9999px;
+  overflow: visible;
   flex-shrink: 0;
   margin: 0 8px;
+  cursor: ew-resize;
 }
 
 .pill-micro-progress-fill {
   height: 100%;
   background: linear-gradient(90deg, #10B981, #06B6D4);
-  border-radius: 2px;
+  border-radius: 9999px;
   transition: width 0.25s ease;
+  pointer-events: none;
+}
+
+/* ── Floating Micro-HUD Tooltip (ETA & Queue countdown) ─────────── */
+.pill-micro-hud {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+  z-index: 1000;
+  animation: microHudPop 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes microHudPop {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 3px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+.pill-micro-hud-content {
+  background: rgba(10, 15, 29, 0.96);
+  backdrop-filter: blur(20px) saturate(200%);
+  -webkit-backdrop-filter: blur(20px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.65), 0 0 12px rgba(6, 182, 212, 0.25);
+  padding: 3.5px 9px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: #F8FAFC;
+}
+
+.micro-hud-eta {
+  color: #38BDF8;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.micro-hud-sep {
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 10px;
+}
+
+.micro-hud-count {
+  color: #E2E8F0;
+  font-weight: 500;
+}
+
+.micro-hud-scrub {
+  color: #10B981;
+  font-size: 9.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  background: rgba(16, 185, 129, 0.18);
+  padding: 0.5px 4px;
+  border-radius: 4px;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.pill-micro-hud-caret {
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 5px solid rgba(10, 15, 29, 0.96);
+  margin-top: -1px;
 }
 
 .pill-right {
@@ -380,6 +491,38 @@ body, html, #root {
   font-size: 13px;
   font-weight: 600;
   color: #FFFFFF;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.01em;
+}
+
+/* Next Up Row in Expanded Card */
+.card-next-queue-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 4px;
+  margin-bottom: 2px;
+  min-width: 0;
+}
+
+.card-next-pill-tag {
+  font-size: 9px;
+  font-weight: 700;
+  color: #38BDF8;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  padding: 1px 5px;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.card-next-filename {
+  font-size: 11px;
+  color: #94A3B8;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

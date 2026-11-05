@@ -114,12 +114,16 @@ export default function PrprojGenerator(): JSX.Element {
         if (!payload) return
         const p = payload.folderPath || payload.path
         if (p) {
+          const targetMode = payload.mode || (payload.isMaster === true ? 'master' : (payload.isSlot || payload.isMaster === false ? 'single' : 'auto'))
+          if (targetMode === 'single' || targetMode === 'master') {
+            setMode(targetMode)
+          }
           if (payload.excludedFolders && Array.isArray(payload.excludedFolders)) {
             setStore({ excludedPaths: payload.excludedFolders, activeSection: 'generator' })
           } else {
             setStore({ activeSection: 'generator' })
           }
-          handleFolderSelect(p)
+          handleFolderSelect(p, targetMode)
         }
       })
     }
@@ -226,11 +230,11 @@ export default function PrprojGenerator(): JSX.Element {
     setExcludedPaths(subfolders.map(s => s.path))
   }
 
-  const handleFolderSelect = async (path: string) => {
+  const handleFolderSelect = async (path: string, overrideMode?: 'auto' | 'master' | 'single') => {
     setParentFolder(path)
     if (path) {
       playTick()
-      await scanFolder(path, mode)
+      await scanFolder(path, overrideMode || mode)
     } else {
       setStore({
         subfolders: [],

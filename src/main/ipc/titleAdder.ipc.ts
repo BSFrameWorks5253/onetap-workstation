@@ -1313,6 +1313,18 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
     let cancelled = false
     const batchOutputs: Record<string, string> = {}
 
+    // Calculate initial video and next video names
+    const firstVideoName = videos.length > 0 ? path.basename(videos[0]).replace(/\.(tmp|temp)$/i, '') : ''
+    let initialNextName = ''
+    if (videos.length > 1) {
+      for (let ni = 1; ni < videos.length; ni++) {
+        if (!isGroupPhotoVideo(videos[ni])) {
+          initialNextName = path.basename(videos[ni]).replace(/\.(tmp|temp)$/i, '')
+          break
+        }
+      }
+    }
+
     updateIslandState({
       active: true,
       done: false,
@@ -1320,6 +1332,8 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
       totalVideos: videos.length,
       currentIdx: 1,
       percent: 0,
+      videoName: firstVideoName,
+      nextVideoName: initialNextName,
       outputFolder: targetOut,
       task: 'Preparing video render queue...'
     })
@@ -1368,6 +1382,18 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
       send('titleAdder:log', { jobId: params.jobId, message: `\n━━━ [${done + 1}/${videos.length}] ${path.basename(videoPath)} ━━━`, level: 'info' })
       send('titleAdder:log', { jobId: params.jobId, message: `  Prefix detected: "${prefix}"`, level: 'info' })
 
+      // Find next video in queue
+      let currentNextVideoName = ''
+      const curIdx = videos.indexOf(rawVideoPath)
+      if (curIdx !== -1) {
+        for (let ni = curIdx + 1; ni < videos.length; ni++) {
+          if (!isGroupPhotoVideo(videos[ni])) {
+            currentNextVideoName = path.basename(videos[ni]).replace(/\.(tmp|temp)$/i, '')
+            break
+          }
+        }
+      }
+
       updateIslandState({
         active: true,
         done: false,
@@ -1375,6 +1401,7 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
         totalVideos: videos.length,
         currentIdx: done + 1,
         videoName: path.basename(videoPath),
+        nextVideoName: currentNextVideoName,
         task: `Rendering ${path.basename(videoPath)}`,
         outputFolder: targetOut
       })
@@ -1684,6 +1711,7 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
             onTitleAdderProgressBridge(evt, {
               jobId: params.jobId,
               videoName: path.basename(videoPath),
+              nextVideoName: currentNextVideoName,
               currentIdx: done + 1,
               totalVideos: videos.length,
               thumbnailPath: titleImg || '',
@@ -1825,6 +1853,7 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
       done: true,
       success: !cancelled,
       percent: 100,
+      nextVideoName: '',
       task: cancelled ? 'Cancelled' : 'All videos rendered successfully!'
     })
     send('titleAdder:done', { jobId: params.jobId, success: !cancelled, done, total: videos.length, outputFolder: finalOutputDir, batchOutputs })

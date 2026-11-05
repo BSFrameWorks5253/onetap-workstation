@@ -25,6 +25,7 @@ export default function MorphingBrand({
     name: string
     username?: string
     userId?: string
+    avatar?: string | null
   } | null>(null)
 
   useEffect(() => {
@@ -37,7 +38,8 @@ export default function MorphingBrand({
             setUserProfile({
               name: p.name || 'Creator',
               username: p.username || (p.email ? p.email.split('@')[0] : 'creator'),
-              userId: p.username || p.userId || 'creator'
+              userId: p.username || p.userId || 'creator',
+              avatar: p.avatar || p.avatarBase64 || null
             })
           }
         }).catch(() => {})
@@ -46,14 +48,26 @@ export default function MorphingBrand({
 
     loadProfile()
 
-    // 2. Also listen for ecosystem storage events and custom auth changes
+    // 2. Also listen for ecosystem storage events, custom auth changes, and focus
     const handleStorage = () => loadProfile()
     window.addEventListener('storage', handleStorage)
     window.addEventListener('anything:ecosystem-auth-change', handleStorage)
+    window.addEventListener('focus', loadProfile)
+
+    // Poll periodically for cross-app edits in Anything Master Hub
+    const pollInterval = setInterval(loadProfile, 4000)
+
+    let unsubProfile: (() => void) | undefined
+    if (api?.userProfile?.onProfileUpdated) {
+      unsubProfile = api.userProfile.onProfileUpdated(() => loadProfile())
+    }
 
     return () => {
       window.removeEventListener('storage', handleStorage)
       window.removeEventListener('anything:ecosystem-auth-change', handleStorage)
+      window.removeEventListener('focus', loadProfile)
+      clearInterval(pollInterval)
+      if (unsubProfile) unsubProfile()
     }
   }, [])
 
@@ -82,7 +96,81 @@ export default function MorphingBrand({
       }}
       title={`One Tap Workstation · ${userProfile ? `${userProfile.name} (@${effectiveHandle})` : version}`}
     >
-      <OneTapLogo size={logoSize} glow={true} />
+      <div
+        style={{
+          width: `${logoSize}px`,
+          height: `${logoSize}px`,
+          position: 'relative',
+          flexShrink: 0,
+        }}
+      >
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            opacity: activeSlide === 0 || !userProfile ? 1 : 0,
+            transform: activeSlide === 0 || !userProfile ? 'scale(1)' : 'scale(0.85)',
+            transition: 'opacity 0.4s ease, transform 0.4s ease',
+            pointerEvents: activeSlide === 0 || !userProfile ? 'auto' : 'none',
+          }}
+        >
+          <OneTapLogo size={logoSize} glow={true} />
+        </div>
+
+        {userProfile && (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: activeSlide === 1 ? 1 : 0,
+              transform: activeSlide === 1 ? 'scale(1)' : 'scale(0.85)',
+              transition: 'opacity 0.4s ease, transform 0.4s ease',
+              pointerEvents: activeSlide === 1 ? 'auto' : 'none',
+            }}
+          >
+            {userProfile.avatar ? (
+              <img
+                src={userProfile.avatar}
+                alt={userProfile.name}
+                style={{
+                  width: `${logoSize}px`,
+                  height: `${logoSize}px`,
+                  borderRadius: '50%',
+                  objectFit: 'cover',
+                  border: '2px solid rgba(2, 132, 199, 0.7)',
+                  boxShadow: '0 0 10px rgba(2, 132, 199, 0.35)',
+                }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: `${logoSize}px`,
+                  height: `${logoSize}px`,
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #0284c7 0%, #6366f1 100%)',
+                  color: '#ffffff',
+                  fontWeight: 800,
+                  fontSize: `${Math.max(10, Math.round(logoSize * 0.42))}px`,
+                  fontFamily: 'var(--font-display, sans-serif)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '2px solid rgba(2, 132, 199, 0.7)',
+                  boxShadow: '0 0 10px rgba(2, 132, 199, 0.35)',
+                }}
+              >
+                {userProfile.name.slice(0, 2).toUpperCase()}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       {!compact && (
         <div

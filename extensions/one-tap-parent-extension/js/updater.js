@@ -191,9 +191,10 @@
                     if (window.showStatus) window.showStatus("Installing update v" + remote.version + "...", "var(--accent)");
 
                     // Use PowerShell Expand-Archive to extract & overwrite CEP extension folder cleanly
-                    var psCommand = 'PowerShell -ExecutionPolicy Bypass -Command "Expand-Archive -Path \'' + tempZipPath + '\' -DestinationPath \'' + extPath + '\' -Force"';
+                    // Use parameterized execFile to avoid command injection vulnerabilities
+                    var psArgs = ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', 'Expand-Archive -LiteralPath $args[0] -DestinationPath $args[1] -Force', tempZipPath, extPath];
 
-                    child_process.exec(psCommand, function (error, stdout, stderr) {
+                    child_process.execFile('powershell.exe', psArgs, function (error, stdout, stderr) {
                         // Clean up temporary zip file
                         try { fs.unlinkSync(tempZipPath); } catch (e) { }
 

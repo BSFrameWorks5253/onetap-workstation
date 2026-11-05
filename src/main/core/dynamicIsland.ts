@@ -23,6 +23,7 @@ export interface IslandState {
   active: boolean
   jobId: string
   videoName: string
+  nextVideoName?: string
   currentIdx: number
   totalVideos: number
   percent: number
@@ -48,6 +49,7 @@ const state: IslandState = {
   active: false,
   jobId: '',
   videoName: '',
+  nextVideoName: '',
   currentIdx: 0,
   totalVideos: 0,
   percent: 0,
@@ -96,8 +98,8 @@ function createIslandWindow(): BrowserWindow {
   const primaryDisplay = screen.getPrimaryDisplay()
   const { width: screenWidth } = primaryDisplay.workAreaSize
 
-  const defaultWidth = 420
-  const defaultHeight = 44
+  const defaultWidth = 450
+  const defaultHeight = 80
 
   // Check saved position
   const savedX = get('island_pos_x') as number | null
@@ -275,7 +277,8 @@ function registerIslandIPC(): void {
     updateIslandState({
       active: true,
       done: false,
-      videoName: 'Video_02_Qadam.mp4',
+      videoName: '1448-03-12_02E-12-10MZ-30310666.mp4',
+      nextVideoName: '1448-03-14_Video_03.mp4',
       currentIdx: 2,
       totalVideos: 5,
       percent: 42,
@@ -356,6 +359,7 @@ function registerIslandIPC(): void {
 export function onTitleAdderProgressBridge(evt: any, meta?: {
   jobId?: string
   videoName?: string
+  nextVideoName?: string
   currentIdx?: number
   totalVideos?: number
   thumbnailPath?: string

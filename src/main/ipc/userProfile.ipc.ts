@@ -8,7 +8,7 @@
  * - Fetching the registered user list from Google Sheet for bulk email
  */
 
-import { ipcMain, app } from 'electron'
+import { ipcMain, app, BrowserWindow } from 'electron'
 import fs from 'fs'
 import path from 'path'
 import https from 'https'
@@ -123,27 +123,47 @@ export function registerUserProfileIPC(): void {
         }
       }
 
-      // Also check command line arguments --ecosystem-user-name, --ecosystem-user-email, --ecosystem-user-id
+      // Also check command line arguments
       for (const arg of process.argv) {
-        if (arg.startsWith('--ecosystem-user-name=')) {
+        if (arg.startsWith('--ecosystem-user-name=') || arg.startsWith('--user-name=')) {
           const name = decodeURIComponent(arg.split('=')[1] || '')
           if (name) ecosystemUser = { ...ecosystemUser, name }
-        } else if (arg.startsWith('--ecosystem-user-email=')) {
+        } else if (arg.startsWith('--ecosystem-user-email=') || arg.startsWith('--user-email=')) {
           const email = arg.split('=')[1] || ''
           if (email) ecosystemUser = { ...ecosystemUser, email }
-        } else if (arg.startsWith('--ecosystem-user-id=')) {
+        } else if (arg.startsWith('--ecosystem-user-id=') || arg.startsWith('--user-id=')) {
           const id = arg.split('=')[1] || ''
           if (id) ecosystemUser = { ...ecosystemUser, id }
+        } else if (arg.startsWith('--ecosystem-user-handle=') || arg.startsWith('--user-handle=')) {
+          const username = arg.split('=')[1] || ''
+          if (username) ecosystemUser = { ...ecosystemUser, username }
+        } else if (arg.startsWith('--ecosystem-user-avatar=') || arg.startsWith('--user-avatar=')) {
+          const avatar = decodeURIComponent(arg.split('=')[1] || '')
+          if (avatar) ecosystemUser = { ...ecosystemUser, avatar }
+        }
+      }
+
+      if (process.env.ANYTHING_USER_ID || process.env.ANYTHING_USER_NAME || process.env.ANYTHING_USER_AVATAR) {
+        ecosystemUser = {
+          ...ecosystemUser,
+          id: process.env.ANYTHING_USER_ID || ecosystemUser?.id,
+          name: process.env.ANYTHING_USER_NAME || ecosystemUser?.name,
+          email: process.env.ANYTHING_USER_EMAIL || ecosystemUser?.email,
+          username: process.env.ANYTHING_USER_HANDLE || ecosystemUser?.username,
+          avatar: process.env.ANYTHING_USER_AVATAR || ecosystemUser?.avatar,
+          role: process.env.ANYTHING_USER_ROLE || ecosystemUser?.role,
         }
       }
 
       if (ecosystemUser) {
+        const resolvedAvatar = ecosystemUser.avatar || (data && (data.avatarBase64 || data.avatar)) || null
         return {
           name: ecosystemUser.name || (data && data.name) || 'Creative Member',
           email: ecosystemUser.email || (data && data.email) || '',
           username: ecosystemUser.username || (ecosystemUser.email ? ecosystemUser.email.split('@')[0] : 'creator'),
           userId: ecosystemUser.username || ecosystemUser.id || 'creator',
-          avatarBase64: ecosystemUser.avatar || (data && data.avatarBase64) || null,
+          avatar: resolvedAvatar,
+          avatarBase64: resolvedAvatar,
           isAdmin: ecosystemUser.role === 'admin' || (data && data.isAdmin === true)
         }
       }

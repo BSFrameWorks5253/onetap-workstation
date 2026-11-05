@@ -6,7 +6,7 @@
  */
 
 import { ipcMain, app, BrowserWindow } from 'electron'
-import { spawn, exec } from 'child_process'
+import { spawn, exec, execFile } from 'child_process'
 import fs from 'fs'
 import path from 'path'
 import https from 'https'
@@ -18,7 +18,7 @@ import appPackageJson from '../../../package.json'
 
 // Target GitHub Repository & Default Anything Ecosystem Directory
 const GITHUB_REPO = process.env.GITHUB_REPO || 'BSFrameWorks5253/onetap-workstation'
-export const DEFAULT_ANYTHING_PATH = 'C:\\Users\\Burhanuddin\\OneDrive\\Desktop\\Anything\\Anything'
+export const DEFAULT_ANYTHING_PATH = path.resolve(app.getAppPath(), '..', '..', '..', 'Anything', 'Anything')
 
 export interface UpdateManifest {
   updateAvailable: boolean
@@ -185,8 +185,8 @@ export async function checkAnythingUpdate(customPath?: string): Promise<UpdateMa
     process.env.ANYTHING_DIR,
     process.env.ANYTHING_ECOSYSTEM_PATH,
     (get('anything_app_path') as string),
-    'C:\\Users\\Burhanuddin\\OneDrive\\Desktop\\Anything\\Anything',
-    'C:\\Users\\Burhanuddin\\OneDrive\\Desktop\\Anything',
+    path.resolve(app.getAppPath(), '..', '..', '..', 'Anything', 'Anything'),
+    path.resolve(app.getAppPath(), '..', '..', '..', 'Anything'),
     appData ? path.join(appData, 'Anything') : '',
     appData ? path.join(appData, 'anything') : '',
     DEFAULT_ANYTHING_PATH
@@ -675,7 +675,7 @@ export function registerUpdateIPC(mainWindowGetter: () => BrowserWindow | null):
 
             if (process.platform === 'win32') {
               try {
-                exec(`powershell -Command "Unblock-File -Path '${finalInstallerPath}'"`, { windowsHide: true })
+                execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', 'Unblock-File', '-LiteralPath', finalInstallerPath], { windowsHide: true })
               } catch (uErr) {
                 console.warn('[Updater] Powershell Unblock-File non-fatal warning:', uErr)
               }
@@ -782,7 +782,7 @@ export function registerUpdateIPC(mainWindowGetter: () => BrowserWindow | null):
           // Remove Zone.Identifier (Unblock-File) on Windows
           if (process.platform === 'win32') {
             try {
-              exec(`powershell -Command "Unblock-File -Path '${finalInstallerPath}'"`, { windowsHide: true })
+              execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', 'Unblock-File', '-LiteralPath', finalInstallerPath], { windowsHide: true })
             } catch (uErr) {
               console.warn('[Updater] Powershell Unblock-File non-fatal warning:', uErr)
             }
