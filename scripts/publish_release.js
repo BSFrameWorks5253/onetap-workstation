@@ -290,31 +290,26 @@ function pushGitTag(version) {
 }
 
 function syncToAnythingEcosystem(version, versionDir) {
-  const candidateAnythingDirs = [
-    'C:\\Users\\Burhanuddin\\OneDrive\\Desktop\\New folder (2)\\Anything',
-    'C:\\Users\\Burhanuddin\\OneDrive\\Desktop\\New folder (2)',
-    'C:\\Users\\Burhanuddin\\OneDrive\\Desktop\\Anything'
-  ]
+  const ecosystemRoot = path.resolve(ROOT_DIR, '..', '..');
+  const appData = process.env.APPDATA || (process.env.USERPROFILE ? path.join(process.env.USERPROFILE, 'AppData', 'Roaming') : '');
 
-  const targets = candidateAnythingDirs.filter((d) => fs.existsSync(d))
-  if (targets.length === 0) return
+  const targets = [
+    path.join(ecosystemRoot, 'Anything Child app realse', 'one-tap', `V${version}`),
+    path.join(ecosystemRoot, 'Anything', 'releases', 'one-tap', `V-${version}`),
+    path.join(ecosystemRoot, 'Anything', 'published-apps', 'one-tap'),
+    appData ? path.join(appData, 'Anything', 'published-apps', 'one-tap') : '',
+  ].filter(Boolean);
 
-  for (const anythingDir of targets) {
-    const releaseTarget = path.join(anythingDir, 'releases', 'one-tap')
-    const vTarget = path.join(releaseTarget, `V-${version}`)
-
+  for (const t of targets) {
     try {
-      fs.mkdirSync(releaseTarget, { recursive: true })
-      fs.mkdirSync(vTarget, { recursive: true })
-
-      const files = fs.readdirSync(versionDir)
+      fs.mkdirSync(t, { recursive: true });
+      const files = fs.readdirSync(versionDir);
       for (const f of files) {
-        fs.copyFileSync(path.join(versionDir, f), path.join(vTarget, f))
-        fs.copyFileSync(path.join(versionDir, f), path.join(releaseTarget, f))
+        fs.copyFileSync(path.join(versionDir, f), path.join(t, f));
       }
-      logSuccess(`Synced version V-${version} to Anything: ${releaseTarget}`)
+      logSuccess(`Synced version v${version} to: ${t}`);
     } catch (e) {
-      logWarn(`Could not sync to Anything (${releaseTarget}): ${e.message}`)
+      logWarn(`Could not sync to ${t}: ${e.message}`);
     }
   }
 }

@@ -26,6 +26,7 @@ import { CursorProvider } from './cursor'
 import { parseFolderName, detectCity } from './utils/cityUtils'
 import { parseSafarHierarchy, isBogusSafar } from './utils/safarUtils'
 import { prprojStore } from './stores/prprojStore'
+import { anyShareRealtimeService } from './services/anyshareRealtimeService'
 
 // Truly code-split pages — evaluated on-demand upon first navigation
 const Dashboard = React.lazy(() => import('./pages/Dashboard/Dashboard'))
@@ -229,6 +230,24 @@ function AppInner(): JSX.Element {
       if (typeof unsub === 'function') unsub()
     }
   }, [showToast, playSuccess])
+
+  // Persistent AnyShare Cloud Nexus Listener (Remote Render & Pairing)
+  useEffect(() => {
+    try {
+      anyShareRealtimeService.init((msg) => {
+        showToast({
+          title: 'AnyShare Remote Nexus',
+          message: msg,
+          type: 'info'
+        })
+      })
+    } catch (e) {
+      console.warn('Realtime nexus init failed:', e)
+    }
+    return () => {
+      anyShareRealtimeService.destroy()
+    }
+  }, [showToast])
 
 
 

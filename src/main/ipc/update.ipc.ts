@@ -178,6 +178,7 @@ export async function checkAnythingUpdate(customPath?: string): Promise<UpdateMa
   }
   const cliArg = process.argv.find((a) => a.startsWith('--anything-dir='))?.split('=')[1];
   const appData = process.env.APPDATA || (process.env.USERPROFILE ? path.join(process.env.USERPROFILE, 'AppData', 'Roaming') : '');
+  const parentOfApp = path.resolve(app.getAppPath(), '..', '..');
 
   const candidates = [
     customPath,
@@ -185,10 +186,13 @@ export async function checkAnythingUpdate(customPath?: string): Promise<UpdateMa
     process.env.ANYTHING_DIR,
     process.env.ANYTHING_ECOSYSTEM_PATH,
     (get('anything_app_path') as string),
-    path.resolve(app.getAppPath(), '..', '..', '..', 'Anything', 'Anything'),
-    path.resolve(app.getAppPath(), '..', '..', '..', 'Anything'),
-    appData ? path.join(appData, 'Anything') : '',
-    appData ? path.join(appData, 'anything') : '',
+    path.join(appData, 'Anything'),
+    path.join(appData, 'anything'),
+    path.resolve(parentOfApp, 'Anything'),
+    path.resolve(parentOfApp, '..', 'Anything'),
+    path.resolve(parentOfApp, '..', 'Anything', 'Anything'),
+    path.resolve(process.cwd(), '..', 'Anything'),
+    path.resolve(process.cwd(), '..', 'Anything', 'Anything'),
     DEFAULT_ANYTHING_PATH
   ].filter((p): p is string => Boolean(p && typeof p === 'string' && fs.existsSync(p)));
 
@@ -212,18 +216,49 @@ export async function checkAnythingUpdate(customPath?: string): Promise<UpdateMa
     }
   }
 
-  if (!anythingDir) {
-    anythingDir = candidates[0] || DEFAULT_ANYTHING_PATH;
-  }
-  if (!fs.existsSync(anythingDir)) {
-    console.log(`[Updater] Anything path does not exist on disk: ${anythingDir}`);
-    return null;
-  }
-
   let bestVersion = ''
   let bestReleaseRecord: any = null
   let bestExePath: string = ''
   let bestExeSize: number = 0
+
+  // Check direct local release folders in Anything Child app realse
+  const childReleaseBases = [
+    path.resolve(parentOfApp, 'Anything Child app realse', 'one-tap'),
+    path.resolve(parentOfApp, '..', 'Anything Child app realse', 'one-tap'),
+    path.resolve(process.cwd(), '..', 'Anything Child app realse', 'one-tap'),
+    path.resolve(process.cwd(), '..', '..', 'Anything Child app realse', 'one-tap'),
+  ];
+  for (const crb of childReleaseBases) {
+    if (fs.existsSync(crb)) {
+      try {
+        const subdirs = fs.readdirSync(crb, { withFileTypes: true });
+        for (const sub of subdirs) {
+          if (sub.isDirectory()) {
+            const vStr = sub.name.replace(/^v/i, '').trim();
+            if (vStr && (!bestVersion || compareVersions(vStr, bestVersion) > 0)) {
+              const subPath = path.join(crb, sub.name);
+              const subFiles = fs.readdirSync(subPath);
+              const exe = subFiles.find((f) => f.toLowerCase().endsWith('.exe'));
+              if (exe) {
+                bestVersion = vStr;
+                bestExePath = path.join(subPath, exe);
+                try { bestExeSize = fs.statSync(bestExePath).size; } catch {}
+                bestReleaseRecord = {
+                  tagline: `One Tap v${vStr}`,
+                  summary: `Direct local release from Anything Child app realse`,
+                  releaseDate: new Date().toISOString().split('T')[0]
+                };
+              }
+            }
+          }
+        }
+      } catch {}
+    }
+  }
+
+  if (!anythingDir) {
+    anythingDir = candidates[0] || DEFAULT_ANYTHING_PATH;
+  }
 
   // 1. Scan published-apps/catalog.json
   const diskCatalogFile = catalogPath || path.join(anythingDir, 'published-apps', 'catalog.json')
@@ -831,19 +866,20 @@ export function registerUpdateIPC(mainWindowGetter: () => BrowserWindow | null):
     const tempFolder = app.getPath('temp')
     const candidates = [
       lastDownloadedInstallerPath,
+      path.join(tempFolder, 'onetap_setup_latest.exe'),
+      path.join(tempFolder, 'OneTap_Setup.exe'),
       path.join(tempFolder, 'unidesk_setup_latest.exe'),
       path.join(tempFolder, 'unidesk_latest.AppImage'),
       path.join(tempFolder, 'unidesk_latest.deb'),
-      path.join(tempFolder, 'onetap_setup_latest.exe')
     ].filter(Boolean) as string[]
 
-    let installerPath = candidates.find(p => fs.existsSync(p))
+    let installerPath = candidates.find(p => p && fs.existsSync(p))
 
     if (!installerPath) {
       // Look for any newly downloaded installer in tempFolder
       try {
         const files = fs.readdirSync(tempFolder)
-        const match = files.find(f => (f.endsWith('.AppImage') || f.endsWith('.deb') || f.endsWith('.exe')) && f.toLowerCase().includes('unidesk'))
+        const match = files.find(f => (f.endsWith('.AppImage') || f.endsWith('.deb') || f.endsWith('.exe')) && (f.toLowerCase().includes('onetap') || f.toLowerCase().includes('one_tap') || f.toLowerCase().includes('unidesk')))
         if (match) installerPath = path.join(tempFolder, match)
       } catch {}
     }
@@ -906,12 +942,13 @@ if %ERRORLEVEL% NEQ 0 (
 )
 
 :: Re-launch updated workstation
-set "TARGET_EXE=%LOCALAPPDATA%\\Programs\\One Tap\\One Tap.exe"
+set "TARGET_EXE=${process.execPath.replace(/["&]/g, '')}"
+if not exist "%TARGET_EXE%" set "TARGET_EXE=%LOCALAPPDATA%\\Programs\\One Tap\\One Tap.exe"
 if not exist "%TARGET_EXE%" set "TARGET_EXE=%LOCALAPPDATA%\\Programs\\Uni Desk\\Uni Desk.exe"
 if exist "%TARGET_EXE%" (
     start "" "%TARGET_EXE%"
 ) else (
-    set "ALT_EXE=C:\\Program Files\\Uni Desk\\Uni Desk.exe"
+    set "ALT_EXE=C:\\Program Files\\One Tap\\One Tap.exe"
     if exist "%ALT_EXE%" (
         start "" "%ALT_EXE%"
     )
