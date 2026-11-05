@@ -91,6 +91,7 @@ export function initAnyShareBridge(window: BrowserWindow | null) {
 
 // Ephemeral in-memory pairing sessions map
 const activePairingSessions = new Map<string, any>();
+const consumedPairingTokens = new Set<string>();
 
 /**
  * Starts a native local HTTP Bridge server allowing AnyShare web/PWA
@@ -274,13 +275,40 @@ function startLocalBridgeServer() {
         try {
           const body = JSON.parse(bodyStr || '{}');
           const token = body.token;
-          const session = token ? activePairingSessions.get(token) : null;
 
+          if (!token) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: false, error: 'Missing pairing token' }));
+            return;
+          }
+
+          if (consumedPairingTokens.has(token)) {
+            res.writeHead(409, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({
+              success: false,
+              code: 'ALREADY_CONSUMED',
+              error: 'This one-time QR code has already been consumed and cannot be reused.'
+            }));
+            return;
+          }
+
+          const session = activePairingSessions.get(token);
           if (session) {
+            if (session.status === 'claimed') {
+              consumedPairingTokens.add(token);
+              res.writeHead(409, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({
+                success: false,
+                code: 'ALREADY_CONSUMED',
+                error: 'This one-time QR code has already been consumed and cannot be reused.'
+              }));
+              return;
+            }
             session.status = 'claimed';
             session.claimedAt = new Date().toISOString();
             session.claimedBy = body.claimedBy || 'anyshare_website';
           }
+          consumedPairingTokens.add(token);
 
           // Desktop alert and Dynamic Island pulse
           updateIslandState({

@@ -50,6 +50,7 @@ export default function AnySharePairingModal({ isOpen, onClose }: AnySharePairin
           const data = await res.json();
           if (data?.status === 'claimed') {
             setIsPaired(true);
+            setQrDataUrl(''); // burn the QR code immediately
             setPairedUsername(data?.claimedBy || 'Mobile User');
           }
         }
