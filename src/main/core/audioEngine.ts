@@ -102,7 +102,7 @@ export function getAudioForVideo(
 ): string | null {
   if (!pool.length) { logFn?.('⚠ Audio pool empty'); return null }
 
-  const mode = get('audio_assignment_mode', 'single') as string
+  const mode = get('audio_assignment_mode', 'alternate') as string
 
   if (mode === 'alternate') return pool[index % pool.length]
 
@@ -140,7 +140,7 @@ export function getNikahAudio(titlesPath: string): string | null {
 
 // ── Status helpers ───────────────────────────────────────────
 export function describeMode(): string {
-  const mode = get('audio_assignment_mode', 'single') as string
+  const mode = get('audio_assignment_mode', 'alternate') as string
   if (mode === 'alternate') return 'Alternate (cycles through pool)'
   if (mode === 'prefix') {
     const pm = (get('audio_prefix_assignments') ?? {}) as object

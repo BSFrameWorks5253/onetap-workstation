@@ -108,8 +108,26 @@ export default function PrprojGenerator(): JSX.Element {
       const path = (e as CustomEvent).detail
       if (path) handleFolderSelect(path)
     }
+    let unsubSetParent: (() => void) | undefined
+    if (api?.prproj?.onSetParentFolder) {
+      unsubSetParent = api.prproj.onSetParentFolder((payload: any) => {
+        if (!payload) return
+        const p = payload.folderPath || payload.path
+        if (p) {
+          if (payload.excludedFolders && Array.isArray(payload.excludedFolders)) {
+            setStore({ excludedPaths: payload.excludedFolders, activeSection: 'generator' })
+          } else {
+            setStore({ activeSection: 'generator' })
+          }
+          handleFolderSelect(p)
+        }
+      })
+    }
     window.addEventListener('prproj-preload-folder', onPreload)
-    return () => window.removeEventListener('prproj-preload-folder', onPreload)
+    return () => {
+      if (unsubSetParent) unsubSetParent()
+      window.removeEventListener('prproj-preload-folder', onPreload)
+    }
   }, [])  // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Listen to IPC Progress Updates ──────────

@@ -51,6 +51,12 @@ export class WorkstationErrorBoundary extends Component<Props, State> {
       copied: false,
       showDetails: false
     })
+    try {
+      sessionStorage.removeItem('ot_boot_splash_shown')
+      if (typeof (window as any).navigateToPage === 'function') {
+        (window as any).navigateToPage('adder')
+      }
+    } catch {}
     if (this.props.onResetPage) {
       this.props.onResetPage()
     }

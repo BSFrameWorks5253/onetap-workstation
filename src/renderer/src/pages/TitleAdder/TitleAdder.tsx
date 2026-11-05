@@ -1044,7 +1044,16 @@ export default function TitleAdder(): JSX.Element {
   }, [mode, videoFiles])
 
   const duration = storeState.duration
-  const setDuration = (d: string) => setStoreState({ duration: d })
+  const setDuration = (d: string) => {
+    setStoreState({ duration: d })
+    try {
+      localStorage.setItem('ot_ta_duration', d)
+      const api = (window as any).api
+      if (api?.settings?.setAndSave) {
+        api.settings.setAndSave('title_duration', parseFloat(d) || 3)
+      }
+    } catch {}
+  }
 
   const running = storeState.running
   const setRunning = (r: boolean) => setStoreState({ running: r })
@@ -1153,7 +1162,17 @@ export default function TitleAdder(): JSX.Element {
   const [outputExists, setOutputExists] = useState<boolean | null>(null)
   const [outputPathError, setOutputPathError] = useState<string | null>(null)
 
-  const [audioAssignMode, setAudioAssignMode] = useState<string>('single')
+  const [audioAssignMode, setAudioAssignModeState] = useState<string>(() => localStorage.getItem('ot_ta_audio_mode') || 'alternate')
+  const setAudioAssignMode = (m: string) => {
+    setAudioAssignModeState(m)
+    try {
+      localStorage.setItem('ot_ta_audio_mode', m)
+      const api = (window as any).api
+      if (api?.settings?.setAndSave) {
+        api.settings.setAndSave('audio_assignment_mode', m)
+      }
+    } catch {}
+  }
   const [audioSingleIdx, setAudioSingleIdx] = useState<number>(0)
 
   const reapplyAudioLogic = async (targetMode: string, targetSingleIdx: number) => {
@@ -2141,12 +2160,12 @@ export default function TitleAdder(): JSX.Element {
       setOutputFolder(out)
     }
 
-    const savedDur = storeStateCurrent.duration || localStorage.getItem('ot_ta_duration') || all.title_duration
+    const savedDur = localStorage.getItem('ot_ta_duration') || (storeStateCurrent.duration && storeStateCurrent.duration !== '3' ? storeStateCurrent.duration : null) || (all.title_duration ? String(all.title_duration) : null) || storeStateCurrent.duration || '3'
     if (savedDur !== undefined && savedDur !== null) {
       setDuration(String(savedDur))
     }
 
-    const savedAudioMode = (all.audio_assignment_mode as string) || 'single'
+    const savedAudioMode = (all.audio_assignment_mode as string) || localStorage.getItem('ot_ta_audio_mode') || 'alternate'
     const savedAudioIdx = typeof all.audio_single_index === 'number' ? all.audio_single_index : 0
     setAudioAssignMode(savedAudioMode)
     setAudioSingleIdx(savedAudioIdx)

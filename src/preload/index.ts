@@ -328,6 +328,11 @@ contextBridge.exposeInMainWorld('api', {
       ipcRenderer.on('prproj:progress', sub)
       return () => ipcRenderer.removeListener('prproj:progress', sub)
     },
+    onSetParentFolder: (cb: (d: any) => void) => {
+      const sub = (_e: any, d: any): void => cb(d)
+      ipcRenderer.on('prproj:set-parent-folder', sub)
+      return () => ipcRenderer.removeListener('prproj:set-parent-folder', sub)
+    },
     removeListeners: () => ipcRenderer.removeAllListeners('prproj:progress')
   },
 

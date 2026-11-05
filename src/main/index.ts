@@ -586,6 +586,13 @@ function createWindow(): void {
     }
   })
 
+  // Explicitly assign AppUserModelID directly to the native window handle for seamless taskbar grouping
+  if (process.platform === 'win32') {
+    try {
+      mainWindow.setAppDetails({ appId: 'com.bsframework.onetap' })
+    } catch {}
+  }
+
   // Log renderer console messages to main process terminal for easier debugging
   mainWindow.webContents.on('console-message', (_event, level, message, line, sourceId) => {
     console.log(`[Renderer Console - Level ${level}] ${message} (at ${sourceId}:${line})`)
@@ -1226,6 +1233,55 @@ function normalizeFolderPath(folderPath: any): string {
         })
         res.end(JSON.stringify({ error: String(err) }))
       }
+    } else if (req.method === 'OPTIONS') {
+      res.writeHead(200, {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+      })
+      res.end()
+    } else if (req.method === 'POST' && (req.url === '/open-prproj-modal' || req.url === '/api/premiere-preflight')) {
+      let body = ''
+      req.on('data', chunk => { body += chunk.toString() })
+      req.on('end', () => {
+        try {
+          const payload = body ? JSON.parse(body) : {}
+          const folderPath = normalizeFolderPath(payload.folderPath || payload.path || '')
+          const folderName = payload.folderName || (folderPath ? path.basename(folderPath) : '')
+          const isMaster = Boolean(payload.isMaster)
+          const excludedFolders = Array.isArray(payload.excludedFolders) ? payload.excludedFolders : []
+
+          if (mainWindow) {
+            if (mainWindow.isMinimized()) mainWindow.restore()
+            mainWindow.show()
+            mainWindow.focus()
+            try {
+              mainWindow.setAlwaysOnTop(true)
+              setTimeout(() => { try { mainWindow?.setAlwaysOnTop(false) } catch {} }, 1000)
+            } catch {}
+
+            mainWindow.webContents.send('app:navigate', 'prproj')
+            mainWindow.webContents.send('prproj:set-parent-folder', {
+              folderPath,
+              folderName,
+              isMaster,
+              excludedFolders
+            })
+          }
+
+          res.writeHead(200, {
+            'Access-Control-Allow-Origin': '*',
+            'Content-Type': 'application/json'
+          })
+          res.end(JSON.stringify({ ok: true, message: 'One Tap Premiere Preflight window activated', folderPath }))
+        } catch (e: any) {
+          res.writeHead(500, {
+            'Access-Control-Allow-Origin': '*',
+            'Content-Type': 'application/json'
+          })
+          res.end(JSON.stringify({ ok: false, error: e.message || String(e) }))
+        }
+      })
     } else if (req.method === 'GET' && req.url === '/status') {
       res.writeHead(200, {
         'Access-Control-Allow-Origin': '*',

@@ -21,13 +21,33 @@ $.runScript.getMarkerNames = function() {
         if (!markers) return "ERROR|||No markers found.";
         
         var list = [];
-        var cur = markers.getFirstMarker();
+        var fps = 25.0;
+        try {
+            var settings = seq.getSettings && seq.getSettings();
+            if (settings && settings.videoFrameRate !== undefined && settings.videoFrameRate !== null) {
+                var vr = settings.videoFrameRate;
+                if (typeof vr === "number") fps = vr;
+                else if (typeof vr === "string") { var pf = parseFloat(vr); if (isFinite(pf) && pf > 0) fps = pf; }
+                else if (typeof vr === "object" && vr.numerator && vr.denominator) { var pf2 = vr.numerator / vr.denominator; if (isFinite(pf2) && pf2 > 0) fps = pf2; }
+            }
+        } catch (eFps) { fps = 25.0; }
+
+        var markerItems = [];
+        var mScan = markers.getFirstMarker();
+        while (mScan) {
+            var mStart = (mScan.start && !isNaN(Number(mScan.start.seconds))) ? Number(mScan.start.seconds) : 0;
+            // Collect marker for sort
+            markerItems.push({ obj: mScan, name: mScan.name || '', startSec: mStart });
+            mScan = markers.getNextMarker(mScan);
+        }
+        markerItems.sort(function (a, b) { return a.startSec - b.startSec; });
         var count = 0;
-        while (cur) {
+        for (var mi = 0; mi < markerItems.length; mi++) {
+            var cur = markerItems[mi];
             var name = cur.name || ("marker_" + count);
             name = name.replace(/[\\\/:*?"<>|]/g, "_"); // Sanitize filename characters
             list.push(name + ".mp4");
-            cur = markers.getNextMarker(cur);
+            // item processed in for-loop
             count++;
         }
         return "SUCCESS|||" + list.join("|||");
@@ -354,13 +374,14 @@ $.runScript.autoInOutMarkers = function (userChoice, addSeqPrefix) {
         // prepare segments where last uses seqEndSec
         var segments = [];
         for (var i = 0; i < list.length; i++) {
-            var s = Number(list[i].startSec || 0);
+            var sFrame = Math.round(Number(list[i].startSec || 0) * fps);
+            var s = sFrame / fps;
             var e;
             if (i < list.length - 1) {
-                var ns = Number(list[i + 1].startSec || s);
-                e = ns - frameDuration;
+                var nsFrame = Math.round(Number(list[i + 1].startSec || s) * fps);
+                var eFrame = Math.max(sFrame, nsFrame - 1); e = eFrame / fps;
             } else {
-                e = Math.max(s, seqEndSec - frameDuration);
+                var seqEndFrame = Math.round(Number(seqEndSec) * fps); var eFrameLast = Math.max(sFrame, seqEndFrame - 1); e = eFrameLast / fps;
             }
             if (!isFinite(e) || e < s) e = s;
 
@@ -542,12 +563,32 @@ $.runScript.autoMEIO = function (selectedMarkersStr) {
         var markers = seq.markers;
         if (!markers) return "No markers found.";
 
-        var cur = markers.getFirstMarker();
+        var fps = 25.0;
+        try {
+            var settings = seq.getSettings && seq.getSettings();
+            if (settings && settings.videoFrameRate !== undefined && settings.videoFrameRate !== null) {
+                var vr = settings.videoFrameRate;
+                if (typeof vr === "number") fps = vr;
+                else if (typeof vr === "string") { var pf = parseFloat(vr); if (isFinite(pf) && pf > 0) fps = pf; }
+                else if (typeof vr === "object" && vr.numerator && vr.denominator) { var pf2 = vr.numerator / vr.denominator; if (isFinite(pf2) && pf2 > 0) fps = pf2; }
+            }
+        } catch (eFps) { fps = 25.0; }
+
+        var markerItems = [];
+        var mScan = markers.getFirstMarker();
+        while (mScan) {
+            var mStart = (mScan.start && !isNaN(Number(mScan.start.seconds))) ? Number(mScan.start.seconds) : 0;
+            // Collect marker for sort
+            markerItems.push({ obj: mScan, name: mScan.name || '', startSec: mStart });
+            mScan = markers.getNextMarker(mScan);
+        }
+        markerItems.sort(function (a, b) { return a.startSec - b.startSec; });
         var count = 0;
         var queuedFiles = [];
 
         // Queue in Media Encoder
-        while (cur) {
+        for (var mi = 0; mi < markerItems.length; mi++) {
+            var cur = markerItems[mi];
             try {
                 var name = cur.name || ("marker_" + count);
                 name = name.replace(/[\\\/:*?"<>|]/g, "_");
@@ -565,8 +606,37 @@ $.runScript.autoMEIO = function (selectedMarkersStr) {
                 }
 
                 if (shouldExport) {
-                    seq.setInPoint(cur.start.seconds);
-                    seq.setOutPoint(cur.end.seconds);
+                    var curObj = cur.obj;
+                    var sFrame = Math.round(cur.startSec * fps);
+                    var inSec = sFrame / fps;
+                    var outSec = inSec + (1.0 / fps);
+                    var objEnd = (curObj && curObj.end && !isNaN(Number(curObj.end.seconds))) ? Number(curObj.end.seconds) : 0;
+                    if (objEnd > cur.startSec + (0.5 / fps)) {
+                        var eFrame = Math.round(objEnd * fps);
+                        outSec = Math.max(inSec + (1.0 / fps), eFrame / fps);
+                    } else if (mi < markerItems.length - 1) {
+                        var nextStartFrame = Math.round(markerItems[mi + 1].startSec * fps);
+                        var eFrame = Math.max(sFrame + 1, nextStartFrame - 1);
+                        outSec = eFrame / fps;
+                    } else {
+                        var seqEnd = 0;
+                        try { seqEnd = Number(seq.end && seq.end.seconds) || 0; } catch (eSeqEnd) {}
+                        if (seqEnd <= inSec) {
+                            try { seqEnd = Number(seq.getOutPoint && seq.getOutPoint()) || 0; } catch (eOutp) {}
+                        }
+                        var endFrame = Math.round(Math.max(seqEnd, inSec + 10.0) * fps);
+                        var eFrame = Math.max(sFrame + 1, endFrame - 1);
+                        outSec = eFrame / fps;
+                    }
+                    try {
+                        var tPos = new Time();
+                        tPos.seconds = inSec;
+                        if (seq.setPlayerPosition) seq.setPlayerPosition(tPos.ticks);
+                    } catch (ePos) {}
+                    seq.setInPoint(inSec);
+                    seq.setOutPoint(outSec);
+                    $.sleep(120);
+
 
                     var outFile = outPath + sep + name + ".mp4";
 
@@ -588,6 +658,7 @@ $.runScript.autoMEIO = function (selectedMarkersStr) {
                         app.encoder.ENCODE_IN_TO_OUT,
                         1
                     );
+                    $.sleep(60);
                     queuedFiles.push(filename);
                     count++;
                 }
@@ -596,7 +667,7 @@ $.runScript.autoMEIO = function (selectedMarkersStr) {
                 // continue with next marker
             }
 
-            cur = markers.getNextMarker(cur);
+            // item processed in for-loop
         }
 
         return "SUCCESS|||" + outPath + "|||Auto MEIO: Queued " + count + " jobs to Media Encoder.\n\nOpen Media Encoder to start the render.|||" + queuedFiles.join(";;;");
@@ -2145,7 +2216,8 @@ function detectGroupPhotoSources(seq) {
     var allMarkers = [];
     if (seq.markers) {
         var cur = seq.markers.getFirstMarker();
-        while (cur) {
+        for (var mi = 0; mi < markerItems.length; mi++) {
+            var cur = markerItems[mi];
             var nm = (cur.name || "").replace(/^\s+|\s+$/g, "");
             if (isGroupPhotoName(nm)) {
                 var gpNum = extractGpNumber(nm);
@@ -2348,7 +2420,8 @@ function collectNikaahMarkers(seq) {
     var allMarkers = [];
     if (seq.markers) {
         var cur = seq.markers.getFirstMarker();
-        while (cur) {
+        for (var mi = 0; mi < markerItems.length; mi++) {
+            var cur = markerItems[mi];
             var startSec = (cur.start && !isNaN(Number(cur.start.seconds))) ? Number(cur.start.seconds) : 0;
             var endSec   = (cur.end   && !isNaN(Number(cur.end.seconds)))   ? Number(cur.end.seconds)   : 0;
             var durSec   = (cur.duration && !isNaN(Number(cur.duration.seconds))) ? Number(cur.duration.seconds) : 0;

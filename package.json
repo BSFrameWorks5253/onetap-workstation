@@ -25,6 +25,7 @@
     "build:win:msix": "npm run build && node scripts/build-win.js msix",
     "build:win:zip": "npm run build && node scripts/build-win.js zip",
     "build:win:dir": "npm run build && node scripts/build-win.js dir",
+    "build:setup": "npm run build && npm run build:win:dir && \"C:\\Program Files (x86)\\Inno Setup 6\\ISCC.exe\" /DAppVersion=\"26.11.08\" /DOutputBaseFilename=\"OneTap-Setup-V-26.11.08\" installer\\installer.iss",
     "build:all": "npm run build && electron-builder --linux && node scripts/build-win.js",
     "release": "node scripts/publish_release.js",
     "release:publish": "node scripts/publish_release.js --publish",

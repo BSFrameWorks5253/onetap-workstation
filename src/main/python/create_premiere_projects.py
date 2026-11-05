@@ -103,7 +103,13 @@ def get_video_info(file_path):
             except (TypeError, ValueError):
                 nb_frames = 0
 
-        dur_raw = (stream.get('duration') if stream else None) or fmt.get('duration')
+        stream_dur = None
+        if stream and stream.get('duration'):
+            try:
+                stream_dur = float(stream.get('duration'))
+            except (TypeError, ValueError):
+                stream_dur = None
+        dur_raw = stream_dur if stream_dur is not None else fmt.get('duration')
         try:
             dur_sec = float(dur_raw)
             if dur_sec <= 0:
@@ -114,7 +120,7 @@ def get_video_info(file_path):
         if nb_frames > 0 and fps > 0:
             dur_sec = float(nb_frames) / fps
 
-        return {"width": w, "height": h, "duration": max(dur_sec, 0.1), "fps": round(fps, 2), "audioChannels": channels, "nb_frames": nb_frames, "isValid": True}
+        return {"width": w, "height": h, "duration": max(dur_sec, 0.1), "fps": round(fps, 2), "audioChannels": channels, "nb_frames": nb_frames, "stream_duration": stream_dur, "isValid": True}
     except Exception:
         return fallback_res
 
@@ -506,10 +512,13 @@ def build_xmeml_xml(sequence_name, video_inputs):
         marker_key = f"{marker_name}||{marker_desc}"
         info = video_infos[idx]
         tb, ntsc_str = parse_tb_ntsc(info['fps'])
+        seq_real_fps = float(seq_tb) / 1.001 if seq_ntsc == 'TRUE' else float(seq_tb)
+        v_dur = info.get('stream_duration') or info.get('duration', 10.0)
+        max_valid_frames = max(1, int(math.floor(v_dur * seq_real_fps)))
         if tb == seq_tb and info.get('nb_frames', 0) > 0:
-            clip_frames = info['nb_frames']
+            clip_frames = min(int(info['nb_frames']), max_valid_frames)
         else:
-            clip_frames = max(1, int(math.floor(info['duration'] * seq_tb)))
+            clip_frames = max_valid_frames
         clip_name = os.path.basename(vid_path)
         file_id = f"file-{idx + 1}"
         master_id = f"masterclip-{idx + 1}"

@@ -151,10 +151,8 @@ function AppInner(): JSX.Element {
     return params.get('view') === 'splash'
   })
 
-  // Dedicated radial loader for in-app refresh
-  const [isRefreshing, setIsRefreshing] = useState<boolean>(() => {
-    return isReload
-  })
+  // Dedicated radial loader for in-app refresh — initialized strictly to false to eliminate startup glitches
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false)
 
   const [showWelcome, setShowWelcome] = useState<boolean>(false)
   const [setupDone, setSetupDone] = useState<boolean>(true)
@@ -826,17 +824,14 @@ function AppInner(): JSX.Element {
     }
   }, [setupDone])
 
-  // Dead-man switch for white-screen hang
+  // Dead-man switch for white-screen / splash / loading hang — guarantees visibility
   useEffect(() => {
     const timer = setTimeout(() => {
-      setSetupDone(prev => {
-        if (prev === null) {
-          console.warn('Initialization timeout — forcing reveal.')
-          return true
-        }
-        return prev
-      })
-    }, 4000)
+      setShowSplash(false)
+      setIsRefreshing(false)
+      setShowWelcome(false)
+      setSetupDone(true)
+    }, 1200)
     return () => clearTimeout(timer)
   }, [])
 
@@ -991,7 +986,7 @@ function AppInner(): JSX.Element {
     }
   }
 
-  const ActivePage = PAGE_COMPONENTS[activePage] || PAGE_COMPONENTS['adder'] || (TitleAdder as any)
+  const ActivePage = PAGE_COMPONENTS[activePage] || PAGE_COMPONENTS[normalizePageKey(activePage)] || PAGE_COMPONENTS['adder'] || (TitleAdder as any)
 
   return (
     <>
