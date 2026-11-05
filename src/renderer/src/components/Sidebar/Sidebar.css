@@ -276,3 +276,29 @@
   color: var(--text-muted);
   opacity: 0.65;
 }
+
+/* ── Responsive Workstation Breakpoints ── */
+@media (max-width: 1024px) {
+  .sidebar:not(.sidebar--collapsed) {
+    width: 184px;
+    min-width: 184px;
+  }
+}
+
+@media (max-width: 860px) {
+  .sidebar {
+    width: 62px !important;
+    min-width: 62px !important;
+    padding: 10px 5px 8px;
+  }
+  .sidebar .sidebar-brand {
+    justify-content: center;
+    padding: 8px 0;
+  }
+  .sidebar .brand-text,
+  .sidebar .sidebar-version,
+  .sidebar .nav-item-label,
+  .sidebar .sidebar-section-label span {
+    display: none !important;
+  }
+}

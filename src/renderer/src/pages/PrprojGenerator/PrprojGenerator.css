@@ -996,4 +996,43 @@
   flex-wrap: wrap;
 }
 
+/* ── Responsive Breakpoints for Premiere Pro Generator ── */
+@media (max-width: 1100px) {
+  .prproj-page {
+    padding: 18px 20px;
+    gap: 18px;
+  }
+  .prproj-header {
+    padding: 16px 20px;
+  }
+  .prproj-title {
+    font-size: 22px;
+  }
+  .prproj-icon {
+    font-size: 34px;
+    padding: 12px;
+  }
+}
+
+@media (max-width: 820px) {
+  .prproj-page {
+    padding: 14px;
+    gap: 14px;
+  }
+  .prproj-header {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 14px;
+    gap: 12px;
+  }
+  .prproj-section-nav {
+    flex-direction: column;
+    gap: 4px;
+  }
+  .prproj-section-nav-btn {
+    width: 100%;
+  }
+}
+
+
 

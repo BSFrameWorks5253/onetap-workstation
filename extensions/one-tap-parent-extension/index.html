@@ -1160,6 +1160,34 @@
             border: none;
             box-shadow: var(--shadow-btn);
         }
+        /* ── RESPONSIVE ADAPTIVE BREAKPOINTS ── */
+        @media (max-width: 310px) {
+            .panel-outer-wrap { padding: 2px; }
+            .panel-container { padding: 6px; gap: 5px; }
+            .brand-badge { width: 24px; height: 24px; font-size: 11px; }
+            .title { font-size: 11px; }
+            .version-tag { font-size: 7.5px; padding: 0 3px; }
+            .subtitle { display: none; }
+            .locate-xml-btn { padding: 2px 5px; font-size: 9px; }
+            .locate-xml-btn span { display: none; }
+            .tab-btn { padding: 5px 2px; font-size: 9.5px; gap: 2px; }
+            .btn-card { height: 42px; min-height: 42px; max-height: 42px; padding: 0 8px; gap: 6px; }
+            .btn-icon-wrap { width: 28px; height: 28px; font-size: 14px; }
+            .btn-title { font-size: 11px; }
+            .btn-desc { font-size: 8.5px; }
+        }
+
+        @media (max-height: 540px) {
+            html, body { overflow-y: auto !important; }
+            .panel-container { height: auto; min-height: 100%; overflow-y: visible; max-height: none; }
+            .btn-card { height: 42px; min-height: 42px; max-height: 42px; }
+        }
+
+        @media (min-width: 420px) {
+            .panel-container { max-width: 100%; }
+            .tab-page.active { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+            .chrome-btn-wrap { width: 100%; }
+        }
     </style>
     <script>
         var cs = new CSInterface();

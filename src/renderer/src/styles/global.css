@@ -952,3 +952,25 @@ h1, h2, h3 {
   background: var(--theme-accent, #818CF8) !important;
   background-clip: padding-box !important;
 }
+
+/* ── 10. Universal Responsive App Breakpoints ── */
+@media (max-width: 1080px) {
+  .app-main-container {
+    margin: 6px 8px 6px 0;
+  }
+  .page-scroll {
+    padding: 14px 18px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .app-main-container {
+    margin: 4px;
+    border-radius: 12px;
+  }
+  .toolbar {
+    padding: 0 10px !important;
+    gap: 6px !important;
+  }
+}
+
