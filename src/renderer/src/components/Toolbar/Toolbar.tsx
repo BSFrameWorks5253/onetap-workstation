@@ -3,8 +3,8 @@ import type { PageKey } from '../../types'
 import { PAGE_META } from '../../types'
 import { PageIcon } from '../PageIcon'
 import './Toolbar.css'
-
 import MorphingBrand from '../MorphingBrand'
+import AnySharePairingModal from '../AnySharePairingModal/AnySharePairingModal'
 
 interface ToolbarProps {
   activePage: PageKey
@@ -14,6 +14,7 @@ interface ToolbarProps {
 export default function Toolbar({ activePage, onOpenCmdPalette }: ToolbarProps): JSX.Element {
   const [clock, setClock] = useState('')
   const [launchInfo, setLaunchInfo] = useState<{ isDemo?: boolean; isTrial?: boolean } | null>(null)
+  const [isAnySharePairingOpen, setIsAnySharePairingOpen] = useState(false)
   const meta = PAGE_META[activePage]
 
   useEffect(() => {
@@ -84,6 +85,28 @@ export default function Toolbar({ activePage, onOpenCmdPalette }: ToolbarProps):
               </span>
             )}
 
+            {/* AnyShare Mobile Pairing Button */}
+            <button
+              className="toolbar-btn-pill"
+              onClick={() => setIsAnySharePairingOpen(true)}
+              title="Link AnyShare Mobile / Web via One-Time QR Code"
+              style={{
+                borderColor: 'rgba(212, 175, 55, 0.45)',
+                background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.18), rgba(138, 102, 20, 0.12))',
+                color: '#F5E6C8',
+                fontWeight: 600,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px'
+              }}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#D4AF37" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <rect width="18" height="18" x="3" y="3" rx="2"/>
+                <path d="M7 7h.01M17 7h.01M7 17h.01M17 17h.01"/>
+              </svg>
+              <span>Link AnyShare</span>
+            </button>
+
             {/* Quick Spotlight Launcher */}
             {onOpenCmdPalette && (
               <button className="toolbar-btn-pill" onClick={onOpenCmdPalette} title="Open Spotlight Launcher (Ctrl+K)">
@@ -104,6 +127,11 @@ export default function Toolbar({ activePage, onOpenCmdPalette }: ToolbarProps):
           <span className="toolbar-clock">{clock}</span>
         </div>
       </div>
+
+      <AnySharePairingModal
+        isOpen={isAnySharePairingOpen}
+        onClose={() => setIsAnySharePairingOpen(false)}
+      />
     </header>
   )
 }
