@@ -65,7 +65,7 @@ class AnyShareRealtimeService {
     this.onScanRequestedCallback = cb;
   }
 
-  public async syncSafarTrackerSnapshot(safars: any[], tasks: any[]) {
+  public async syncSafarTrackerSnapshot(safars: any[], tasks: any[], scanComplete = false) {
     const now = new Date().toISOString();
     let priorRows = new Map<string, any>();
     let priorSafars = new Map<string, any>();
@@ -77,12 +77,13 @@ class AnyShareRealtimeService {
       priorSafars = new Map(previousSafars.map((safar: any) => [safar.safarName, safar]));
     } catch {}
     const scannedSafarNames = new Set((safars || []).map((s: any) => String(s.safarName || '')).filter(Boolean));
+    const safarByName = new Map((safars || []).map((s: any) => [String(s.safarName || ''), s]));
     const rows = (tasks || []).map((task: any, index: number) => {
       const safarName = String(task.safarName || '');
       const dateFolder = String(task.dateFolder || '');
       const status = String(task.status || 'editing_pending');
       const stage = status === 'submitted' ? 'jameya' : status === 'uploaded' || status === 'upload_pending' ? 'upload' : status === 'editing' || status === 'review' ? 'editing' : 'rendering';
-      const safar = safars.find((s: any) => s.safarName === safarName);
+      const safar = safarByName.get(safarName);
       const hijriYear = safar?.safarYear || '';
       const id = `${safarName}::${dateFolder}`;
       const previous = priorRows.get(id);
@@ -101,7 +102,13 @@ class AnyShareRealtimeService {
     const archivedSafarNames = new Set([...priorSafars.values()].filter((safar: any) => safar.isArchived).map((safar: any) => safar.safarName));
     const retainedArchivedRows = [...priorRows.values()].filter((row: any) => archivedSafarNames.has(row.safarName) && !scannedSafarNames.has(row.safarName));
     rows.push(...retainedArchivedRows);
-    if (rows.length === 0 && priorRows.size > 0) {
+    const rowsBySafar = new Map<string, any[]>();
+    for (const row of rows) {
+      const group = rowsBySafar.get(row.safarName) || [];
+      group.push(row);
+      rowsBySafar.set(row.safarName, group);
+    }
+    if (rows.length === 0 && priorRows.size > 0 && !scanComplete) {
       console.warn('[AnyShare Nexus] Empty Safar scan skipped; retaining the last cloud snapshot.');
       return;
     }
@@ -112,7 +119,7 @@ class AnyShareRealtimeService {
         const safarName = String(s.safarName || '');
         const previousSafar = priorSafars.get(safarName);
         const totalDays = Number(s.totalDays || 0);
-        const safarRows = rows.filter((row: any) => row.safarName === safarName);
+        const safarRows = rowsBySafar.get(safarName) || [];
         const allDatesSubmitted = safarRows.length > 0 && safarRows.every((row: any) => row.stage === 'jameya') && (!totalDays || safarRows.length >= totalDays);
         const isArchived = Boolean(previousSafar?.isArchived || s.isArchived || s.is_archived || allDatesSubmitted);
         return {

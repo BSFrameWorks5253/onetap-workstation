@@ -491,6 +491,10 @@ export function isSafarFolder(name: string): boolean {
   if (!name) return false
   const clean = name.trim()
   if (isSystemIgnored(clean)) return false
+  const rootKey = clean.toUpperCase().replace(/[\s_-]+/g, ' ').trim()
+  if (['IN PROCESS', 'TO UPLOAD', 'TO DELETE', 'UPLOADED DATA', 'UPLOADED', 'UPLOAD', 'PENDING', 'SAFARS', 'SAFAR', 'WORKING SAFAR', 'WORKING', 'CLIENT', 'CLIENTS'].includes(rootKey)) return false
+  if (/^\d{4}[\s._-]\d{1,2}[\s._-]\d{1,2}(?:\b|[\s._-])/i.test(clean)) return false
+  if (/^day[\s._-]?\d+/i.test(clean)) return false
   // Standard Safar folder patterns:
   // e.g. "1448-03 Mumbai", "1448_03_Mumbai", "1448 - 03 Mumbai", "1448-03-Mumbai", "1448-03"
   if (/^\d{4}[\s\-_.]+\d{1,3}(?:[\s\-_.]+[A-Za-z].*)?$/i.test(clean)) return true
@@ -560,7 +564,6 @@ export function isDateFolder(name: string): boolean {
   return (
     /^\d{4}[\s._\-]\d{1,2}[\s._\-]\d{1,2}/.test(clean) ||
     /^\d{1,2}[\s._\-]\d{1,2}[\s._\-]\d{2,4}/.test(clean) ||
-    /_\d{1,2}[a-z]/i.test(clean) ||
     /^day[\s._\-]?\d+/i.test(clean) ||
     /^\d{1,2}[\s._\-]\d{1,2}\b/.test(clean) ||
     /^\d{1,2}$/.test(clean)
@@ -976,28 +979,27 @@ function scanSingleWorkspace(
     e => e.isDirectory() && (e.name.toLowerCase() === 'final' || e.name.toLowerCase() === 'final titles')
   )
   const hasSubDateFolders = rootEntries.some(e => e.isDirectory() && isDateFolder(e.name))
+  const workingFolderIsSafar = isSafarFolder(path.basename(actualWorkingPath))
 
-  if (hasSubFinal || hasSubDateFolders) {
+  if (workingFolderIsSafar && (hasSubFinal || hasSubDateFolders)) {
     safarDirs = [actualWorkingPath]
   } else {
     const collectDeepSafars = (dir: string, depth = 0): string[] => {
-      if (depth > 2) return []
+      if (depth > 4) return []
       try {
         const entries = fs.readdirSync(dir, { withFileTypes: true })
         const hasFinal = entries.some(e => e.isDirectory() && (e.name.toLowerCase() === 'final' || e.name.toLowerCase() === 'final titles'))
         const hasDates = entries.some(e => e.isDirectory() && isDateFolder(e.name))
-        if (hasFinal || hasDates) {
+        if (isSafarFolder(path.basename(dir)) && (hasFinal || hasDates)) {
           return [dir]
         }
         const found: string[] = []
         for (const ent of entries) {
           if (!ent.isDirectory() || isSystemIgnored(ent.name)) continue
-          const sub = path.join(dir, ent.name)
-          if (isSafarFolder(ent.name)) {
-            found.push(sub)
-          } else {
-            found.push(...collectDeepSafars(sub, depth + 1))
-          }
+          const folderKey = ent.name.toUpperCase().replace(/[\s_-]+/g, ' ').trim()
+          const isClientContainer = ['CLIENT', 'CLIENTS', 'IN PROCESS', 'TO UPLOAD', 'TO DELETE', 'UPLOADED DATA', 'PENDING', 'SAFARS', 'SAFAR', 'WORKING SAFAR', 'WORKING'].includes(folderKey)
+          if (depth >= 2 && !isClientContainer && !isSafarFolder(ent.name)) continue
+          found.push(...collectDeepSafars(path.join(dir, ent.name), depth + 1))
         }
         return found
       } catch {
@@ -1018,20 +1020,6 @@ function scanSingleWorkspace(
     const safarFolderName = path.basename(safarPath)
     const safarMeta = parseSafarMetadata(safarFolderName)
 
-    // Catalog Safar folder itself
-    resourcesToUpsert.push({
-      safarName: safarFolderName,
-      fileName: safarFolderName,
-      filePath: safarPath,
-      parentDir: path.dirname(safarPath),
-      fileType: 'folder',
-      category: 'folder',
-      driveRoot: workingDrive,
-      driveLabel: workingDriveLabel,
-      fileSize: 0,
-      mtime: Date.now()
-    })
-
     let safarEntries: fs.Dirent[] = []
     try {
       safarEntries = fs.readdirSync(safarPath, { withFileTypes: true })
@@ -1049,37 +1037,50 @@ function scanSingleWorkspace(
       try {
         const fSubs = fs.readdirSync(finalDirPath, { withFileTypes: true })
         for (const fsEnt of fSubs) {
-          if (fsEnt.isDirectory()) {
+          if (fsEnt.isDirectory() && isDateFolder(fsEnt.name)) {
             finalDateFoldersMap.set(fsEnt.name.toLowerCase().trim(), path.join(finalDirPath, fsEnt.name))
           }
         }
       } catch {}
     }
 
-    const dateDirEnts = safarEntries.filter(e => {
-      if (!e.isDirectory()) return false
-      const lower = e.name.toLowerCase()
-      if (lower === 'final' || lower === 'final titles' || lower === 'titles' || lower === 'assets' || lower === 'raw') return false
-      if (isDateFolder(e.name)) return true
-      try {
-        const subFiles = fs.readdirSync(path.join(safarPath, e.name))
-        return subFiles.some(f => f.toLowerCase().endsWith('.prproj') || VIDEO_EXTS.has(path.extname(f).toLowerCase()))
-      } catch {
-        return false
-      }
-    })
+    const dateFolderNames = new Map<string, string>()
+    for (const entry of safarEntries) {
+      if (!entry.isDirectory()) continue
+      const lower = entry.name.toLowerCase()
+      if (lower === 'final' || lower === 'final titles' || lower === 'titles' || lower === 'assets' || lower === 'raw') continue
+      if (isDateFolder(entry.name)) dateFolderNames.set(entry.name.toLowerCase().trim(), entry.name)
+    }
+    for (const finalPath of finalDateFoldersMap.values()) {
+      const name = path.basename(finalPath)
+      dateFolderNames.set(name.toLowerCase().trim(), name)
+    }
 
     const hasDirectPrproj = safarEntries.some(e => e.isFile() && e.name.toLowerCase().endsWith('.prproj'))
     const hasDirectVideo = safarEntries.some(e => e.isFile() && VIDEO_EXTS.has(path.extname(e.name).toLowerCase()))
 
     // If this folder has neither date folders nor a Final folder nor direct project/media, it is not a Safar directory
-    if (dateDirEnts.length === 0 && !finalDirPath && !hasDirectPrproj && !hasDirectVideo) {
+    if (dateFolderNames.size === 0 && !finalDirPath && !hasDirectPrproj && !hasDirectVideo) {
       continue
     }
 
+    // Catalog only verified Safar roots, after confirming their production layout.
+    resourcesToUpsert.push({
+      safarName: safarFolderName,
+      fileName: safarFolderName,
+      filePath: safarPath,
+      parentDir: path.dirname(safarPath),
+      fileType: 'folder',
+      category: 'folder',
+      driveRoot: workingDrive,
+      driveLabel: workingDriveLabel,
+      fileSize: 0,
+      mtime: Date.now()
+    })
+
     const safarTasks: TaskRecord[] = []
 
-    if (dateDirEnts.length === 0) {
+    if (dateFolderNames.size === 0) {
       // Direct root Safar project/media
       const prInfo = checkAdobeProject(safarPath)
       let status: TaskRecord['status'] = 'editing_pending'
@@ -1110,10 +1111,11 @@ function scanSingleWorkspace(
       tasksToUpsert.push(directTask)
     }
 
-    for (const dateEnt of dateDirEnts) {
-      const dateFolderName = dateEnt.name
-      const dateFolderPath = path.join(safarPath, dateFolderName)
+    for (const dateFolderName of dateFolderNames.values()) {
       const dateKey = dateFolderName.toLowerCase().trim()
+      const matchedFinalPath = finalDateFoldersMap.get(dateKey) || null
+      const sourceDateFolderPath = path.join(safarPath, dateFolderName)
+      const dateFolderPath = fs.existsSync(sourceDateFolderPath) ? sourceDateFolderPath : matchedFinalPath || sourceDateFolderPath
 
       // Catalog date folder itself
       resourcesToUpsert.push({
@@ -1130,7 +1132,6 @@ function scanSingleWorkspace(
         mtime: Date.now()
       })
 
-      const matchedFinalPath = finalDateFoldersMap.get(dateKey) || null
       const isRenderedInFinal = !!matchedFinalPath
 
       let renderVideoCount = 0
@@ -1551,8 +1552,15 @@ function enrichTrackerData(dbSafars: SafarRecord[], dbTasks: TaskRecord[]): { sa
     }
   })
 
+  const tasksBySafar = new Map<string, TaskRecord[]>()
+  for (const task of enrichedTasks) {
+    const group = tasksBySafar.get(task.safarName) || []
+    group.push(task)
+    tasksBySafar.set(task.safarName, group)
+  }
+
   const groupedSafars = dbSafars.map(s => {
-    const matchedTasks = enrichedTasks.filter(t => t.safarName === s.safarName)
+    const matchedTasks = tasksBySafar.get(s.safarName) || []
     const completedDays = matchedTasks.filter(t => t.status === 'uploaded' || t.status === 'submitted').length
     const isSafarDone = matchedTasks.length > 0 && matchedTasks.every(t => t.status === 'uploaded' || t.status === 'submitted')
     let isDriveConnected = false
@@ -1587,7 +1595,8 @@ function enrichTrackerData(dbSafars: SafarRecord[], dbTasks: TaskRecord[]): { sa
   return { safars: groupedSafars, tasks: enrichedTasks }
 }
 
-let cachedScanResult: { safars: SafarRecord[]; tasks: TaskRecord[] } | null = null
+type TrackerScanResult = { safars: SafarRecord[]; tasks: TaskRecord[]; websiteSafars?: SafarRecord[]; websiteTasks?: TaskRecord[]; websiteScanComplete?: boolean }
+let cachedScanResult: TrackerScanResult | null = null
 let lastScanTimestamp = 0
 let isScanRunning = false
 
@@ -1597,7 +1606,7 @@ export async function scanTrackerDataAsync(input: {
   toDeletePath?: string
   workspaces?: DriveWorkspaceConfig[]
   force?: boolean
-} | DriveWorkspaceConfig[]): Promise<{ safars: SafarRecord[]; tasks: TaskRecord[] }> {
+} | DriveWorkspaceConfig[]): Promise<TrackerScanResult> {
   const isForce = !Array.isArray(input) && Boolean((input as any)?.force)
 
   // Fast-path: return cached result if scanned within the last 6 seconds
@@ -1627,7 +1636,16 @@ export async function scanTrackerDataAsync(input: {
       workspaceList = input.workspaces.filter(w => w.enabled)
     }
 
+    const configuredDriveKeys = new Set(workspaceList.map(ws => normalizeDrive(ws.driveRoot || ws.inProcessPath)).filter(Boolean))
+    let websiteScanComplete = false
+    if (!workspaceList.length && !Array.isArray(input) && input?.workingPath) {
+      const pathDrive = normalizeDrive(input.workingPath)
+      if (pathDrive) configuredDriveKeys.add(pathDrive)
+    }
+    const offlineDriveKeys = new Set([...configuredDriveKeys].filter(root => /^[A-Z]:\\$/i.test(root) && !verifiedOnlineDrives.has(root.slice(0, 2).toUpperCase())))
+
     if (workspaceList.length > 0) {
+      websiteScanComplete = [...configuredDriveKeys].some(root => !/^[A-Z]:\\$/i.test(root) || verifiedOnlineDrives.has(root.slice(0, 2).toUpperCase()))
       for (const ws of workspaceList) {
         // Yield to event loop between workspaces to prevent any UI freezing
         await new Promise(r => setImmediate(r))
@@ -1648,6 +1666,7 @@ export async function scanTrackerDataAsync(input: {
     } else if (!Array.isArray(input) && input?.workingPath) {
       const workingDir = input.workingPath
       const driveLetter = workingDir.match(/^([A-Za-z]:)/)?.[1]?.toUpperCase()
+      websiteScanComplete = !driveLetter || verifiedOnlineDrives.has(driveLetter)
       if (!driveLetter || verifiedOnlineDrives.has(driveLetter)) {
         const res = scanSingleWorkspace(input.workingPath, input.toUploadPath, input.toDeletePath)
         allSafarsToUpsert = res.safars
@@ -1671,14 +1690,38 @@ export async function scanTrackerDataAsync(input: {
 
     // Return full consolidated state from tracker.db so all drives remain visible and preserved
     const pyRes = await runTrackerDbAsync(['--get-all'])
+    const storedSafars: SafarRecord[] = pyRes?.data?.safars || []
+    const storedTasks: TaskRecord[] = pyRes?.data?.tasks || []
+    const verifiedSafarNames = new Set(allSafarsToUpsert.map(safar => safar.safarName))
+    const retainedOfflineSafars = storedSafars.filter(safar => {
+      const driveKey = normalizeDrive(safar.currentDrive || safar.currentPath || '')
+      return offlineDriveKeys.has(driveKey) && !verifiedSafarNames.has(safar.safarName)
+    })
+    const retainedOfflineNames = new Set(retainedOfflineSafars.map(safar => safar.safarName))
+    const websiteSafars = [...allSafarsToUpsert, ...retainedOfflineSafars]
+    const websiteTasks = [
+      ...allTasksToUpsert,
+      ...storedTasks.filter(task => retainedOfflineNames.has(task.safarName))
+    ]
     if (pyRes && pyRes.success && pyRes.data && Array.isArray(pyRes.data.safars) && pyRes.data.safars.length > 0) {
-      cachedScanResult = enrichTrackerData(pyRes.data.safars, pyRes.data.tasks || [])
+      const verifiedSet = new Set(allSafarsToUpsert.map(safar => safar.safarName))
+      const allowedSafars = pyRes.data.safars.filter((safar: SafarRecord) => {
+        const driveKey = normalizeDrive(safar.currentDrive || safar.currentPath || '')
+        return verifiedSet.has(safar.safarName) || offlineDriveKeys.has(driveKey) || !configuredDriveKeys.has(driveKey)
+      })
+      const allowedNames = new Set(allowedSafars.map((safar: SafarRecord) => safar.safarName))
+      cachedScanResult = {
+        ...enrichTrackerData(allowedSafars, (pyRes.data.tasks || []).filter((task: TaskRecord) => allowedNames.has(task.safarName))),
+        websiteSafars,
+        websiteTasks,
+        websiteScanComplete
+      }
     } else if (allSafarsToUpsert.length > 0) {
-      cachedScanResult = enrichTrackerData(allSafarsToUpsert, allTasksToUpsert)
+      cachedScanResult = { ...enrichTrackerData(allSafarsToUpsert, allTasksToUpsert), websiteSafars, websiteTasks, websiteScanComplete }
     } else if (pyRes?.data?.safars) {
-      cachedScanResult = enrichTrackerData(pyRes.data.safars, pyRes.data.tasks || [])
+      cachedScanResult = { ...enrichTrackerData(retainedOfflineSafars, storedTasks.filter(task => retainedOfflineNames.has(task.safarName))), websiteSafars, websiteTasks, websiteScanComplete }
     } else {
-      cachedScanResult = { safars: [], tasks: [] }
+      cachedScanResult = { safars: [], tasks: [], websiteSafars, websiteTasks, websiteScanComplete }
     }
     lastScanTimestamp = Date.now()
     exportProductionSummary(cachedScanResult)

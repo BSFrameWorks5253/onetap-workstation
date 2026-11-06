@@ -247,7 +247,7 @@ function AppInner(): JSX.Element {
         }
         const legacyPath = localStorage.getItem('ot_tracker_working_path') || ''
         const result = await api.taskTracker.scan(workspaces.length > 0 ? { workspaces } : legacyPath ? { workingPath: legacyPath } : {})
-        anyShareRealtimeService.syncSafarTrackerSnapshot(result?.safars || [], result?.tasks || [])
+        anyShareRealtimeService.syncSafarTrackerSnapshot(result?.websiteSafars || result?.safars || [], result?.websiteTasks || result?.tasks || [], Boolean(result?.websiteScanComplete))
       } catch (error) {
         console.warn('[App] Background Safar sync failed:', error)
       }

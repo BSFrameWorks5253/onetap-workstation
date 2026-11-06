@@ -195,7 +195,7 @@ export default function App(): JSX.Element {
   )
   const pageHeading: Record<typeof view, { title: string; eyebrow: string; description: string }> = {
     dashboard: { title: 'Dashboard', eyebrow: 'LIVE SAFAR OVERVIEW', description: 'A compact view of each active Safar and its completion.' },
-    tracker: { title: 'Safar tracker', eyebrow: 'SAFAR-BY-SAFAR PRODUCTION', description: 'Dates, event folders, assignments, and progress grouped by Safar.' },
+    tracker: { title: 'Safar tracker', eyebrow: 'SAFAR-BY-SAFAR PRODUCTION', description: 'Date folders, assignments, and progress grouped by Safar.' },
     archive: { title: 'Archived Safars', eyebrow: 'COMPLETED & STORED', description: 'Archived Safars remain available here and can be restored at any time.' },
     editors: { title: 'Editors & assignments', eyebrow: 'TEAM WORKLOAD', description: 'See who is working on each date and where it is in the pipeline.' },
     pipeline: { title: 'Media pipeline', eyebrow: 'PRODUCTION STAGES', description: 'Follow each date from rendering through AlJamea submission.' },
@@ -301,7 +301,8 @@ export default function App(): JSX.Element {
     const normalized = normalizeSnapshot(next)
     const current = snapshotRef.current
     const previousSafars = new Map((current.safars || []).map(safar => [safar.safarName, safar]))
-    const mergedSafars = normalized.safars.length
+    const hasSafarMetadata = Array.isArray((next as any)?.safars)
+    const mergedSafars = hasSafarMetadata
       ? normalized.safars.map(safar => ({ ...previousSafars.get(safar.safarName), ...safar, isArchived: safar.isArchived ?? previousSafars.get(safar.safarName)?.isArchived ?? false }))
       : current.safars
     const merged = { ...normalized, safars: mergedSafars }
@@ -496,7 +497,7 @@ export default function App(): JSX.Element {
 
         {(view === 'tracker' || view === 'archive') && <section className="panel safar-view-panel" aria-labelledby="safar-view-title">
           <div className="panel-heading"><div><h2 id="safar-view-title">{view === 'archive' ? 'Archived Safars' : 'Active Safars by date'}</h2><p>Date folder names only. Open a Safar to update its assignments, stage, or due date.</p></div><span className="safar-group-count">{view === 'archive' ? archiveSafarGroups.length : activeSafarGroups.length} Safars</span></div>
-          <div className="toolbar"><div className="search-box"><Search aria-hidden="true" size={16}/><label className="visually-hidden" htmlFor="safar-search">Search Safar, date, or event folder</label><input id="safar-search" type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search Safar, date, or event folder"/></div><div className="toolbar-actions"><label className="filter-select"><ListFilter aria-hidden="true" size={15}/><span className="visually-hidden">Filter by stage</span><select aria-label="Filter by stage" value={filter} onChange={event => setFilter(event.target.value)}><option value="all">All stages</option>{STAGES.map(stage => <option key={stage.id} value={stage.id}>{stage.label}</option>)}</select></label><button type="button" className="button-secondary export-button" onClick={exportCsv}><Cloud aria-hidden="true" size={15}/> Export CSV</button></div></div>
+          <div className="toolbar"><div className="search-box"><Search aria-hidden="true" size={16}/><label className="visually-hidden" htmlFor="safar-search">Search Safar or date folder</label><input id="safar-search" type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search Safar or date folder"/></div><div className="toolbar-actions"><label className="filter-select"><ListFilter aria-hidden="true" size={15}/><span className="visually-hidden">Filter by stage</span><select aria-label="Filter by stage" value={filter} onChange={event => setFilter(event.target.value)}><option value="all">All stages</option>{STAGES.map(stage => <option key={stage.id} value={stage.id}>{stage.label}</option>)}</select></label><button type="button" className="button-secondary export-button" onClick={exportCsv}><Cloud aria-hidden="true" size={15}/> Export CSV</button></div></div>
           <div className="safar-groups-list">{visibleSafarGroups.map(group => <SafarProductionGroup key={group.safarName} group={group} expanded={expandedSafars.has(group.safarName)} onToggle={() => toggleSafarExpanded(group.safarName)} onArchive={archived => void setSafarArchived(group, archived)} onUpdateTask={(task, changes) => void updateTask(task, changes)}/>)}
             {!visibleSafarGroups.length && <div className="safar-empty-state"><h3>{view === 'archive' ? archiveSafarGroups.length ? 'No archived dates match' : 'Your archive is empty' : activeSafarGroups.length ? 'No dates match these filters' : 'No active Safars'}</h3><p>{view === 'archive' ? archiveSafarGroups.length ? 'Clear the filters to see all archived Safars.' : 'Archived Safars will stay here until you restore them.' : activeSafarGroups.length ? 'Try a different search or stage filter.' : 'Safar folders from One Tap will appear here after sync.'}</p></div>}
           </div>

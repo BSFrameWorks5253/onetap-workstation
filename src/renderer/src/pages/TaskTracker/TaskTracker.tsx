@@ -241,7 +241,7 @@ export default function TaskTracker(): JSX.Element {
         setTasks(res.tasks || [])
 
         // Keep the remote PWA current with Safar and date folder names only.
-        anyShareRealtimeService.syncSafarTrackerSnapshot(res.safars || [], res.tasks || [])
+        anyShareRealtimeService.syncSafarTrackerSnapshot(res.websiteSafars || res.safars || [], res.websiteTasks || res.tasks || [], Boolean(res.websiteScanComplete))
 
         // Automatically push detected Safar campaigns to AnyShare Web Portal
         if (res.safars && res.safars.length > 0) {
