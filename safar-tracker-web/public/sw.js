@@ -1,4 +1,4 @@
-const CACHE = 'one-tap-safar-v1'
+const CACHE = 'one-tap-safar-v2'
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(['/','/manifest.webmanifest'])))
   self.skipWaiting()

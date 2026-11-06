@@ -1,6 +1,22 @@
 import { supabaseNexus, REALTIME_NEXUS_CHANNEL } from './supabaseNexus';
 import { parseSafarHierarchy } from '../utils/safarUtils';
 
+function getHijriDate(dateFolder: string, safarYear: string | number): string {
+  const day = dateFolder.match(/Day[_ -]?(\d{1,2})/i)?.[1]
+  const calendar = dateFolder.match(/(\d{4})[-_](\d{1,2})[-_](\d{1,2})/)
+  const year = String(calendar?.[1] || safarYear || '').replace(/\s*(?:AH|H)$/i, '').trim()
+  if (day) return `${String(Number(day)).padStart(2, '0')} Safar ${year} AH`.trim()
+  if (calendar) return `${Number(calendar[3])} Safar ${calendar[1]} H`
+  return ''
+}
+
+function getDateFolderName(value: unknown): string {
+  const parts = String(value || '').trim().split(/[\\/]+/).filter(Boolean)
+  let folder = parts[parts.length - 1] || ''
+  if (/\.(mp4|mov|mkv|avi|mxf|prproj|xml|wav|mp3|jpg|jpeg|png)$/i.test(folder)) folder = parts[parts.length - 2] || ''
+  return folder
+}
+
 export interface WorkstationTelemetry {
   nodeId: string;
   label: string;
@@ -20,6 +36,30 @@ class AnyShareRealtimeService {
   private onTelemetryCallback: ((msg: string) => void) | null = null;
   private onScanRequestedCallback: (() => void) | null = null;
   private pushedSafarCache: Set<string> = new Set();
+  private pendingWebsiteNotifications: any[] = [];
+
+  private sendWebsiteNotification(payload: any) {
+    if (!this.channel || !this.isConnected) {
+      this.pendingWebsiteNotifications.push(payload);
+      if (this.pendingWebsiteNotifications.length > 100) this.pendingWebsiteNotifications.shift();
+      return;
+    }
+    this.channel.send({ type: 'broadcast', event: 'website_user_notification', payload }).then((status: string) => {
+      if (status !== 'ok') {
+        this.pendingWebsiteNotifications.push(payload);
+        if (this.pendingWebsiteNotifications.length > 100) this.pendingWebsiteNotifications.shift();
+      }
+    }).catch((error: any) => {
+      this.pendingWebsiteNotifications.push(payload);
+      if (this.pendingWebsiteNotifications.length > 100) this.pendingWebsiteNotifications.shift();
+      console.warn('[AnyShare Nexus] Safar notification queued for retry:', error);
+    });
+  }
+
+  private flushWebsiteNotifications() {
+    const pending = this.pendingWebsiteNotifications.splice(0);
+    pending.forEach(payload => this.sendWebsiteNotification(payload));
+  }
 
   public setScanRequestedCallback(cb: () => void) {
     this.onScanRequestedCallback = cb;
@@ -28,25 +68,29 @@ class AnyShareRealtimeService {
   public async syncSafarTrackerSnapshot(safars: any[], tasks: any[]) {
     const now = new Date().toISOString();
     let priorRows = new Map<string, any>();
+    let priorSafars = new Map<string, any>();
     try {
       const { data } = await supabaseNexus.from('safar_tracker_snapshots').select('snapshot').eq('id', 'primary').maybeSingle();
       const previous = data?.snapshot?.tasks;
       if (Array.isArray(previous)) priorRows = new Map(previous.map((row: any) => [row.id || `${row.safarName}::${row.dateFolder}`, row]));
+      const previousSafars = Array.isArray(data?.snapshot?.safars) ? data.snapshot.safars : [];
+      priorSafars = new Map(previousSafars.map((safar: any) => [safar.safarName, safar]));
     } catch {}
+    const scannedSafarNames = new Set((safars || []).map((s: any) => String(s.safarName || '')).filter(Boolean));
     const rows = (tasks || []).map((task: any, index: number) => {
       const safarName = String(task.safarName || '');
       const dateFolder = String(task.dateFolder || '');
       const status = String(task.status || 'editing_pending');
       const stage = status === 'submitted' ? 'jameya' : status === 'uploaded' || status === 'upload_pending' ? 'upload' : status === 'editing' || status === 'review' ? 'editing' : 'rendering';
-      const day = dateFolder.match(/(?:Day[_ -]?|[-_])(\d{1,2})(?:\D|$)/i)?.[1];
-      const hijriYear = safars.find((s: any) => s.safarName === safarName)?.safarYear || '';
+      const safar = safars.find((s: any) => s.safarName === safarName);
+      const hijriYear = safar?.safarYear || '';
       const id = `${safarName}::${dateFolder}`;
       const previous = priorRows.get(id);
       return {
         id,
         safarName,
         dateFolder,
-        hijriDate: day ? `${String(day).padStart(2, '0')} Safar ${hijriYear}`.trim() : '',
+        hijriDate: task.hijriDate || getHijriDate(dateFolder, hijriYear),
         stage: previous?.stage || stage,
         dueDate: previous?.dueDate || '',
         editorName: previous?.editorName || '',
@@ -54,6 +98,9 @@ class AnyShareRealtimeService {
         order: index
       };
     }).filter((row: any) => row.safarName && row.dateFolder);
+    const archivedSafarNames = new Set([...priorSafars.values()].filter((safar: any) => safar.isArchived).map((safar: any) => safar.safarName));
+    const retainedArchivedRows = [...priorRows.values()].filter((row: any) => archivedSafarNames.has(row.safarName) && !scannedSafarNames.has(row.safarName));
+    rows.push(...retainedArchivedRows);
     if (rows.length === 0 && priorRows.size > 0) {
       console.warn('[AnyShare Nexus] Empty Safar scan skipped; retaining the last cloud snapshot.');
       return;
@@ -61,7 +108,23 @@ class AnyShareRealtimeService {
     const snapshot = {
       tasks: rows,
       folders: [...new Set(rows.map((row: any) => row.dateFolder))],
-      safars: (safars || []).map((s: any) => ({ safarName: String(s.safarName || ''), safarYear: s.safarYear || '', totalDays: s.totalDays || 0 })),
+      safars: [...(safars || []).map((s: any) => {
+        const safarName = String(s.safarName || '');
+        const previousSafar = priorSafars.get(safarName);
+        const totalDays = Number(s.totalDays || 0);
+        const safarRows = rows.filter((row: any) => row.safarName === safarName);
+        const allDatesSubmitted = safarRows.length > 0 && safarRows.every((row: any) => row.stage === 'jameya') && (!totalDays || safarRows.length >= totalDays);
+        const isArchived = Boolean(previousSafar?.isArchived || s.isArchived || s.is_archived || allDatesSubmitted);
+        return {
+          safarName,
+          safarYear: s.safarYear || previousSafar?.safarYear || '',
+          totalDays,
+          isDone: Boolean(s.isSafarDone || isArchived),
+          isArchived,
+          archivePriorStages: previousSafar?.archivePriorStages,
+          updatedAt: now
+        };
+      }).filter((s: any) => s.safarName), ...[...priorSafars.values()].filter((safar: any) => safar.isArchived && !scannedSafarNames.has(safar.safarName))],
       updatedAt: now,
       source: 'onetap-desktop'
     };
@@ -79,12 +142,7 @@ class AnyShareRealtimeService {
   }
 
   public notifySafarWebsite(title: string, message: string, type: string) {
-    if (!this.channel || !this.isConnected) return;
-    this.channel.send({
-      type: 'broadcast',
-      event: 'website_user_notification',
-      payload: { id: `safar_${Date.now()}`, type, title, message, timestamp: new Date().toISOString() }
-    }).catch((error: any) => console.warn('[AnyShare Nexus] Safar notification failed:', error));
+    this.sendWebsiteNotification({ id: `safar_${Date.now()}`, type, title, message, timestamp: new Date().toISOString() });
   }
 
   public init(onTelemetry?: (msg: string) => void) {
@@ -154,12 +212,18 @@ class AnyShareRealtimeService {
           console.log('[AnyShare Nexus] Inbound safar_mark_done received from website:', payload);
           if (payload?.safarName) {
             const api = (window as any).api?.taskTracker;
-            if (api?.toggleSafarDone) {
-              await api.toggleSafarDone({
-                safarName: payload.safarName,
-                isDone: payload.isDone !== false,
-                isArchived: payload.isArchived !== false
-              });
+            if (api?.setManualStatus && Array.isArray(payload.taskStatuses)) {
+              const statuses = new Map<'uploaded' | 'submitted' | 'auto', Array<{ safarName: string; dateFolder: string }>>();
+              for (const item of payload.taskStatuses) {
+                if (!item?.dateFolder) continue;
+                const status = (['uploaded', 'submitted', 'auto'].includes(item.status) ? item.status : 'auto') as 'uploaded' | 'submitted' | 'auto';
+                const taskKeys = statuses.get(status) || [];
+                taskKeys.push({ safarName: payload.safarName, dateFolder: item.dateFolder });
+                statuses.set(status, taskKeys);
+              }
+              for (const [status, taskKeys] of statuses) {
+                await api.setManualStatus({ taskKeys, status });
+              }
             }
             if (this.onTelemetryCallback) {
               this.onTelemetryCallback(`Website sync: Safar "${payload.safarName}" marked ${payload.isArchived !== false ? 'Archived / Done' : 'Active'}`);
@@ -186,6 +250,7 @@ class AnyShareRealtimeService {
           console.log(`[AnyShare Nexus] Supabase Realtime channel status: ${status}`);
           if (status === 'SUBSCRIBED') {
             this.isConnected = true;
+            this.flushWebsiteNotifications();
             this.sendHeartbeat();
             this.syncWorkstationItems();
             this.startHeartbeatLoop();
@@ -206,17 +271,13 @@ class AnyShareRealtimeService {
     outputFolder?: string;
     assignedUser?: string;
   }) {
-    if (!this.channel) return;
-
+    const dateFolder = getDateFolderName(params.dateFolder)
     const safarLabel = params.safarName
-      ? `${params.safarName}${params.dateFolder ? ` - ${params.dateFolder}` : ''}`
-      : (params.videoName || 'Batch Render');
+      ? `${params.safarName}${dateFolder ? ` - ${dateFolder}` : ''}`
+      : 'Video batch';
 
     // 1. Broadcast user/admin notification for the website
-    this.channel.send({
-      type: 'broadcast',
-      event: 'website_user_notification',
-      payload: {
+    this.sendWebsiteNotification({
         id: `notif_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
         type: 'batch_render_complete',
         title: '🎬 Video Batch Render Complete!',
@@ -224,13 +285,11 @@ class AnyShareRealtimeService {
         targetRole: 'admin',
         assignedUser: params.assignedUser || 'CREATIVE-ADMIN-MASTER',
         safarName: params.safarName,
-        dateFolder: params.dateFolder,
-        videoName: params.videoName,
+        dateFolder,
         totalVideos: params.totalVideos,
-        outputFolder: params.outputFolder,
         timestamp: new Date().toISOString()
-      }
-    }).catch((err: any) => console.warn('[AnyShare Nexus] Notify error:', err));
+    });
+    if (!this.channel) return;
 
     // 2. Broadcast task status update to mark it done in the website's task tracker
     this.channel.send({
@@ -281,10 +340,7 @@ class AnyShareRealtimeService {
     }).catch((err: any) => console.warn('[AnyShare Nexus] Safar status broadcast error:', err));
 
     // Send user/admin notification
-    this.channel.send({
-      type: 'broadcast',
-      event: 'website_user_notification',
-      payload: {
+    this.sendWebsiteNotification({
         id: `notif_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
         type: params.isArchived ? 'safar_archived' : 'safar_restored',
         title: params.isArchived ? '📦 Full Safar Marked Done & Archived' : '📂 Safar Reopened',
@@ -296,8 +352,7 @@ class AnyShareRealtimeService {
         isDone: params.isDone,
         isArchived: params.isArchived,
         timestamp: new Date().toISOString()
-      }
-    }).catch(() => {});
+    });
   }
 
   /**
@@ -447,23 +502,20 @@ class AnyShareRealtimeService {
       payload: newCampaign
     }).catch(() => {});
 
+    const dateFolderName = getDateFolderName(resolvedDateFolder)
     const dateMessage = wasDateAdded
-      ? `Date was not in path — One Tap auto-appended: \\${resolvedDateFolder}`
-      : `Date folder detected: \\${resolvedDateFolder}`;
+      ? `One Tap added the date folder ${dateFolderName}.`
+      : `Date folder detected: ${dateFolderName}.`
 
-    this.channel.send({
-      type: 'broadcast',
-      event: 'website_user_notification',
-      payload: {
+    this.sendWebsiteNotification({
         id: `notif_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
         type: 'safar_detected',
         title: '🌟 New Safar Detected from Workstation',
-        message: `One Tap detected "${safarName}" (${driveRoot}). ${dateMessage}`,
+        message: `One Tap detected "${safarName}". ${dateMessage}`,
         targetRole: 'admin',
         safarName,
         timestamp: new Date().toISOString()
-      }
-    }).catch(() => {});
+    });
 
     if (this.onTelemetryCallback) {
       this.onTelemetryCallback(`AnyShare synced: ${safarName} (${driveRoot})`);
