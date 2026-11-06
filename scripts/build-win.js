@@ -140,7 +140,7 @@ async function buildWindows() {
   prepareCustomMsiTemplate()
 
   const requestedTarget = process.argv[2] // e.g. "zip", "nsis", "msi", "msix", "dir"
-  let builderTarget = requestedTarget ? requestedTarget : 'nsis'
+  let builderTarget = requestedTarget ? requestedTarget : 'setup'
 
   if (requestedTarget === 'msix' || requestedTarget === 'appx') {
     builderTarget = 'appx'
@@ -154,7 +154,26 @@ async function buildWindows() {
 
   if (process.platform === 'win32') {
     log(`Building Windows application natively on Windows (${builderTarget || 'nsis'})...`)
-    execSync(`npx electron-builder --win ${builderTarget}`, { stdio: 'inherit' })
+    if (builderTarget === 'setup') {
+      log(`Packaging unpacked Windows binaries for Setup installer (v${pkg.version})...`)
+      execSync('npx electron-builder --win dir', { stdio: 'inherit' })
+
+      const isccCandidates = [
+        'C:\\Program Files (x86)\\Inno Setup 6\\ISCC.exe',
+        'C:\\Program Files\\Inno Setup 6\\ISCC.exe'
+      ]
+      const isccPath = isccCandidates.find((p) => fs.existsSync(p))
+      if (isccPath) {
+        log(`Compiling Inno Setup installer for v${pkg.version} via ${isccPath}...`)
+        execSync(`"${isccPath}" /DAppVersion="${pkg.version}" /DOutputBaseFilename="OneTap-Setup-V-${pkg.version}" installer\\installer.iss`, { stdio: 'inherit' })
+        logSuccess(`Inno Setup installer created: release/OneTap-Setup-V-${pkg.version}.exe`)
+      } else {
+        logWarn('Inno Setup ISCC.exe not found on system. Building via electron-builder NSIS...')
+        execSync('npx electron-builder --win nsis', { stdio: 'inherit' })
+      }
+    } else {
+      execSync(`npx electron-builder --win ${builderTarget}`, { stdio: 'inherit' })
+    }
     if (builderTarget === 'appx') {
       try {
         log('Signing AppX / MSIX package with Windows SDK SignTool and developer certificate...')

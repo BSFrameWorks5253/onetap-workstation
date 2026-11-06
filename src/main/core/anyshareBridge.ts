@@ -93,6 +93,92 @@ export function initAnyShareBridge(window: BrowserWindow | null) {
 const activePairingSessions = new Map<string, any>();
 const consumedPairingTokens = new Set<string>();
 
+export function getWorkstationUserProfile() {
+  let name = 'Burhanuddin';
+  let email = 'sounasathburhan5252@gmail.com';
+  let username = 'burhanuddin';
+  let role = 'admin';
+  let avatar = '';
+
+  try {
+    const appData = process.env.APPDATA || path.join(require('os').homedir(), 'AppData', 'Roaming');
+
+    // 1. Check ai_profile.json in One Tap
+    const profileCandidates = [
+      path.join(appData, 'One Tap', 'ai_profile.json'),
+      path.join(appData, 'one-tap', 'ai_profile.json'),
+      path.join(app.getPath('userData'), 'ai_profile.json')
+    ];
+
+    for (const p of profileCandidates) {
+      if (fs.existsSync(p)) {
+        try {
+          const raw = JSON.parse(fs.readFileSync(p, 'utf8'));
+          if (raw?.name) name = raw.name.trim();
+          if (raw?.email) email = raw.email.trim();
+          if (raw?.isAdmin !== undefined) role = 'admin';
+          if (raw?.avatar && typeof raw.avatar === 'string' && !raw.avatar.startsWith('data:')) {
+            avatar = raw.avatar;
+          }
+          break;
+        } catch {}
+      }
+    }
+
+    // 2. Check ecosystem_session.json in Anything
+    const sessionCandidates = [
+      path.join(appData, 'Anything', 'ecosystem_session.json'),
+      path.join(appData, 'anything', 'ecosystem_session.json'),
+      path.join(app.getPath('userData'), 'ecosystem_session.json')
+    ];
+
+    for (const sp of sessionCandidates) {
+      if (fs.existsSync(sp)) {
+        try {
+          const sess = JSON.parse(fs.readFileSync(sp, 'utf8'));
+          if (sess?.user) {
+            if (sess.user.name && name === 'Burhanuddin') name = sess.user.name.trim();
+            if (sess.user.email) email = sess.user.email.trim();
+            if (sess.user.username && sess.user.username !== 'admin') username = sess.user.username.trim();
+            if (sess.user.avatar && !avatar && typeof sess.user.avatar === 'string' && !sess.user.avatar.startsWith('data:')) {
+              avatar = sess.user.avatar;
+            }
+            break;
+          }
+        } catch {}
+      }
+    }
+
+    // 3. Username normalization
+    if (!username || username === 'admin') {
+      if (name) {
+        username = name.toLowerCase().replace(/[^a-z0-9_]/g, '');
+      } else if (email) {
+        username = email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '');
+      } else {
+        username = 'burhanuddin';
+      }
+    }
+
+    // 4. Clean modern avatar
+    if (!avatar) {
+      avatar = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name || username)}&backgroundColor=0f172a&textColor=ffffff`;
+    }
+  } catch (err) {
+    console.warn('[AnyShare Bridge] Could not load profile:', err);
+  }
+
+  return {
+    id: 'user_' + username,
+    name: name || 'Burhanuddin',
+    username: username || 'burhanuddin',
+    email: email || 'sounasathburhan5252@gmail.com',
+    role: role || 'admin',
+    avatar: avatar || `https://api.dicebear.com/7.x/initials/svg?seed=Burhanuddin&backgroundColor=0f172a&textColor=ffffff`,
+    provider: 'onetap_workstation'
+  };
+}
+
 /**
  * Starts a native local HTTP Bridge server allowing AnyShare web/PWA
  * to dispatch render commands directly to this workstation with 0 latency.
@@ -177,10 +263,32 @@ function startLocalBridgeServer() {
       return;
     }
 
+    // GET /api/user-profile -> Direct fetch of One Tap Workstation user identity for 1-click web login
+    if (req.method === 'GET' && url.pathname === '/api/user-profile') {
+      const user = getWorkstationUserProfile();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        success: true,
+        user,
+        workstation: {
+          nodeId: 'node_studio_pc_01',
+          label: 'Studio-PC-01 (Primary One Tap Node)',
+          appVersion: `One Tap v${app.getVersion() || '2.4.1'}`,
+          bridgePort: PORT,
+          localIp: '127.0.0.1',
+          gpu: 'NVIDIA RTX 4090 (24GB VRAM)',
+          storageFreeGB: 482.4
+        },
+        timestamp: new Date().toISOString()
+      }));
+      return;
+    }
+
     // GET /api/auth-qr -> Generate dynamic One-Time Login QR code for AnyShare Website Scanner
     if (req.method === 'GET' && url.pathname === '/api/auth-qr') {
       const pairingToken = 'pair_ot_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
       const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+      const realUser = getWorkstationUserProfile();
 
       const pairingPayload = {
         type: 'ANYSHARE_ONE_TIME_LOGIN',
@@ -188,15 +296,7 @@ function startLocalBridgeServer() {
         token: pairingToken,
         createdAt: new Date().toISOString(),
         expiresAt: new Date(expiresAt).toISOString(),
-        user: {
-          id: 'user_master_01',
-          name: 'Master Architect',
-          username: 'admin',
-          email: 'admin@anything.local',
-          role: 'admin',
-          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80',
-          provider: 'onetap_workstation'
-        },
+        user: realUser,
         workstation: {
           nodeId: 'node_studio_pc_01',
           label: 'Studio-PC-01 (Primary One Tap Node)',
@@ -217,7 +317,10 @@ function startLocalBridgeServer() {
         expiresAt
       });
 
-      QRCode.toDataURL(JSON.stringify(pairingPayload), {
+      // Compact payload for high-density QR scanning
+      const compactPayloadStr = JSON.stringify(pairingPayload);
+
+      QRCode.toDataURL(compactPayloadStr, {
         errorCorrectionLevel: 'M',
         margin: 2,
         scale: 7,

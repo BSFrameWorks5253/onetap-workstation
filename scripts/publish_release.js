@@ -295,6 +295,7 @@ function syncToAnythingEcosystem(version, versionDir) {
 
   const targets = [
     path.join(ecosystemRoot, 'Anything Child app realse', 'one-tap', `V${version}`),
+    path.join(ecosystemRoot, 'Anything Child app realse', 'one-tap', `V-${version}`),
     path.join(ecosystemRoot, 'Anything', 'releases', 'one-tap', `V-${version}`),
     path.join(ecosystemRoot, 'Anything', 'published-apps', 'one-tap'),
     appData ? path.join(appData, 'Anything', 'published-apps', 'one-tap') : '',
@@ -310,6 +311,44 @@ function syncToAnythingEcosystem(version, versionDir) {
       logSuccess(`Synced version v${version} to: ${t}`);
     } catch (e) {
       logWarn(`Could not sync to ${t}: ${e.message}`);
+    }
+  }
+
+  // Synchronize catalog.json so Anything desktop immediately recognizes new version & setup executable
+  const setupExeName = `OneTap-Setup-V-${version}.exe`;
+  const canonicalPkgPath = path.join(ecosystemRoot, 'Anything Child app realse', 'one-tap', `V${version}`, setupExeName);
+
+  const catalogTargets = [
+    path.join(ecosystemRoot, 'Anything', 'published-apps', 'catalog.json'),
+    appData ? path.join(appData, 'Anything', 'published-apps', 'catalog.json') : ''
+  ].filter(Boolean);
+
+  for (const cp of catalogTargets) {
+    if (fs.existsSync(cp)) {
+      try {
+        const cat = JSON.parse(fs.readFileSync(cp, 'utf-8'));
+        if (Array.isArray(cat)) {
+          const entry = cat.find((a) => a.id === 'one-tap');
+          if (entry) {
+            entry.version = version;
+            entry.versionText = `V${version}`;
+            entry.executableName = setupExeName;
+            entry.setupExecutableName = setupExeName;
+            entry.packageFileName = setupExeName;
+            entry.localPackagePath = canonicalPkgPath;
+            entry.downloadUrl = canonicalPkgPath;
+            if (entry.releaseInfo) {
+              entry.releaseInfo.version = version;
+              entry.releaseInfo.executableName = setupExeName;
+              entry.releaseInfo.downloadUrl = canonicalPkgPath;
+            }
+            fs.writeFileSync(cp, JSON.stringify(cat, null, 2), 'utf-8');
+            logSuccess(`Updated catalog ${cp} with One Tap v${version}`);
+          }
+        }
+      } catch (err) {
+        logWarn(`Could not update catalog ${cp}: ${err.message}`);
+      }
     }
   }
 }
@@ -329,19 +368,6 @@ async function publishRelease(options = {}) {
 
   // 1. Search for built installer executable in release/
   const flatReleaseDir = path.join(ROOT_DIR, 'release')
-  let detectedExe = null
-
-  if (fs.existsSync(flatReleaseDir)) {
-    const files = fs.readdirSync(flatReleaseDir)
-    // Priority: OneTap-V-<version>.exe or any Setup .exe
-    const matched = files.find((f) => f.toLowerCase() === `onetap-v-${version.toLowerCase()}.exe`)
-      || files.find((f) => f.toLowerCase().includes('onetap') && f.endsWith('.exe'))
-      || files.find((f) => f.toLowerCase().includes('setup') && f.endsWith('.exe'))
-
-    if (matched) {
-      detectedExe = path.join(flatReleaseDir, matched)
-    }
-  }
 
   // Target executable name strictly per Anything CHILD_APP_GUIDE standard
   const targetExeName = `OneTap-V-${version}.exe`
@@ -351,24 +377,28 @@ async function publishRelease(options = {}) {
   const targetExePath = path.join(versionDir, targetExeName)
   const setupExePath = path.join(versionDir, setupExeName)
 
-  if (detectedExe && fs.existsSync(detectedExe)) {
-    if (detectedExe !== targetExePath) {
-      try { fs.copyFileSync(detectedExe, targetExePath) } catch {}
+  let builtExe = null
 
-      logSuccess(`Organized setup executable into: release/One Tap/V-${version}/${targetExeName}`)
+  if (fs.existsSync(flatSetupPath)) {
+    builtExe = flatSetupPath
+  } else if (fs.existsSync(flatTargetPath)) {
+    builtExe = flatTargetPath
+  } else if (fs.existsSync(flatReleaseDir)) {
+    const files = fs.readdirSync(flatReleaseDir)
+    // ONLY match executables that strictly contain the target version string!
+    const versionMatch = files.find((f) => f.toLowerCase().includes(version.toLowerCase()) && f.endsWith('.exe'))
+    if (versionMatch) {
+      builtExe = path.join(flatReleaseDir, versionMatch)
     }
-    if (fs.existsSync(flatSetupPath)) {
-      if (!fs.existsSync(setupExePath) || fs.statSync(flatSetupPath).mtimeMs > fs.statSync(setupExePath).mtimeMs) {
-        fs.copyFileSync(flatSetupPath, setupExePath)
-        logSuccess(`Organized professional setup into: release/One Tap/V-${version}/${setupExeName}`)
-      }
-    } else if (detectedExe !== setupExePath) {
-      fs.copyFileSync(detectedExe, setupExePath)
-      logSuccess(`Organized professional setup into: release/One Tap/V-${version}/${setupExeName}`)
-    }
-  } else if (!fs.existsSync(targetExePath)) {
-    // If not built yet, create placeholder indicator so the release folder structure is valid
-    logWarn(`Executable not yet in release/. Preparing release structure for ${targetExeName}...`)
+  }
+
+  if (builtExe && fs.existsSync(builtExe)) {
+    fs.copyFileSync(builtExe, setupExePath)
+    logSuccess(`Organized setup into: release/One Tap/V-${version}/${setupExeName}`)
+    fs.copyFileSync(builtExe, targetExePath)
+    logSuccess(`Organized executable alias into: release/One Tap/V-${version}/${targetExeName}`)
+  } else {
+    logWarn(`No executable matching version v${version} found in release/. Preparing release structure for ${targetExeName}...`)
   }
 
   // 2. Ensure manifests exist
@@ -377,12 +407,28 @@ async function publishRelease(options = {}) {
   const logoPngPath = path.join(releaseBaseDir, 'app-logo.png')
   const releaseJsonPath = path.join(versionDir, 'release.json')
 
-  // Copy app.json & app-logo.png to version subfolder
+  // Update & write app.json with current version & executable info
+  let appJson = {}
   if (fs.existsSync(appJsonPath)) {
-    fs.copyFileSync(appJsonPath, path.join(versionDir, 'app.json'))
+    try {
+      appJson = JSON.parse(fs.readFileSync(appJsonPath, 'utf-8'))
+    } catch {}
   }
+  appJson.id = appJson.id || 'one-tap'
+  appJson.name = appJson.name || 'One Tap'
+  appJson.version = version
+  appJson.versionText = `V${version}`
+  appJson.executableName = setupExeName
+  appJson.setupExecutableName = setupExeName
+  appJson.packageFileName = setupExeName
+  if (builtExe && fs.existsSync(builtExe)) {
+    appJson.size = `${(fs.statSync(builtExe).size / (1024 * 1024)).toFixed(1)} MB`
+  }
+  fs.writeFileSync(appJsonPath, JSON.stringify(appJson, null, 2), 'utf-8')
+  fs.writeFileSync(path.join(versionDir, 'app.json'), JSON.stringify(appJson, null, 2), 'utf-8')
+
   if (fs.existsSync(logoPngPath)) {
-    fs.copyFileSync(logoPngPath, path.join(versionDir, 'app-logo.png'))
+    try { fs.copyFileSync(logoPngPath, path.join(versionDir, 'app-logo.png')) } catch {}
   }
 
   let releaseNotes = `One Tap v${version} - Automated Video Production Workstation`
