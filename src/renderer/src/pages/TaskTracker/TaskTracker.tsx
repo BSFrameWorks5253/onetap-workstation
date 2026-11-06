@@ -238,6 +238,24 @@ export default function TaskTracker(): JSX.Element {
       if (res) {
         setSafars(res.safars || [])
         setTasks(res.tasks || [])
+
+        // Automatically push detected Safar campaigns to AnyShare Web Portal
+        if (res.safars && res.safars.length > 0) {
+          for (const s of res.safars) {
+            try {
+              anyShareRealtimeService.pushSafarDetected({
+                safarPath: s.workingDirectory || (s.currentDrive ? `${s.currentDrive}\\${s.safarName}` : s.safarName),
+                safarName: s.safarName,
+                city: s.city,
+                driveRoot: s.currentDrive,
+                totalDays: s.totalDays || 10
+              });
+            } catch (err) {
+              console.warn('[TaskTracker] Could not push Safar to AnyShare:', s.safarName, err);
+            }
+          }
+        }
+
         if (showNotice) {
           playSuccess()
           showToast({
@@ -260,6 +278,12 @@ export default function TaskTracker(): JSX.Element {
 
   // ── Auto-Watcher & Drive Sentinel Hook ──
   useEffect(() => {
+    // Listen for remote scan requests from AnyShare Web Portal
+    anyShareRealtimeService.setScanRequestedCallback(() => {
+      console.log('[TaskTracker] Inbound scan requested from AnyShare Web Portal — rescanning drives...');
+      doScan(false);
+    });
+
     loadDrives().then(loaded => {
       refreshDriveSpaces(loaded)
       doScan()

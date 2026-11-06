@@ -13,6 +13,7 @@ import { useSound } from '../../components/SoundProvider'
 import confetti from 'canvas-confetti'
 import { useTitleAdderStore, titleAdderStore } from '../../stores/titleAdderStore'
 import { getPrefixColorTheme } from '../../utils/safarUtils'
+import { anyShareRealtimeService } from '../../services/anyshareRealtimeService'
 
 interface CustomAudioSelectProps {
   value: string
@@ -1015,6 +1016,102 @@ export default function TitleAdder(): JSX.Element {
   const [availablePrefixes, setAvailablePrefixes] = useState<string[]>([])
   const [safarFinalInfo, setSafarFinalInfo] = useState<any>(null)
 
+  const fileOutputFolders = storeState.fileOutputFolders || {}
+  const setFileOutputFolders = (mapOrUpdater: Record<string, string> | ((prev: Record<string, string>) => Record<string, string>)) => {
+    const next = typeof mapOrUpdater === 'function' ? mapOrUpdater(storeState.fileOutputFolders || {}) : mapOrUpdater
+    setStoreState({ fileOutputFolders: next })
+  }
+
+  const autoDetectOutputFoldersForFiles = async (paths: string[]) => {
+    const api = (window as any).api
+    if (!api?.titleAdder?.resolveSafarFinalPath || !paths || paths.length === 0) return
+    const newMap: Record<string, string> = { ...(storeState.fileOutputFolders || {}) }
+    let primaryTarget = outputFolder
+    let primaryInfo: any = safarFinalInfo
+
+    for (const filePath of paths) {
+      if (!filePath) continue
+      try {
+        const res = await api.titleAdder.resolveSafarFinalPath(filePath)
+        if (res && res.success && res.targetPath) {
+          newMap[filePath] = res.targetPath
+          if (!primaryTarget) {
+            primaryTarget = res.targetPath
+            primaryInfo = res
+
+            // Push detected Safar path to AnyShare
+            try {
+              anyShareRealtimeService.pushSafarDetected({
+                safarPath: res.targetPath,
+                safarName: res.safarName,
+                city: res.city,
+                dateFolder: res.dateFolder
+              });
+            } catch (e) {}
+          }
+        }
+      } catch (err) {
+        console.warn('[TitleAdder] Could not resolve Safar path for:', filePath, err)
+      }
+    }
+
+    setFileOutputFolders(newMap)
+    if (primaryTarget && !outputFolder) {
+      setOutputFolder(primaryTarget)
+      setSafarFinalInfo(primaryInfo)
+      const check = await validatePathOnDisk(primaryTarget)
+      setOutputExists(check.valid)
+      setOutputPathError(check.reason || null)
+    }
+  }
+
+  const handleSelectCustomOutputForFile = async (filePath: string) => {
+    const api = (window as any).api
+    if (!api?.dialog?.openFolder) return
+    const currentFolder = fileOutputFolders[filePath] || outputFolder || ''
+    const picked = await api.dialog.openFolder({
+      title: `Select Output Folder for ${filePath.split(/[\\/]/).pop()}`,
+      defaultPath: currentFolder
+    })
+    if (picked) {
+      setFileOutputFolders(prev => ({
+        ...prev,
+        [filePath]: picked
+      }))
+      showToast({
+        title: 'File Output Folder Updated 📁',
+        message: `${filePath.split(/[\\/]/).pop()} ➔ ${picked}`,
+        type: 'info'
+      })
+      playSuccess()
+    }
+  }
+
+  const handleResetCustomOutputForFile = async (filePath: string) => {
+    const api = (window as any).api
+    if (!api?.titleAdder?.resolveSafarFinalPath) return
+    try {
+      const res = await api.titleAdder.resolveSafarFinalPath(filePath)
+      if (res && res.success && res.targetPath) {
+        setFileOutputFolders(prev => ({
+          ...prev,
+          [filePath]: res.targetPath
+        }))
+        showToast({
+          title: 'Output Folder Reset ↺',
+          message: `Auto-detected: ${res.targetPath}`,
+          type: 'success'
+        })
+      } else {
+        setFileOutputFolders(prev => {
+          const next = { ...prev }
+          delete next[filePath]
+          return next
+        })
+      }
+    } catch {}
+  }
+
   const autoDetectSafarFinal = async (samplePath: string) => {
     const api = (window as any).api
     if (!api?.titleAdder?.resolveSafarFinalPath || !samplePath) return
@@ -1031,6 +1128,16 @@ export default function TitleAdder(): JSX.Element {
           message: `${res.safarName ? res.safarName + ' ➔ ' : ''}Final\\${res.dateFolder}`,
           type: 'success'
         })
+
+        // Automatically push detected Safar path to AnyShare Web Portal
+        try {
+          anyShareRealtimeService.pushSafarDetected({
+            safarPath: res.targetPath,
+            safarName: res.safarName,
+            city: res.city,
+            dateFolder: res.dateFolder
+          });
+        } catch (e) {}
       }
     } catch (err) {
       console.warn('[TitleAdder] Could not auto-resolve Safar final path:', err)
@@ -1038,8 +1145,13 @@ export default function TitleAdder(): JSX.Element {
   }
 
   useEffect(() => {
-    if (mode === 'single' && videoFiles.length > 0 && !safarFinalInfo) {
-      autoDetectSafarFinal(videoFiles[0])
+    if (mode === 'single' && videoFiles.length > 0) {
+      const needsDetection = videoFiles.some(f => !fileOutputFolders[f])
+      if (needsDetection) {
+        autoDetectOutputFoldersForFiles(videoFiles)
+      } else if (!safarFinalInfo && videoFiles[0]) {
+        autoDetectSafarFinal(videoFiles[0])
+      }
     }
   }, [mode, videoFiles])
 
@@ -1867,7 +1979,15 @@ export default function TitleAdder(): JSX.Element {
 
   const removeVideoFile = (indexToRemove: number) => {
     const updated = videoFiles.filter((_, i) => i !== indexToRemove)
+    const targetFile = videoFiles[indexToRemove]
     setVideoFiles(updated)
+    if (targetFile) {
+      setFileOutputFolders(prev => {
+        const next = { ...prev }
+        delete next[targetFile]
+        return next
+      })
+    }
     const basenames = updated.map(f => f.split(/[\\/]/).pop() || '')
     setAvailableVideos(basenames)
     setWatermarkedVideos(new Set(basenames))
@@ -1885,6 +2005,7 @@ export default function TitleAdder(): JSX.Element {
     setAvailableVideos([])
     setMutedVideos(new Set())
     setWatermarkedVideos(new Set())
+    setFileOutputFolders({})
   }
 
   const handleDragEnter = (e: React.DragEvent) => {
@@ -1994,7 +2115,7 @@ export default function TitleAdder(): JSX.Element {
               showToast({ title: 'Videos Loaded', message: `Found and loaded ${folderVideos.length} videos from folder`, type: 'success' })
               playSuccess()
               if (fullPaths[0]) {
-                autoDetectSafarFinal(fullPaths[0])
+                autoDetectOutputFoldersForFiles(fullPaths)
               }
               return
             }
@@ -2016,7 +2137,7 @@ export default function TitleAdder(): JSX.Element {
         showToast({ title: 'Videos Loaded', message: `Dragged and loaded ${allPaths.length} video file${allPaths.length > 1 ? 's' : ''}`, type: 'success' })
         playSuccess()
         if (allPaths[0]) {
-          autoDetectSafarFinal(allPaths[0])
+          autoDetectOutputFoldersForFiles(allPaths)
         }
       } else {
         showToast({ title: 'No Videos Found', message: 'Dragged files are not supported video formats (.mp4, .mov, .mkv)', type: 'warning' })
@@ -2213,7 +2334,44 @@ export default function TitleAdder(): JSX.Element {
     unsubs.push(api.titleAdder.onLog((d: any) => addLine(d.message, d.level)))
     unsubs.push(api.titleAdder.onVideosDone((d: any) => {
       setDone(d.done)
-      if (d.total) setTotal(d.total)
+
+    }))
+    unsubs.push(api.titleAdder.onVideoFinished?.((d: any) => {
+      const finishedPath = d.videoPath || d.rawVideoPath || ''
+      const finishedBase = (finishedPath ? finishedPath.split(/[\\/]/).pop() : '') || (d.stem ? `${d.stem}.mp4` : '')
+      const finishedCanonical = finishedPath ? getCanonicalStem(finishedPath) : (d.stem || '')
+
+      setVideoFiles(prev => {
+        return prev.filter(f => {
+          if (!f) return false
+          if (finishedPath && (f === finishedPath || f.toLowerCase() === finishedPath.toLowerCase())) return false
+          const fBase = f.split(/[\\/]/).pop() || ''
+          if (finishedBase && fBase.toLowerCase() === finishedBase.toLowerCase()) return false
+          if (finishedCanonical && getCanonicalStem(f) === finishedCanonical) return false
+          return true
+        })
+      })
+
+      setAvailableVideos(prev => {
+        return prev.filter(f => {
+          if (!f) return false
+          const fBase = f.split(/[\\/]/).pop() || ''
+          if (finishedBase && (f.toLowerCase() === finishedBase.toLowerCase() || fBase.toLowerCase() === finishedBase.toLowerCase())) return false
+          if (finishedCanonical && getCanonicalStem(f) === finishedCanonical) return false
+          return true
+        })
+      })
+
+      setFileOutputFolders(prev => {
+        const next = { ...prev }
+        if (finishedPath) delete next[finishedPath]
+        if (d.rawVideoPath) delete next[d.rawVideoPath]
+        return next
+      })
+
+      addLine(`✔ Video rendered & removed from queue: ${finishedBase || d.stem}`, 'info')
+
+
     }))
     unsubs.push(api.titleAdder.onSetBatchSource?.((rawPayload: string) => {
       let targetPath = ''
@@ -2264,7 +2422,8 @@ export default function TitleAdder(): JSX.Element {
     unsubs.push(api.titleAdder.onDone((d: any) => {
       setRunning(false)
       setProgress(100)
-      if (d.total) setTotal(d.total)
+
+
       setStatus(d.done > 0 ? 'Completed' : 'Failed')
       setSpeed('—')
       setFps('—')
@@ -2600,6 +2759,7 @@ export default function TitleAdder(): JSX.Element {
       batchSource: effectiveSource,
       batchSources: effectiveSources,
       videoFiles,
+      fileOutputFolders,
       outputFolder,
       duration: dur,
       jobId: jobIdRef.current, 
@@ -2671,7 +2831,7 @@ export default function TitleAdder(): JSX.Element {
           showToast({ title: 'Videos Selected', message: `Loaded ${validFiles.length} video file${validFiles.length > 1 ? 's' : ''}`, type: 'success' })
           playSuccess()
           if (validFiles[0]) {
-            autoDetectSafarFinal(validFiles[0])
+            autoDetectOutputFoldersForFiles(validFiles)
           }
         } else {
           showToast({ title: 'Group Photo Skipped', message: 'Group photo videos are skipped and not rendered by Title Adder.', type: 'info' })
@@ -3381,9 +3541,64 @@ export default function TitleAdder(): JSX.Element {
                                     padding: '4px 6px'
                                   }}
                                 >
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, flex: 1 }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1, flexWrap: 'wrap' }}>
                                     <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>#{idx + 1}</span>
-                                    <span className="truncate" title={f}>{name}</span>
+                                    <span className="truncate" title={f} style={{ fontWeight: 600, maxWidth: '160px' }}>{name}</span>
+
+                                    {/* Per-File Output Folder Destination Badge */}
+                                    {(() => {
+                                      const fileTarget = fileOutputFolders[f] || outputFolder || ''
+                                      const displayTarget = fileTarget ? (fileTarget.length > 26 ? '...' + fileTarget.slice(-24) : fileTarget) : 'Auto-detecting output...'
+                                      return (
+                                        <div
+                                          className="ta-file-output-pill"
+                                          onClick={(e) => {
+                                            e.stopPropagation()
+                                            handleSelectCustomOutputForFile(f)
+                                          }}
+                                          title={`Output Destination for this file:\n${fileTarget || 'Pending detection'}\n\nClick to set a different output folder for this file.`}
+                                          style={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '4px',
+                                            background: 'rgba(56, 189, 248, 0.1)',
+                                            border: '1px solid rgba(56, 189, 248, 0.25)',
+                                            color: '#38bdf8',
+                                            borderRadius: '6px',
+                                            padding: '2px 7px',
+                                            fontSize: '11px',
+                                            cursor: 'pointer',
+                                            maxWidth: '220px'
+                                          }}
+                                        >
+                                          <span style={{ fontSize: '11px' }}>🎯</span>
+                                          <span className="truncate" style={{ maxWidth: '150px' }}>{displayTarget}</span>
+                                          <span style={{ fontSize: '10px', opacity: 0.8 }}>📁</span>
+                                        </div>
+                                      )
+                                    })()}
+
+                                    {fileOutputFolders[f] && (
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          handleResetCustomOutputForFile(f)
+                                        }}
+                                        title="Reset to auto-detected Safar Final path"
+                                        style={{
+                                          background: 'none',
+                                          border: 'none',
+                                          color: 'var(--text-muted)',
+                                          cursor: 'pointer',
+                                          padding: '2px 4px',
+                                          fontSize: '11px',
+                                          lineHeight: 1
+                                        }}
+                                      >
+                                        ↺
+                                      </button>
+                                    )}
                                   </div>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
                                     {isMissing && (
@@ -3429,7 +3644,9 @@ export default function TitleAdder(): JSX.Element {
                       <p className="ta-ws-card-sub">
                         {mode === 'batch' 
                           ? 'Each folder’s videos will automatically be saved into its own date-named output folder' 
-                          : 'Destination directory where processed videos will be saved'}
+                          : (videoFiles.length > 1
+                              ? 'Each video file auto-detects its own output destination (customizable per file above)'
+                              : 'Destination directory where processed videos will be saved')}
                       </p>
                     </div>
                   </div>
@@ -3635,6 +3852,7 @@ export default function TitleAdder(): JSX.Element {
                       setWatermarkedVideos(new Set(availableVideos))
                     } else {
                       setWatermarkedVideos(new Set())
+    setFileOutputFolders({})
                     }
                   }}
                 >
@@ -3653,6 +3871,7 @@ export default function TitleAdder(): JSX.Element {
                           setWatermarkedVideos(new Set(availableVideos))
                         } else {
                           setWatermarkedVideos(new Set())
+    setFileOutputFolders({})
                         }
                       }}
                     >
@@ -3895,6 +4114,7 @@ export default function TitleAdder(): JSX.Element {
                     size="sm"
                     onClick={() => {
                       setWatermarkedVideos(new Set())
+    setFileOutputFolders({})
                       playTick()
                     }}
                   >
