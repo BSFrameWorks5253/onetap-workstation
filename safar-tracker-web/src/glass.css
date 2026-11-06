@@ -246,6 +246,29 @@ tbody tr:hover { background: rgba(255,255,255,.38); }
 }
 
 /* Readable defaults, keyboard support, and comfortable touch targets. */
+:root {
+  --font-ui: "Segoe UI Variable Text", "Segoe UI", Aptos, Inter, system-ui, sans-serif;
+  --font-display: "Segoe UI Variable Display", "Segoe UI", Aptos Display, Inter, system-ui, sans-serif;
+  font-family: var(--font-ui);
+  font-optical-sizing: auto;
+}
+#root .brand-mark,
+#root .brand strong,
+#root .page-heading h1,
+#root .summary-main strong,
+#root .ring b,
+#root .stage-summary > strong,
+#root .panel-heading h2,
+#root .editor-card-main strong,
+#root .editor-stats strong,
+#root .editor-empty h2,
+#root .pipeline-column-head strong,
+#root .pipeline-task strong,
+#root .settings-card h2,
+#root .sync-copy h3 {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+}
 .visually-hidden,
 .skip-link:not(:focus) {
   position: absolute;
