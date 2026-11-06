@@ -233,6 +233,25 @@ function AppInner(): JSX.Element {
 
   // Persistent AnyShare Cloud Nexus Listener (Remote Render & Pairing)
   useEffect(() => {
+    const api = (window as any).api
+    const syncTrackerSnapshot = async () => {
+      if (!api?.taskTracker?.scan) return
+      try {
+        const settings = await api.settings?.getAll?.()
+        let workspaces = Array.isArray(settings?.task_tracker_drives) ? settings.task_tracker_drives : []
+        if (workspaces.length === 0) {
+          try {
+            const saved = JSON.parse(localStorage.getItem('ot_tracker_drives') || '[]')
+            if (Array.isArray(saved)) workspaces = saved
+          } catch {}
+        }
+        const legacyPath = localStorage.getItem('ot_tracker_working_path') || ''
+        const result = await api.taskTracker.scan(workspaces.length > 0 ? { workspaces } : legacyPath ? { workingPath: legacyPath } : {})
+        anyShareRealtimeService.syncSafarTrackerSnapshot(result?.safars || [], result?.tasks || [])
+      } catch (error) {
+        console.warn('[App] Background Safar sync failed:', error)
+      }
+    }
     try {
       anyShareRealtimeService.init((msg) => {
         showToast({
@@ -241,10 +260,15 @@ function AppInner(): JSX.Element {
           type: 'info'
         })
       })
+      anyShareRealtimeService.setScanRequestedCallback(syncTrackerSnapshot)
     } catch (e) {
       console.warn('Realtime nexus init failed:', e)
     }
+    const initialSync = window.setTimeout(syncTrackerSnapshot, 8000)
+    const syncTimer = window.setInterval(syncTrackerSnapshot, 10 * 60 * 1000)
     return () => {
+      window.clearTimeout(initialSync)
+      window.clearInterval(syncTimer)
       anyShareRealtimeService.destroy()
     }
   }, [showToast])

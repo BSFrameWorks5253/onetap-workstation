@@ -49,6 +49,55 @@
   box-sizing: border-box;
 }
 
+/* Refined tracker surfaces and hierarchy across the One Tap theme variants. */
+.tracker-page {
+  gap: 16px;
+  padding: 18px 20px 28px;
+}
+
+.tracker-header,
+.tracker-kpi-card,
+.tracker-safar-card,
+.tracker-table-wrap,
+.tracker-pipeline-column,
+.tracker-inspect-panel {
+  border-color: var(--border);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+
+.tracker-header {
+  padding: 15px 18px;
+  border-radius: var(--radius-card);
+}
+
+.tracker-header-title {
+  font-size: 19px;
+  letter-spacing: -0.45px;
+}
+
+.tracker-header-sub {
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.tracker-kpi-card,
+.tracker-safar-card {
+  border-radius: var(--radius-card);
+}
+
+.tracker-page button {
+  transition: background-color var(--dur-fast) ease, border-color var(--dur-fast) ease,
+    box-shadow var(--dur-fast) ease, transform var(--dur-fast) ease;
+}
+
+.tracker-page button:focus-visible,
+.tracker-page input:focus-visible,
+.tracker-page select:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--theme-accent) 55%, var(--border));
+  outline-offset: 2px;
+}
+
 /* ── 1. Hero Command Header ── */
 .tracker-header {
   display: flex;

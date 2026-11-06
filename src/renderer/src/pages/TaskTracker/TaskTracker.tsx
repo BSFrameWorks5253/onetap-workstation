@@ -3,6 +3,7 @@ import { useToast } from '../../components/Toast'
 import { useSound } from '../../components/SoundProvider'
 import Modal from '../../components/Modal'
 import { PageIcon } from '../../components/PageIcon'
+import { anyShareRealtimeService } from '../../services/anyshareRealtimeService'
 import {
   SafarGroupItem,
   TrackerTaskItem,
@@ -239,6 +240,9 @@ export default function TaskTracker(): JSX.Element {
         setSafars(res.safars || [])
         setTasks(res.tasks || [])
 
+        // Keep the remote PWA current with Safar and date folder names only.
+        anyShareRealtimeService.syncSafarTrackerSnapshot(res.safars || [], res.tasks || [])
+
         // Automatically push detected Safar campaigns to AnyShare Web Portal
         if (res.safars && res.safars.length > 0) {
           for (const s of res.safars) {
@@ -278,12 +282,6 @@ export default function TaskTracker(): JSX.Element {
 
   // ── Auto-Watcher & Drive Sentinel Hook ──
   useEffect(() => {
-    // Listen for remote scan requests from AnyShare Web Portal
-    anyShareRealtimeService.setScanRequestedCallback(() => {
-      console.log('[TaskTracker] Inbound scan requested from AnyShare Web Portal — rescanning drives...');
-      doScan(false);
-    });
-
     loadDrives().then(loaded => {
       refreshDriveSpaces(loaded)
       doScan()

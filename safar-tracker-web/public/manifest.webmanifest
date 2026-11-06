@@ -1,0 +1,10 @@
+{
+  "name": "One Tap Safar Tracker",
+  "short_name": "Safar Tracker",
+  "description": "Track Safar production from any device.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f4ee",
+  "theme_color": "#f5f4ee",
+  "icons": [{ "src": "/logo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}

@@ -13,14 +13,78 @@ export interface WorkstationTelemetry {
 
 class AnyShareRealtimeService {
   private channel: any = null;
+  private trackerChannel: any = null;
   private heartbeatInterval: any = null;
   private isConnected: boolean = false;
+  private isTrackerConnected: boolean = false;
   private onTelemetryCallback: ((msg: string) => void) | null = null;
   private onScanRequestedCallback: (() => void) | null = null;
   private pushedSafarCache: Set<string> = new Set();
 
   public setScanRequestedCallback(cb: () => void) {
     this.onScanRequestedCallback = cb;
+  }
+
+  public async syncSafarTrackerSnapshot(safars: any[], tasks: any[]) {
+    const now = new Date().toISOString();
+    let priorRows = new Map<string, any>();
+    try {
+      const { data } = await supabaseNexus.from('safar_tracker_snapshots').select('snapshot').eq('id', 'primary').maybeSingle();
+      const previous = data?.snapshot?.tasks;
+      if (Array.isArray(previous)) priorRows = new Map(previous.map((row: any) => [row.id || `${row.safarName}::${row.dateFolder}`, row]));
+    } catch {}
+    const rows = (tasks || []).map((task: any, index: number) => {
+      const safarName = String(task.safarName || '');
+      const dateFolder = String(task.dateFolder || '');
+      const status = String(task.status || 'editing_pending');
+      const stage = status === 'submitted' ? 'jameya' : status === 'uploaded' || status === 'upload_pending' ? 'upload' : status === 'editing' || status === 'review' ? 'editing' : 'rendering';
+      const day = dateFolder.match(/(?:Day[_ -]?|[-_])(\d{1,2})(?:\D|$)/i)?.[1];
+      const hijriYear = safars.find((s: any) => s.safarName === safarName)?.safarYear || '';
+      const id = `${safarName}::${dateFolder}`;
+      const previous = priorRows.get(id);
+      return {
+        id,
+        safarName,
+        dateFolder,
+        hijriDate: day ? `${String(day).padStart(2, '0')} Safar ${hijriYear}`.trim() : '',
+        stage: previous?.stage || stage,
+        dueDate: previous?.dueDate || '',
+        editorName: previous?.editorName || '',
+        updatedAt: now,
+        order: index
+      };
+    }).filter((row: any) => row.safarName && row.dateFolder);
+    if (rows.length === 0 && priorRows.size > 0) {
+      console.warn('[AnyShare Nexus] Empty Safar scan skipped; retaining the last cloud snapshot.');
+      return;
+    }
+    const snapshot = {
+      tasks: rows,
+      folders: [...new Set(rows.map((row: any) => row.dateFolder))],
+      safars: (safars || []).map((s: any) => ({ safarName: String(s.safarName || ''), safarYear: s.safarYear || '', totalDays: s.totalDays || 0 })),
+      updatedAt: now,
+      source: 'onetap-desktop'
+    };
+
+    try {
+      const { error } = await supabaseNexus.from('safar_tracker_snapshots').upsert({ id: 'primary', snapshot, updated_at: now });
+      if (error) throw error;
+    } catch (error) {
+      console.warn('[AnyShare Nexus] Safar tracker snapshot persistence failed; sending a live snapshot instead:', error);
+    }
+    if (this.trackerChannel && this.isTrackerConnected) {
+      this.trackerChannel.send({ type: 'broadcast', event: 'snapshot', payload: { snapshot } })
+        .catch((error: any) => console.warn('[AnyShare Nexus] Safar tracker live broadcast failed:', error));
+    }
+  }
+
+  public notifySafarWebsite(title: string, message: string, type: string) {
+    if (!this.channel || !this.isConnected) return;
+    this.channel.send({
+      type: 'broadcast',
+      event: 'website_user_notification',
+      payload: { id: `safar_${Date.now()}`, type, title, message, timestamp: new Date().toISOString() }
+    }).catch((error: any) => console.warn('[AnyShare Nexus] Safar notification failed:', error));
   }
 
   public init(onTelemetry?: (msg: string) => void) {
@@ -31,6 +95,19 @@ class AnyShareRealtimeService {
       this.channel = supabaseNexus.channel(REALTIME_NEXUS_CHANNEL, {
         config: { broadcast: { self: false } }
       });
+
+      this.trackerChannel = supabaseNexus.channel('one_tap_safar_tracker', {
+        config: { broadcast: { self: false } }
+      });
+      this.trackerChannel
+        .on('broadcast', { event: 'request_snapshot' }, () => {
+          if (this.onScanRequestedCallback) {
+            try { this.onScanRequestedCallback(); } catch {}
+          }
+        })
+        .subscribe((status: string) => {
+          this.isTrackerConnected = status === 'SUBSCRIBED';
+        });
 
       this.channel
         .on('broadcast', { event: 'pairing_claim' }, (res: any) => {
@@ -606,6 +683,11 @@ class AnyShareRealtimeService {
         supabaseNexus.removeChannel(this.channel);
       } catch (e) {}
       this.channel = null;
+    }
+    if (this.trackerChannel) {
+      try { supabaseNexus.removeChannel(this.trackerChannel); } catch (e) {}
+      this.trackerChannel = null;
+      this.isTrackerConnected = false;
     }
     this.isConnected = false;
   }

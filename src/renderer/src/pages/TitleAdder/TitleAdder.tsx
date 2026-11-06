@@ -1591,6 +1591,11 @@ export default function TitleAdder(): JSX.Element {
     if (api?.titleAutomode?.onAmeRenderComplete) {
       unsubs.push(api.titleAutomode.onAmeRenderComplete((data: any) => {
         if (data?.dvdPath) {
+          anyShareRealtimeService.notifySafarWebsite(
+            'Media Encoder batch ready',
+            'All videos in the Media Encoder batch are ready for title adding.',
+            'batch_render_complete'
+          )
           handleMediaEncoderSignalRef.current?.(data.dvdPath, data?.autoStart !== false)
         }
       }))
@@ -2429,6 +2434,13 @@ export default function TitleAdder(): JSX.Element {
       setFps('—')
       setEta('Done')
       if (d.success && d.done > 0) {
+        if (d.done === d.total) {
+          anyShareRealtimeService.notifySafarWebsite(
+            'Title adding finished',
+            `Title processing finished for all ${d.total} videos.`,
+            'title_adder_complete'
+          )
+        }
         // Clear earlier exported videos in Single / Custom mode so they do not linger
         if (mode === 'single' || videoFiles.length > 0) {
           clearAllVideoFiles()
