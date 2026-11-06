@@ -11,8 +11,8 @@ const STAGES: { id: Stage; label: string }[] = [
 ]
 const localKey = 'ot_safar_tracker_snapshot'
 const env = (import.meta as any).env
-const supabaseUrl = env.SUPABASE_URL || 'https://dubscvthmkgkeiqdladp.supabase.co'
-const supabaseKey = env.SUPABASE_PUBLISHABLE_KEY || env.SUPABASE_ANON_KEY || 'sb_publishable_kYApNvq2_6HAfNwJb8hW1g_7iLMSVyk'
+const supabaseUrl = env.VITE_SUPABASE_URL || env.SUPABASE_URL || 'https://dubscvthmkgkeiqdladp.supabase.co'
+const supabaseKey = env.VITE_SUPABASE_PUBLISHABLE_KEY || env.VITE_SUPABASE_ANON_KEY || env.SUPABASE_PUBLISHABLE_KEY || env.SUPABASE_ANON_KEY || 'sb_publishable_kYApNvq2_6HAfNwJb8hW1g_7iLMSVyk'
 const supabase: SupabaseClient = createClient(supabaseUrl, supabaseKey, { auth: { persistSession: true } })
 
 function readLocal(): Snapshot {
