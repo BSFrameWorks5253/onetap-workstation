@@ -497,9 +497,54 @@ td { color: #514d43; font-size: .875rem; }
 .skeleton-copy { width: 52%; height: 12px; }
 .skeleton-date { width: 100%; height: 34px; border-radius: 8px !important; }
 .skeleton-date.short { width: 83%; }
-.skeleton-section-heading i::after, .skeleton-card i::after { position: absolute; inset: 0; content: ''; transform: translateX(-100%); background: linear-gradient(100deg, transparent 15%, rgba(255,255,255,.62) 48%, transparent 82%); animation: safar-skeleton-shimmer 1.65s ease-in-out infinite; }
-.skeleton-status-copy { margin: 0; color: var(--text-secondary); font-size: .875rem; }
+.skeleton-section-heading i::after, .skeleton-card i::after, .skeleton-shimmer::after { position: absolute; inset: 0; content: ''; transform: translateX(-100%); background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,.55) 50%, transparent 100%); animation: safar-skeleton-shimmer 1.5s ease-in-out infinite; }
+.skeleton-status-copy { margin: 0; color: var(--text-secondary); font-size: .875rem; text-align: center; }
 @keyframes safar-skeleton-shimmer { to { transform: translateX(100%); } }
+
+.skeleton-kanban-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  width: 100%;
+}
+
+.skeleton-kanban-col {
+  border-radius: 18px;
+  border: 1px solid var(--glass-border);
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+  box-shadow: var(--glass-shadow);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 420px;
+}
+
+.skeleton-kanban-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 8px;
+  border-bottom: 1px solid color-mix(in srgb, var(--glass-border) 60%, transparent);
+}
+
+.skeleton-shimmer {
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--text-secondary) 14%, var(--surface));
+}
+
+.skeleton-kanban-item {
+  border-radius: 14px;
+  border: 1px solid var(--glass-border);
+  padding: 14px;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
 
 @media (max-width: 760px) {
   .skeleton-dashboard-grid { grid-template-columns: 1fr; }

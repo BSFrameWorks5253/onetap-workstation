@@ -2,7 +2,7 @@
 ; Script generated for BS Framework
 
 #ifndef AppVersion
-#define AppVersion "26.11.14"
+#define AppVersion "26.11.15"
 #endif
 #ifndef OutputBaseFilename
 #define OutputBaseFilename "OneTap-Setup-V-" + AppVersion

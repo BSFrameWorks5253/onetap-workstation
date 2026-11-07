@@ -553,14 +553,27 @@ export function extractCleanDateFolder(name: string): string | null {
   if (['final', 'final titles', 'output', 'outputs', 'export', 'exports', 'dvd', 'titles', 'assets', 'raw'].includes(lower) || lower.startsWith('$') || lower.startsWith('.')) return null
   if (isSafarFolder(clean)) return null
   if (/^(?:intelvga|dptf|mei|realtek|nvidia|amd|driver|drivers|windows|system)/i.test(clean)) return null
-  const ymdMatch = clean.match(/^(\d{4})[\s._\-](\d{1,2})[\s._\-](\d{1,2})/i)
+  const ymdMatch = clean.match(/(?:^|[^\d])(\d{4})[\s._\-](\d{1,2})[\s._\-](\d{1,2})(?:[^\d]|$)/i)
   if (ymdMatch) return `${ymdMatch[1]}-${ymdMatch[2].padStart(2, '0')}-${ymdMatch[3].padStart(2, '0')}`
-  const dmyMatch = clean.match(/^(\d{1,2})[\s._\-](\d{1,2})[\s._\-](\d{4})/i)
+  const dmyMatch = clean.match(/(?:^|[^\d])(\d{1,2})[\s._\-](\d{1,2})[\s._\-](\d{4})(?:[^\d]|$)/i)
   if (dmyMatch) return `${dmyMatch[3]}-${dmyMatch[2].padStart(2, '0')}-${dmyMatch[1].padStart(2, '0')}`
-  const dayMatch = clean.match(/^day[\s._\-]?(\d{1,3})/i)
+  const dayMatch = clean.match(/day[\s._\-]?(\d{1,3})/i)
   if (dayMatch) { const d = parseInt(dayMatch[1], 10); return `Day ${d < 10 ? '0' + d : d}` }
-  const singleDayMatch = clean.match(/^(\d{1,2})$/)
-  if (singleDayMatch) { const d = parseInt(singleDayMatch[1], 10); if (d >= 1 && d <= 31) return `Day ${d < 10 ? '0' + d : d}` }
+  const leadingNumMatch = clean.match(/^(\d{1,2})(?:[\s._\-]+.*)?$/)
+  if (leadingNumMatch) {
+    const d = parseInt(leadingNumMatch[1], 10)
+    if (d >= 1 && d <= 31) return `Day ${d < 10 ? '0' + d : d}`
+  }
+  const dmMatch = clean.match(/^(\d{1,2})[\s._\-](\d{1,2})(?:[\s._\-]+.*)?$/)
+  if (dmMatch) {
+    const d = parseInt(dmMatch[1], 10)
+    const m = parseInt(dmMatch[2], 10)
+    if (d >= 1 && d <= 31 && m >= 1 && m <= 12) return `Day ${d < 10 ? '0' + d : d}`
+  }
+  const stripped = clean.split(/[\s_]+_/)[0].replace(/[-_ ]*(?:waaz|isteqbal|majlis|misaaq|urs|ziyarat|event|morning|evening|night|session).*$/i, '').trim()
+  if (stripped && stripped.length >= 2 && !/^[A-Za-z]+$/.test(stripped)) {
+    return stripped
+  }
   return null
 }
 
@@ -707,9 +720,13 @@ function getFolderNamesSet(rootPath: string): Map<string, string> {
         const lower = ent.name.toLowerCase().trim()
 
         const cleanDate = extractCleanDateFolder(ent.name)
+        const parentName = path.basename(dir).toLowerCase().trim()
         if (cleanDate) {
           const normD = normalizeDateFolderKey(cleanDate)
           if (!map.has(normD)) map.set(normD, full)
+          if (depth >= 1 && parentName) {
+            map.set(`${parentName}::${normD}`, full)
+          }
         }
         if (ent.isDirectory()) {
           const stats = scanFolderMedia(full, 2)
@@ -1225,7 +1242,9 @@ function scanSingleWorkspace(
     for (const dateFolderName of dateFolderNames.values()) {
       const dateKey = normalizeDateFolderKey(dateFolderName)
       const matchedFinalPath = finalDateFoldersMap.get(dateKey) || null
-      const sourceDateFolderPath = path.join(safarPath, dateFolderName)
+      const group = dateGroups.get(dateFolderName)
+      const existingSourcePath = group?.sourcePaths?.find(p => fs.existsSync(p)) || null
+      const sourceDateFolderPath = existingSourcePath || path.join(safarPath, dateFolderName)
       const dateFolderPath = fs.existsSync(sourceDateFolderPath) ? sourceDateFolderPath : matchedFinalPath || sourceDateFolderPath
 
       // Catalog date folder itself
@@ -1308,7 +1327,18 @@ function scanSingleWorkspace(
         } catch {}
       }
 
-      const prInfo = checkAdobeProject(dateFolderPath)
+      let prInfo = checkAdobeProject(dateFolderPath)
+      if (!prInfo.hasPrproj && group?.sourcePaths) {
+        for (const sp of group.sourcePaths) {
+          if (fs.existsSync(sp) && sp !== dateFolderPath) {
+            const altPr = checkAdobeProject(sp)
+            if (altPr.hasPrproj) {
+              prInfo = altPr
+              break
+            }
+          }
+        }
+      }
       if (prInfo.hasPrproj && prInfo.prprojPath) {
         resourcesToUpsert.push({
           safarName: safarFolderName,
@@ -1351,8 +1381,9 @@ function scanSingleWorkspace(
         } catch {}
       }
 
-      const uploadMatchPath = uploadFoldersMap.get(dateKey) || null
-      const deleteMatchPath = deleteFoldersMap.get(dateKey) || null
+      const safarDateKey = `${safarFolderName.toLowerCase()}::${dateKey}`
+      const uploadMatchPath = uploadFoldersMap.get(safarDateKey) || (toUploadPath && path.basename(toUploadPath).toLowerCase() === safarFolderName.toLowerCase() ? uploadFoldersMap.get(dateKey) : null) || null
+      const deleteMatchPath = deleteFoldersMap.get(safarDateKey) || (toDeletePath && path.basename(toDeletePath).toLowerCase() === safarFolderName.toLowerCase() ? deleteFoldersMap.get(dateKey) : null) || null
 
       let status: TaskStatus = 'editing_pending'
 
@@ -2177,7 +2208,7 @@ export async function resetAndCleanTrackerRecords(): Promise<{ success: boolean;
     await runTrackerDbAsync(['--clean-reset'])
     cachedScanResult = null
     lastScanTimestamp = 0
-    const fresh = await scanTrackerDataAsync(lastScanInput || {})
+    const fresh = await scanTrackerDataAsync({ ...(lastScanInput || {}), force: true })
     broadcastChange()
     return { success: true, data: fresh }
   } catch (err: any) {

@@ -30,15 +30,30 @@ export interface WorkstationTelemetry {
 function extractPureDate(name: string): string {
   if (!name) return '';
   const clean = name.trim();
-  const ymdMatch = clean.match(/^(\d{4})[\s._\-](\d{1,2})[\s._\-](\d{1,2})/i);
+  // 1. YYYY-MM-DD anywhere in the string
+  const ymdMatch = clean.match(/(?:^|[^\d])(\d{4})[\s._\-](\d{1,2})[\s._\-](\d{1,2})(?:[^\d]|$)/i);
   if (ymdMatch) return `${ymdMatch[1]}-${ymdMatch[2].padStart(2, '0')}-${ymdMatch[3].padStart(2, '0')}`;
-  const dmyMatch = clean.match(/^(\d{1,2})[\s._\-](\d{1,2})[\s._\-](\d{4})/i);
+  // 2. DD-MM-YYYY anywhere in the string
+  const dmyMatch = clean.match(/(?:^|[^\d])(\d{1,2})[\s._\-](\d{1,2})[\s._\-](\d{4})(?:[^\d]|$)/i);
   if (dmyMatch) return `${dmyMatch[3]}-${dmyMatch[2].padStart(2, '0')}-${dmyMatch[1].padStart(2, '0')}`;
-  const dayMatch = clean.match(/^day[\s._\-]?(\d{1,3})/i);
+  // 3. Day X anywhere
+  const dayMatch = clean.match(/day[\s._\-]?(\d{1,3})/i);
   if (dayMatch) { const d = parseInt(dayMatch[1], 10); return `Day ${d < 10 ? '0' + d : d}`; }
-  const singleDayMatch = clean.match(/^(\d{1,2})$/);
-  if (singleDayMatch) { const d = parseInt(singleDayMatch[1], 10); if (d >= 1 && d <= 31) return `Day ${d < 10 ? '0' + d : d}`; }
-  return clean.split(/[\s_]+_/)[0].trim();
+  // 4. Starting with index / number (e.g. "01 - Waaz", "01_Waaz", "01 Waaz", "01. Waaz", "01")
+  const leadingNumMatch = clean.match(/^(\d{1,2})(?:[\s._\-]+.*)?$/);
+  if (leadingNumMatch) {
+    const d = parseInt(leadingNumMatch[1], 10);
+    if (d >= 1 && d <= 31) return `Day ${d < 10 ? '0' + d : d}`;
+  }
+  // 5. DD-MM (e.g. "24-03", "24_03")
+  const dmMatch = clean.match(/^(\d{1,2})[\s._\-](\d{1,2})(?:[\s._\-]+.*)?$/);
+  if (dmMatch) {
+    const d = parseInt(dmMatch[1], 10);
+    const m = parseInt(dmMatch[2], 10);
+    if (d >= 1 && d <= 31 && m >= 1 && m <= 12) return `Day ${d < 10 ? '0' + d : d}`;
+  }
+  // 6. Generic date-like folder: strip event suffix (_01M, -Waaz, etc.)
+  return clean.split(/[\s_]+_/)[0].replace(/[-_ ]*(?:waaz|isteqbal|majlis|misaaq|urs|ziyarat|event|morning|evening|night|session).*$/i, '').trim();
 }
 
 class AnyShareRealtimeService {
@@ -92,11 +107,15 @@ class AnyShareRealtimeService {
     } catch {}
     const scannedSafarNames = new Set((safars || []).map((s: any) => String(s.safarName || '')).filter(Boolean));
     const safarByName = new Map((safars || []).map((s: any) => [String(s.safarName || ''), s]));
+    let rowId = '';
     const rows = (tasks || []).map((task: any, index: number) => {
       const safarName = String(task.safarName || '');
       const dateFolder = extractPureDate(String(task.dateFolder || '')) || String(task.dateFolder || '');
+      rowId = `${safarName}::${dateFolder}`;
+      const priorTask = priorRows.get(rowId);
       const status = String(task.status || 'editing_pending');
       const isMissing = task.isMissing === true || task.isPresent === false || task.isAvailable === false;
+
       let stage: 'editing' | 'rendering' | 'upload' | 'jameya' = 'editing';
       if (isMissing || status === 'submitted') {
         stage = 'jameya';
@@ -112,17 +131,17 @@ class AnyShareRealtimeService {
       let resolvedStage = stage;
       if (isMissing) {
         resolvedStage = 'jameya';
-      } else if (previous?.stage && previous.stage === 'jameya' && status !== 'upload_pending' && status !== 'uploaded') {
+      } else if (priorTask?.stage && priorTask.stage === 'jameya' && status !== 'upload_pending' && status !== 'uploaded') {
         resolvedStage = 'jameya';
-      } else if (previous?.stage && stage === 'editing' && !task.isManual) {
-        resolvedStage = previous.stage;
+      } else if (priorTask?.stage && stage === 'editing' && !task.isManual) {
+        resolvedStage = priorTask.stage;
       }
       const safar = safarByName.get(safarName);
       const hijriYear = safar?.safarYear || '';
-      const id = `${safarName}::${dateFolder}`;
-      const previous = priorRows.get(id);
+      rowId = `${safarName}::${dateFolder}`;
+      const previous = priorTask;
       return {
-        id,
+        id: rowId,
         safarName,
         dateFolder,
         hijriDate: task.hijriDate || getHijriDate(dateFolder, hijriYear),

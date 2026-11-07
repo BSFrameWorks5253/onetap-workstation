@@ -94,15 +94,24 @@ function dateLabel(dateFolder: string, supplied?: string, safarYear?: string | n
 function extractCleanWebDate(name: string): string {
   if (!name) return ''
   const clean = name.trim()
-  const ymdMatch = clean.match(/^(\d{4})[\s._\-](\d{1,2})[\s._\-](\d{1,2})/i)
+  const ymdMatch = clean.match(/(?:^|[^\d])(\d{4})[\s._\-](\d{1,2})[\s._\-](\d{1,2})(?:[^\d]|$)/i)
   if (ymdMatch) return `${ymdMatch[1]}-${ymdMatch[2].padStart(2, '0')}-${ymdMatch[3].padStart(2, '0')}`
-  const dmyMatch = clean.match(/^(\d{1,2})[\s._\-](\d{1,2})[\s._\-](\d{4})/i)
+  const dmyMatch = clean.match(/(?:^|[^\d])(\d{1,2})[\s._\-](\d{1,2})[\s._\-](\d{4})(?:[^\d]|$)/i)
   if (dmyMatch) return `${dmyMatch[3]}-${dmyMatch[2].padStart(2, '0')}-${dmyMatch[1].padStart(2, '0')}`
-  const dayMatch = clean.match(/^day[\s._\-]?(\d{1,3})/i)
+  const dayMatch = clean.match(/day[\s._\-]?(\d{1,3})/i)
   if (dayMatch) { const d = parseInt(dayMatch[1], 10); return `Day ${d < 10 ? '0' + d : d}` }
-  const singleDayMatch = clean.match(/^(\d{1,2})$/)
-  if (singleDayMatch) { const d = parseInt(singleDayMatch[1], 10); if (d >= 1 && d <= 31) return `Day ${d < 10 ? '0' + d : d}` }
-  return clean.split(/[\s_]+_/)[0].trim()
+  const leadingNumMatch = clean.match(/^(\d{1,2})(?:[\s._\-]+.*)?$/)
+  if (leadingNumMatch) {
+    const d = parseInt(leadingNumMatch[1], 10)
+    if (d >= 1 && d <= 31) return `Day ${d < 10 ? '0' + d : d}`
+  }
+  const dmMatch = clean.match(/^(\d{1,2})[\s._\-](\d{1,2})(?:[\s._\-]+.*)?$/)
+  if (dmMatch) {
+    const d = parseInt(dmMatch[1], 10)
+    const m = parseInt(dmMatch[2], 10)
+    if (d >= 1 && d <= 31 && m >= 1 && m <= 12) return `Day ${d < 10 ? '0' + d : d}`
+  }
+  return clean.split(/[\s_]+_/)[0].replace(/[-_ ]*(?:waaz|isteqbal|majlis|misaaq|urs|ziyarat|event|morning|evening|night|session).*$/i, '').trim()
 }
 
 function dateFolderName(task: Partial<SafarTask>): string {
@@ -159,9 +168,15 @@ function normalizeSnapshot(value: Partial<Snapshot> | null | undefined): Snapsho
       seenKeys.set(key, t)
     } else {
       const existing = seenKeys.get(key)!
-      if (t.updatedAt && existing.updatedAt && t.updatedAt > existing.updatedAt) {
-        seenKeys.set(key, t)
-      }
+      const rank = (st: string) => st === 'jameya' ? 4 : st === 'upload' ? 3 : st === 'rendering' ? 2 : 1
+      const higherStage = rank(t.stage) > rank(existing.stage) ? t.stage : existing.stage
+      seenKeys.set(key, {
+        ...existing,
+        ...t,
+        stage: higherStage,
+        editorName: t.editorName || existing.editorName || '',
+        dueDate: t.dueDate || existing.dueDate || ''
+      })
     }
   }
   const tasks = Array.from(seenKeys.values())
@@ -194,20 +209,20 @@ function SafarLoadingSkeleton({ variant }: { variant: 'dashboard' | 'tracker' | 
         <div className="skeleton-title-row"><i/><i/></div><i className="skeleton-progress"/><i className="skeleton-copy"/><i className="skeleton-date"/><i className="skeleton-date short"/>
       </div>)}</div>
     </> : variant === 'kanban' ? (
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px', marginTop: '16px' }}>
+      <div className="skeleton-kanban-grid">
         {[0, 1, 2, 3].map(col => (
-          <div key={col} style={{ borderRadius: '16px', border: '1px solid var(--border)', background: 'var(--surface)', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', minHeight: '380px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ width: '130px', height: '18px', borderRadius: '6px', background: 'rgba(0,0,0,0.08)' }} />
-              <div style={{ width: '28px', height: '18px', borderRadius: '10px', background: 'rgba(0,0,0,0.06)' }} />
+          <div key={col} className="skeleton-kanban-col">
+            <div className="skeleton-kanban-head">
+              <div className="skeleton-shimmer" style={{ width: '130px', height: '18px' }} />
+              <div className="skeleton-shimmer" style={{ width: '28px', height: '18px', borderRadius: '12px' }} />
             </div>
             {[0, 1, 2].map(card => (
-              <div key={card} style={{ borderRadius: '12px', border: '1px solid var(--border)', padding: '14px', background: 'var(--surface)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <div style={{ width: '70%', height: '16px', borderRadius: '4px', background: 'rgba(0,0,0,0.08)' }} />
-                <div style={{ width: '45%', height: '12px', borderRadius: '4px', background: 'rgba(0,0,0,0.05)' }} />
+              <div key={card} className="skeleton-kanban-item">
+                <div className="skeleton-shimmer" style={{ width: '75%', height: '16px' }} />
+                <div className="skeleton-shimmer" style={{ width: '45%', height: '12px' }} />
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px' }}>
-                  <div style={{ width: '30%', height: '10px', borderRadius: '4px', background: 'rgba(0,0,0,0.04)' }} />
-                  <div style={{ width: '20%', height: '10px', borderRadius: '4px', background: 'rgba(0,0,0,0.04)' }} />
+                  <div className="skeleton-shimmer" style={{ width: '35%', height: '10px' }} />
+                  <div className="skeleton-shimmer" style={{ width: '22%', height: '10px' }} />
                 </div>
               </div>
             ))}
