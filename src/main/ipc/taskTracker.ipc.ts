@@ -519,6 +519,9 @@ export function isSafarFolder(name: string, dirPath?: string): boolean {
   }
   // date deliverables without city handled above
   if (/^day[\s._-]?\d+/i.test(clean)) return false
+  if (/^\d{1,2}$/.test(clean)) return false
+  if (/^\d{1,3}[\s\-_.]+(?:waaz|majlis|isteqbal|misaaq|ziyarat|event|session|morning|evening|night|day)\b/i.test(clean)) return false
+  if (/^(?:waaz|majlis|isteqbal|misaaq|ziyarat|event|session|morning|evening|night)\b/i.test(clean)) return false
   // Standard Safar folder patterns:
   // e.g. "1448-03 Mumbai", "1448_03_Mumbai", "1448 - 03 Mumbai", "1448-03-Mumbai", "1448-03"
   if (/^\d{4}[\s\-_.]+\d{1,3}(?:[\s\-_.]+[A-Za-z].*)?$/i.test(clean)) return true
@@ -574,7 +577,17 @@ export function extractCleanDateFolder(name: string): string | null {
   if (isSystemIgnored(clean)) return null
   const lower = clean.toLowerCase()
   if (['final', 'final titles', 'output', 'outputs', 'export', 'exports', 'dvd', 'titles', 'assets', 'raw'].includes(lower) || lower.startsWith('$') || lower.startsWith('.')) return null
-  if (isSafarFolder(clean)) return null
+  // 1. Session / Waaz formats: "01 Waaz", "01-Waaz", "01_Waaz", "Waaz Day 01", "23-01 Waaz Leicester"
+  const sessionDayMatch = clean.match(/^(\d{1,2})[\s._-]+(?:waaz|majlis|isteqbal|misaaq|ziyarat|event|session)/i)
+  if (sessionDayMatch) {
+    const d = parseInt(sessionDayMatch[1], 10)
+    return `Day ${d < 10 ? '0' + d : d}`
+  }
+  const waazDayMatch = clean.match(/(?:waaz|majlis|isteqbal)[\s._-]+(?:day[\s._-]?)?(\d{1,2})/i)
+  if (waazDayMatch) {
+    const d = parseInt(waazDayMatch[1], 10)
+    return `Day ${d < 10 ? '0' + d : d}`
+  }
   if (/^(?:intelvga|dptf|mei|realtek|nvidia|amd|driver|drivers|windows|system)/i.test(clean)) return null
   const ymdMatch = clean.match(/(?:^|[^\d])(\d{4})[\s._\-](\d{1,2})[\s._\-](\d{1,2})(?:[^\d]|$)/i)
   if (ymdMatch) return `${ymdMatch[1]}-${ymdMatch[2].padStart(2, '0')}-${ymdMatch[3].padStart(2, '0')}`
@@ -593,6 +606,7 @@ export function extractCleanDateFolder(name: string): string | null {
     const m = parseInt(dmMatch[2], 10)
     if (d >= 1 && d <= 31 && m >= 1 && m <= 12) return `Day ${d < 10 ? '0' + d : d}`
   }
+  if (isSafarFolder(clean)) return null
   const stripped = clean.split(/[\s_]+_/)[0].replace(/[-_ ]*(?:waaz|isteqbal|majlis|misaaq|urs|ziyarat|event|morning|evening|night|session).*$/i, '').trim()
   if (stripped && stripped.length >= 2 && !/^[A-Za-z]+$/.test(stripped)) {
     return stripped
@@ -1008,8 +1022,8 @@ function scanSingleWorkspace(
   workingPath: string,
   toUploadPath?: string,
   toDeletePath?: string,
-  pendingPath?: string,
-  driveRootOverride?: string
+  driveRootOverride?: string,
+  pendingPath?: string
 ): { safars: SafarRecord[]; tasks: TaskRecord[]; resources: MediaResourceRecord[] } {
   const tasksToUpsert: TaskRecord[] = []
   const safarsToUpsert: SafarRecord[] = []
@@ -1024,7 +1038,9 @@ function scanSingleWorkspace(
   const targetDriveRoot = driveRootOverride || path.parse(actualWorkingPath).root
   const driveLetterMatch = targetDriveRoot.match(/^([A-Za-z]:)/)
   const driveLetter = driveLetterMatch ? driveLetterMatch[1].toUpperCase() : null
-  if (driveLetter && !verifiedOnlineDrives.has(driveLetter)) {
+  if (actualWorkingPath && fs.existsSync(actualWorkingPath)) {
+    if (driveLetter) verifiedOnlineDrives.add(driveLetter)
+  } else if (driveLetter && !verifiedOnlineDrives.has(driveLetter)) {
     return { safars: [], tasks: [], resources: [] }
   }
 
@@ -1104,7 +1120,8 @@ function scanSingleWorkspace(
         const entries = fs.readdirSync(dir, { withFileTypes: true })
         const hasFinal = entries.some(e => e.isDirectory() && (e.name.toLowerCase() === 'final' || e.name.toLowerCase() === 'final titles'))
         const hasDates = entries.some(e => e.isDirectory() && isDateFolder(e.name))
-        if (isSafarFolder(path.basename(dir)) && (hasFinal || hasDates)) {
+        const hasPrproj = entries.some(e => e.isFile() && e.name.toLowerCase().endsWith('.prproj'))
+        if (isSafarFolder(path.basename(dir), dir) && (hasFinal || hasDates || hasPrproj)) {
           return [dir]
         }
         const found: string[] = []
@@ -1112,7 +1129,7 @@ function scanSingleWorkspace(
           if (!ent.isDirectory() || isSystemIgnored(ent.name)) continue
           const folderKey = ent.name.toUpperCase().replace(/[\s_-]+/g, ' ').trim()
           const isClientContainer = ['CLIENT', 'CLIENTS', 'IN PROCESS', 'TO UPLOAD', 'TO DELETE', 'UPLOADED DATA', 'PENDING', 'SAFARS', 'SAFAR', 'WORKING SAFAR', 'WORKING'].includes(folderKey)
-          if (depth >= 2 && !isClientContainer && !isSafarFolder(ent.name)) continue
+          if (depth >= 2 && !isClientContainer && !isSafarFolder(ent.name, path.join(dir, ent.name))) continue
           found.push(...collectDeepSafars(path.join(dir, ent.name), depth + 1))
         }
         return found
@@ -1125,8 +1142,11 @@ function scanSingleWorkspace(
       safarDirs = discovered
     } else {
       safarDirs = rootEntries
-        .filter(e => e.isDirectory() && !isSystemIgnored(e.name) && isSafarFolder(e.name))
+        .filter(e => e.isDirectory() && !isSystemIgnored(e.name) && isSafarFolder(e.name, path.join(actualWorkingPath, e.name)))
         .map(e => path.join(actualWorkingPath, e.name))
+      if (safarDirs.length === 0 && (hasSubFinal || hasSubDateFolders)) {
+        safarDirs = [actualWorkingPath]
+      }
     }
   }
 
@@ -1930,14 +1950,16 @@ export async function scanTrackerDataAsync(input: {
 
         const workingDir = ws.inProcessPath || ws.driveRoot || ''
         const driveLetter = (ws.driveRoot || workingDir).match(/^([A-Za-z]:)/)?.[1]?.toUpperCase()
-        if (driveLetter && !verifiedOnlineDrives.has(driveLetter)) {
+        if (workingDir && fs.existsSync(workingDir)) {
+          if (driveLetter) verifiedOnlineDrives.add(driveLetter)
+        } else if (driveLetter && !verifiedOnlineDrives.has(driveLetter)) {
           continue // Skip offline drive instantly without touching disk
         }
 
         const scannedDirs = new Set<string>()
         if (workingDir && fs.existsSync(workingDir)) {
           scannedDirs.add(workingDir.toLowerCase())
-          const res = scanSingleWorkspace(workingDir, ws.toUploadPath, ws.toDeletePath, ws.driveRoot)
+          const res = scanSingleWorkspace(workingDir, ws.toUploadPath, ws.toDeletePath, ws.driveRoot, ws.pendingPath)
           allSafarsToUpsert.push(...res.safars)
           allTasksToUpsert.push(...res.tasks)
           allResourcesToUpsert.push(...res.resources)
@@ -1946,7 +1968,7 @@ export async function scanTrackerDataAsync(input: {
         const pendingDir = ws.pendingPath || (ws.driveRoot ? path.join(ws.driveRoot, 'Pending') : null)
         if (pendingDir && fs.existsSync(pendingDir) && !scannedDirs.has(pendingDir.toLowerCase())) {
           scannedDirs.add(pendingDir.toLowerCase())
-          const resPending = scanSingleWorkspace(pendingDir, ws.toUploadPath, ws.toDeletePath, ws.driveRoot)
+          const resPending = scanSingleWorkspace(pendingDir, ws.toUploadPath, ws.toDeletePath, ws.driveRoot, ws.pendingPath)
           for (const s of resPending.safars) {
             s.currentFolder = 'pending'
           }
@@ -1958,7 +1980,7 @@ export async function scanTrackerDataAsync(input: {
         const deleteDir = ws.toDeletePath || (ws.driveRoot ? path.join(ws.driveRoot, 'To Delete') : null)
         if (deleteDir && fs.existsSync(deleteDir) && !scannedDirs.has(deleteDir.toLowerCase())) {
           scannedDirs.add(deleteDir.toLowerCase())
-          const resDelete = scanSingleWorkspace(deleteDir, ws.toUploadPath, ws.toDeletePath, ws.driveRoot)
+          const resDelete = scanSingleWorkspace(deleteDir, ws.toUploadPath, ws.toDeletePath, ws.driveRoot, ws.pendingPath)
           for (const s of resDelete.safars) {
             s.currentFolder = 'to_delete'
             s.isSafarDone = true
@@ -1972,7 +1994,7 @@ export async function scanTrackerDataAsync(input: {
           allResourcesToUpsert.push(...resDelete.resources)
         }
         if (false as boolean) { /* legacy */
-          const res = scanSingleWorkspace(workingDir, ws.toUploadPath, ws.toDeletePath, ws.driveRoot)
+          const res = scanSingleWorkspace(workingDir, ws.toUploadPath, ws.toDeletePath, ws.driveRoot, ws.pendingPath)
           allSafarsToUpsert.push(...res.safars)
           allTasksToUpsert.push(...res.tasks)
           allResourcesToUpsert.push(...res.resources)

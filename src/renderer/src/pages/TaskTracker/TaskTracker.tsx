@@ -149,7 +149,7 @@ export default function TaskTracker(): JSX.Element {
     if (api?.taskTracker?.autoDetectDriveFolders) {
       try {
         const sysDrives: string[] = (await api?.system?.getDrives?.()) || ['F:\\', 'D:\\', 'E:\\', 'C:\\']
-        const prioritized = Array.from(new Set(['F:\\', 'D:\\', 'E:\\', ...sysDrives]))
+        const prioritized = Array.from(new Set(['D:\\', 'F:\\', 'E:\\', ...sysDrives]))
         let changed = false
         for (const drv of prioritized) {
           const normDrv = normalizeDrive(drv)
@@ -417,6 +417,7 @@ export default function TaskTracker(): JSX.Element {
       inProcessPath: folder,
       toUploadPath: `${parentDir}\\To Upload`,
       toDeletePath: `${parentDir}\\To Delete`,
+      pendingPath: `${parentDir}\\Pending`,
       label: folderName
     }
 
