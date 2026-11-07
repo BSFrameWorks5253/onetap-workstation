@@ -8,7 +8,7 @@ import {
   ArrowRight,
   ArrowLeft,
   Calendar,
-  CloudCheck,
+  UploadCloud,
   Film,
   FileCheck2,
   AlertTriangle,
@@ -69,7 +69,7 @@ const COLUMNS: ColumnConfig[] = [
     subtitle: 'Synced to Google Drive & Cloud storage',
     badgeColor: '#059669',
     headerBg: 'rgba(5, 150, 105, 0.08)',
-    icon: <CloudCheck size={17} color="#059669" />
+    icon: <UploadCloud size={17} color="#059669" />
   },
   {
     id: 'jameya',
