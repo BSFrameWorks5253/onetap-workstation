@@ -27,7 +27,8 @@ export function isJunkSafarName(name: string): boolean {
   if (!name) return true;
   const clean = name.trim().toLowerCase();
   if (JUNK_SAFAR_REGEX.test(clean)) return true;
-  if (clean.includes('intel') || clean.includes('driver') || clean.includes('vga')) return true;
+  if (clean.includes('intel') || clean.includes('driver') || clean.includes('vga') || clean.includes('dptf') || clean.includes('mei')) return true;
+  if (clean.includes('in process') || clean.includes('to delete') || clean.includes('to upload') || clean.includes('uploaded data')) return true;
   return false;
 }
 

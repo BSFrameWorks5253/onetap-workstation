@@ -18,6 +18,14 @@ const api = (window as any).api
 const archivedSafarStorageKey = 'ot_tracker_archived_safar_names'
 const removedSafarStorageKey = 'ot_tracker_removed_safar_names'
 
+function isJunkOrContainerSafar(name: string): boolean {
+  if (!name) return true
+  const clean = name.trim().toLowerCase()
+  if (/^(?:in[\s_-]?process|pending|to[\s_-]?delete|to[\s_-]?upload|uploaded[\s_-]?data|uploaded|upload|client|clients|safars?|working[\s_-]?safar|working|final|output|exports?|dvd|intel|intelvga|dptf|mei|realtek|nvidia|amd|driver|drivers|windows|system|\$recycle\.bin)$/i.test(clean)) return true
+  if (clean.includes('intel') || clean.includes('dptf') || clean.includes('mei') || clean.includes('driver')) return true
+  return false
+}
+
 function readSafarNameList(key: string): string[] {
   try {
     const value = JSON.parse(localStorage.getItem(key) || '[]')
@@ -59,14 +67,14 @@ const STATUS_CONFIG: Record<TaskStatus, { label: string; color: string; bg: stri
     stepIndex: 3
   },
   upload_pending: {
-    label: 'Upload Pending (In Final)',
+    label: 'Stage 2: Rendered (In Final)',
     color: '#22D3EE',
     bg: 'rgba(6, 182, 212, 0.15)',
     icon: 'globe',
     stepIndex: 4
   },
   uploaded: {
-    label: 'Uploaded (In To Upload)',
+    label: 'Stage 3: Uploaded (In To Upload)',
     color: '#34D399',
     bg: 'rgba(16, 185, 129, 0.15)',
     icon: 'check_circle',
@@ -283,9 +291,9 @@ export default function TaskTracker(): JSX.Element {
 
         // Keep the remote PWA current with Safar and date folder names only.
         const websiteSafars = (res.websiteSafars || res.safars || [])
-          .filter((s: SafarGroupItem) => !removedSafarNames.includes(s.safarName))
+          .filter((s: SafarGroupItem) => !removedSafarNames.includes(s.safarName) && !isJunkOrContainerSafar(s.safarName))
           .map((s: SafarGroupItem) => ({ ...s, isArchived: archivedSafarNames.includes(s.safarName) }))
-        const websiteTasks = (res.websiteTasks || res.tasks || []).filter((task: TrackerTaskItem) => !removedSafarNames.includes(task.safarName))
+        const websiteTasks = (res.websiteTasks || res.tasks || []).filter((task: TrackerTaskItem) => !removedSafarNames.includes(task.safarName) && !isJunkOrContainerSafar(task.safarName))
         anyShareRealtimeService.syncSafarTrackerSnapshot(websiteSafars, websiteTasks, Boolean(res.websiteScanComplete))
 
         // Automatically push detected Safar campaigns to AnyShare Web Portal
@@ -737,8 +745,17 @@ export default function TaskTracker(): JSX.Element {
           type: 'success'
         })
         if (res.data) {
-          setSafars(res.data.safars || [])
-          setTasks(res.data.tasks || [])
+          const freshSafars = (res.data.safars || []).filter((s: SafarGroupItem) => !isJunkOrContainerSafar(s.safarName))
+          const freshTasks = (res.data.tasks || []).filter((t: TrackerTaskItem) => !isJunkOrContainerSafar(t.safarName))
+          setSafars(freshSafars)
+          setTasks(freshTasks)
+          const websiteSafars = (res.data.websiteSafars || freshSafars)
+            .filter((s: SafarGroupItem) => !removedSafarNames.includes(s.safarName) && !isJunkOrContainerSafar(s.safarName))
+            .map((s: SafarGroupItem) => ({ ...s, isArchived: archivedSafarNames.includes(s.safarName) }))
+          const websiteTasks = (res.data.websiteTasks || freshTasks)
+            .filter((task: TrackerTaskItem) => !removedSafarNames.includes(task.safarName) && !isJunkOrContainerSafar(task.safarName))
+          anyShareRealtimeService.syncSafarTrackerSnapshot(websiteSafars, websiteTasks, true)
+
         } else {
           doScan(true)
         }
@@ -861,6 +878,7 @@ export default function TaskTracker(): JSX.Element {
       setDeleteSafarConfirm(null)
       setSafarStatusFilter('all')
       publishSafarChanges(nextArchived, nextRemoved)
+      void doScan(true)
       showToast({
         title: deleteFolder ? 'Safar Folder Deleted' : 'Safar Removed from Task Manager',
         message: deleteFolder ? `${safar.safarName} and its tracker records were permanently deleted.` : `${safar.safarName} and its saved tracker records were removed. The Safar folder and its files remain on disk.`,

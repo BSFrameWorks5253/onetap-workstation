@@ -31,8 +31,10 @@ function extractPureDate(name: string): string {
   if (!name) return '';
   const clean = name.trim();
   // 1. YYYY-MM-DD anywhere in the string
+  const sessionMatch = clean.match(/(_\d{2}[A-Za-z]|\s*_\d{2}|\s*Session\s*\d+|\s*Morning|\s*Evening|\s*Night)/i);
+  const sessionTag = sessionMatch ? ` ${sessionMatch[1].trim()}` : '';
   const ymdMatch = clean.match(/(?:^|[^\d])(\d{4})[\s._\-](\d{1,2})[\s._\-](\d{1,2})(?:[^\d]|$)/i);
-  if (ymdMatch) return `${ymdMatch[1]}-${ymdMatch[2].padStart(2, '0')}-${ymdMatch[3].padStart(2, '0')}`;
+  if (ymdMatch) return `${ymdMatch[1]}-${ymdMatch[2].padStart(2, '0')}-${ymdMatch[3].padStart(2, '0')}${sessionTag}`;
   // 2. DD-MM-YYYY anywhere in the string
   const dmyMatch = clean.match(/(?:^|[^\d])(\d{1,2})[\s._\-](\d{1,2})[\s._\-](\d{4})(?:[^\d]|$)/i);
   if (dmyMatch) return `${dmyMatch[3]}-${dmyMatch[2].padStart(2, '0')}-${dmyMatch[1].padStart(2, '0')}`;
@@ -133,7 +135,7 @@ class AnyShareRealtimeService {
         resolvedStage = 'jameya';
       } else if (priorTask?.stage && priorTask.stage === 'jameya' && status !== 'upload_pending' && status !== 'uploaded') {
         resolvedStage = 'jameya';
-      } else if (priorTask?.stage && stage === 'editing' && !task.isManual) {
+      } else if (priorTask?.stage && stage === 'editing' && !task.isManual && !scanComplete) {
         resolvedStage = priorTask.stage;
       }
       const safar = safarByName.get(safarName);
