@@ -123,9 +123,18 @@ function dateFolderName(task: Partial<SafarTask>): string {
   return /\.[a-z\d]{2,6}$/i.test(folder) || !isDateFolder ? 'Date folder unavailable' : folder
 }
 
+function isJunkSafarOrHardware(name: string): boolean {
+  const s = String(name || '').trim().toLowerCase()
+  if (!s) return true
+  if (/^(?:intelvga|dptf|mei|realtek|nvidia|amd|driver|drivers|windows|system|\$recycle\.bin)/i.test(s)) return true
+  const rootKey = s.replace(/[\s_-]+/g, ' ')
+  if (['in process', 'to upload', 'to delete', 'uploaded data', 'uploaded', 'upload', 'pending', 'safars', 'safar', 'working safar', 'working', 'client', 'clients', 'final', 'output', 'export'].includes(rootKey)) return true
+  return false
+}
+
 function normalizeSnapshot(value: Partial<Snapshot> | null | undefined): Snapshot {
   const safars = (Array.isArray(value?.safars) ? value.safars : [])
-    .filter(safar => Boolean(safar?.safarName) && !/^(?:intelvga|dptf|mei)/i.test(safar.safarName))
+    .filter(safar => Boolean(safar?.safarName) && !isJunkSafarOrHardware(safar.safarName))
     .map(safar => ({
       safarName: String(safar.safarName),
       safarYear: safar.safarYear,
@@ -138,7 +147,7 @@ function normalizeSnapshot(value: Partial<Snapshot> | null | undefined): Snapsho
   const yearByName = new Map(safars.map(safar => [safar.safarName, safar.safarYear]))
 
   const rawTasks = (Array.isArray(value?.tasks) ? value.tasks : [])
-    .filter((raw: any) => !/^(?:intelvga|dptf|mei)/i.test(String(raw?.safarName || '')))
+    .filter((raw: any) => !isJunkSafarOrHardware(String(raw?.safarName || '')))
     .map((raw: any, index): SafarTask => {
       const dateFolder = dateFolderName({ dateFolder: String(raw.dateFolder || '') })
       const safarName = String(raw.safarName || '')
