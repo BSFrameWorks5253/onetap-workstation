@@ -21,6 +21,16 @@ import {
 } from 'lucide-react';
 import { sendWhatsAppAlert, DEFAULT_WHATSAPP_PHONE } from '../lib/googleAppsScript';
 
+const JUNK_SAFAR_REGEX = /^(?:in[\s_-]?process|pending|to[\s_-]?delete|intel|intelvga|amd|nvidia|system|temp|program|windows|\$rec|delivery|renders?|output|exports?|dptf|mei)$/i;
+
+export function isJunkSafarName(name: string): boolean {
+  if (!name) return true;
+  const clean = name.trim().toLowerCase();
+  if (JUNK_SAFAR_REGEX.test(clean)) return true;
+  if (clean.includes('intel') || clean.includes('driver') || clean.includes('vga')) return true;
+  return false;
+}
+
 export type KanbanStage = 'editing' | 'rendering' | 'upload' | 'jameya';
 
 export interface SafarTaskItem {
@@ -104,10 +114,10 @@ export default function OngoingSafarKanban({
   const ongoingSafars = useMemo(() => {
     const names = new Set<string>();
     safars
-      .filter(s => !s.isArchived && !/^(?:intelvga|dptf|mei)/i.test(s.safarName))
+      .filter(s => !s.isArchived && !isJunkSafarName(s.safarName))
       .forEach(s => s.safarName && names.add(s.safarName));
     tasks
-      .filter(t => !/^(?:intelvga|dptf|mei)/i.test(t.safarName))
+      .filter(t => !isJunkSafarName(t.safarName))
       .forEach(t => t.safarName && names.add(t.safarName));
     return Array.from(names);
   }, [safars, tasks]);

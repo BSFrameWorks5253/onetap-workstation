@@ -23,9 +23,10 @@ import {
   LogIn,
   LogOut,
   CheckCircle2,
-  RefreshCw
+  RefreshCw,
+  Trash2
 } from 'lucide-react'
-import OngoingSafarKanban, { type SafarTaskItem } from './components/OngoingSafarKanban'
+import OngoingSafarKanban, { type SafarTaskItem, isJunkSafarName } from './components/OngoingSafarKanban'
 import PhotoTracker from './components/PhotoTracker'
 import EmailLoginModal from './components/EmailLoginModal'
 import AppLoader from './components/AppLoader'
@@ -245,12 +246,13 @@ function SafarLoadingSkeleton({ variant }: { variant: 'dashboard' | 'tracker' | 
   </section>
 }
 
-function SafarProductionGroup({ group, expanded, onToggle, onArchive, onUpdateTask }: {
+function SafarProductionGroup({ group, expanded, onToggle, onArchive, onUpdateTask, onDelete }: {
   group: SafarGroup
   expanded: boolean
   onToggle: () => void
   onArchive: (isArchived: boolean) => void
   onUpdateTask: (task: SafarTask, changes: Partial<SafarTask>) => void
+  onDelete?: (safarName: string) => void
 }): JSX.Element {
   const year = hijriYearLabel(group.safarYear)
   return <article className="panel safar-group-card">
@@ -260,9 +262,12 @@ function SafarProductionGroup({ group, expanded, onToggle, onArchive, onUpdateTa
         <span className="safar-group-progress"><strong>{group.percent}%</strong><span>{group.completed} of {group.total} submitted</span><i role="progressbar" aria-label={`${group.safarName} completion`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={group.percent}><b style={{ width: `${group.percent}%` }}/></i></span>
         <ChevronDown aria-hidden="true" size={19} className={expanded ? 'expanded' : ''}/>
       </button>
-      <button type="button" className="button-secondary safar-archive-action" aria-label={`${group.isArchived ? 'Restore' : 'Archive'} ${group.safarName}`} onClick={() => onArchive(!group.isArchived)}>
-        {group.isArchived ? <RotateCcw aria-hidden="true" size={16}/> : <Archive aria-hidden="true" size={16}/>}{group.isArchived ? 'Restore' : 'Archive'}
-      </button>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <button type="button" className="button-secondary safar-archive-action" aria-label={`${group.isArchived ? 'Restore' : 'Archive'} ${group.safarName}`} onClick={() => onArchive(!group.isArchived)}>
+          {group.isArchived ? <RotateCcw aria-hidden="true" size={16}/> : <Archive aria-hidden="true" size={16}/>}{group.isArchived ? 'Restore' : 'Archive'}
+        </button>
+        {onDelete && <button type="button" className="button-secondary" style={{ color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.25)', padding: '6px 8px' }} aria-label={`Remove ${group.safarName}`} title={`Permanently remove ${group.safarName}`} onClick={() => onDelete(group.safarName)}><Trash2 aria-hidden="true" size={14}/></button>}
+      </div>
     </div>
     {expanded && <div className="safar-date-list">
       <div className="safar-date-list-heading"><span>Date folder</span><span>Editor</span><span>Stage</span><span>Due date</span></div>
@@ -321,9 +326,10 @@ export default function App(): JSX.Element {
   const safarGroups = useMemo<SafarGroup[]>(() => {
     const grouped = new Map<string, { summary: SafarSummary; tasks: SafarTask[] }>()
     for (const summary of snapshot.safars || []) {
-      if (summary.safarName) grouped.set(summary.safarName, { summary, tasks: [] })
+      if (summary.safarName && !isJunkSafarName(summary.safarName)) grouped.set(summary.safarName, { summary, tasks: [] })
     }
     for (const task of snapshot.tasks) {
+      if (isJunkSafarName(task.safarName)) continue
       if (!grouped.has(task.safarName)) grouped.set(task.safarName, { summary: { safarName: task.safarName }, tasks: [] })
       grouped.get(task.safarName)!.tasks.push(task)
     }
@@ -340,6 +346,7 @@ export default function App(): JSX.Element {
   const safars = useMemo(() => safarGroups.filter(group => !group.isArchived).map(group => group.safarName), [safarGroups])
   const searchTerm = search.trim().toLowerCase()
   const rows = useMemo(() => snapshot.tasks.filter(task =>
+    !isJunkSafarName(task.safarName) &&
     (selectedSafar === 'all' || task.safarName === selectedSafar) &&
     (selectedEditor === 'all' || task.editorName === selectedEditor) &&
     (filter === 'all' || task.stage === filter) &&
@@ -729,6 +736,36 @@ export default function App(): JSX.Element {
     setNotice(`Added date "${cleanFolder}" to ${safarName}.`)
   }
 
+  // Permanently delete a Safar and all its tasks
+  async function handleDeleteSafar(safarName: string) {
+    if (!window.confirm(`Permanently remove "${safarName}" and all its task records?`)) return
+    const current = snapshotRef.current
+    const tasks = current.tasks.filter(t => t.safarName !== safarName)
+    const safars = (current.safars || []).filter(s => s.safarName !== safarName)
+    const next: Snapshot = {
+      ...current,
+      tasks,
+      safars,
+      updatedAt: new Date().toISOString(),
+      source: 'website'
+    }
+    applySnapshot(next)
+    await persistSnapshot(next)
+    await nexusChannelRef.current?.send({
+      type: 'broadcast',
+      event: 'safar_delete',
+      payload: { safarName }
+    })
+    try {
+      await fetch('http://127.0.0.1:5253/api/tasks/delete-safar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ safarName })
+      })
+    } catch {}
+    setNotice(`Removed ${safarName} from tracker.`)
+  }
+
   // Reset and Rescan present folders on workstation disk
   async function handleResetAndRescan() {
     setNotice('Resetting tasks and rescanning workstation disk...')
@@ -972,7 +1009,31 @@ export default function App(): JSX.Element {
               <div className="dashboard-progress" role="progressbar" aria-label={`${group.safarName} completion`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={group.percent}><span style={{ width: `${group.percent}%` }}/></div>
               <p className="dashboard-safar-progress-copy">{group.completed} of {group.total} dates submitted</p>
               {group.tasks.length ? <ul className="safar-preview-list">{group.tasks.slice(0, 3).map(task => <li key={task.id}><strong title={dateFolderName(task)}>{dateFolderName(task)}</strong></li>)}</ul> : <p className="safar-preview-empty">Waiting for date folders to sync.</p>}
-              <button type="button" className="safar-open-link" onClick={() => { setSelectedSafar(group.safarName); navigateTo('ongoing') }}>View Safar Kanban <ArrowUpRight aria-hidden="true" size={15}/></button>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginTop: '6px' }}>
+                <button type="button" className="safar-open-link" onClick={() => { setSelectedSafar(group.safarName); navigateTo('ongoing') }}>View Safar Kanban <ArrowUpRight aria-hidden="true" size={15}/></button>
+                <button
+                  type="button"
+                  title={`Remove ${group.safarName} from tracker`}
+                  onClick={e => { e.stopPropagation(); void handleDeleteSafar(group.safarName) }}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#94a3b8',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontSize: '11px',
+                    padding: '3px 6px',
+                    borderRadius: '6px'
+                  }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#ef4444' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#94a3b8' }}
+                >
+                  <Trash2 size={13} />
+                  <span>Remove</span>
+                </button>
+              </div>
             </article>)}</div>}
           </section>}
 
@@ -1001,7 +1062,7 @@ export default function App(): JSX.Element {
               </div>
             </div>
             <div className="safar-groups-list">
-              {visibleSafarGroups.map(group => <SafarProductionGroup key={group.safarName} group={group} expanded={expandedSafars.has(group.safarName)} onToggle={() => toggleSafarExpanded(group.safarName)} onArchive={archived => void setSafarArchived(group, archived)} onUpdateTask={(task, changes) => void updateTask(task, changes)}/>)}
+              {visibleSafarGroups.map(group => <SafarProductionGroup key={group.safarName} group={group} expanded={expandedSafars.has(group.safarName)} onToggle={() => toggleSafarExpanded(group.safarName)} onArchive={archived => void setSafarArchived(group, archived)} onUpdateTask={(task, changes) => void updateTask(task, changes)} onDelete={safarName => void handleDeleteSafar(safarName)}/>)}
               {!visibleSafarGroups.length && <div className="safar-empty-state">
                 <h3>{view === 'archive' ? archiveSafarGroups.length ? 'No archived dates match' : 'Your archive is empty' : activeSafarGroups.length ? 'No dates match these filters' : 'No active Safars'}</h3>
                 <p>{view === 'archive' ? archiveSafarGroups.length ? 'Clear the filters to see all archived Safars.' : 'Archived Safars will stay here until you restore them.' : activeSafarGroups.length ? 'Try a different search or stage filter.' : 'Safar folders from One Tap will appear here after sync.'}</p>

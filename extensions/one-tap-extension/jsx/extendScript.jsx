@@ -57,9 +57,29 @@ $.runScript.getMarkerNames = function() {
 };
 
 // Helper to find last used preset or bundled high-speed hardware preset
-function getLastUsedEncoderPreset() {
+function getLastUsedEncoderPreset(extPath) {
     try {
-        // 1. Prioritize bundled high-speed GPU optimized preset
+        // 1. If explicit preset passed
+        if (extPath && typeof extPath === "string") {
+            try {
+                var directFile = new File(extPath);
+                if (directFile.exists && directFile.name.match(/\.epr$/i)) return directFile.fsName;
+            } catch (eDir) {}
+        }
+        // 2. Prioritize bundled high-speed GPU preset in extension
+        if (extPath && typeof extPath === "string") {
+            try {
+                var cleanExt = extPath.replace(/\\/g, "/").replace(/\/+$/, "");
+                var directBundled = new File(cleanExt + "/presets/My One.epr");
+                if (directBundled && directBundled.exists) return directBundled.fsName;
+                var pDir = new Folder(cleanExt + "/presets");
+                if (pDir && pDir.exists) {
+                    var pFiles = pDir.getFiles("*.epr");
+                    if (pFiles && pFiles.length > 0) return pFiles[0].fsName;
+                }
+            } catch (eExt) {}
+        }
+        // 3. Prioritize bundled high-speed GPU optimized preset
         try {
             var scriptFile = new File($.fileName);
             if (scriptFile && scriptFile.exists) {
@@ -69,7 +89,27 @@ function getLastUsedEncoderPreset() {
                     return bundledPreset.fsName;
                 }
             }
-        } catch (eBundled) {}
+        } catch (eBundled) {}
+
+        // 4. Common CEP extension directories
+        var commonCep = [
+            "C:/Program Files (x86)/Common Files/Adobe/CEP/extensions/one-tap-extension/presets/My One.epr",
+            "C:/Program Files (x86)/Common Files/Adobe/CEP/extensions/one-tap-parent-extension/presets/My One.epr",
+            "C:/Program Files/Common Files/Adobe/CEP/extensions/one-tap-extension/presets/My One.epr",
+            "C:/Program Files/Common Files/Adobe/CEP/extensions/one-tap-parent-extension/presets/My One.epr"
+        ];
+        try {
+            if (Folder.userData && Folder.userData.exists) {
+                commonCep.push(Folder.userData.fsName + "/Adobe/CEP/extensions/one-tap-extension/presets/My One.epr");
+                commonCep.push(Folder.userData.fsName + "/Adobe/CEP/extensions/one-tap-parent-extension/presets/My One.epr");
+            }
+        } catch (eCep) {}
+        for (var ci = 0; ci < commonCep.length; ci++) {
+            try {
+                var cFile = new File(commonCep[ci]);
+                if (cFile && cFile.exists) return cFile.fsName;
+            } catch (eCf) {}
+        }
 
         var docFolder = Folder.myDocuments;
         var ameDir = new Folder(docFolder.fsName + "/Adobe/Adobe Media Encoder");
@@ -521,7 +561,7 @@ $.runScript.autoInOutMarkers = function (userChoice, addSeqPrefix) {
 // ----------------------
 // Auto MEIO Export (Batch or Selected Custom Markers)
 // ----------------------
-$.runScript.autoMEIO = function (selectedMarkersStr) {
+$.runScript.autoMEIO = function (selectedMarkersStr, explicitExtOrPresetPath) {
     try {
         var selectedList = null;
         if (selectedMarkersStr && selectedMarkersStr !== "") {
@@ -555,13 +595,20 @@ $.runScript.autoMEIO = function (selectedMarkersStr) {
         var outPath = outFolder.fsName;
 
         // Use last used Media Encoder preset (or scan for latest .epr in AME user presets folder)
-        var presetPath = getLastUsedEncoderPreset();
+        // Use last used Media Encoder preset (or scan for latest .epr in extension/AME)
+        var presetPath = getLastUsedEncoderPreset(explicitExtOrPresetPath);
+        if (!presetPath) {
+            return "ERROR|||Could not find Media Encoder export preset (.epr). Please ensure presets/My One.epr is in the extension folder or save an export preset in Media Encoder.";
+        }
+        try {
+            if (app.encoder && app.encoder.launchEncoder) app.encoder.launchEncoder();
+        } catch (eLaunch) {}
 
         // Active sequence + markers
         var seq = app.project.activeSequence;
-        if (!seq) return "No active sequence.";
+        if (!seq) return "ERROR|||No active sequence.";
         var markers = seq.markers;
-        if (!markers) return "No markers found.";
+        if (!markers) return "ERROR|||No markers found.";
 
         var fps = 25.0;
         try {
@@ -584,7 +631,8 @@ $.runScript.autoMEIO = function (selectedMarkersStr) {
         }
         markerItems.sort(function (a, b) { return a.startSec - b.startSec; });
         var count = 0;
-        var queuedFiles = [];
+        var queuedFiles = [];
+        var lastError = "";
 
         // Queue in Media Encoder
         for (var mi = 0; mi < markerItems.length; mi++) {
@@ -598,7 +646,8 @@ $.runScript.autoMEIO = function (selectedMarkersStr) {
                 if (selectedList) {
                     shouldExport = false;
                     for (var k = 0; k < selectedList.length; k++) {
-                        if (selectedList[k] === filename) {
+                        var sItem = selectedList[k];
+                        if (sItem && (sItem === filename || sItem === name || sItem.replace(/\.mp4$/i, "") === name)) {
                             shouldExport = true;
                             break;
                         }
@@ -611,6 +660,12 @@ $.runScript.autoMEIO = function (selectedMarkersStr) {
                     var inSec = sFrame / fps;
                     var outSec = inSec + (1.0 / fps);
                     var objEnd = (curObj && curObj.end && !isNaN(Number(curObj.end.seconds))) ? Number(curObj.end.seconds) : 0;
+                    if (objEnd <= 0 && curObj && curObj.duration) {
+                        try {
+                            var dSec = (!isNaN(Number(curObj.duration.seconds))) ? Number(curObj.duration.seconds) : Number(curObj.duration);
+                            if (dSec > 0) objEnd = cur.startSec + dSec;
+                        } catch (eDur) {}
+                    }
                     if (objEnd > cur.startSec + (0.5 / fps)) {
                         var eFrame = Math.round(objEnd * fps);
                         outSec = Math.max(inSec + (1.0 / fps), eFrame / fps);
@@ -633,8 +688,12 @@ $.runScript.autoMEIO = function (selectedMarkersStr) {
                         tPos.seconds = inSec;
                         if (seq.setPlayerPosition) seq.setPlayerPosition(tPos.ticks);
                     } catch (ePos) {}
-                    seq.setInPoint(inSec);
-                    seq.setOutPoint(outSec);
+                    try { seq.setInPoint(inSec); } catch (eIn) {
+                        try { var tI = new Time(); tI.seconds = inSec; seq.setInPoint(tI); } catch (eI2) { seq.setInPoint(String(inSec)); }
+                    }
+                    try { seq.setOutPoint(outSec); } catch (eOut) {
+                        try { var tO = new Time(); tO.seconds = outSec; seq.setOutPoint(tO); } catch (eO2) { seq.setOutPoint(String(outSec)); }
+                    }
                     $.sleep(120);
 
 
@@ -655,7 +714,7 @@ $.runScript.autoMEIO = function (selectedMarkersStr) {
                         seq,
                         outFile,
                         presetPath,
-                        app.encoder.ENCODE_IN_TO_OUT,
+                        (typeof app.encoder.ENCODE_IN_TO_OUT !== "undefined" ? app.encoder.ENCODE_IN_TO_OUT : 1),
                         1
                     );
                     $.sleep(60);
@@ -664,12 +723,16 @@ $.runScript.autoMEIO = function (selectedMarkersStr) {
                 }
 
             } catch (e) {
-                // continue with next marker
+                lastError = e.toString();
             }
 
             // item processed in for-loop
         }
 
+        if (count === 0) {
+            if (lastError) return "ERROR|||Media Encoder queue error: " + lastError;
+            return "ERROR|||No matching markers found to export. Please ensure markers are placed on timeline.";
+        }
         return "SUCCESS|||" + outPath + "|||Auto MEIO: Queued " + count + " jobs to Media Encoder.\n\nOpen Media Encoder to start the render.|||" + queuedFiles.join(";;;");
 
     } catch (err) {

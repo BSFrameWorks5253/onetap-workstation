@@ -1185,7 +1185,8 @@
 
         @media (min-width: 420px) {
             .panel-container { max-width: 100%; }
-            .tab-page.active { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+            #page-batch.tab-page.active, #page-custom.tab-page.active { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+            #page-relink.tab-page.active { display: flex !important; flex-direction: column !important; gap: 8px; }
             .chrome-btn-wrap { width: 100%; }
         }
     </style>
@@ -1654,7 +1655,14 @@
 
         function runAutoBatch() {
             showStatus("⏳ Exporting all markers...", "var(--accent)");
-            cs.evalScript("$.runScript.autoMEIO()", function (r) {
+            var extPath = "";
+            try {
+                if (typeof cs !== "undefined" && cs.getSystemPath && typeof SystemPath !== "undefined") {
+                    extPath = cs.getSystemPath(SystemPath.EXTENSION) || "";
+                }
+            } catch (ePath) {}
+            var escapedExt = (extPath || "").replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            cs.evalScript("$.runScript.autoMEIO('', '" + escapedExt + "')", function (r) {
                 if (r.indexOf("SUCCESS|||") === 0) {
                     var parts = r.split("|||");
                     var path = parts[1];
@@ -1671,7 +1679,14 @@
         function runAutoCustom(selectedMarkersStr) {
             showStatus("⏳ Exporting selected markers...", "var(--accent)");
             var escapedStr = (selectedMarkersStr || "").replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-            cs.evalScript("$.runScript.autoMEIO('" + escapedStr + "')", function (r) {
+            var extPath = "";
+            try {
+                if (typeof cs !== "undefined" && cs.getSystemPath && typeof SystemPath !== "undefined") {
+                    extPath = cs.getSystemPath(SystemPath.EXTENSION) || "";
+                }
+            } catch (ePath) {}
+            var escapedExt = (extPath || "").replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            cs.evalScript("$.runScript.autoMEIO('" + escapedStr + "', '" + escapedExt + "')", function (r) {
                 if (r.indexOf("SUCCESS|||") === 0) {
                     var parts = r.split("|||");
                     var path = parts[1];

@@ -1855,6 +1855,7 @@ type TrackerScanResult = { safars: SafarRecord[]; tasks: TaskRecord[]; websiteSa
 let cachedScanResult: TrackerScanResult | null = null
 let lastScanTimestamp = 0
 let isScanRunning = false
+let lastScanInput: any = null
 
 export function deduplicateTasks(tasks: TaskRecord[]): TaskRecord[] {
   const map = new Map<string, TaskRecord>()
@@ -1919,6 +1920,7 @@ export async function scanTrackerDataAsync(input: {
     return py?.data ? enrichTrackerData(py.data.safars || [], py.data.tasks || []) : { safars: [], tasks: [] }
   }
 
+  lastScanInput = Array.isArray(input) ? { workspaces: input } : (input || {})
   isScanRunning = true
   updateOnlineDrives()
 

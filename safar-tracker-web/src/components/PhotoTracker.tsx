@@ -25,6 +25,7 @@ import {
   PhotoDeliverable,
   PhotoStats
 } from '../lib/googleAppsScript';
+import { isJunkSafarName } from './OngoingSafarKanban';
 
 export default function PhotoTracker({
   tasks,
@@ -38,8 +39,8 @@ export default function PhotoTracker({
   // Determine available Safars from Task Tracker
   const safarNames = useMemo(() => {
     const set = new Set<string>();
-    safars.forEach(s => s.safarName && set.add(s.safarName));
-    tasks.forEach(t => t.safarName && set.add(t.safarName));
+    safars.forEach(s => s.safarName && !isJunkSafarName(s.safarName) && set.add(s.safarName));
+    tasks.forEach(t => t.safarName && !isJunkSafarName(t.safarName) && set.add(t.safarName));
     return Array.from(set);
   }, [safars, tasks]);
 
