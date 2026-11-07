@@ -538,6 +538,12 @@ function parseSafarMetadata(folderName: string): { name: string; year?: number; 
   return { name: folderName, year, serial, city }
 }
 
+export const excludedFolderKeys = new Set<string>()
+
+export function normalizeDateFolderKey(name: string): string {
+  return (name || '').toLowerCase().replace(/[\s_-]+/g, ' ').trim()
+}
+
 export function isDateFolder(name: string): boolean {
   if (!name) return false
   const clean = name.trim().toLowerCase()
@@ -565,8 +571,9 @@ export function isDateFolder(name: string): boolean {
     /^\d{4}[\s._\-]\d{1,2}[\s._\-]\d{1,2}/.test(clean) ||
     /^\d{1,2}[\s._\-]\d{1,2}[\s._\-]\d{2,4}/.test(clean) ||
     /^day[\s._\-]?\d+/i.test(clean) ||
-    /^\d{1,2}[\s._\-]\d{1,2}\b/.test(clean) ||
-    /^\d{1,2}$/.test(clean)
+    // Reject camera / sub-event items
+    (!(/^cam\s*\d+/i.test(clean) || /^cam\b/i.test(clean) || /^\d{1,3}\s*[-_]\s*[a-z]{1,4}\s*[-_]/i.test(clean) || /^[-_]\d{1,4}[a-z]?[-_]/i.test(clean)) && false) ||
+    /^\d{2,4}[\s._\-]\d{1,2}[\s._\-]+_?\d{1,2}[a-z]/i.test(clean)
   )
 }
 
@@ -676,7 +683,8 @@ function getFolderNamesSet(rootPath: string): Map<string, string> {
         const lower = ent.name.toLowerCase().trim()
 
         if (ent.isDirectory()) {
-          if (!map.has(lower)) {
+          const stats = scanFolderMedia(full, 2)
+          if (stats.videoCount > 0 && !map.has(lower)) {
             map.set(lower, full)
           }
           walk(full, depth + 1)
@@ -1038,7 +1046,7 @@ function scanSingleWorkspace(
         const fSubs = fs.readdirSync(finalDirPath, { withFileTypes: true })
         for (const fsEnt of fSubs) {
           if (fsEnt.isDirectory() && isDateFolder(fsEnt.name)) {
-            finalDateFoldersMap.set(fsEnt.name.toLowerCase().trim(), path.join(finalDirPath, fsEnt.name))
+            finalDateFoldersMap.set(normalizeDateFolderKey(fsEnt.name), path.join(finalDirPath, fsEnt.name))
           }
         }
       } catch {}
@@ -1049,11 +1057,21 @@ function scanSingleWorkspace(
       if (!entry.isDirectory()) continue
       const lower = entry.name.toLowerCase()
       if (lower === 'final' || lower === 'final titles' || lower === 'titles' || lower === 'assets' || lower === 'raw') continue
-      if (isDateFolder(entry.name)) dateFolderNames.set(entry.name.toLowerCase().trim(), entry.name)
+      if (isDateFolder(entry.name)) {
+        const normKey = normalizeDateFolderKey(entry.name)
+        const checkKey = `${safarFolderName.toLowerCase()}::${normKey}`
+        if (!excludedFolderKeys.has(checkKey)) {
+          dateFolderNames.set(normKey, entry.name)
+        }
+      }
     }
     for (const finalPath of finalDateFoldersMap.values()) {
       const name = path.basename(finalPath)
-      dateFolderNames.set(name.toLowerCase().trim(), name)
+      const normKey = normalizeDateFolderKey(name)
+      const checkKey = `${safarFolderName.toLowerCase()}::${normKey}`
+      if (!excludedFolderKeys.has(checkKey) && !dateFolderNames.has(normKey)) {
+        dateFolderNames.set(normKey, name)
+      }
     }
 
     const hasDirectPrproj = safarEntries.some(e => e.isFile() && e.name.toLowerCase().endsWith('.prproj'))
@@ -1112,7 +1130,7 @@ function scanSingleWorkspace(
     }
 
     for (const dateFolderName of dateFolderNames.values()) {
-      const dateKey = dateFolderName.toLowerCase().trim()
+      const dateKey = normalizeDateFolderKey(dateFolderName)
       const matchedFinalPath = finalDateFoldersMap.get(dateKey) || null
       const sourceDateFolderPath = path.join(safarPath, dateFolderName)
       const dateFolderPath = fs.existsSync(sourceDateFolderPath) ? sourceDateFolderPath : matchedFinalPath || sourceDateFolderPath
@@ -1210,6 +1228,32 @@ function scanSingleWorkspace(
         })
       }
 
+      // Secondary check: look for rendered video outputs inside date folder subdirectories (Final, Output) or root
+      if (renderVideoCount === 0 && fs.existsSync(dateFolderPath)) {
+        try {
+          const subs = fs.readdirSync(dateFolderPath, { withFileTypes: true })
+          const candDir = subs.find(s => s.isDirectory() && ['final', 'final titles', 'output', 'outputs', 'exports'].includes(s.name.toLowerCase()))
+          if (candDir) {
+            const candPath = path.join(dateFolderPath, candDir.name)
+            const stats = scanFolderMedia(candPath)
+            renderVideoCount = stats.videoCount
+            renderSizeBytes = stats.totalSize
+            if (stats.mtime > 0) renderedAtTime = stats.mtime
+          } else {
+            for (const ent of subs) {
+              if (ent.isFile() && VIDEO_EXTS.has(path.extname(ent.name).toLowerCase())) {
+                renderVideoCount++
+                try {
+                  const st = fs.statSync(path.join(dateFolderPath, ent.name))
+                  renderSizeBytes += st.size
+                  if (st.mtimeMs > (renderedAtTime || 0)) renderedAtTime = st.mtimeMs
+                } catch {}
+              }
+            }
+          }
+        } catch {}
+      }
+
       const uploadMatchPath = uploadFoldersMap.get(dateKey) || null
       const deleteMatchPath = deleteFoldersMap.get(dateKey) || null
 
@@ -1221,7 +1265,7 @@ function scanSingleWorkspace(
       } else if (uploadMatchPath) {
         // Date folder found in "To Upload" → uploaded / ready for AlJamea
         status = 'uploaded'
-      } else if (isRenderedInFinal) {
+      } else if (isRenderedInFinal || renderVideoCount > 0) {
         // Render exists in Final subfolder, but not yet in To Upload
         status = 'upload_pending'
       } else if (prInfo.hasPrproj) {
@@ -1600,6 +1644,47 @@ let cachedScanResult: TrackerScanResult | null = null
 let lastScanTimestamp = 0
 let isScanRunning = false
 
+export function deduplicateTasks(tasks: TaskRecord[]): TaskRecord[] {
+  const map = new Map<string, TaskRecord>()
+  for (const t of tasks) {
+    const key = `${(t.safarName || '').trim().toLowerCase()}::${normalizeDateFolderKey(t.dateFolder)}`
+    if (!map.has(key)) {
+      map.set(key, t)
+    } else {
+      const existing = map.get(key)!
+      map.set(key, {
+        ...existing,
+        ...t,
+        renderVideoCount: Math.max(existing.renderVideoCount || 0, t.renderVideoCount || 0),
+        renderSizeBytes: Math.max(existing.renderSizeBytes || 0, t.renderSizeBytes || 0),
+        finalPath: t.finalPath || existing.finalPath,
+        uploadPath: t.uploadPath || existing.uploadPath,
+        status: t.status !== 'editing_pending' ? t.status : existing.status
+      })
+    }
+  }
+  return Array.from(map.values())
+}
+
+export function deduplicateSafars(safars: SafarRecord[]): SafarRecord[] {
+  const map = new Map<string, SafarRecord>()
+  for (const s of safars) {
+    const key = (s.safarName || '').trim().toLowerCase()
+    if (!map.has(key)) {
+      map.set(key, s)
+    } else {
+      const existing = map.get(key)!
+      map.set(key, {
+        ...existing,
+        ...s,
+        totalDays: Math.max(existing.totalDays || 0, s.totalDays || 0),
+        completedDays: Math.max(existing.completedDays || 0, s.completedDays || 0)
+      })
+    }
+  }
+  return Array.from(map.values())
+}
+
 export async function scanTrackerDataAsync(input: {
   workingPath?: string
   toUploadPath?: string
@@ -1698,10 +1783,16 @@ export async function scanTrackerDataAsync(input: {
       return offlineDriveKeys.has(driveKey) && !verifiedSafarNames.has(safar.safarName)
     })
     const retainedOfflineNames = new Set(retainedOfflineSafars.map(safar => safar.safarName))
-    const websiteSafars = [...allSafarsToUpsert, ...retainedOfflineSafars]
-    const websiteTasks = [
+    allSafarsToUpsert = deduplicateSafars(allSafarsToUpsert)
+    allTasksToUpsert = deduplicateTasks(allTasksToUpsert)
+    const presentTaskKeys = new Set(allTasksToUpsert.map(t => `${t.safarName.toLowerCase()}::${normalizeDateFolderKey(t.dateFolder)}`))
+
+    const websiteSafars = deduplicateSafars([...allSafarsToUpsert, ...retainedOfflineSafars])
+    const websiteTasks = deduplicateTasks([
       ...allTasksToUpsert,
-      ...storedTasks.filter(task => retainedOfflineNames.has(task.safarName))
+      ...storedTasks.filter(task => retainedOfflineNames.has(task.safarName) || task.status === 'submitted')
+    ])
+    void [
     ]
     if (pyRes && pyRes.success && pyRes.data && Array.isArray(pyRes.data.safars) && pyRes.data.safars.length > 0) {
       const verifiedSet = new Set(allSafarsToUpsert.map(safar => safar.safarName))
@@ -1711,7 +1802,15 @@ export async function scanTrackerDataAsync(input: {
       })
       const allowedNames = new Set(allowedSafars.map((safar: SafarRecord) => safar.safarName))
       cachedScanResult = {
-        ...enrichTrackerData(allowedSafars, (pyRes.data.tasks || []).filter((task: TaskRecord) => allowedNames.has(task.safarName))),
+        ...enrichTrackerData(
+          deduplicateSafars(allowedSafars),
+          deduplicateTasks(
+            (pyRes.data.tasks || []).filter((task: TaskRecord) =>
+              allowedNames.has(task.safarName) &&
+              (presentTaskKeys.has(`${task.safarName.toLowerCase()}::${normalizeDateFolderKey(task.dateFolder)}`) || task.status === 'submitted')
+            )
+          )
+        ),
         websiteSafars,
         websiteTasks,
         websiteScanComplete
@@ -1945,6 +2044,73 @@ export function moveSafarDirectory(params: {
 
   broadcastChange()
   return { success: true, newPath: targetPath }
+}
+
+export function removeTaskTrackerRecord(safarName: string, dateFolder: string): { success: boolean; error?: string } {
+  const sName = (safarName || '').trim()
+  const dName = (dateFolder || '').trim()
+  if (!sName || !dName) return { success: false, error: 'safarName and dateFolder required' }
+
+  const normKey = `${sName.toLowerCase()}::${normalizeDateFolderKey(dName)}`
+  excludedFolderKeys.add(normKey)
+
+  const result = runTrackerDb(['--remove-task', '--safar', sName, '--date', dName])
+  if (!result?.success) return { success: false, error: result?.error || 'Could not remove task record.' }
+
+  if (cachedScanResult) {
+    cachedScanResult.tasks = (cachedScanResult.tasks || []).filter(t =>
+      !(t.safarName.toLowerCase() === sName.toLowerCase() && normalizeDateFolderKey(t.dateFolder) === normalizeDateFolderKey(dName))
+    )
+    if (cachedScanResult.websiteTasks) {
+      cachedScanResult.websiteTasks = (cachedScanResult.websiteTasks || []).filter(t =>
+        !(t.safarName.toLowerCase() === sName.toLowerCase() && normalizeDateFolderKey(t.dateFolder) === normalizeDateFolderKey(dName))
+      )
+    }
+  }
+  broadcastChange()
+  return { success: true }
+}
+
+export async function resetAndCleanTrackerRecords(): Promise<{ success: boolean; data?: any; error?: string }> {
+  try {
+    await runTrackerDbAsync(['--clean-reset'])
+    cachedScanResult = null
+    lastScanTimestamp = 0
+    const fresh = await scanTrackerDataAsync(lastScanInput || {})
+    broadcastChange()
+    return { success: true, data: fresh }
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Reset failed' }
+  }
+}
+
+export async function addManualDateFolderRecord(safarName: string, dateFolder: string, datePath?: string): Promise<{ success: boolean; error?: string }> {
+  const sName = (safarName || '').trim()
+  const dName = (dateFolder || '').trim()
+  if (!sName || !dName) return { success: false, error: 'safarName and dateFolder required' }
+
+  const normKey = `${sName.toLowerCase()}::${normalizeDateFolderKey(dName)}`
+  excludedFolderKeys.delete(normKey)
+
+  const directTask: TaskRecord = {
+    safarName: sName,
+    dateFolder: dName,
+    status: 'editing_pending',
+    workingPath: datePath || undefined,
+    currentDrive: datePath ? normalizeDrive(datePath) : undefined
+  }
+  await runTrackerDbAsync(['--upsert-batch'], JSON.stringify({
+    tasks: [directTask],
+    safars: [{ safarName: sName, totalDays: 1, completedDays: 0, isSafarDone: false }]
+  }))
+  cachedScanResult = null
+  lastScanTimestamp = 0
+  broadcastChange()
+  return { success: true }
+}
+
+export function getLatestTrackerData(): { safars: SafarRecord[]; tasks: TaskRecord[] } {
+  return cachedScanResult || { safars: [], tasks: [] }
 }
 
 // ── Register IPC Handlers ─────────────────────────────────────
@@ -2307,5 +2473,33 @@ export function registerTaskTrackerIPC(): void {
     if (params.serial) args.push('--serial', params.serial)
 
     return runTrackerDb(args)
+  })
+
+  // ── 14. Remove Task Record (and exclude from tracker) ──
+  ipcMain.handle('taskTracker:removeTask', (_e, params: { safarName: string; dateFolder: string }) => {
+    try {
+      return removeTaskTrackerRecord(params.safarName, params.dateFolder)
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Failed to remove task' }
+    }
+  })
+
+  // ── 15. Reset and Clean Tracker for Fresh Rescan ──
+  ipcMain.handle('taskTracker:resetAndRescan', async () => {
+    try {
+      return await resetAndCleanTrackerRecords()
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Failed to reset and rescan' }
+    }
+  })
+
+  // ── 16. Manually Add Date Folder ──
+  ipcMain.handle('taskTracker:addDateFolder', async (_e, params: { safarName: string; dateFolder: string; datePath?: string }) => {
+    try {
+      return await addManualDateFolderRecord(params.safarName, params.dateFolder, params.datePath)
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Failed to add date folder' }
+    }
+
   })
 }

@@ -18,6 +18,13 @@ import http from 'http';
 import QRCode from 'qrcode';
 import { updateIslandState } from './dynamicIsland';
 import { verifyFileHash } from './hashVerifier';
+import {
+  getLatestTrackerData,
+  removeTaskTrackerRecord,
+  resetAndCleanTrackerRecords,
+  addManualDateFolderRecord,
+  scanTrackerDataAsync
+} from '../ipc/taskTracker.ipc';
 
 export interface RemoteRenderCommand {
   id: string;
@@ -284,7 +291,87 @@ function startLocalBridgeServer() {
       return;
     }
 
-    // GET /api/auth-qr -> Generate dynamic One-Time Login QR code for AnyShare Website Scanner
+    // GET /api/tasks -> Return current Safars and Tasks for AnyShare Web Companion
+    if (req.method === 'GET' && (url.pathname === '/api/tasks' || url.pathname === '/api/safars')) {
+      const data = getLatestTrackerData();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        success: true,
+        safars: data?.safars || [],
+        tasks: data?.tasks || [],
+        timestamp: new Date().toISOString()
+      }));
+      return;
+    }
+
+    // POST /api/rescan -> Trigger rescan on workstation
+    if (req.method === 'POST' && url.pathname === '/api/rescan') {
+      scanTrackerDataAsync({ force: true }).then(fresh => {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          success: true,
+          safars: fresh?.safars || [],
+          tasks: fresh?.tasks || [],
+          timestamp: new Date().toISOString()
+        }));
+      }).catch(err => {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: err?.message || 'Rescan failed' }));
+      });
+      return;
+    }
+
+    // POST /api/tasks/remove -> Remove date folder from tracker & exclude
+    if (req.method === 'POST' && url.pathname === '/api/tasks/remove') {
+      let bodyStr = '';
+      req.on('data', chunk => { bodyStr += chunk; });
+      req.on('end', () => {
+        try {
+          const body = JSON.parse(bodyStr || '{}');
+          const result = removeTaskTrackerRecord(body.safarName, body.dateFolder);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(result));
+        } catch (e: any) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: false, error: e?.message || 'Invalid JSON' }));
+        }
+      });
+      return;
+    }
+
+    // POST /api/tasks/add -> Add date folder manually
+    if (req.method === 'POST' && url.pathname === '/api/tasks/add') {
+      let bodyStr = '';
+      req.on('data', chunk => { bodyStr += chunk; });
+      req.on('end', () => {
+        try {
+          const body = JSON.parse(bodyStr || '{}');
+          addManualDateFolderRecord(body.safarName, body.dateFolder, body.datePath).then(result => {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(result));
+          }).catch(err => {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: false, error: err?.message }));
+          });
+        } catch (e: any) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: false, error: e?.message || 'Invalid JSON' }));
+        }
+      });
+      return;
+    }
+
+    // POST /api/tasks/reset -> Clean reset non-submitted tasks and rescan
+    if (req.method === 'POST' && url.pathname === '/api/tasks/reset') {
+      resetAndCleanTrackerRecords().then(result => {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(result));
+      }).catch(err => {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: err?.message }));
+      });
+      return;
+    }
     if (req.method === 'GET' && url.pathname === '/api/auth-qr') {
       const pairingToken = 'pair_ot_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
       const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes

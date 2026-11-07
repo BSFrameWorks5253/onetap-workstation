@@ -2,7 +2,7 @@
 ; Script generated for BS Framework
 
 #ifndef AppVersion
-#define AppVersion "26.11.12"
+#define AppVersion "26.11.13"
 #endif
 #ifndef OutputBaseFilename
 #define OutputBaseFilename "OneTap-Setup-V-" + AppVersion
@@ -17,6 +17,8 @@ AppPublisherURL=https://bsframework.com/
 DefaultDirName={autopf}\One Tap
 DefaultGroupName=One Tap
 AllowNoIcons=yes
+CloseApplications=yes
+RestartApplications=no
 ; Professional Installer Assets
 SetupIconFile=..\resources\icon.ico
 LicenseFile=..\resources\LICENSE.txt

@@ -100,7 +100,9 @@ class AnyShareRealtimeService {
       };
     }).filter((row: any) => row.safarName && row.dateFolder);
     const archivedSafarNames = new Set([...priorSafars.values()].filter((safar: any) => safar.isArchived).map((safar: any) => safar.safarName));
-    const retainedArchivedRows = [...priorRows.values()].filter((row: any) => archivedSafarNames.has(row.safarName) && !scannedSafarNames.has(row.safarName));
+    const retainedArchivedRows = scanComplete
+      ? []
+      : [...priorRows.values()].filter((row: any) => archivedSafarNames.has(row.safarName) && !scannedSafarNames.has(row.safarName));
     rows.push(...retainedArchivedRows);
     const rowsBySafar = new Map<string, any[]>();
     for (const row of rows) {
@@ -121,7 +123,10 @@ class AnyShareRealtimeService {
         const totalDays = Number(s.totalDays || 0);
         const safarRows = rowsBySafar.get(safarName) || [];
         const allDatesSubmitted = safarRows.length > 0 && safarRows.every((row: any) => row.stage === 'jameya') && (!totalDays || safarRows.length >= totalDays);
-        const isArchived = Boolean(previousSafar?.isArchived || s.isArchived || s.is_archived || allDatesSubmitted);
+        const hasArchiveOverride = typeof s.isArchived === 'boolean' || typeof s.is_archived === 'boolean';
+        const isArchived = hasArchiveOverride
+          ? Boolean(s.isArchived ?? s.is_archived)
+          : Boolean(previousSafar?.isArchived || allDatesSubmitted);
         return {
           safarName,
           safarYear: s.safarYear || previousSafar?.safarYear || '',
@@ -131,7 +136,7 @@ class AnyShareRealtimeService {
           archivePriorStages: previousSafar?.archivePriorStages,
           updatedAt: now
         };
-      }).filter((s: any) => s.safarName), ...[...priorSafars.values()].filter((safar: any) => safar.isArchived && !scannedSafarNames.has(safar.safarName))],
+      }).filter((s: any) => s.safarName), ...(scanComplete ? [] : [...priorSafars.values()].filter((safar: any) => safar.isArchived && !scannedSafarNames.has(safar.safarName)))],
       updatedAt: now,
       source: 'onetap-desktop'
     };
@@ -142,6 +147,51 @@ class AnyShareRealtimeService {
     } catch (error) {
       console.warn('[AnyShare Nexus] Safar tracker snapshot persistence failed; sending a live snapshot instead:', error);
     }
+    if (this.channel && this.isConnected) {
+      const safarListForWeb = (safars || []).map((s: any) => {
+        const sName = String(s.safarName || '');
+        const matchingTasks = (tasks || []).filter((t: any) => String(t.safarName || '').toLowerCase() === sName.toLowerCase());
+        const dates = matchingTasks.map((t: any, idx: number) => ({
+          id: `${sName}_${t.dateFolder || idx}`,
+          dayNumber: idx + 1,
+          dateLabel: t.dateFolder,
+          dateFolder: t.dateFolder,
+          datePath: t.workingPath || t.finalPath,
+          hijriDate: t.hijriDate || getHijriDate(t.dateFolder, s.safarYear),
+          status: t.status || 'editing_pending',
+          renderVideoCount: t.renderVideoCount || 0,
+          renderSizeBytes: t.renderSizeBytes || 0,
+          isRendered: Boolean(t.finalPath || (t.renderVideoCount && t.renderVideoCount > 0)),
+          isUploaded: t.status === 'uploaded' || Boolean(t.uploadPath),
+          isSubmitted: t.status === 'submitted' || Boolean(t.deletePath)
+        }));
+        return {
+          id: `safar_${sName.toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
+          safarName: sName,
+          name: sName,
+          city: s.city || 'Unassigned',
+          hijriYear: s.safarYear ? `${s.safarYear} H` : '1448 H',
+          baseDirectory: s.currentPath || '',
+          driveRoot: s.currentDrive || '',
+          totalDays: s.totalDays || dates.length,
+          completedDays: s.completedDays || dates.filter((d: any) => d.status === 'uploaded' || d.status === 'submitted').length,
+          isSafarDone: Boolean(s.isSafarDone),
+          dates,
+          tasks: matchingTasks
+        };
+      });
+
+      this.channel.send({
+        type: 'broadcast',
+        event: 'workstation_sync_safars',
+        payload: {
+          safars: safarListForWeb,
+          tasks: rows,
+          timestamp: now
+        }
+      }).catch((e: any) => console.warn('[AnyShare Nexus] workstation_sync_safars broadcast failed:', e));
+    }
+
     if (this.trackerChannel && this.isTrackerConnected) {
       this.trackerChannel.send({ type: 'broadcast', event: 'snapshot', payload: { snapshot } })
         .catch((error: any) => console.warn('[AnyShare Nexus] Safar tracker live broadcast failed:', error));

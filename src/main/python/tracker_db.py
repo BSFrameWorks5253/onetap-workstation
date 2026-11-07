@@ -608,6 +608,72 @@ def get_all_data(conn):
 
     return {'safars': safars, 'tasks': tasks}
 
+def remove_safar_records(conn, safar_name):
+    """Remove a Safar block and its tracker history without touching source files."""
+    name = (safar_name or '').strip()
+    if not name:
+        return {'success': False, 'error': 'Safar name is required'}
+    cursor = conn.cursor()
+    for table in ('tracker_history_logs', 'tracker_media_resources', 'tracker_tasks', 'safars'):
+        cursor.execute(f"DELETE FROM {table} WHERE safar_name = ?", (name,))
+    removed = cursor.rowcount
+    conn.commit()
+    return {'success': True, 'safarName': name, 'recordsRemoved': removed}
+
+def remove_task_record(conn, safar_name, date_folder):
+    """Remove an individual date folder/task without touching source files."""
+    s_name = (safar_name or '').strip()
+    d_name = (date_folder or '').strip()
+    if not s_name or not d_name:
+        return {'success': False, 'error': 'safarName and dateFolder required'}
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM tracker_history_logs WHERE safar_name = ? AND date_folder = ?", (s_name, d_name))
+    cursor.execute("DELETE FROM tracker_media_resources WHERE safar_name = ? AND date_folder = ?", (s_name, d_name))
+    cursor.execute("DELETE FROM tracker_tasks WHERE safar_name = ? AND date_folder = ?", (s_name, d_name))
+    removed = cursor.rowcount
+
+    cursor.execute("""
+        SELECT COUNT(*),
+               SUM(CASE WHEN status IN ('uploaded', 'submitted') THEN 1 ELSE 0 END)
+        FROM tracker_tasks
+        WHERE safar_name = ?
+    """, (s_name,))
+    s_row = cursor.fetchone()
+    tot = (s_row[0] or 0) if s_row else 0
+    comp = (s_row[1] or 0) if s_row else 0
+    is_done = 1 if (tot > 0 and comp >= tot) else 0
+
+    cursor.execute("""
+        UPDATE safars
+        SET total_days = ?,
+            completed_days = ?,
+            is_safar_done = ?,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE safar_name = ?
+    """, (tot, comp, is_done, s_name))
+
+    conn.commit()
+    return {'success': True, 'safarName': s_name, 'dateFolder': d_name, 'recordsRemoved': removed}
+
+def reset_and_clean_tracker(conn, preserve_submitted=True):
+    """
+    Cleans out tracker database:
+    - If preserve_submitted=True, preserves tasks marked 'submitted' (Submitted to Jameya)
+    - Removes all non-submitted tasks so that a fresh rescan only brings in currently existing folders.
+    """
+    cursor = conn.cursor()
+    if preserve_submitted:
+        cursor.execute("DELETE FROM tracker_tasks WHERE status != 'submitted'")
+        cursor.execute("DELETE FROM tracker_media_resources WHERE date_folder NOT IN (SELECT date_folder FROM tracker_tasks)")
+        cursor.execute("DELETE FROM safars WHERE safar_name NOT IN (SELECT DISTINCT safar_name FROM tracker_tasks)")
+    else:
+        cursor.execute("DELETE FROM tracker_tasks")
+        cursor.execute("DELETE FROM tracker_media_resources")
+        cursor.execute("DELETE FROM safars")
+        cursor.execute("DELETE FROM tracker_history_logs")
+    conn.commit()
+    return {'success': True, 'preserveSubmitted': preserve_submitted}
+
 def get_history_logs(conn, safar_name=None, date_folder=None):
     cursor = conn.cursor()
     query = "SELECT id, task_id, safar_name, date_folder, from_status, to_status, event_description, timestamp FROM tracker_history_logs"
@@ -911,6 +977,9 @@ def main():
     parser.add_argument('--db', help="Path to sqlite db file")
     parser.add_argument('--init', action='store_true', help="Initialize tracker database")
     parser.add_argument('--get-all', action='store_true', help="Retrieve all tracker safars and tasks")
+    parser.add_argument('--remove-safar-records', action='store_true', help="Remove a Safar's tracker records without deleting files")
+    parser.add_argument('--remove-task', action='store_true', help="Remove an individual date folder/task")
+    parser.add_argument('--clean-reset', action='store_true', help="Clean reset non-submitted tasks for fresh rescan")
     parser.add_argument('--get-history', action='store_true', help="Retrieve audit history logs")
     parser.add_argument('--safar', help="Filter by safar name")
     parser.add_argument('--date', help="Filter by date folder name")
@@ -961,6 +1030,18 @@ def main():
         if args.get_all:
             data = get_all_data(conn)
             print(json.dumps({'success': True, 'data': data, 'db': db_file}))
+            return
+
+        if args.remove_safar_records:
+            print(json.dumps(remove_safar_records(conn, args.safar)))
+            return
+
+        if args.remove_task:
+            print(json.dumps(remove_task_record(conn, args.safar, args.date)))
+            return
+
+        if args.clean_reset:
+            print(json.dumps(reset_and_clean_tracker(conn, preserve_submitted=True)))
             return
 
         if args.search_resources:

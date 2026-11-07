@@ -15,6 +15,17 @@ import {
 import './TaskTracker.css'
 
 const api = (window as any).api
+const archivedSafarStorageKey = 'ot_tracker_archived_safar_names'
+const removedSafarStorageKey = 'ot_tracker_removed_safar_names'
+
+function readSafarNameList(key: string): string[] {
+  try {
+    const value = JSON.parse(localStorage.getItem(key) || '[]')
+    return Array.isArray(value) ? value.filter((name): name is string => typeof name === 'string') : []
+  } catch {
+    return []
+  }
+}
 
 const STATUS_ORDER: TaskStatus[] = [
   'editing_pending',
@@ -95,10 +106,12 @@ export default function TaskTracker(): JSX.Element {
   // ── Core Data & UI State ──
   const [safars, setSafars] = useState<SafarGroupItem[]>([])
   const [tasks, setTasks] = useState<TrackerTaskItem[]>([])
+  const [archivedSafarNames, setArchivedSafarNames] = useState<string[]>(() => readSafarNameList(archivedSafarStorageKey))
+  const [removedSafarNames, setRemovedSafarNames] = useState<string[]>(() => readSafarNameList(removedSafarStorageKey))
   const [loading, setLoading] = useState<boolean>(false)
   const [searchQuery, setSearchQuery] = useState<string>('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [safarStatusFilter, setSafarStatusFilter] = useState<'all' | 'safar_pending' | 'in_process' | 'to_delete' | 'to_upload'>('all')
+  const [safarStatusFilter, setSafarStatusFilter] = useState<'all' | 'safar_pending' | 'in_process' | 'to_delete' | 'to_upload' | 'archived'>('all')
   const [viewMode, setViewMode] = useState<'safar' | 'pipeline' | 'table'>('safar')
   const [collapsedSafars, setCollapsedSafars] = useState<Record<string, boolean>>({})
   const [selectedSafars, setSelectedSafars] = useState<string[]>([])
@@ -109,7 +122,9 @@ export default function TaskTracker(): JSX.Element {
   const [generatingTasks, setGeneratingTasks] = useState<Record<string, boolean>>({})
   const [generatingSafars, setGeneratingSafars] = useState<Record<string, boolean>>({})
   const [moveModalSafar, setMoveModalSafar] = useState<any | null>(null)
+  const [deleteSafarConfirm, setDeleteSafarConfirm] = useState<SafarGroupItem | null>(null)
   const [isMoving, setIsMoving] = useState<boolean>(false)
+  const [isDeletingSafar, setIsDeletingSafar] = useState(false)
 
   // ── Load Drive Configurations from Settings ──
   const loadDrives = async (): Promise<DriveWorkspaceConfig[]> => {
@@ -241,11 +256,15 @@ export default function TaskTracker(): JSX.Element {
         setTasks(res.tasks || [])
 
         // Keep the remote PWA current with Safar and date folder names only.
-        anyShareRealtimeService.syncSafarTrackerSnapshot(res.websiteSafars || res.safars || [], res.websiteTasks || res.tasks || [], Boolean(res.websiteScanComplete))
+        const websiteSafars = (res.websiteSafars || res.safars || [])
+          .filter((s: SafarGroupItem) => !removedSafarNames.includes(s.safarName))
+          .map((s: SafarGroupItem) => ({ ...s, isArchived: archivedSafarNames.includes(s.safarName) }))
+        const websiteTasks = (res.websiteTasks || res.tasks || []).filter((task: TrackerTaskItem) => !removedSafarNames.includes(task.safarName))
+        anyShareRealtimeService.syncSafarTrackerSnapshot(websiteSafars, websiteTasks, Boolean(res.websiteScanComplete))
 
         // Automatically push detected Safar campaigns to AnyShare Web Portal
         if (res.safars && res.safars.length > 0) {
-          for (const s of res.safars) {
+          for (const s of res.safars.filter((item: SafarGroupItem) => !archivedSafarNames.includes(item.safarName) && !removedSafarNames.includes(item.safarName))) {
             try {
               anyShareRealtimeService.pushSafarDetected({
                 safarPath: s.workingDirectory || (s.currentDrive ? `${s.currentDrive}\\${s.safarName}` : s.safarName),
@@ -638,6 +657,77 @@ export default function TaskTracker(): JSX.Element {
     })
   }
 
+  // ── Remove Date Folder from Task Tracker and AnyShare ──
+  const handleRemoveTask = async (safarName: string, dateFolder: string) => {
+    if (!window.confirm(`Exclude date folder "${dateFolder}" from ${safarName}?\nIt will be removed from local tracking and excluded from the AnyShare website companion.`)) {
+      return
+    }
+    try {
+      const res = await api?.taskTracker?.removeTask?.(safarName, dateFolder)
+      if (res?.success) {
+        playSuccess()
+        showToast({
+          title: 'Folder Removed',
+          message: `Excluded "${dateFolder}" from task tracker and website companion.`,
+          type: 'success'
+        })
+        doScan(true)
+      } else {
+        showToast({ title: 'Error', message: res?.error || 'Failed to remove', type: 'error' })
+      }
+    } catch (err: any) {
+      showToast({ title: 'Error', message: err.message, type: 'error' })
+    }
+  }
+
+  // ── Reset Non-Submitted Items and Clean Rescan ──
+  const handleResetAndCleanRescan = async () => {
+    if (!window.confirm('Reset tracker state and perform a clean rescan?\nStale non-submitted records will be purged so only folders currently on disk are shown.')) {
+      return
+    }
+    setLoading(true)
+    try {
+      const res = await api?.taskTracker?.resetAndRescan?.()
+      if (res?.success) {
+        playSuccess()
+        showToast({
+          title: 'Clean Rescan Complete',
+          message: 'Stale records purged. Only physically present folders and submitted deliverables are loaded.',
+          type: 'success'
+        })
+        doScan(true)
+      } else {
+        showToast({ title: 'Error', message: res?.error || 'Reset failed', type: 'error' })
+      }
+    } catch (err: any) {
+      showToast({ title: 'Error', message: err.message, type: 'error' })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // ── Manually Add Date Folder ──
+  const handleAddDateFolder = async (safarName: string) => {
+    const dateFolder = window.prompt(`Enter Date / Session folder name to track for "${safarName}" (e.g. 1448-03-14 _01M):`)
+    if (!dateFolder || !dateFolder.trim()) return
+    try {
+      const res = await api?.taskTracker?.addDateFolder?.({ safarName, dateFolder: dateFolder.trim() })
+      if (res?.success) {
+        playSuccess()
+        showToast({
+          title: 'Folder Added',
+          message: `Added "${dateFolder.trim()}" to ${safarName}.`,
+          type: 'success'
+        })
+        doScan(true)
+      } else {
+        showToast({ title: 'Error', message: res?.error || 'Failed to add', type: 'error' })
+      }
+    } catch (err: any) {
+      showToast({ title: 'Error', message: err.message, type: 'error' })
+    }
+  }
+
   // ── Safar Directory Mover Handler ──
   const handleMoveSafar = async (targetFolder: 'in_process' | 'to_upload' | 'to_delete' | 'pending') => {
     if (!moveModalSafar) return
@@ -675,6 +765,74 @@ export default function TaskTracker(): JSX.Element {
     } finally {
       setIsMoving(false)
     }
+  }
+
+  const publishSafarChanges = (archivedNames: string[], removedNames: string[]) => {
+    const removed = new Set(removedNames)
+    anyShareRealtimeService.syncSafarTrackerSnapshot(
+      safars.filter(safar => !removed.has(safar.safarName)).map(safar => ({
+        ...safar,
+        isArchived: archivedNames.includes(safar.safarName)
+      })),
+      tasks.filter(task => !removed.has(task.safarName)),
+      true
+    )
+  }
+
+  const handleToggleSafarArchive = (safar: SafarGroupItem) => {
+    const isArchived = archivedSafarNames.includes(safar.safarName)
+    const next = isArchived
+      ? archivedSafarNames.filter(name => name !== safar.safarName)
+      : [...archivedSafarNames, safar.safarName]
+    setArchivedSafarNames(next)
+    localStorage.setItem(archivedSafarStorageKey, JSON.stringify(next))
+    setSafarStatusFilter(isArchived ? 'all' : 'archived')
+    publishSafarChanges(next, removedSafarNames)
+    showToast({
+      title: isArchived ? 'Safar Restored' : 'Safar Archived',
+      message: isArchived ? `Restored ${safar.safarName} to active Safars.` : `${safar.safarName} is now in the Archived Safars view. Its folder and task history are unchanged.`,
+      type: 'success'
+    })
+  }
+
+  const handleRemoveSafar = async (safar: SafarGroupItem, deleteFolder: boolean) => {
+    setIsDeletingSafar(true)
+    try {
+      const result = deleteFolder
+        ? await api?.taskTracker?.deleteSafarDirectory({ safarName: safar.safarName, currentPath: safar.currentPath, workspaces: drives })
+        : await api?.taskTracker?.removeSafarRecords(safar.safarName)
+      if (!result?.success) {
+        showToast({ title: deleteFolder ? 'Safar Delete Failed' : 'Could Not Remove Safar', message: result?.error || 'The requested action could not be completed.', type: 'error' })
+        return
+      }
+      const nextRemoved = [...new Set([...removedSafarNames, safar.safarName])]
+      const nextArchived = archivedSafarNames.filter(name => name !== safar.safarName)
+      setRemovedSafarNames(nextRemoved)
+      setArchivedSafarNames(nextArchived)
+      localStorage.setItem(removedSafarStorageKey, JSON.stringify(nextRemoved))
+      localStorage.setItem(archivedSafarStorageKey, JSON.stringify(nextArchived))
+      setSelectedSafars(selected => selected.filter(name => name !== safar.safarName))
+      setDeleteSafarConfirm(null)
+      setSafarStatusFilter('all')
+      publishSafarChanges(nextArchived, nextRemoved)
+      showToast({
+        title: deleteFolder ? 'Safar Folder Deleted' : 'Safar Removed from Task Manager',
+        message: deleteFolder ? `${safar.safarName} and its tracker records were permanently deleted.` : `${safar.safarName} and its saved tracker records were removed. The Safar folder and its files remain on disk.`,
+        type: 'success'
+      })
+    } catch (error: any) {
+      showToast({ title: 'Safar Action Failed', message: error?.message || String(error), type: 'error' })
+    } finally {
+      setIsDeletingSafar(false)
+    }
+  }
+
+  const handleRestoreRemovedSafar = (safarName: string) => {
+    const next = removedSafarNames.filter(name => name !== safarName)
+    setRemovedSafarNames(next)
+    localStorage.setItem(removedSafarStorageKey, JSON.stringify(next))
+    setSafarStatusFilter('all')
+    void doScan(true)
   }
 
   // ── 1-Click Excel Export ──
@@ -827,8 +985,13 @@ export default function TaskTracker(): JSX.Element {
   // ── Filtered Safars & Tasks (Search & Status, with Safar-level filter) ──
   const filteredSafars = useMemo(() => {
     const q = searchQuery.toLowerCase().trim()
+    const archivedNames = new Set(archivedSafarNames)
+    const removedNames = new Set(removedSafarNames)
 
     return driveFilteredSafars
+      .filter(s => safarStatusFilter === 'archived'
+        ? archivedNames.has(s.safarName)
+        : !archivedNames.has(s.safarName) && !removedNames.has(s.safarName))
       .map(s => {
         const tasksList = s.tasks || []
         const matchingTasks = tasksList.filter(t => {
@@ -845,8 +1008,8 @@ export default function TaskTracker(): JSX.Element {
 
         // Compute Safar-level bucket for safarStatusFilter
         const statuses = tasksList.map(t => t.status)
-        let safarBucket: string = 'safar_pending'
-        if (statuses.length > 0) {
+        let safarBucket: string = archivedNames.has(s.safarName) ? 'archived' : 'safar_pending'
+        if (!archivedNames.has(s.safarName) && statuses.length > 0) {
           const allSubmitted = statuses.every(st => st === 'submitted')
           const allUploadReady = statuses.every(st => st === 'upload_pending' || st === 'uploaded')
           const anyEditing = statuses.some(st => st === 'editing' || st === 'review')
@@ -864,7 +1027,7 @@ export default function TaskTracker(): JSX.Element {
         }
       })
       .filter(s => s.shouldShow)
-  }, [driveFilteredSafars, searchQuery, statusFilter, safarStatusFilter])
+  }, [driveFilteredSafars, searchQuery, statusFilter, safarStatusFilter, archivedSafarNames, removedSafarNames])
 
 
 
@@ -961,6 +1124,15 @@ export default function TaskTracker(): JSX.Element {
           </button>
           <button className="btn-secondary-action" onClick={handleExportExcel} title="Export full spreadsheet">
             <PageIcon pageKey="excelmerger" size={13} style={{ marginRight: 6 }} /> Export Excel
+          </button>
+          <button
+            className="btn-secondary-action reset-clean-btn"
+            onClick={handleResetAndCleanRescan}
+            disabled={loading}
+            title="Clean reset: Purge stale records and rescan disk. Only existing folders and submitted deliverables will be kept."
+            style={{ borderColor: 'rgba(239, 68, 68, 0.35)', color: '#EF4444' }}
+          >
+            <PageIcon pageKey="cleaner" size={13} style={{ marginRight: 6 }} color="#EF4444" /> Reset & Rescan
           </button>
           <button
             className="btn-primary-action"
@@ -1277,6 +1449,18 @@ export default function TaskTracker(): JSX.Element {
             </span>
           </div>
           <span className="tracker-kpi-val">{safarStatusBuckets.toUpload}</span>
+        </div>
+
+        <div
+          className={`tracker-kpi-card kpi-safar-archived ${safarStatusFilter === 'archived' ? 'active' : ''}`}
+          onClick={() => setSafarStatusFilter(prev => prev === 'archived' ? 'all' : 'archived')}
+          title="Show Safars archived from the active Task Manager list"
+        >
+          <div className="tracker-kpi-top">
+            <span className="tracker-kpi-label">Archived Safars</span>
+            <span className="tracker-kpi-icon"><PageIcon pageKey="archivevault" size={16} /></span>
+          </div>
+          <span className="tracker-kpi-val">{archivedSafarNames.filter(name => safars.some(safar => safar.safarName === name)).length}</span>
         </div>
       </div>
 
@@ -1618,6 +1802,14 @@ export default function TaskTracker(): JSX.Element {
                         Move
                       </button>
                       <button
+                        className="safar-action-btn add-date-btn"
+                        onClick={() => { playTick(); handleAddDateFolder(safar.safarName) }}
+                        title="Manually add or include a date folder to this Safar"
+                      >
+                        <PageIcon pageKey="plus" size={12} color="#60A5FA" style={{ marginRight: 4 }} />
+                        + Add Date
+                      </button>
+                      <button
                         className="safar-action-btn create-all-prproj"
                         onClick={() => handleGenerateSafarProjects(safar)}
                         disabled={generatingSafars[safar.safarName] || safar.isPathExists === false}
@@ -1867,6 +2059,14 @@ export default function TaskTracker(): JSX.Element {
                                 title="Inspect Details & Timeline"
                               >
                                 <PageIcon pageKey="search" size={13} />
+                              </button>
+                              <button
+                                className="icon-action-btn delete-btn"
+                                style={{ color: '#EF4444', borderColor: 'rgba(239, 68, 68, 0.3)' }}
+                                onClick={() => handleRemoveTask(task.safarName, task.dateFolder)}
+                                title="Exclude / Remove this folder from Task Tracker and AnyShare"
+                              >
+                                <PageIcon pageKey="trash" size={13} color="#EF4444" />
                               </button>
                             </div>
                           </div>

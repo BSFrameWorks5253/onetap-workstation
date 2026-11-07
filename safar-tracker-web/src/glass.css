@@ -479,3 +479,32 @@ td { color: #514d43; font-size: .875rem; }
 @media (prefers-reduced-motion: reduce) {
   .dashboard-progress span, .safar-group-toggle > svg { transition: none; }
 }
+
+/* Fast first paint while the workstation's initial snapshot is loading. */
+.safar-loading-skeleton { display: grid; gap: 15px; min-height: 255px; }
+.skeleton-section-heading { display: grid; gap: 8px; width: min(100%, 290px); padding: 3px 0 2px; }
+.skeleton-section-heading i, .skeleton-card i { display: block; overflow: hidden; position: relative; border-radius: 999px; background: color-mix(in srgb, var(--text-secondary) 12%, var(--surface)); }
+.skeleton-section-heading i { height: 13px; }
+.skeleton-section-heading i:first-child { width: 56%; height: 20px; }
+.skeleton-dashboard-grid, .skeleton-tracker-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 285px), 1fr)); gap: 14px; align-items: start; }
+.skeleton-tracker-list { grid-template-columns: 1fr; }
+.skeleton-card { display: grid; gap: 13px; min-height: 202px; padding: 19px; border: 1px solid var(--glass-border); border-radius: 16px; background: color-mix(in srgb, var(--surface) 80%, transparent); box-shadow: var(--glass-shadow); }
+.skeleton-tracker-list .skeleton-card { min-height: 130px; }
+.skeleton-title-row { display: flex; justify-content: space-between; gap: 18px; }
+.skeleton-title-row i:first-child { width: min(62%, 220px); height: 19px; }
+.skeleton-title-row i:last-child { width: 42px; height: 19px; }
+.skeleton-progress { width: 100%; height: 8px; }
+.skeleton-copy { width: 52%; height: 12px; }
+.skeleton-date { width: 100%; height: 34px; border-radius: 8px !important; }
+.skeleton-date.short { width: 83%; }
+.skeleton-section-heading i::after, .skeleton-card i::after { position: absolute; inset: 0; content: ''; transform: translateX(-100%); background: linear-gradient(100deg, transparent 15%, rgba(255,255,255,.62) 48%, transparent 82%); animation: safar-skeleton-shimmer 1.65s ease-in-out infinite; }
+.skeleton-status-copy { margin: 0; color: var(--text-secondary); font-size: .875rem; }
+@keyframes safar-skeleton-shimmer { to { transform: translateX(100%); } }
+
+@media (max-width: 760px) {
+  .skeleton-dashboard-grid { grid-template-columns: 1fr; }
+  .skeleton-card { min-height: 190px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-section-heading i::after, .skeleton-card i::after { animation: none; }
+}
