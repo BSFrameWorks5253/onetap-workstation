@@ -727,7 +727,8 @@ export default function TaskTracker(): JSX.Element {
     }
     setLoading(true)
     try {
-      const res = await api?.taskTracker?.resetAndRescan?.()
+      const currentDrives = drives.length > 0 ? drives : await loadDrives()
+      const res = await api?.taskTracker?.resetAndRescan?.({ workspaces: currentDrives })
       if (res?.success) {
         playSuccess()
         showToast({
@@ -735,7 +736,12 @@ export default function TaskTracker(): JSX.Element {
           message: 'Stale records purged. Only physically present folders and submitted deliverables are loaded.',
           type: 'success'
         })
-        doScan(true)
+        if (res.data) {
+          setSafars(res.data.safars || [])
+          setTasks(res.data.tasks || [])
+        } else {
+          doScan(true)
+        }
       } else {
         showToast({ title: 'Error', message: res?.error || 'Reset failed', type: 'error' })
       }

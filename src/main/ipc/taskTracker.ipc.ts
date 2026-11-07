@@ -573,43 +573,44 @@ export function normalizeDateFolderKey(name: string): string {
 
 export function extractCleanDateFolder(name: string): string | null {
   if (!name) return null
-  const clean = name.trim()
-  if (isSystemIgnored(clean)) return null
+  const clean = name.replace(/\.[a-z\d]{2,6}$/i, '').trim()
+  if (!clean || isSystemIgnored(clean)) return null
   const lower = clean.toLowerCase()
-  if (['final', 'final titles', 'output', 'outputs', 'export', 'exports', 'dvd', 'titles', 'assets', 'raw'].includes(lower) || lower.startsWith('$') || lower.startsWith('.')) return null
-  // 1. Session / Waaz formats: "01 Waaz", "01-Waaz", "01_Waaz", "Waaz Day 01", "23-01 Waaz Leicester"
-  const sessionDayMatch = clean.match(/^(\d{1,2})[\s._-]+(?:waaz|majlis|isteqbal|misaaq|ziyarat|event|session)/i)
-  if (sessionDayMatch) {
-    const d = parseInt(sessionDayMatch[1], 10)
-    return `Day ${d < 10 ? '0' + d : d}`
-  }
-  const waazDayMatch = clean.match(/(?:waaz|majlis|isteqbal)[\s._-]+(?:day[\s._-]?)?(\d{1,2})/i)
-  if (waazDayMatch) {
-    const d = parseInt(waazDayMatch[1], 10)
-    return `Day ${d < 10 ? '0' + d : d}`
-  }
+  if (['final', 'final titles', 'output', 'outputs', 'export', 'exports', 'dvd', 'titles', 'assets', 'raw', 'temp'].includes(lower) || lower.startsWith('$') || lower.startsWith('.')) return null
   if (/^(?:intelvga|dptf|mei|realtek|nvidia|amd|driver|drivers|windows|system)/i.test(clean)) return null
-  const ymdMatch = clean.match(/(?:^|[^\d])(\d{4})[\s._\-](\d{1,2})[\s._\-](\d{1,2})(?:[^\d]|$)/i)
-  if (ymdMatch) return `${ymdMatch[1]}-${ymdMatch[2].padStart(2, '0')}-${ymdMatch[3].padStart(2, '0')}`
-  const dmyMatch = clean.match(/(?:^|[^\d])(\d{1,2})[\s._\-](\d{1,2})[\s._\-](\d{4})(?:[^\d]|$)/i)
-  if (dmyMatch) return `${dmyMatch[3]}-${dmyMatch[2].padStart(2, '0')}-${dmyMatch[1].padStart(2, '0')}`
-  const dayMatch = clean.match(/day[\s._\-]?(\d{1,3})/i)
-  if (dayMatch) { const d = parseInt(dayMatch[1], 10); return `Day ${d < 10 ? '0' + d : d}` }
-  const leadingNumMatch = clean.match(/^(\d{1,2})(?:[\s._\-]+.*)?$/)
-  if (leadingNumMatch) {
-    const d = parseInt(leadingNumMatch[1], 10)
+  if (isSafarFolder(clean)) return null
+
+  // 1. Matches standard date format with or without session: e.g. "1448-05-08 _01M", "1448-05-08 _02E", "1448-05-08", "2026-11-05"
+  if (/^\d{4}[\s._-]\d{1,2}[\s._-]\d{1,2}/.test(clean)) {
+    return clean
+  }
+  // 2. Matches "01-1448-05" or "14-03-1448"
+  if (/^\d{1,2}[\s._-]\d{1,2}[\s._-]\d{2,4}/.test(clean)) {
+    return clean
+  }
+  // 3. Matches "Day 01", "Day 1", "Day-02"
+  const dayMatch = clean.match(/^day[\s._\-]?(\d{1,3})/i)
+  if (dayMatch) {
+    const d = parseInt(dayMatch[1], 10)
+    return `Day ${d < 10 ? '0' + d : d}`
+  }
+  // 4. Session / Waaz formats: "01 Waaz...", "23-01 Waaz Leicester", "Waaz Day 01"
+  if (/^\d{1,2}[\s._-]+(?:waaz|majlis|isteqbal|misaaq|ziyarat|event|session)/i.test(clean) || /(?:waaz|majlis|isteqbal)[\s._-]+(?:day[\s._-]?)?\d{1,2}/i.test(clean)) {
+    return clean
+  }
+  // 5. Numbered day folders e.g. "01", "02", "1", "2"
+  const numOnly = clean.match(/^(\d{1,2})$/)
+  if (numOnly) {
+    const d = parseInt(numOnly[1], 10)
     if (d >= 1 && d <= 31) return `Day ${d < 10 ? '0' + d : d}`
   }
-  const dmMatch = clean.match(/^(\d{1,2})[\s._\-](\d{1,2})(?:[\s._\-]+.*)?$/)
-  if (dmMatch) {
-    const d = parseInt(dmMatch[1], 10)
-    const m = parseInt(dmMatch[2], 10)
-    if (d >= 1 && d <= 31 && m >= 1 && m <= 12) return `Day ${d < 10 ? '0' + d : d}`
+  const leadingNumMatch = clean.match(/^(\d{1,2})[\s._\-]+[A-Za-z]/)
+  if (leadingNumMatch) {
+    return clean
   }
-  if (isSafarFolder(clean)) return null
-  const stripped = clean.split(/[\s_]+_/)[0].replace(/[-_ ]*(?:waaz|isteqbal|majlis|misaaq|urs|ziyarat|event|morning|evening|night|session).*$/i, '').trim()
-  if (stripped && stripped.length >= 2 && !/^[A-Za-z]+$/.test(stripped)) {
-    return stripped
+  // 6. Generic session or event folder inside a Safar:
+  if (!/^[A-Za-z]+$/.test(clean) && clean.length >= 2) {
+    return clean
   }
   return null
 }
@@ -1936,6 +1937,25 @@ export async function scanTrackerDataAsync(input: {
       workspaceList = input.workspaces.filter(w => w.enabled)
     }
 
+    if (workspaceList.length === 0 && (!input || !('workingPath' in input) || !input.workingPath)) {
+      updateOnlineDrives()
+      for (const drvLetter of verifiedOnlineDrives) {
+        const root = drvLetter.endsWith('\\') ? drvLetter : drvLetter + '\\'
+        const auto = autoDetectDriveFolders(root)
+        if (auto.inProcessExists || auto.toDeleteExists || auto.pendingExists || auto.safarCount > 0) {
+          workspaceList.push({
+            id: `auto_${drvLetter.slice(0, 1)}`,
+            driveRoot: root,
+            inProcessPath: auto.inProcessPath,
+            toUploadPath: auto.toUploadPath,
+            toDeletePath: auto.toDeletePath,
+            pendingPath: auto.pendingPath,
+            enabled: true
+          })
+        }
+      }
+    }
+
     const configuredDriveKeys = new Set(workspaceList.map(ws => normalizeDrive(ws.driveRoot || ws.inProcessPath)).filter(Boolean))
     let websiteScanComplete = false
     if (!workspaceList.length && !Array.isArray(input) && input?.workingPath) {
@@ -2340,12 +2360,13 @@ export function removeTaskTrackerRecord(safarName: string, dateFolder: string): 
   return { success: true }
 }
 
-export async function resetAndCleanTrackerRecords(): Promise<{ success: boolean; data?: any; error?: string }> {
+export async function resetAndCleanTrackerRecords(input?: any): Promise<{ success: boolean; data?: any; error?: string }> {
   try {
     await runTrackerDbAsync(['--clean-reset'])
     cachedScanResult = null
     lastScanTimestamp = 0
-    const fresh = await scanTrackerDataAsync({ ...(lastScanInput || {}), force: true })
+    const scanArgs = (input && Object.keys(input).length > 0) ? input : (lastScanInput || {})
+    const fresh = await scanTrackerDataAsync({ ...(scanArgs || {}), force: true })
     broadcastChange()
     return { success: true, data: fresh }
   } catch (err: any) {
@@ -2756,9 +2777,9 @@ export function registerTaskTrackerIPC(): void {
   })
 
   // ── 15. Reset and Clean Tracker for Fresh Rescan ──
-  ipcMain.handle('taskTracker:resetAndRescan', async () => {
+  ipcMain.handle('taskTracker:resetAndRescan', async (_e, input?: any) => {
     try {
-      return await resetAndCleanTrackerRecords()
+      return await resetAndCleanTrackerRecords(input)
     } catch (err: any) {
       return { success: false, error: err?.message || 'Failed to reset and rescan' }
     }

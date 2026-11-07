@@ -197,7 +197,7 @@ contextBridge.exposeInMainWorld('api', {
       ipcRenderer.invoke('taskTracker:moveSafar', params),
     removeSafarRecords:    (safarName: string) => ipcRenderer.invoke('taskTracker:removeSafarRecords', safarName),
     removeTask:            (safarName: string, dateFolder: string) => ipcRenderer.invoke('taskTracker:removeTask', { safarName, dateFolder }),
-    resetAndRescan:        () => ipcRenderer.invoke('taskTracker:resetAndRescan'),
+    resetAndRescan:        (input?: any) => ipcRenderer.invoke('taskTracker:resetAndRescan', input),
     addDateFolder:         (params: { safarName: string; dateFolder: string; datePath?: string }) => ipcRenderer.invoke('taskTracker:addDateFolder', params),
     deleteSafarDirectory:  (params: { safarName: string; currentPath: string; workspaces: any[] }) =>
       ipcRenderer.invoke('taskTracker:deleteSafarDirectory', params),
