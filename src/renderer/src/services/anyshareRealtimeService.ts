@@ -27,6 +27,20 @@ export interface WorkstationTelemetry {
   timestamp: string;
 }
 
+function extractPureDate(name: string): string {
+  if (!name) return '';
+  const clean = name.trim();
+  const ymdMatch = clean.match(/^(\d{4})[\s._\-](\d{1,2})[\s._\-](\d{1,2})/i);
+  if (ymdMatch) return `${ymdMatch[1]}-${ymdMatch[2].padStart(2, '0')}-${ymdMatch[3].padStart(2, '0')}`;
+  const dmyMatch = clean.match(/^(\d{1,2})[\s._\-](\d{1,2})[\s._\-](\d{4})/i);
+  if (dmyMatch) return `${dmyMatch[3]}-${dmyMatch[2].padStart(2, '0')}-${dmyMatch[1].padStart(2, '0')}`;
+  const dayMatch = clean.match(/^day[\s._\-]?(\d{1,3})/i);
+  if (dayMatch) { const d = parseInt(dayMatch[1], 10); return `Day ${d < 10 ? '0' + d : d}`; }
+  const singleDayMatch = clean.match(/^(\d{1,2})$/);
+  if (singleDayMatch) { const d = parseInt(singleDayMatch[1], 10); if (d >= 1 && d <= 31) return `Day ${d < 10 ? '0' + d : d}`; }
+  return clean.split(/[\s_]+_/)[0].trim();
+}
+
 class AnyShareRealtimeService {
   private channel: any = null;
   private trackerChannel: any = null;
@@ -80,9 +94,29 @@ class AnyShareRealtimeService {
     const safarByName = new Map((safars || []).map((s: any) => [String(s.safarName || ''), s]));
     const rows = (tasks || []).map((task: any, index: number) => {
       const safarName = String(task.safarName || '');
-      const dateFolder = String(task.dateFolder || '');
+      const dateFolder = extractPureDate(String(task.dateFolder || '')) || String(task.dateFolder || '');
       const status = String(task.status || 'editing_pending');
-      const stage = status === 'submitted' ? 'jameya' : status === 'uploaded' || status === 'upload_pending' ? 'upload' : status === 'editing' || status === 'review' ? 'editing' : 'rendering';
+      const isMissing = task.isMissing === true || task.isPresent === false || task.isAvailable === false;
+      let stage: 'editing' | 'rendering' | 'upload' | 'jameya' = 'editing';
+      if (isMissing || status === 'submitted') {
+        stage = 'jameya';
+      } else if (status === 'uploaded') {
+        stage = 'upload';
+      } else if (status === 'upload_pending' || (task.renderVideoCount && task.renderVideoCount > 0) || task.finalPath) {
+        stage = 'rendering';
+      } else if (status === 'editing' || status === 'review') {
+        stage = 'editing';
+      } else {
+        stage = 'editing';
+      }
+      let resolvedStage = stage;
+      if (isMissing) {
+        resolvedStage = 'jameya';
+      } else if (previous?.stage && previous.stage === 'jameya' && status !== 'upload_pending' && status !== 'uploaded') {
+        resolvedStage = 'jameya';
+      } else if (previous?.stage && stage === 'editing' && !task.isManual) {
+        resolvedStage = previous.stage;
+      }
       const safar = safarByName.get(safarName);
       const hijriYear = safar?.safarYear || '';
       const id = `${safarName}::${dateFolder}`;
@@ -92,7 +126,9 @@ class AnyShareRealtimeService {
         safarName,
         dateFolder,
         hijriDate: task.hijriDate || getHijriDate(dateFolder, hijriYear),
-        stage: previous?.stage || stage,
+        stage: resolvedStage,
+        isPresent: !isMissing,
+        isMissing,
         dueDate: previous?.dueDate || '',
         editorName: previous?.editorName || '',
         updatedAt: now,
@@ -104,8 +140,19 @@ class AnyShareRealtimeService {
       ? []
       : [...priorRows.values()].filter((row: any) => archivedSafarNames.has(row.safarName) && !scannedSafarNames.has(row.safarName));
     rows.push(...retainedArchivedRows);
+    const uniqueRowsMap = new Map<string, any>();
+    for (const r of rows) {
+      if (!uniqueRowsMap.has(r.id)) {
+        uniqueRowsMap.set(r.id, r);
+      } else {
+        const existing = uniqueRowsMap.get(r.id)!;
+        const rank = (st: string) => st === 'jameya' ? 4 : st === 'upload' ? 3 : st === 'rendering' ? 2 : 1;
+        if (rank(r.stage) > rank(existing.stage)) uniqueRowsMap.set(r.id, { ...existing, ...r });
+      }
+    }
+    const cleanRows = Array.from(uniqueRowsMap.values());
     const rowsBySafar = new Map<string, any[]>();
-    for (const row of rows) {
+    for (const row of cleanRows) {
       const group = rowsBySafar.get(row.safarName) || [];
       group.push(row);
       rowsBySafar.set(row.safarName, group);
@@ -115,8 +162,8 @@ class AnyShareRealtimeService {
       return;
     }
     const snapshot = {
-      tasks: rows,
-      folders: [...new Set(rows.map((row: any) => row.dateFolder))],
+      tasks: cleanRows,
+      folders: [...new Set(cleanRows.map((row: any) => row.dateFolder))],
       safars: [...(safars || []).map((s: any) => {
         const safarName = String(s.safarName || '');
         const previousSafar = priorSafars.get(safarName);
@@ -186,7 +233,7 @@ class AnyShareRealtimeService {
         event: 'workstation_sync_safars',
         payload: {
           safars: safarListForWeb,
-          tasks: rows,
+          tasks: cleanRows,
           timestamp: now
         }
       }).catch((e: any) => console.warn('[AnyShare Nexus] workstation_sync_safars broadcast failed:', e));
@@ -215,7 +262,26 @@ class AnyShareRealtimeService {
         config: { broadcast: { self: false } }
       });
       this.trackerChannel
-        .on('broadcast', { event: 'request_snapshot' }, () => {
+        .on('broadcast', { event: 'request_snapshot' }, (payload: any) => {
+          if (payload?.payload?.forceRescan) {
+            const api = (window as any).api?.taskTracker;
+            if (api?.resetAndRescan) {
+              api.resetAndRescan().then(() => {
+                if (this.onScanRequestedCallback) this.onScanRequestedCallback();
+              });
+              return;
+            }
+          }
+          if (this.onScanRequestedCallback) {
+            try { this.onScanRequestedCallback(); } catch {}
+          }
+        })
+        .on('broadcast', { event: 'reset_and_rescan' }, async () => {
+          const api = (window as any).api?.taskTracker;
+          if (api?.resetAndRescan) await api.resetAndRescan();
+          if (this.onScanRequestedCallback) this.onScanRequestedCallback();
+        })
+        .on('broadcast', { event: '_noop' }, () => {
           if (this.onScanRequestedCallback) {
             try { this.onScanRequestedCallback(); } catch {}
           }

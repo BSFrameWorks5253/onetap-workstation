@@ -476,7 +476,7 @@ const SYSTEM_IGNORED_DIRS = new Set([
   'microsoft',
   'msbuild',
   'windows kits',
-  'temp',
+  'temp', 'intelvga', 'dptf', 'mei', 'drivers',
   'cache'
 ])
 
@@ -493,6 +493,7 @@ export function isSafarFolder(name: string): boolean {
   if (isSystemIgnored(clean)) return false
   const rootKey = clean.toUpperCase().replace(/[\s_-]+/g, ' ').trim()
   if (['IN PROCESS', 'TO UPLOAD', 'TO DELETE', 'UPLOADED DATA', 'UPLOADED', 'UPLOAD', 'PENDING', 'SAFARS', 'SAFAR', 'WORKING SAFAR', 'WORKING', 'CLIENT', 'CLIENTS'].includes(rootKey)) return false
+  if (/^(?:intelvga|dptf|mei|realtek|nvidia|amd|driver|drivers|windows|system)/i.test(clean)) return false
   if (/^\d{4}[\s._-]\d{1,2}[\s._-]\d{1,2}(?:\b|[\s._-])/i.test(clean)) return false
   if (/^day[\s._-]?\d+/i.test(clean)) return false
   // Standard Safar folder patterns:
@@ -544,7 +545,30 @@ export function normalizeDateFolderKey(name: string): string {
   return (name || '').toLowerCase().replace(/[\s_-]+/g, ' ').trim()
 }
 
+export function extractCleanDateFolder(name: string): string | null {
+  if (!name) return null
+  const clean = name.trim()
+  if (isSystemIgnored(clean)) return null
+  const lower = clean.toLowerCase()
+  if (['final', 'final titles', 'output', 'outputs', 'export', 'exports', 'dvd', 'titles', 'assets', 'raw'].includes(lower) || lower.startsWith('$') || lower.startsWith('.')) return null
+  if (isSafarFolder(clean)) return null
+  if (/^(?:intelvga|dptf|mei|realtek|nvidia|amd|driver|drivers|windows|system)/i.test(clean)) return null
+  const ymdMatch = clean.match(/^(\d{4})[\s._\-](\d{1,2})[\s._\-](\d{1,2})/i)
+  if (ymdMatch) return `${ymdMatch[1]}-${ymdMatch[2].padStart(2, '0')}-${ymdMatch[3].padStart(2, '0')}`
+  const dmyMatch = clean.match(/^(\d{1,2})[\s._\-](\d{1,2})[\s._\-](\d{4})/i)
+  if (dmyMatch) return `${dmyMatch[3]}-${dmyMatch[2].padStart(2, '0')}-${dmyMatch[1].padStart(2, '0')}`
+  const dayMatch = clean.match(/^day[\s._\-]?(\d{1,3})/i)
+  if (dayMatch) { const d = parseInt(dayMatch[1], 10); return `Day ${d < 10 ? '0' + d : d}` }
+  const singleDayMatch = clean.match(/^(\d{1,2})$/)
+  if (singleDayMatch) { const d = parseInt(singleDayMatch[1], 10); if (d >= 1 && d <= 31) return `Day ${d < 10 ? '0' + d : d}` }
+  return null
+}
+
 export function isDateFolder(name: string): boolean {
+  return extractCleanDateFolder(name) !== null
+}
+
+function _legacyIsDateFolder(name: string): boolean {
   if (!name) return false
   const clean = name.trim().toLowerCase()
   if (
@@ -682,6 +706,11 @@ function getFolderNamesSet(rootPath: string): Map<string, string> {
         const full = path.join(dir, ent.name)
         const lower = ent.name.toLowerCase().trim()
 
+        const cleanDate = extractCleanDateFolder(ent.name)
+        if (cleanDate) {
+          const normD = normalizeDateFolderKey(cleanDate)
+          if (!map.has(normD)) map.set(normD, full)
+        }
         if (ent.isDirectory()) {
           const stats = scanFolderMedia(full, 2)
           if (stats.videoCount > 0 && !map.has(lower)) {
@@ -1041,6 +1070,66 @@ function scanSingleWorkspace(
     const finalDirPath = finalDirEnt ? path.join(safarPath, finalDirEnt.name) : null
 
     const finalDateFoldersMap = new Map<string, string>()
+    const dateFolderNames = new Map<string, string>()
+    const dateGroups = new Map<string, { cleanDate: string; sourcePaths: string[] }>()
+    const finalRendersByDate = new Map<string, { videoCount: number; totalSize: number; latestMtime: number; finalPaths: string[] }>()
+
+    for (const entry of safarEntries) {
+      if (!entry.isDirectory()) continue
+      const lower = entry.name.toLowerCase()
+      if (['final', 'final titles', 'titles', 'assets', 'raw', 'output', 'outputs', 'export', 'exports'].includes(lower)) continue
+      const cleanDate = extractCleanDateFolder(entry.name)
+      if (cleanDate) {
+        const normKey = normalizeDateFolderKey(cleanDate)
+        const checkKey = `${safarFolderName.toLowerCase()}::${normKey}`
+        if (!excludedFolderKeys.has(checkKey)) {
+          const group = dateGroups.get(cleanDate) || { cleanDate, sourcePaths: [] }
+          group.sourcePaths.push(path.join(safarPath, entry.name))
+          dateGroups.set(cleanDate, group)
+          dateFolderNames.set(normKey, cleanDate)
+        }
+      }
+    }
+
+    if (finalDirPath && fs.existsSync(finalDirPath)) {
+      try {
+        const fSubs = fs.readdirSync(finalDirPath, { withFileTypes: true })
+        for (const fsEnt of fSubs) {
+          const cleanDate = extractCleanDateFolder(fsEnt.name)
+          if (!cleanDate) continue
+          const normKey = normalizeDateFolderKey(cleanDate)
+          const checkKey = `${safarFolderName.toLowerCase()}::${normKey}`
+          if (excludedFolderKeys.has(checkKey)) continue
+
+          const fullPath = path.join(finalDirPath, fsEnt.name)
+          const record = finalRendersByDate.get(cleanDate) || { videoCount: 0, totalSize: 0, latestMtime: 0, finalPaths: [] }
+          record.finalPaths.push(fullPath)
+
+          if (fsEnt.isDirectory()) {
+            finalDateFoldersMap.set(normKey, fullPath)
+            const stats = scanFolderMedia(fullPath)
+            record.videoCount += stats.videoCount
+            record.totalSize += stats.totalSize
+            if (stats.mtime > record.latestMtime) record.latestMtime = stats.mtime
+          } else if (fsEnt.isFile() && VIDEO_EXTS.has(path.extname(fsEnt.name).toLowerCase())) {
+            record.videoCount += 1
+            try {
+              const st = fs.statSync(fullPath)
+              record.totalSize += st.size
+              if (st.mtimeMs > record.latestMtime) record.latestMtime = st.mtimeMs
+            } catch {}
+          }
+          finalRendersByDate.set(cleanDate, record)
+
+          if (!dateGroups.has(cleanDate)) {
+            dateGroups.set(cleanDate, { cleanDate, sourcePaths: [fullPath] })
+            dateFolderNames.set(normKey, cleanDate)
+          }
+        }
+      } catch {}
+    }
+
+    /* legacy scan replaced by dateGroups */ if (false as boolean) {
     if (finalDirPath && fs.existsSync(finalDirPath)) {
       try {
         const fSubs = fs.readdirSync(finalDirPath, { withFileTypes: true })
@@ -1070,7 +1159,9 @@ function scanSingleWorkspace(
       const normKey = normalizeDateFolderKey(name)
       const checkKey = `${safarFolderName.toLowerCase()}::${normKey}`
       if (!excludedFolderKeys.has(checkKey) && !dateFolderNames.has(normKey)) {
-        dateFolderNames.set(normKey, name)
+        if (true) { dateFolderNames.set(normKey, name) /* balanced */
+      }
+    }
       }
     }
 
@@ -1118,6 +1209,8 @@ function scanSingleWorkspace(
         workingPath: safarPath,
         finalPath: finalDirPath || undefined,
         currentDrive: workingDrive,
+        isAvailable: true,
+        isDriveConnected: true,
         metadata: {
           hasPrproj: prInfo.hasPrproj,
           hasAutoSave: prInfo.hasAutoSave,
@@ -1150,11 +1243,15 @@ function scanSingleWorkspace(
         mtime: Date.now()
       })
 
-      const isRenderedInFinal = !!matchedFinalPath
+      const renderRecord = finalRendersByDate.get(dateFolderName)
+      const isRenderedInFinal = Boolean(matchedFinalPath || (renderRecord && (renderRecord.videoCount > 0 || renderRecord.finalPaths.length > 0)))
 
-      let renderVideoCount = 0
-      let renderSizeBytes = 0
-      let renderedAtTime: number | undefined
+      let renderVideoCount = renderRecord?.videoCount || 0
+      let renderSizeBytes = renderRecord?.totalSize || 0
+      let renderedAtTime: number | undefined = renderRecord?.latestMtime && renderRecord.latestMtime > 0 ? renderRecord.latestMtime : undefined
+      let _unusedZero = 0; if (false as boolean) renderVideoCount = _unusedZero
+      if (!renderSizeBytes) renderSizeBytes = 0
+      if (!renderedAtTime) renderedAtTime = undefined
 
       // Catalog Final outputs
       if (matchedFinalPath && fs.existsSync(matchedFinalPath)) {
@@ -1295,6 +1392,8 @@ function scanSingleWorkspace(
         uploadPath: uploadMatchPath || undefined,
         deletePath: deleteMatchPath || undefined,
         currentDrive: workingDrive,
+        isAvailable: true,
+        isDriveConnected: true,
         metadata: {
           hasPrproj: prInfo.hasPrproj,
           hasAutoSave: prInfo.hasAutoSave,
@@ -1360,6 +1459,8 @@ function scanSingleWorkspace(
                 uploadPath: category === 'to_upload' ? fullPath : undefined,
                 deletePath: category === 'to_delete' ? fullPath : undefined,
                 currentDrive: workingDrive,
+        isAvailable: true,
+        isDriveConnected: true,
                 metadata: { isRendered: true, driveLabel: workingDriveLabel }
               })
             } else if (isSafarFolder(ent.name)) {

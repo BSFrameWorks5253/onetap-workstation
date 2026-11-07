@@ -301,6 +301,19 @@ export default function TaskTracker(): JSX.Element {
 
   // ── Auto-Watcher & Drive Sentinel Hook ──
   useEffect(() => {
+
+    try {
+      anyShareRealtimeService.init((msg) => {
+        showToast({ title: 'AnyShare Nexus', message: msg, type: 'info' })
+      })
+      anyShareRealtimeService.setScanRequestedCallback(() => {
+        console.log('[TaskTracker] AnyShare requested fresh scan')
+        doScan(false)
+      })
+    } catch (e) {
+      console.warn('[TaskTracker] anyShareRealtimeService init error:', e)
+    }
+
     loadDrives().then(loaded => {
       refreshDriveSpaces(loaded)
       doScan()

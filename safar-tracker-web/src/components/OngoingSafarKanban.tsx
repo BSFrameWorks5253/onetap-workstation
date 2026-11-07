@@ -103,8 +103,12 @@ export default function OngoingSafarKanban({
   // 1. Available ongoing (non-archived) Safars
   const ongoingSafars = useMemo(() => {
     const names = new Set<string>();
-    safars.filter(s => !s.isArchived).forEach(s => s.safarName && names.add(s.safarName));
-    tasks.forEach(t => t.safarName && names.add(t.safarName));
+    safars
+      .filter(s => !s.isArchived && !/^(?:intelvga|dptf|mei)/i.test(s.safarName))
+      .forEach(s => s.safarName && names.add(s.safarName));
+    tasks
+      .filter(t => !/^(?:intelvga|dptf|mei)/i.test(t.safarName))
+      .forEach(t => t.safarName && names.add(t.safarName));
     return Array.from(names);
   }, [safars, tasks]);
 
@@ -136,13 +140,14 @@ export default function OngoingSafarKanban({
     for (const t of list) {
       const normKey = (t.dateFolder || '').toLowerCase().replace(/[\s_\-]/g, '');
       if (!normKey) continue;
-      // Deduplicate: if duplicate found, keep the one with stage or most recent
+      // Deduplicate: if duplicate found, keep the one with more advanced stage or most recent
       if (!seen.has(normKey)) {
         seen.set(normKey, t);
       } else {
         const existing = seen.get(normKey)!;
-        if (t.updatedAt && existing.updatedAt && t.updatedAt > existing.updatedAt) {
-          seen.set(normKey, t);
+        const rank = (st: string) => st === 'jameya' ? 4 : st === 'upload' ? 3 : st === 'rendering' ? 2 : 1;
+        if (rank(t.stage) > rank(existing.stage) || (t.updatedAt && existing.updatedAt && t.updatedAt > existing.updatedAt)) {
+          seen.set(normKey, { ...existing, ...t });
         }
       }
     }

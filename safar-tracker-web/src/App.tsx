@@ -91,43 +91,65 @@ function dateLabel(dateFolder: string, supplied?: string, safarYear?: string | n
   return dayOnly ? `Day ${Number(dayOnly)}` : 'Date not provided'
 }
 
+function extractCleanWebDate(name: string): string {
+  if (!name) return ''
+  const clean = name.trim()
+  const ymdMatch = clean.match(/^(\d{4})[\s._\-](\d{1,2})[\s._\-](\d{1,2})/i)
+  if (ymdMatch) return `${ymdMatch[1]}-${ymdMatch[2].padStart(2, '0')}-${ymdMatch[3].padStart(2, '0')}`
+  const dmyMatch = clean.match(/^(\d{1,2})[\s._\-](\d{1,2})[\s._\-](\d{4})/i)
+  if (dmyMatch) return `${dmyMatch[3]}-${dmyMatch[2].padStart(2, '0')}-${dmyMatch[1].padStart(2, '0')}`
+  const dayMatch = clean.match(/^day[\s._\-]?(\d{1,3})/i)
+  if (dayMatch) { const d = parseInt(dayMatch[1], 10); return `Day ${d < 10 ? '0' + d : d}` }
+  const singleDayMatch = clean.match(/^(\d{1,2})$/)
+  if (singleDayMatch) { const d = parseInt(singleDayMatch[1], 10); if (d >= 1 && d <= 31) return `Day ${d < 10 ? '0' + d : d}` }
+  return clean.split(/[\s_]+_/)[0].trim()
+}
+
 function dateFolderName(task: Partial<SafarTask>): string {
   const parts = String(task.dateFolder || '').trim().split(/[\\/]+/).filter(Boolean)
   const folder = parts[parts.length - 1] || ''
+  const cleanDate = extractCleanWebDate(folder)
+  if (cleanDate) return cleanDate
   const isDateFolder = /(?:^|\D)\d{4}[\s._-]\d{1,2}(?:[\s._-]\d{1,2})?|^\d{1,2}[\s._-]\d{1,2}(?:[\s._-]\d{4})?|^Day[_ -]?\d{1,3}/i.test(folder)
   return /\.[a-z\d]{2,6}$/i.test(folder) || !isDateFolder ? 'Date folder unavailable' : folder
 }
 
 function normalizeSnapshot(value: Partial<Snapshot> | null | undefined): Snapshot {
-  const safars = (Array.isArray(value?.safars) ? value.safars : []).filter(safar => Boolean(safar?.safarName)).map(safar => ({
-    safarName: String(safar.safarName),
-    safarYear: safar.safarYear,
-    totalDays: Number(safar.totalDays) || 0,
-    isArchived: Boolean(safar.isArchived),
-    isDone: Boolean(safar.isDone),
-    archivePriorStages: safar.archivePriorStages,
-    updatedAt: safar.updatedAt
-  }))
+  const safars = (Array.isArray(value?.safars) ? value.safars : [])
+    .filter(safar => Boolean(safar?.safarName) && !/^(?:intelvga|dptf|mei)/i.test(safar.safarName))
+    .map(safar => ({
+      safarName: String(safar.safarName),
+      safarYear: safar.safarYear,
+      totalDays: Number(safar.totalDays) || 0,
+      isArchived: Boolean(safar.isArchived),
+      isDone: Boolean(safar.isDone),
+      archivePriorStages: safar.archivePriorStages,
+      updatedAt: safar.updatedAt
+    }))
   const yearByName = new Map(safars.map(safar => [safar.safarName, safar.safarYear]))
 
-  const rawTasks = (Array.isArray(value?.tasks) ? value.tasks : []).map((raw: any, index): SafarTask => {
-    const dateFolder = dateFolderName({ dateFolder: String(raw.dateFolder || '') })
-    const safarName = String(raw.safarName || '')
-    const isMissing = raw.isMissing ?? (raw.isPresent === false || raw.is_present === false)
-    const isPresent = !isMissing
-    return {
-      id: String(raw.id || `${safarName}::${dateFolder}::${index}`),
-      safarName,
-      dateFolder,
-      hijriDate: dateLabel(dateFolder, raw.hijriDate || raw.dateLabel, yearByName.get(safarName)),
-      stage: STAGES.some(stage => stage.id === raw.stage) ? raw.stage : 'editing',
-      dueDate: String(raw.dueDate || ''),
-      updatedAt: String(raw.updatedAt || value?.updatedAt || ''),
-      isPresent,
-      isMissing,
-      is_present: isPresent
-    }
-  }).filter(task => task.safarName && task.dateFolder && task.dateFolder !== 'Date folder unavailable')
+  const rawTasks = (Array.isArray(value?.tasks) ? value.tasks : [])
+    .filter((raw: any) => !/^(?:intelvga|dptf|mei)/i.test(String(raw?.safarName || '')))
+    .map((raw: any, index): SafarTask => {
+      const dateFolder = dateFolderName({ dateFolder: String(raw.dateFolder || '') })
+      const safarName = String(raw.safarName || '')
+      const isMissing = raw.isMissing ?? (raw.isPresent === false || raw.is_present === false)
+      const isPresent = !isMissing
+      // USER RULE: non-present items must ONLY and ONLY appear in Stage 4: Submitted to Jameya!
+      const stage: Stage = isMissing ? 'jameya' : (STAGES.some(s => s.id === raw.stage) ? raw.stage : 'editing')
+      return {
+        id: String(raw.id || `${safarName}::${dateFolder}::${index}`),
+        safarName,
+        dateFolder,
+        hijriDate: dateLabel(dateFolder, raw.hijriDate || raw.dateLabel, yearByName.get(safarName)),
+        stage,
+        dueDate: String(raw.dueDate || ''),
+        updatedAt: String(raw.updatedAt || value?.updatedAt || ''),
+        isPresent,
+        isMissing,
+        is_present: isPresent
+      }
+    }).filter(task => task.safarName && task.dateFolder && task.dateFolder !== 'Date folder unavailable')
 
   // Strict deduplication by normalized key: safarName + normalized date folder
   const seenKeys = new Map<string, SafarTask>()
@@ -163,7 +185,7 @@ function EditorAssignment({ value, label, onSave }: { value: string; label: stri
   return <input className="editor-input" aria-label={label} value={draft} placeholder="Assign editor" onChange={event => setDraft(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') event.currentTarget.blur(); if (event.key === 'Escape') { setDraft(value); event.currentTarget.blur() } }} onBlur={() => { if (draft.trim() !== value) onSave(draft.trim()) }} />
 }
 
-function SafarLoadingSkeleton({ variant }: { variant: 'dashboard' | 'tracker' }): JSX.Element {
+function SafarLoadingSkeleton({ variant }: { variant: 'dashboard' | 'tracker' | 'kanban' }): JSX.Element {
   return <section className={`safar-loading-skeleton ${variant}`} role="status" aria-label="Loading Safar production data" aria-busy="true">
     <span className="visually-hidden">Loading your Safar folders and progress…</span>
     {variant === 'dashboard' ? <>
@@ -171,7 +193,28 @@ function SafarLoadingSkeleton({ variant }: { variant: 'dashboard' | 'tracker' })
       <div className="skeleton-dashboard-grid">{[0, 1, 2].map(item => <div className="skeleton-card" key={item} aria-hidden="true">
         <div className="skeleton-title-row"><i/><i/></div><i className="skeleton-progress"/><i className="skeleton-copy"/><i className="skeleton-date"/><i className="skeleton-date short"/>
       </div>)}</div>
-    </> : <div className="skeleton-tracker-list" aria-hidden="true">{[0, 1, 2].map(item => <div className="skeleton-card" key={item}>
+    </> : variant === 'kanban' ? (
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px', marginTop: '16px' }}>
+        {[0, 1, 2, 3].map(col => (
+          <div key={col} style={{ borderRadius: '16px', border: '1px solid var(--border)', background: 'var(--surface)', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', minHeight: '380px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ width: '130px', height: '18px', borderRadius: '6px', background: 'rgba(0,0,0,0.08)' }} />
+              <div style={{ width: '28px', height: '18px', borderRadius: '10px', background: 'rgba(0,0,0,0.06)' }} />
+            </div>
+            {[0, 1, 2].map(card => (
+              <div key={card} style={{ borderRadius: '12px', border: '1px solid var(--border)', padding: '14px', background: 'var(--surface)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ width: '70%', height: '16px', borderRadius: '4px', background: 'rgba(0,0,0,0.08)' }} />
+                <div style={{ width: '45%', height: '12px', borderRadius: '4px', background: 'rgba(0,0,0,0.05)' }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px' }}>
+                  <div style={{ width: '30%', height: '10px', borderRadius: '4px', background: 'rgba(0,0,0,0.04)' }} />
+                  <div style={{ width: '20%', height: '10px', borderRadius: '4px', background: 'rgba(0,0,0,0.04)' }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    ) : <div className="skeleton-tracker-list" aria-hidden="true">{[0, 1, 2].map(item => <div className="skeleton-card" key={item}>
       <div className="skeleton-title-row"><i/><i/></div><i className="skeleton-progress"/><i className="skeleton-copy"/>
     </div>)}</div>}
     <p className="skeleton-status-copy">Getting your Safar folders ready…</p>
@@ -666,7 +709,7 @@ export default function App(): JSX.Element {
   async function handleResetAndRescan() {
     setNotice('Resetting tasks and rescanning workstation disk...')
     try {
-      await fetch('http://127.0.0.1:5253/api/tasks/reset', { method: 'POST' })
+      localStorage.removeItem(localKey)
     } catch {}
     await nexusChannelRef.current?.send({
       type: 'broadcast',
@@ -675,9 +718,15 @@ export default function App(): JSX.Element {
     })
     await trackerChannelRef.current?.send({
       type: 'broadcast',
+      event: 'reset_and_rescan',
+      payload: { requestedAt: new Date().toISOString(), forceRescan: true }
+    })
+    await trackerChannelRef.current?.send({
+      type: 'broadcast',
       event: 'request_snapshot',
       payload: { requestedAt: new Date().toISOString(), forceRescan: true }
     })
+    setNotice('Reset broadcast sent to One Tap Workstation. Rescanning disk for present folders...')
   }
 
   async function requestDesktopSync() {
@@ -854,16 +903,18 @@ export default function App(): JSX.Element {
 
           {/* VIEW: ONGOING SAFAR KANBAN BOARD */}
           {view === 'ongoing' && (
-            <OngoingSafarKanban
-              tasks={snapshot.tasks}
-              safars={snapshot.safars}
-              onUpdateTask={(task, changes) => void updateTask(task as SafarTask, changes as Partial<SafarTask>)}
-              onRemoveTask={task => void handleRemoveTask(task as SafarTask)}
-              onAddTask={(safarName, folder) => void handleAddTask(safarName, folder)}
-              onResetAndRescan={handleResetAndRescan}
-              saving={saving}
-              connected={connected}
-            />
+            initialLoading ? <SafarLoadingSkeleton variant="kanban" /> : (
+              <OngoingSafarKanban
+                tasks={snapshot.tasks}
+                safars={snapshot.safars}
+                onUpdateTask={(task, changes) => void updateTask(task as SafarTask, changes as Partial<SafarTask>)}
+                onRemoveTask={task => void handleRemoveTask(task as SafarTask)}
+                onAddTask={(safarName, folder) => void handleAddTask(safarName, folder)}
+                onResetAndRescan={handleResetAndRescan}
+                saving={saving}
+                connected={connected}
+              />
+            )
           )}
 
           {/* VIEW: PHOTO DATA & GOOGLE DRIVE SYNC */}
