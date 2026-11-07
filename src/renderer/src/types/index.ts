@@ -301,11 +301,13 @@ export interface DriveWorkspaceConfig {
   inProcessPath: string; // e.g. "D:\IN PROCESS"
   toUploadPath: string; // e.g. "D:\UPLOADED DATA" or "D:\TO UPLOAD"
   toDeletePath: string; // e.g. "D:\TO DELETE"
+  pendingPath?: string; // e.g. "D:\PENDING"
   label?: string;
   status?: {
     inProcessExists: boolean;
     toUploadExists: boolean;
     toDeleteExists: boolean;
+    pendingExists?: boolean;
     safarCount?: number;
   };
 }

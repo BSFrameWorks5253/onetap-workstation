@@ -153,8 +153,34 @@ export default function TaskTracker(): JSX.Element {
         let changed = false
         for (const drv of prioritized) {
           const normDrv = normalizeDrive(drv)
-          const alreadyExists = list.some(d => normalizeDrive(d.driveRoot) === normDrv)
-          if (!alreadyExists) {
+          const existingIdx = list.findIndex(d => normalizeDrive(d.driveRoot) === normDrv)
+          const auto = await api.taskTracker.autoDetectDriveFolders(drv)
+          if (auto && (auto.inProcessExists || auto.toDeleteExists || auto.pendingExists || auto.safarCount > 0)) {
+            if (existingIdx >= 0) {
+              list[existingIdx] = {
+                ...list[existingIdx],
+                inProcessPath: list[existingIdx].inProcessPath || auto.inProcessPath,
+                toUploadPath: list[existingIdx].toUploadPath || auto.toUploadPath,
+                toDeletePath: list[existingIdx].toDeletePath || auto.toDeletePath,
+                pendingPath: list[existingIdx].pendingPath || auto.pendingPath
+              }
+              changed = true
+            } else {
+              list.push({
+                id: `drive-${drv.toUpperCase().replace(/[\\/:]/g, '')}`,
+                driveRoot: auto.driveRoot,
+                enabled: true,
+                inProcessPath: auto.inProcessPath,
+                toUploadPath: auto.toUploadPath,
+                toDeletePath: auto.toDeletePath,
+                pendingPath: auto.pendingPath,
+                label: `Drive ${auto.driveRoot.replace(/[\\/]/g, '')}`
+              })
+              changed = true
+            }
+          }
+
+          if (false) {
             const auto = await api.taskTracker.autoDetectDriveFolders(drv)
             if (auto && auto.inProcessExists) {
               const inPath = auto.inProcessPath

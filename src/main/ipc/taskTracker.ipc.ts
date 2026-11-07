@@ -107,6 +107,7 @@ export interface DriveWorkspaceConfig {
   inProcessPath?: string
   toUploadPath?: string
   toDeletePath?: string
+  pendingPath?: string
   enabled: boolean
 }
 
@@ -118,6 +119,7 @@ export interface DriveAutoDetectResult {
   toUploadExists: boolean
   toDeletePath: string
   toDeleteExists: boolean
+  pendingExists?: boolean
   safarCount: number
 }
 
@@ -487,14 +489,35 @@ export function isSystemIgnored(dirName: string): boolean {
   return SYSTEM_IGNORED_DIRS.has(lower)
 }
 
-export function isSafarFolder(name: string): boolean {
+export function isSafarFolder(name: string, dirPath?: string): boolean {
   if (!name) return false
   const clean = name.trim()
   if (isSystemIgnored(clean)) return false
   const rootKey = clean.toUpperCase().replace(/[\s_-]+/g, ' ').trim()
   if (['IN PROCESS', 'TO UPLOAD', 'TO DELETE', 'UPLOADED DATA', 'UPLOADED', 'UPLOAD', 'PENDING', 'SAFARS', 'SAFAR', 'WORKING SAFAR', 'WORKING', 'CLIENT', 'CLIENTS'].includes(rootKey)) return false
-  if (/^(?:intelvga|dptf|mei|realtek|nvidia|amd|driver|drivers|windows|system)/i.test(clean)) return false
-  if (/^\d{4}[\s._-]\d{1,2}[\s._-]\d{1,2}(?:\b|[\s._-])/i.test(clean)) return false
+  if (/^(?:intelvga|dptf|mei|realtek|nvidia|amd|driver|drivers|windows|system|\$recycle\.bin)/i.test(clean)) return false
+
+  // If a directory on disk contains a Final subfolder or subdirectories that match dates, it is definitely a Safar
+  if (dirPath && fs.existsSync(dirPath)) {
+    try {
+      const subs = fs.readdirSync(dirPath, { withFileTypes: true })
+      const hasFinal = subs.some(e => e.isDirectory() && (e.name.toLowerCase() === 'final' || e.name.toLowerCase() === 'final titles'))
+      const hasDateSub = subs.some(e => e.isDirectory() && (extractCleanDateFolder(e.name) !== null || /^\d{4}[\s._-]\d{1,2}/.test(e.name)))
+      if (hasFinal || hasDateSub) return true
+    } catch {}
+  }
+
+  // Pure date deliverables without city or with event session tags are dates, not Safars:
+  // e.g. "1448-05-08 _01M", "1448-05-08 _02E", "2026-11-05", "1448-05-08"
+  if (/^\d{4}[\s._-]\d{1,2}[\s._-]\d{1,2}(?:\s*_\d{2}[A-Za-z]|\s*_\d{2}|\s*waaz|\s*isteqbal|\s*majlis|\s*urs|\s*ziyarat|$)/i.test(clean)) {
+    return false
+  }
+
+  // If it starts with YYYY-MM-DD or YYYY-Serial-Day followed by a City name (e.g. "1448-05-08 Coimbatore", "1448-01-22 Mumbai"):
+  if (/^\d{4}[\s._-]\d{1,2}[\s._-]\d{1,2}[\s._-]+[A-Za-z]/i.test(clean)) {
+    return true
+  }
+  // date deliverables without city handled above
   if (/^day[\s._-]?\d+/i.test(clean)) return false
   // Standard Safar folder patterns:
   // e.g. "1448-03 Mumbai", "1448_03_Mumbai", "1448 - 03 Mumbai", "1448-03-Mumbai", "1448-03"
@@ -504,7 +527,7 @@ export function isSafarFolder(name: string): boolean {
   // e.g. "1448 Mumbai", "1448-Mumbai"
   if (/^\d{4}[\s\-_.]+[A-Za-z].*$/i.test(clean)) return true
   // Explicit "Safar" in name e.g. "Safar 1", "Safar_Mumbai"
-  if (/safar/i.test(clean)) return true
+  if (/safar|istefad[ah]?|ziyafat|urs|milad/i.test(clean)) return true
   return false
 }
 
@@ -767,6 +790,8 @@ export function autoDetectDriveFolders(driveRoot: string): DriveAutoDetectResult
     toUploadExists: false,
     toDeletePath: path.join(root, 'To Delete'),
     toDeleteExists: false,
+    pendingPath: path.join(root, 'Pending'),
+    pendingExists: false,
     safarCount: 0
   }
 
@@ -895,6 +920,40 @@ export function autoDetectDriveFolders(driveRoot: string): DriveAutoDetectResult
     if (!result.toDeleteExists) {
       result.toDeleteExists = fs.existsSync(result.toDeletePath)
     }
+
+    // 4. Detect PENDING
+    const pendingCandidates = ['pending', 'to pending', 'queue', 'working safar']
+    for (const cand of pendingCandidates) {
+      const match = dirs.find(d => d.toLowerCase() === cand)
+      if (match) {
+        result.pendingPath = path.join(root, match)
+        result.pendingExists = true
+        break
+      }
+    }
+    if (!result.pendingExists) {
+      result.pendingExists = fs.existsSync(result.pendingPath)
+    }
+
+    // Count Safars across all detected workspace containers
+    let detectedSafars = 0
+    const probeDirs = [
+      result.inProcessExists ? result.inProcessPath : null,
+      result.pendingExists ? result.pendingPath : null,
+      result.toDeleteExists ? result.toDeletePath : null
+    ].filter(Boolean) as string[]
+
+    for (const p of probeDirs) {
+      try {
+        const ents = fs.readdirSync(p, { withFileTypes: true })
+        detectedSafars += ents.filter(
+          e => e.isDirectory() && !isSystemIgnored(e.name) && isSafarFolder(e.name, path.join(p, e.name))
+        ).length
+      } catch {}
+    }
+    result.safarCount = detectedSafars
+    if (false) {
+    }
   } catch (err) {
     console.error('[taskTracker] autoDetectDriveFolders error:', err)
   }
@@ -949,6 +1008,7 @@ function scanSingleWorkspace(
   workingPath: string,
   toUploadPath?: string,
   toDeletePath?: string,
+  pendingPath?: string,
   driveRootOverride?: string
 ): { safars: SafarRecord[]; tasks: TaskRecord[]; resources: MediaResourceRecord[] } {
   const tasksToUpsert: TaskRecord[] = []
@@ -1821,6 +1881,7 @@ export async function scanTrackerDataAsync(input: {
   workingPath?: string
   toUploadPath?: string
   toDeletePath?: string
+  pendingPath?: string
   workspaces?: DriveWorkspaceConfig[]
   force?: boolean
 } | DriveWorkspaceConfig[]): Promise<TrackerScanResult> {
@@ -1873,7 +1934,44 @@ export async function scanTrackerDataAsync(input: {
           continue // Skip offline drive instantly without touching disk
         }
 
-        if (workingDir) {
+        const scannedDirs = new Set<string>()
+        if (workingDir && fs.existsSync(workingDir)) {
+          scannedDirs.add(workingDir.toLowerCase())
+          const res = scanSingleWorkspace(workingDir, ws.toUploadPath, ws.toDeletePath, ws.driveRoot)
+          allSafarsToUpsert.push(...res.safars)
+          allTasksToUpsert.push(...res.tasks)
+          allResourcesToUpsert.push(...res.resources)
+        }
+
+        const pendingDir = ws.pendingPath || (ws.driveRoot ? path.join(ws.driveRoot, 'Pending') : null)
+        if (pendingDir && fs.existsSync(pendingDir) && !scannedDirs.has(pendingDir.toLowerCase())) {
+          scannedDirs.add(pendingDir.toLowerCase())
+          const resPending = scanSingleWorkspace(pendingDir, ws.toUploadPath, ws.toDeletePath, ws.driveRoot)
+          for (const s of resPending.safars) {
+            s.currentFolder = 'pending'
+          }
+          allSafarsToUpsert.push(...resPending.safars)
+          allTasksToUpsert.push(...resPending.tasks)
+          allResourcesToUpsert.push(...resPending.resources)
+        }
+
+        const deleteDir = ws.toDeletePath || (ws.driveRoot ? path.join(ws.driveRoot, 'To Delete') : null)
+        if (deleteDir && fs.existsSync(deleteDir) && !scannedDirs.has(deleteDir.toLowerCase())) {
+          scannedDirs.add(deleteDir.toLowerCase())
+          const resDelete = scanSingleWorkspace(deleteDir, ws.toUploadPath, ws.toDeletePath, ws.driveRoot)
+          for (const s of resDelete.safars) {
+            s.currentFolder = 'to_delete'
+            s.isSafarDone = true
+            s.isArchived = true
+          }
+          for (const t of resDelete.tasks) {
+            t.status = 'submitted'
+          }
+          allSafarsToUpsert.push(...resDelete.safars)
+          allTasksToUpsert.push(...resDelete.tasks)
+          allResourcesToUpsert.push(...resDelete.resources)
+        }
+        if (false as boolean) { /* legacy */
           const res = scanSingleWorkspace(workingDir, ws.toUploadPath, ws.toDeletePath, ws.driveRoot)
           allSafarsToUpsert.push(...res.safars)
           allTasksToUpsert.push(...res.tasks)
@@ -1889,6 +1987,21 @@ export async function scanTrackerDataAsync(input: {
         allSafarsToUpsert = res.safars
         allTasksToUpsert = res.tasks
         allResourcesToUpsert = res.resources
+
+        if (input.toDeletePath && fs.existsSync(input.toDeletePath) && input.toDeletePath.toLowerCase() !== input.workingPath.toLowerCase()) {
+          const resDelete = scanSingleWorkspace(input.toDeletePath, input.toUploadPath, input.toDeletePath)
+          for (const s of resDelete.safars) {
+            s.currentFolder = 'to_delete'
+            s.isSafarDone = true
+            s.isArchived = true
+          }
+          for (const t of resDelete.tasks) {
+            t.status = 'submitted'
+          }
+          allSafarsToUpsert.push(...resDelete.safars)
+          allTasksToUpsert.push(...resDelete.tasks)
+          allResourcesToUpsert.push(...resDelete.resources)
+        }
       }
     }
 
@@ -2291,6 +2404,8 @@ export function registerTaskTrackerIPC(): void {
         toUploadExists: false,
         toDeletePath: path.join(driveRoot, 'TO DELETE'),
         toDeleteExists: false,
+    pendingPath: path.join(root, 'Pending'),
+    pendingExists: false,
         safarCount: 0
       }
     }

@@ -191,6 +191,8 @@ def upsert_tasks(conn, tasks):
 
     for t in tasks:
         safar_name = t.get('safarName') or t.get('safar_name') or 'Unassigned'
+        if not safar_name or safar_name.lower().startswith(('intelvga', 'dptf', 'mei')) or safar_name.lower() in ('in process', 'to upload', 'to delete', 'uploaded data', 'pending', 'client'):
+            continue
         date_folder = t.get('dateFolder') or t.get('date_folder') or ''
         status = t.get('status', 'editing_pending')
         prproj_mod = t.get('prprojModifiedAt') or t.get('prproj_modified_at') or 0
@@ -323,7 +325,9 @@ def upsert_safars(conn, safars_data):
     cursor = conn.cursor()
     for s in safars_data:
         name = s.get('safarName') or s.get('safar_name')
-        if not name:
+        if not name or name.lower().startswith(('intelvga', 'dptf', 'mei')) or name.lower() in ('in process', 'to upload', 'to delete', 'uploaded data', 'pending', 'client'):
+            continue
+        if False:
             continue
         year = s.get('safarYear') or s.get('safar_year')
         serial = s.get('safarSerial') or s.get('safar_serial')
@@ -662,6 +666,8 @@ def reset_and_clean_tracker(conn, preserve_submitted=True):
     - Removes all non-submitted tasks so that a fresh rescan only brings in currently existing folders.
     """
     cursor = conn.cursor()
+    cursor.execute("DELETE FROM tracker_tasks WHERE LOWER(safar_name) LIKE 'intelvga%' OR LOWER(safar_name) LIKE 'dptf%' OR LOWER(safar_name) = 'in process' OR LOWER(safar_name) LIKE 'mei%'")
+    cursor.execute("DELETE FROM safars WHERE LOWER(safar_name) LIKE 'intelvga%' OR LOWER(safar_name) LIKE 'dptf%' OR LOWER(safar_name) = 'in process' OR LOWER(safar_name) LIKE 'mei%'")
     if preserve_submitted:
         cursor.execute("DELETE FROM tracker_tasks WHERE status != 'submitted'")
         cursor.execute("DELETE FROM tracker_media_resources WHERE date_folder NOT IN (SELECT date_folder FROM tracker_tasks)")
