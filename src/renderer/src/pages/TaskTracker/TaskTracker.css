@@ -399,6 +399,28 @@
   border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
+.drive-tab-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--text-muted, #94A3B8);
+  margin-left: 2px;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: all 0.15s ease;
+}
+
+.drive-tab-remove:hover {
+  opacity: 1;
+  color: #EF4444;
+  background: rgba(239, 68, 68, 0.15);
+}
+
 /* ── Drive Disk Space Bar & Alerts ── */
 .drive-tab-space-row {
   display: flex;

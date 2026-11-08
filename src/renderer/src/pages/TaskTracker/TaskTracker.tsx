@@ -153,14 +153,20 @@ export default function TaskTracker(): JSX.Element {
       }
     }
 
-    // Auto-discover connected drives that have In Process or To Upload (e.g. F:\, D:\)
-    if (api?.taskTracker?.autoDetectDriveFolders) {
+    // Auto-discover connected drives only if no workspaces configured
+    if (list.length === 0 && api?.taskTracker?.autoDetectDriveFolders) {
       try {
-        const sysDrives: string[] = (await api?.system?.getDrives?.()) || ['F:\\', 'D:\\', 'E:\\', 'C:\\']
-        const prioritized = Array.from(new Set(['D:\\', 'F:\\', 'E:\\', ...sysDrives]))
+        let removedDrives = new Set<string>()
+        try {
+          const remRaw = localStorage.getItem('ot_removed_tracker_drives')
+          if (remRaw) removedDrives = new Set(JSON.parse(remRaw).map((d: string) => d.toUpperCase().replace(/[\\/]/g, '')))
+        } catch {}
+        const sysDrives: string[] = (await api?.system?.getDrives?.()) || []
+        const prioritized = sysDrives
         let changed = false
         for (const drv of prioritized) {
           const normDrv = normalizeDrive(drv)
+          if (removedDrives.has(normDrv.toUpperCase().replace(/[\\/]/g, ''))) continue
           const existingIdx = list.findIndex(d => normalizeDrive(d.driveRoot) === normDrv)
           const auto = await api.taskTracker.autoDetectDriveFolders(drv)
           if (auto && (auto.inProcessExists || auto.toDeleteExists || auto.pendingExists || auto.safarCount > 0)) {
@@ -219,7 +225,7 @@ export default function TaskTracker(): JSX.Element {
     // Migrate from legacy single paths if still empty
     if (list.length === 0 && workingPath) {
       const rootMatch = workingPath.match(/^[A-Za-z]:[\\/]/)
-      const root = rootMatch ? rootMatch[0] : (workingPath.includes(':') ? workingPath.slice(0, 3) : 'F:\\')
+      const root = rootMatch ? rootMatch[0] : (workingPath.includes(':') ? workingPath.slice(0, 3) : 'C:\\')
       list = [{
         id: 'drive-legacy',
         driveRoot: root,
@@ -432,6 +438,14 @@ export default function TaskTracker(): JSX.Element {
     const updated = [newWs, ...drives.filter(d => d.inProcessPath !== folder)]
     setDrives(updated)
     localStorage.setItem('ot_tracker_drives', JSON.stringify(updated))
+    try {
+      const norm = root.toUpperCase().replace(/[\\/]/g, '')
+      const remRaw = localStorage.getItem('ot_removed_tracker_drives')
+      if (remRaw) {
+        const remList: string[] = JSON.parse(remRaw).filter((d: string) => d.toUpperCase().replace(/[\\/]/g, '') !== norm)
+        localStorage.setItem('ot_removed_tracker_drives', JSON.stringify(remList))
+      }
+    } catch {}
     if (api?.settings?.setAndSave) {
       await api.settings.setAndSave('task_tracker_drives', updated)
     }
@@ -443,6 +457,39 @@ export default function TaskTracker(): JSX.Element {
       type: 'success'
     })
 
+    await doScan(true)
+  }
+
+  const handleRemoveDriveWorkspace = async (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation()
+    const target = drives.find(d => d.id === id)
+    if (!target) return
+    if (!window.confirm(`Remove workspace ${target.label || target.driveRoot} from tracking?`)) return
+    const updated = drives.filter(d => d.id !== id)
+    setDrives(updated)
+    localStorage.setItem('ot_tracker_drives', JSON.stringify(updated))
+    if (api?.settings?.setAndSave) {
+      await api.settings.setAndSave('task_tracker_drives', updated)
+    }
+    if (target.driveRoot) {
+      try {
+        const norm = target.driveRoot.toUpperCase().replace(/[\\/]/g, '')
+        const remRaw = localStorage.getItem('ot_removed_tracker_drives')
+        const remList: string[] = remRaw ? JSON.parse(remRaw) : []
+        if (!remList.includes(norm)) {
+          remList.push(norm)
+          localStorage.setItem('ot_removed_tracker_drives', JSON.stringify(remList))
+        }
+        if (api?.taskTracker?.removeDriveRecords) {
+          await api.taskTracker.removeDriveRecords(target.driveRoot)
+        }
+      } catch {}
+    }
+    if (selectedDrive === target.driveRoot) {
+      setSelectedDrive('all')
+    }
+    playTick()
+    showToast({ title: 'Workspace Removed', message: `Removed ${target.label || target.driveRoot}`, type: 'info' })
     await doScan(true)
   }
 
@@ -1253,6 +1300,13 @@ export default function TaskTracker(): JSX.Element {
                     </span>
                     <span className="drive-tab-name">{d.driveRoot}</span>
                     <span className="drive-tab-count">({safarCountOnDrive})</span>
+                    <span
+                      className="drive-tab-remove"
+                      onClick={(e) => handleRemoveDriveWorkspace(d.id, e)}
+                      title="Remove this drive workspace"
+                    >
+                      ×
+                    </span>
                     <span className={`drive-tab-badge ${isOnline ? 'badge-connected' : 'badge-offline'}`}>
                       {isOnline ? (
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>

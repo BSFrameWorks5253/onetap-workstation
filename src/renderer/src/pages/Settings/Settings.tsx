@@ -167,18 +167,24 @@ export default function Settings(): JSX.Element {
     }
     if (!Array.isArray(loadedDrives)) loadedDrives = []
 
-    // If still empty or missing connected drives, auto-probe available drives (e.g. F:\, D:\)
-    if (api?.taskTracker?.autoDetectDriveFolders) {
+    // If still empty, auto-probe physically connected drives only
+    if (loadedDrives.length === 0 && api?.taskTracker?.autoDetectDriveFolders) {
       try {
-        const sysDrives: string[] = (await api?.system?.getDrives?.()) || ['F:\\', 'D:\\', 'E:\\', 'C:\\']
-        const prioritized = Array.from(new Set(['F:\\', 'D:\\', 'E:\\', ...sysDrives]))
+        let removedDrives = new Set<string>()
+        try {
+          const remRaw = localStorage.getItem('ot_removed_tracker_drives')
+          if (remRaw) removedDrives = new Set(JSON.parse(remRaw).map((d: string) => d.toUpperCase().replace(/[\\/]/g, '')))
+        } catch {}
+        const sysDrives: string[] = (await api?.system?.getDrives?.()) || []
+        const prioritized = sysDrives
         let changed = false
         for (const drv of prioritized) {
           const normDrv = drv.toUpperCase().replace(/[\\/]/g, '')
+          if (removedDrives.has(normDrv)) continue
           const alreadyExists = loadedDrives.some(d => d.driveRoot.toUpperCase().replace(/[\\/]/g, '') === normDrv)
           if (!alreadyExists) {
             const auto = await api.taskTracker.autoDetectDriveFolders(drv)
-            if (auto) {
+            if (auto && (auto.inProcessExists || auto.toDeleteExists || auto.toUploadExists || auto.pendingExists || auto.safarCount > 0)) {
               const inPath = auto.inProcessExists ? auto.inProcessPath : auto.driveRoot
               loadedDrives.push({
                 id: `drive-${normDrv.toLowerCase()}`,
@@ -211,7 +217,7 @@ export default function Settings(): JSX.Element {
       const legacyDelete = localStorage.getItem('ot_tracker_delete_path') || ''
       if (legacyWorking) {
         const rootMatch = legacyWorking.match(/^[A-Za-z]:[\\/]/)
-        const root = rootMatch ? rootMatch[0] : (legacyWorking.includes(':') ? legacyWorking.slice(0, 3) : 'F:\\')
+        const root = rootMatch ? rootMatch[0] : (legacyWorking.includes(':') ? legacyWorking.slice(0, 3) : 'C:\\')
         loadedDrives = [{
           id: 'drive-legacy-1',
           driveRoot: root,
@@ -332,6 +338,14 @@ export default function Settings(): JSX.Element {
       setTrackerDrives(updated)
       await api.settings.setAndSave('task_tracker_drives', updated)
       localStorage.setItem('ot_tracker_drives', JSON.stringify(updated))
+      try {
+        const norm = root.toUpperCase().replace(/[\\/]/g, '')
+        const remRaw = localStorage.getItem('ot_removed_tracker_drives')
+        if (remRaw) {
+          const remList: string[] = JSON.parse(remRaw).filter((d: string) => d.toUpperCase().replace(/[\\/]/g, '') !== norm)
+          localStorage.setItem('ot_removed_tracker_drives', JSON.stringify(remList))
+        }
+      } catch {}
       setSaved(`Drive ${root} added with auto-detected folders!`)
       playSuccess()
     } catch (err: any) {
@@ -359,6 +373,20 @@ export default function Settings(): JSX.Element {
     setTrackerDrives(updated)
     await api.settings.setAndSave('task_tracker_drives', updated)
     localStorage.setItem('ot_tracker_drives', JSON.stringify(updated))
+    if (target?.driveRoot) {
+      try {
+        const norm = target.driveRoot.toUpperCase().replace(/[\\/]/g, '')
+        const remRaw = localStorage.getItem('ot_removed_tracker_drives')
+        const remList: string[] = remRaw ? JSON.parse(remRaw) : []
+        if (!remList.includes(norm)) {
+          remList.push(norm)
+          localStorage.setItem('ot_removed_tracker_drives', JSON.stringify(remList))
+        }
+        if (api?.taskTracker?.removeDriveRecords) {
+          await api.taskTracker.removeDriveRecords(target.driveRoot)
+        }
+      } catch {}
+    }
     setSaved('Drive workspace removed')
     playTick()
   }
@@ -397,6 +425,14 @@ export default function Settings(): JSX.Element {
       setTrackerDrives(updated)
       await api.settings.setAndSave('task_tracker_drives', updated)
       localStorage.setItem('ot_tracker_drives', JSON.stringify(updated))
+      try {
+        const norm = root.toUpperCase().replace(/[\\/]/g, '')
+        const remRaw = localStorage.getItem('ot_removed_tracker_drives')
+        if (remRaw) {
+          const remList: string[] = JSON.parse(remRaw).filter((d: string) => d.toUpperCase().replace(/[\\/]/g, '') !== norm)
+          localStorage.setItem('ot_removed_tracker_drives', JSON.stringify(remList))
+        }
+      } catch {}
       setSaved(`Folders auto-detected for ${target.driveRoot}`)
       playSuccess()
     } finally {

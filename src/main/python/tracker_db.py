@@ -659,7 +659,25 @@ def remove_task_record(conn, safar_name, date_folder):
     conn.commit()
     return {'success': True, 'safarName': s_name, 'dateFolder': d_name, 'recordsRemoved': removed}
 
-def reset_and_clean_tracker(conn, preserve_submitted=True):
+def remove_drive_records(conn, drive_root):
+    """
+    Purges all tasks, resources, and safars mapped to a removed or disconnected drive.
+    """
+    if not drive_root:
+        return {'success': False, 'error': 'drive_root required'}
+    cursor = conn.cursor()
+    norm = drive_root.strip().rstrip(':/\\').upper()
+    like_pat = f"{norm}:%"
+    cursor.execute("DELETE FROM tracker_media_resources WHERE UPPER(drive_root) LIKE ? OR UPPER(file_path) LIKE ?", (like_pat, like_pat))
+    r_count = cursor.rowcount
+    cursor.execute("DELETE FROM tracker_tasks WHERE UPPER(current_drive) LIKE ? OR UPPER(working_path) LIKE ?", (like_pat, like_pat))
+    t_count = cursor.rowcount
+    cursor.execute("DELETE FROM safars WHERE UPPER(current_drive) LIKE ? OR UPPER(current_path) LIKE ?", (like_pat, like_pat))
+    cursor.execute("DELETE FROM safars WHERE safar_name NOT IN (SELECT DISTINCT safar_name FROM tracker_tasks)")
+    conn.commit()
+    return {'success': True, 'drive': drive_root, 'tasksRemoved': t_count, 'resourcesRemoved': r_count}
+
+def reset_and_clean_tracker(conn, preserve_submitted=True, allowed_drives=None):
     """
     Cleans out tracker database:
     - If preserve_submitted=True, preserves tasks marked 'submitted' (Submitted to Jameya)
@@ -985,6 +1003,7 @@ def main():
     parser.add_argument('--get-all', action='store_true', help="Retrieve all tracker safars and tasks")
     parser.add_argument('--remove-safar-records', action='store_true', help="Remove a Safar's tracker records without deleting files")
     parser.add_argument('--remove-task', action='store_true', help="Remove an individual date folder/task")
+    parser.add_argument('--remove-drive', help="Remove all tracker and resource records for a specific drive root (e.g. F:)")
     parser.add_argument('--clean-reset', action='store_true', help="Clean reset non-submitted tasks for fresh rescan")
     parser.add_argument('--get-history', action='store_true', help="Retrieve audit history logs")
     parser.add_argument('--safar', help="Filter by safar name")
@@ -1044,6 +1063,10 @@ def main():
 
         if args.remove_task:
             print(json.dumps(remove_task_record(conn, args.safar, args.date)))
+            return
+
+        if args.remove_drive:
+            print(json.dumps(remove_drive_records(conn, args.remove_drive)))
             return
 
         if args.clean_reset:

@@ -506,13 +506,20 @@ export function isSafarFolder(name: string, dirPath?: string): boolean {
   const rootKey = clean.toUpperCase().replace(/[\s_-]+/g, ' ').trim()
   if (['IN PROCESS', 'TO UPLOAD', 'TO DELETE', 'UPLOADED DATA', 'UPLOADED', 'UPLOAD', 'PENDING', 'SAFARS', 'SAFAR', 'WORKING SAFAR', 'WORKING', 'CLIENT', 'CLIENTS'].includes(rootKey)) return false
   if (/^(?:intelvga|dptf|mei|realtek|nvidia|amd|driver|drivers|windows|system|\$recycle\.bin)/i.test(clean)) return false
-  if (/^\d{4}[\s._-]\d{1,2}[\s._-]\d{1,2}(?:\s*_\d{2}[A-Za-z]|\s*_\d{2}|\s*waaz|\s*isteqbal|\s*majlis|\s*urs|\s*ziyarat|\s*session|\s*morning|\s*evening|\s*night|\s*day|\s*part|$)/i.test(clean)) return false
-  if (/^day[\s._-]?\d+/i.test(clean)) return false
-  if (/^\d{1,2}$/.test(clean)) return false
-  if (/^\d{1,3}[\s\-_.]+(?:waaz|majlis|isteqbal|misaaq|ziyarat|event|session|morning|evening|night|day)\b/i.test(clean)) return false
-  if (/^(?:waaz|majlis|isteqbal|misaaq|ziyarat|event|session|morning|evening|night)\b/i.test(clean)) return false
+  // 1. Primary workspace container parent check: If dirPath sits directly in IN PROCESS, PENDING, TO UPLOAD, TO DELETE
+  if (dirPath) {
+    try {
+      const parentDirName = path.basename(path.dirname(path.resolve(dirPath))).toLowerCase().trim()
+      const isParentContainer = /^(?:in[\s_-]?process|pending|to[\s_-]?upload|to[\s_-]?delete|uploaded[\s_-]?data|safars?|working[\s_-]?safar|working)$/i.test(parentDirName)
+      if (isParentContainer && !isSystemIgnored(clean) && !isContainerFolderName(clean)) {
+        return true
+      }
+    } catch {}
+  }
 
-  // If a directory on disk contains a Final subfolder or subdirectories that match dates, it is definitely a Safar
+
+
+  // 2. Physical disk inspection: If directory contains a Final folder, date subfolders, prproj, or video files
   if (dirPath && fs.existsSync(dirPath)) {
     try {
       const subs = fs.readdirSync(dirPath, { withFileTypes: true })
@@ -524,25 +531,27 @@ export function isSafarFolder(name: string, dirPath?: string): boolean {
         /^\d{1,2}[\s._-]\d{1,2}[\s._-]\d{2,4}/.test(e.name) ||
         extractCleanDateFolder(e.name) !== null
       ))
-      if (hasFinal || hasDateSub) return true
+      const hasPrproj = subs.some(e => e.isFile() && e.name.toLowerCase().endsWith('.prproj'))
+      const hasVideo = subs.some(e => e.isFile() && VIDEO_EXTS.has(path.extname(e.name).toLowerCase()))
+      const hasCameramanSub = subs.some(e => e.isDirectory() && /^(?:q|bq|m|bm|mz|z|audio|raw|footage|sessions?)$/i.test(e.name.trim()))
+      if (hasFinal || hasDateSub || hasPrproj || (hasVideo && hasCameramanSub)) return true
     } catch {}
   }
 
-  // Pure date deliverables without city or with event session tags are dates, not Safars:
-  // e.g. "1448-05-08 _01M", "1448-05-08 _02E", "2026-11-05", "1448-05-08"
-  if (/^\d{4}[\s._-]\d{1,2}[\s._-]\d{1,2}(?:\s*_\d{2}[A-Za-z]|\s*_\d{2}|\s*waaz|\s*isteqbal|\s*majlis|\s*urs|\s*ziyarat|\s*session|\s*morning|\s*evening|\s*night|\s*day|\s*part|$)/i.test(clean)) {
-    return false
-  }
+  // 3. Exclude individual session deliverables (these are date items inside a Safar, not Safars themselves)
+  if (/^\d{4}[\s._-]\d{1,2}[\s._-]\d{1,2}\s*_\d{2}[A-Za-z]?/i.test(clean)) return false
+  if (/^day[\s._-]?\d+$/i.test(clean)) return false
+  if (/^\d{1,2}$/.test(clean)) return false
 
   // If it starts with YYYY-MM-DD or YYYY-Serial-Day followed by a City name (e.g. "1448-05-08 Coimbatore", "1448-01-22 Mumbai"):
   if (/^\d{4}[\s._-]\d{1,2}[\s._-]\d{1,2}[\s._-]+[A-Za-z]/i.test(clean)) {
     return true
   }
-  // date deliverables without city handled above
-  if (/^day[\s._-]?\d+/i.test(clean)) return false
-  if (/^\d{1,2}$/.test(clean)) return false
-  if (/^\d{1,3}[\s\-_.]+(?:waaz|majlis|isteqbal|misaaq|ziyarat|event|session|morning|evening|night|day)\b/i.test(clean)) return false
-  if (/^(?:waaz|majlis|isteqbal|misaaq|ziyarat|event|session|morning|evening|night)\b/i.test(clean)) return false
+  // Bare Hijri/Gregorian date Safar folder (e.g. 1448-05-08, 2026-11-05)
+  if (/^\d{4}[\s._-]\d{1,2}[\s._-]\d{1,2}$/.test(clean)) return true
+
+
+
   // Standard Safar folder patterns:
   // e.g. "1448-03 Mumbai", "1448_03_Mumbai", "1448 - 03 Mumbai", "1448-03-Mumbai", "1448-03"
   if (/^\d{4}[\s\-_.]+\d{1,3}(?:[\s\-_.]+[A-Za-z].*)?$/i.test(clean)) return true
@@ -551,7 +560,21 @@ export function isSafarFolder(name: string, dirPath?: string): boolean {
   // e.g. "1448 Mumbai", "1448-Mumbai"
   if (/^\d{4}[\s\-_.]+[A-Za-z].*$/i.test(clean)) return true
   // Explicit "Safar" in name e.g. "Safar 1", "Safar_Mumbai"
-  if (/safar|istefad[ah]?|ziyafat|urs|milad/i.test(clean)) return true
+  if (/safar|istefad[ah]?|ziyafat|urs|milad|waaz|majlis|isteqbal|misaaq/i.test(clean)) return true
+
+  const commonCitiesLower = [
+    'mumbai', 'indore', 'surat', 'dumas', 'dummas', 'karachi', 'pune', 'nagpur',
+    'ahmedabad', 'rajkot', 'delhi', 'dubai', 'london', 'colombo', 'ujjain',
+    'udaipur', 'hyderabad', 'chennai', 'kolkata', 'jaipur', 'lucknow',
+    'bhopal', 'vadodara', 'thane', 'aurangabad', 'raipur', 'dahod',
+    'burhanpur', 'godhra', 'ratlam', 'mandsaur', 'neemuch', 'sidhpur',
+    'patan', 'jamnagar', 'bhavnagar', 'gondal', 'dhoraji', 'morbi',
+    'anjar', 'bhuj', 'nadiad', 'anand', 'khambhat', 'bharuch',
+    'ankleshwar', 'navsari', 'valsad', 'vapi', 'silvassa', 'daman',
+    'kuwait', 'muscat', 'abu dhabi', 'sharjah', 'doha', 'bahrain',
+    'riyadh', 'jeddah', 'cairo', 'nairobi', 'mombasa', 'dar es salaam'
+  ]
+  if (commonCitiesLower.includes(clean.toLowerCase())) return true
   return false
 }
 
@@ -583,6 +606,9 @@ function parseSafarMetadata(folderName: string): { name: string; year?: number; 
     }
   }
 
+  if ((!city || city === 'Unassigned') && /^[A-Za-z\s]+$/.test(folderName.trim()) && folderName.trim().length >= 3) {
+    city = folderName.trim()
+  }
   return { name: folderName, year, serial, city }
 }
 
@@ -599,7 +625,9 @@ export function extractCleanDateFolder(name: string): string | null {
   const lower = clean.toLowerCase()
   if (['final', 'final titles', 'output', 'outputs', 'export', 'exports', 'dvd', 'titles', 'assets', 'raw', 'temp'].includes(lower) || lower.startsWith('$') || lower.startsWith('.')) return null
   if (/^(?:intelvga|dptf|mei|realtek|nvidia|amd|driver|drivers|windows|system)/i.test(clean)) return null
-  if (isSafarFolder(clean)) return null
+  if (/\b(?:safar|istefad[ah]?)\b/i.test(clean)) return null
+  if (/^\d{4}[\s\-_.]+\d{1,3}[\s\-_.]+[A-Za-z]/i.test(clean)) return null
+  if (/^\d{1,3}[\s\-_.]+[A-Za-z]{3,}/i.test(clean) && !/^\d{1,2}[\s\-_.]+(?:waaz|majlis|isteqbal|misaaq|ziyarat|event|session|day)\b/i.test(clean)) return null
 
   // 1. Matches standard date format with or without session: e.g. "1448-05-08 _01M", "1448-05-08 _02E", "1448-05-08", "2026-11-05"
   if (/^\d{4}[\s._-]\d{1,2}[\s._-]\d{1,2}/.test(clean)) {
@@ -1132,9 +1160,11 @@ function scanSingleWorkspace(
     e => e.isDirectory() && (e.name.toLowerCase() === 'final' || e.name.toLowerCase() === 'final titles')
   )
   const hasSubDateFolders = rootEntries.some(e => e.isDirectory() && isDateFolder(e.name))
-  const workingFolderIsSafar = isSafarFolder(path.basename(actualWorkingPath), actualWorkingPath)
+  const hasSubPrproj = rootEntries.some(e => e.isFile() && e.name.toLowerCase().endsWith('.prproj'))
+  const hasSubVideo = rootEntries.some(e => e.isFile() && VIDEO_EXTS.has(path.extname(e.name).toLowerCase()))
+  const workingFolderIsSafar = !isContainerFolderName(path.basename(actualWorkingPath)) && isSafarFolder(path.basename(actualWorkingPath), actualWorkingPath)
 
-  if (workingFolderIsSafar && (hasSubFinal || hasSubDateFolders)) {
+  if (workingFolderIsSafar && (hasSubFinal || hasSubDateFolders || hasSubPrproj || hasSubVideo)) {
     safarDirs = [actualWorkingPath]
   } else {
     const collectDeepSafars = (dir: string, depth = 0): string[] => {
@@ -1167,7 +1197,7 @@ function scanSingleWorkspace(
       safarDirs = rootEntries
         .filter(e => e.isDirectory() && !isSystemIgnored(e.name) && isSafarFolder(e.name, path.join(actualWorkingPath, e.name)))
         .map(e => path.join(actualWorkingPath, e.name))
-      if (safarDirs.length === 0 && isSafarFolder(path.basename(actualWorkingPath)) && (hasSubFinal || hasSubDateFolders)) {
+      if (safarDirs.length === 0 && !isContainerFolderName(path.basename(actualWorkingPath)) && (hasSubFinal || hasSubDateFolders || hasSubPrproj || hasSubVideo || workingFolderIsSafar)) {
         safarDirs = [actualWorkingPath]
       }
     }
@@ -2173,7 +2203,7 @@ export async function scanTrackerDataAsync(input: {
     const verifiedSafarNames = new Set(allSafarsToUpsert.map(safar => safar.safarName))
     const retainedOfflineSafars = storedSafars.filter(safar => {
       const driveKey = normalizeDrive(safar.currentDrive || safar.currentPath || '')
-      return offlineDriveKeys.has(driveKey) && !verifiedSafarNames.has(safar.safarName)
+      return configuredDriveKeys.has(driveKey) && offlineDriveKeys.has(driveKey) && !verifiedSafarNames.has(safar.safarName)
     })
     const retainedOfflineNames = new Set(retainedOfflineSafars.map(safar => safar.safarName))
     allSafarsToUpsert = deduplicateSafars(allSafarsToUpsert)
@@ -2183,7 +2213,11 @@ export async function scanTrackerDataAsync(input: {
     const websiteSafars = deduplicateSafars([...allSafarsToUpsert, ...retainedOfflineSafars])
     const websiteTasks = deduplicateTasks([
       ...allTasksToUpsert,
-      ...storedTasks.filter(task => retainedOfflineNames.has(task.safarName) || task.status === 'submitted')
+      ...storedTasks.filter(task => {
+        const driveKey = normalizeDrive(task.currentDrive || task.workingPath || '')
+        const isAllowedDrive = !driveKey || configuredDriveKeys.has(driveKey)
+        return isAllowedDrive && (retainedOfflineNames.has(task.safarName) || (verifiedSafarNames.has(task.safarName) && task.status === 'submitted'))
+      })
     ])
     void [
     ]
@@ -2191,7 +2225,7 @@ export async function scanTrackerDataAsync(input: {
       const verifiedSet = new Set(allSafarsToUpsert.map(safar => safar.safarName))
       const allowedSafars = pyRes.data.safars.filter((safar: SafarRecord) => {
         const driveKey = normalizeDrive(safar.currentDrive || safar.currentPath || '')
-        return verifiedSet.has(safar.safarName) || offlineDriveKeys.has(driveKey) || !configuredDriveKeys.has(driveKey)
+        return verifiedSet.has(safar.safarName) || (configuredDriveKeys.has(driveKey) && offlineDriveKeys.has(driveKey))
       })
       const allowedNames = new Set(allowedSafars.map((safar: SafarRecord) => safar.safarName))
       cachedScanResult = {
@@ -2476,6 +2510,19 @@ export async function resetAndCleanTrackerRecords(input?: any): Promise<{ succes
     return { success: true, data: fresh }
   } catch (err: any) {
     return { success: false, error: err?.message || 'Reset failed' }
+  }
+}
+
+export async function removeDriveTrackerRecords(driveRoot: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!driveRoot) return { success: false, error: 'driveRoot required' }
+    await runTrackerDbAsync(['--remove-drive', driveRoot])
+    cachedScanResult = null
+    lastScanTimestamp = 0
+    broadcastChange()
+    return { success: true }
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Failed to remove drive records' }
   }
 }
 
@@ -2887,6 +2934,15 @@ export function registerTaskTrackerIPC(): void {
       return await resetAndCleanTrackerRecords(input)
     } catch (err: any) {
       return { success: false, error: err?.message || 'Failed to reset and rescan' }
+    }
+  })
+
+  // ── 17. Purge Records for Removed Drive ──
+  ipcMain.handle('taskTracker:removeDriveRecords', async (_e, driveRoot: string) => {
+    try {
+      return await removeDriveTrackerRecords(driveRoot)
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Failed to remove drive records' }
     }
   })
 
