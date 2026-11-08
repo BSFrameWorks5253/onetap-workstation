@@ -153,6 +153,8 @@ export default function TaskTracker(): JSX.Element {
       }
     }
 
+    let removedDrives = new Set<string>(); try { const remRaw = localStorage.getItem('ot_removed_tracker_drives'); if (remRaw) (JSON.parse(remRaw) || []).forEach((d: string) => removedDrives.add(d.toUpperCase().replace(/[\\/]/g, ''))) } catch {}
+    list = list.filter(d => !removedDrives.has(normalizeDrive(d.driveRoot).toUpperCase().replace(/[\\/]/g, '')))
     // Auto-discover connected drives only if no workspaces configured
     if (list.length === 0 && api?.taskTracker?.autoDetectDriveFolders) {
       try {

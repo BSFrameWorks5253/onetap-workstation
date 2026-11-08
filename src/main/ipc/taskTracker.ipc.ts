@@ -333,6 +333,14 @@ function watchFolderSafe(folderPath: string): void {
 }
 
 // ── Auto-Drive Watchdog (Drive Reconnect Sentinel) ────────────
+export function normalizeDrive(d?: string): string {
+  if (!d) return ''
+  const trimmed = d.trim()
+  const m = trimmed.match(/^([A-Za-z]:)/)
+  if (m) return m[1].toUpperCase() + '\\'
+  return trimmed.toLowerCase().replace(/[\\/]+$/, '')
+}
+
 let driveSentinelTimer: NodeJS.Timeout | null = null
 let lastKnownDrives: Set<string> = new Set()
 export let verifiedOnlineDrives: Set<string> = new Set(['C:'])
@@ -534,7 +542,7 @@ export function isSafarFolder(name: string, dirPath?: string): boolean {
       const hasPrproj = subs.some(e => e.isFile() && e.name.toLowerCase().endsWith('.prproj'))
       const hasVideo = subs.some(e => e.isFile() && VIDEO_EXTS.has(path.extname(e.name).toLowerCase()))
       const hasCameramanSub = subs.some(e => e.isDirectory() && /^(?:q|bq|m|bm|mz|z|audio|raw|footage|sessions?)$/i.test(e.name.trim()))
-      if (hasFinal || hasDateSub || hasPrproj || (hasVideo && hasCameramanSub)) return true
+      if (hasFinal || hasDateSub || hasPrproj || hasVideo || hasCameramanSub) return true
     } catch {}
   }
 
@@ -880,7 +888,7 @@ export function autoDetectDriveFolders(driveRoot: string): DriveAutoDetectResult
     }
     if (!result.inProcessExists) {
       const rootSafars = dirs.filter(
-        d => !d.startsWith('.') && d.toLowerCase() !== '$recycle.bin' && isSafarFolder(d)
+        d => !d.startsWith('.') && d.toLowerCase() !== '$recycle.bin' && isSafarFolder(d, path.join(root, d))
       )
       if (rootSafars.length > 0) {
         result.inProcessPath = root
@@ -912,7 +920,7 @@ export function autoDetectDriveFolders(driveRoot: string): DriveAutoDetectResult
               const subEntries = fs.readdirSync(subPath, { withFileTypes: true })
               for (const se of subEntries) {
                 if (se.isDirectory() && !se.name.startsWith('.') && !se.name.startsWith('$')) {
-                  if (isSafarFolder(se.name)) {
+                  if (isSafarFolder(se.name, path.join(subPath, se.name))) {
                     deepCandidates.push(path.join(subPath, se.name))
                   } else {
                     try {
@@ -944,7 +952,7 @@ export function autoDetectDriveFolders(driveRoot: string): DriveAutoDetectResult
       try {
         const ipEntries = fs.readdirSync(result.inProcessPath, { withFileTypes: true })
         result.safarCount = ipEntries.filter(
-          e => e.isDirectory() && !e.name.startsWith('.') && e.name.toLowerCase() !== '$recycle.bin' && isSafarFolder(e.name)
+          e => e.isDirectory() && !e.name.startsWith('.') && e.name.toLowerCase() !== '$recycle.bin' && isSafarFolder(e.name, path.join(result.inProcessPath, e.name))
         ).length
       } catch {}
     }
@@ -1123,7 +1131,7 @@ function scanSingleWorkspace(
             actualWorkingPath = path.join(driveRoot, matchedIp)
           } else {
             // Check if Safar folders live directly in the drive root
-            const hasRootSafars = rootDirs.some(d => isSafarFolder(d))
+            const hasRootSafars = rootDirs.some(d => isSafarFolder(d, path.join(driveRoot, d)))
             if (hasRootSafars) {
               actualWorkingPath = driveRoot
             }
@@ -1356,7 +1364,7 @@ function scanSingleWorkspace(
     const hasDirectVideo = safarEntries.some(e => e.isFile() && VIDEO_EXTS.has(path.extname(e.name).toLowerCase()))
 
     // If this folder has neither date folders nor a Final folder nor direct project/media, it is not a Safar directory
-    if (dateFolderNames.size === 0 && !finalDirPath && !hasDirectPrproj && !hasDirectVideo) {
+    if (dateFolderNames.size === 0 && !finalDirPath && !hasDirectPrproj && !hasDirectVideo && !isSafarFolder(safarFolderName, safarPath)) {
       continue
     }
 
@@ -2072,7 +2080,7 @@ export async function scanTrackerDataAsync(input: {
             const rEntries = fs.readdirSync(ws.driveRoot)
             const cand = rEntries.find(d => ['in process', 'in_process', 'inprocess', 'safars', 'safar', 'working safar', 'working'].includes(d.toLowerCase()))
             if (cand) resolvedWorkingDir = path.join(ws.driveRoot, cand)
-            else if (rEntries.some(d => isSafarFolder(d))) resolvedWorkingDir = ws.driveRoot
+            else if (rEntries.some(d => isSafarFolder(d, path.join(ws.driveRoot, d)))) resolvedWorkingDir = ws.driveRoot
           } catch {}
         }
         if (resolvedWorkingDir && fs.existsSync(resolvedWorkingDir)) {
@@ -2221,7 +2229,7 @@ export async function scanTrackerDataAsync(input: {
     ])
     void [
     ]
-    if (pyRes && pyRes.success && pyRes.data && Array.isArray(pyRes.data.safars) && pyRes.data.safars.length > 0) {
+    const consolidatedSafars = deduplicateSafars([...allSafarsToUpsert, ...retainedOfflineSafars]); const consolidatedTasks = deduplicateTasks([...allTasksToUpsert, ...storedTasks.filter(task => { const driveKey = normalizeDrive(task.currentDrive || task.workingPath || ''); const isAllowedDrive = !driveKey || configuredDriveKeys.has(driveKey); return isAllowedDrive && (retainedOfflineNames.has(task.safarName) || (verifiedSafarNames.has(task.safarName) && task.status === 'submitted')) })]); cachedScanResult = { ...enrichTrackerData(consolidatedSafars, consolidatedTasks), websiteSafars: consolidatedSafars, websiteTasks: consolidatedTasks, websiteScanComplete }; if (false as boolean) {
       const verifiedSet = new Set(allSafarsToUpsert.map(safar => safar.safarName))
       const allowedSafars = pyRes.data.safars.filter((safar: SafarRecord) => {
         const driveKey = normalizeDrive(safar.currentDrive || safar.currentPath || '')
