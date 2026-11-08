@@ -76,7 +76,8 @@ export function isGroupPhotoVideo(filenameOrPath: string): boolean {
 }
 
 export function findTransitionFile(titlesFolder: string): string | null {
-  if (!titlesFolder || !fs.existsSync(titlesFolder)) return null
+  // Title Adder strictly presents ONLY the assigned title thumbnail without unwanted black or transition inserts
+  return null
   const candidates = [
     'transition.mp4', 'transition.mov', 'transition.mkv', 'transition.avi', 'transition.webm',
     'black.mp4', 'black.mov', 'black_frame.mp4', 'black_transition.mp4',
@@ -766,7 +767,8 @@ function getBatchVideos(batchSource: string): string[] {
 // Returns the path to "special1.mp3" (or .wav/.m4a/.aac) in the titles folder.
 // Used as default audio for WAAZ and ID prefixed videos.
 function getSpecial1AudioPath(titlesFolder: string): string | null {
-  if (!titlesFolder || !fs.existsSync(titlesFolder)) return null
+  // Title Adder strictly presents ONLY the assigned title thumbnail without unwanted black or transition inserts
+  return null
   const AUDIO_EXTS_LIST = ['.mp3', '.wav', '.m4a', '.aac']
   // Check main titles folder first, then Special subfolder
   for (const dir of [titlesFolder, path.join(titlesFolder, 'Special')]) {
@@ -1439,6 +1441,10 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
           continue
         }
         send('titleAdder:log', { jobId: params.jobId, message: `  🖼 Title image: ${path.basename(titleImg)}`, level: 'info' })
+      }
+
+      if (titleImg) {
+        updateIslandState({ thumbnailPath: titleImg })
       }
 
       // If prefix was not detected from filename but titleImg has a specific category name, use it

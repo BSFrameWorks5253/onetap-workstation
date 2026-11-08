@@ -105,7 +105,7 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
   let nextInputIdx = 0
 
   let startImgIdx = -1
-  if (!skipFront && startImg) {
+  if (!skipFront && startImg && introLen > 0) {
     startImgIdx = nextInputIdx++
     dynamicInputs.push('-loop', '1', '-framerate', fps, '-t', String(introLen), '-i', startImg)
   }
@@ -114,7 +114,7 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
   dynamicInputs.push('-hwaccel', 'auto', '-i', videoPath)
 
   let endImgIdx = -1
-  if (!skipBack && endImg) {
+  if (!skipBack && endImg && outroLen > 0) {
     endImgIdx = nextInputIdx++
     dynamicInputs.push('-loop', '1', '-framerate', fps, '-t', String(outroLen), '-i', endImg)
   }
@@ -304,13 +304,9 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
   const concatSegments: string[] = []
 
   if (!skipFront && startImgIdx >= 0) {
-    // Starting thumbnail: NO dissolve at start (instant clean display), dissolve ONLY at the end into video
-    const titleFadeDur = Math.min(0.5, introLen * 0.5)
-    const titleFadeSt = Math.max(introLen - titleFadeDur, 0)
     videoFilter +=
-      `[${startImgIdx}:v]scale=${width}:${height}:force_original_aspect_ratio=decrease:flags=fast_bilinear,` +
-      `pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1,format=yuv420p,` +
-      `fade=t=out:st=${titleFadeSt.toFixed(3)}:d=${titleFadeDur.toFixed(3)}[img_start];`
+      `[${startImgIdx}:v]fps=${fps},scale=${width}:${height}:force_original_aspect_ratio=decrease:flags=fast_bilinear,` +
+      `pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1,format=yuv420p,trim=0:${introLen.toFixed(3)},settb=AVTB,setpts=PTS-STARTPTS[img_start];`
     concatSegments.push('[img_start]')
 
     // Custom transition clip (only if an explicit transition file exists on disk)
@@ -325,23 +321,20 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
       }
       videoFilter +=
         `[${transIdx}:v]scale=${width}:${height}:force_original_aspect_ratio=decrease:flags=fast_bilinear,` +
-        `pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1,format=yuv420p,` +
+        `pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1,format=yuv420p,settb=AVTB,setpts=PTS-STARTPTS,` +
         `fade=t=in:st=0:d=0.25,fade=t=out:st=${Math.max(transLen - 0.25, 0).toFixed(3)}:d=0.25[trans_seg];`
       concatSegments.push('[trans_seg]')
     }
   }
 
   // Preserve 100% of live video content from frame 0 to end (no fade-to-black cutting into speech or action)
-  videoFilter += `[${vidIdx}:v]setsar=1,format=yuv420p,null[vid_faded];`
+  videoFilter += `[${vidIdx}:v]scale=${width}:${height}:force_original_aspect_ratio=decrease:flags=fast_bilinear,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=${fps},format=yuv420p,settb=AVTB,setpts=PTS-STARTPTS[vid_faded];`
   concatSegments.push('[vid_faded]')
 
   if (!skipBack && endImgIdx >= 0) {
-    // End thumbnail: dissolve AT THE START from video into thumbnail, then hold clean with 0 extra black delay
-    const endFadeDur = Math.min(0.5, outroLen * 0.5)
     videoFilter +=
-      `[${endImgIdx}:v]scale=${width}:${height}:force_original_aspect_ratio=decrease:flags=fast_bilinear,` +
-      `pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1,format=yuv420p,` +
-      `fade=t=in:st=0:d=${endFadeDur.toFixed(3)}[img_end];`
+      `[${endImgIdx}:v]fps=${fps},scale=${width}:${height}:force_original_aspect_ratio=decrease:flags=fast_bilinear,` +
+      `pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1,format=yuv420p,trim=0:${outroLen.toFixed(3)},settb=AVTB,setpts=PTS-STARTPTS[img_end];`
     concatSegments.push('[img_end]')
   }
 

@@ -121,8 +121,10 @@ export function RenderingMonitorWidget(): JSX.Element | null {
 
   const getThumbnailSrc = () => {
     if (!state.thumbnailPath) return null
-    const clean = state.thumbnailPath.replace(/\\/g, '/')
-    return clean.startsWith('http') ? clean : `local-resource://${clean}`
+    if (state.thumbnailPath.startsWith('http') || state.thumbnailPath.startsWith('data:')) return state.thumbnailPath
+    const forward = state.thumbnailPath.replace(/\\/g, '/')
+    const encoded = encodeURI(forward)
+    return `local-resource:///${encoded.replace(/^\//, '')}`
   }
 
   if (!state.active && !state.done) {
@@ -242,7 +244,13 @@ export function RenderingMonitorWidget(): JSX.Element | null {
       <div className="rmw-content">
         <div className="rmw-thumb">
           {thumbUrl ? (
-            <img src={thumbUrl} alt="Rendering frame" />
+            <img
+              src={thumbUrl}
+              alt="Rendering frame"
+              onError={(e) => {
+                (e.currentTarget as HTMLElement).style.display = 'none'
+              }}
+            />
           ) : (
             <div className="rmw-thumb-fallback">🎬</div>
           )}

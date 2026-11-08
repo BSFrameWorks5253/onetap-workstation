@@ -218,8 +218,10 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
 
   const getThumbnailSrc = () => {
     if (!state.thumbnailPath) return null
-    const clean = state.thumbnailPath.replace(/\\/g, '/')
-    return clean.startsWith('http') ? clean : `local-resource://${clean}`
+    if (state.thumbnailPath.startsWith('http') || state.thumbnailPath.startsWith('data:')) return state.thumbnailPath
+    const forward = state.thumbnailPath.replace(/\\/g, '/')
+    const encoded = encodeURI(forward)
+    return `local-resource:///${encoded.replace(/^\//, '')}`
   }
 
   const thumbUrl = getThumbnailSrc()
@@ -251,15 +253,26 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
                 className={`pill-beacon-dot ${state.done ? 'beacon-done' : state.isPaused ? 'beacon-paused' : 'beacon-active'}`}
               />
 
-              {/* Apple Equalizer Audio/Render Waves */}
-              {!state.done && !state.isPaused && (
+              {/* Apple Equalizer Audio/Render Waves or Mini Thumbnail */}
+              {thumbUrl ? (
+                <div className="pill-mini-thumb" style={{ width: 18, height: 18, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, border: '1px solid rgba(255,255,255,0.25)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <img
+                    src={thumbUrl}
+                    alt=""
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    onError={(e) => {
+                      (e.currentTarget as HTMLElement).style.display = 'none'
+                    }}
+                  />
+                </div>
+              ) : (!state.done && !state.isPaused && (
                 <div className="pill-soundwave" aria-hidden="true">
                   <span className="wave-bar wave-1" />
                   <span className="wave-bar wave-2" />
                   <span className="wave-bar wave-3" />
                   <span className="wave-bar wave-4" />
                 </div>
-              )}
+              ))}
 
               {/* Active Video Title & "Next Up" Queue Subtitle */}
               <div className="pill-title-container">
@@ -402,7 +415,13 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
             <div className="card-body">
               <div className="card-thumb-preview">
                 {thumbUrl ? (
-                  <img src={thumbUrl} alt="Thumbnail preview" />
+                  <img
+                    src={thumbUrl}
+                    alt="Thumbnail preview"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLElement).style.display = 'none'
+                    }}
+                  />
                 ) : (
                   <div className="card-thumb-placeholder">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
