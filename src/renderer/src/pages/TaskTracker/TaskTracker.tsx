@@ -123,6 +123,7 @@ export default function TaskTracker(): JSX.Element {
   const [viewMode, setViewMode] = useState<'safar' | 'pipeline' | 'table'>('safar')
   const [collapsedSafars, setCollapsedSafars] = useState<Record<string, boolean>>({})
   const [selectedSafars, setSelectedSafars] = useState<string[]>([])
+  const [selectedTasks, setSelectedTasks] = useState<Record<string, boolean>>({})
 
   // ── Inspect Modal State ──
   const [inspectTask, setInspectTask] = useState<TrackerTaskItem | null>(null)
@@ -377,12 +378,32 @@ export default function TaskTracker(): JSX.Element {
 
       // Drive Sentinel: Auto-detect drive connection/disconnection
       const unsubDrives = api.taskTracker.onDrivesChanged?.((data: any) => {
-        if (data?.newlyConnected && data.newlyConnected.length > 0) {
+        if (data?.driveDetails && data.driveDetails.length > 0) {
+          playSuccess()
+          for (const d of data.driveDetails) {
+            const rootLabel = d.driveRoot ? d.driveRoot.replace(/[\\/]/g, '') : 'External Drive'
+            const sCount = d.safarCount || 0
+            showToast({
+              title: `Drive ${rootLabel} Connected`,
+              message: sCount > 0 
+                ? `Drive ${rootLabel} connected — ${sCount} Safar${sCount > 1 ? 's' : ''} found.`
+                : `Drive ${rootLabel} connected. Synchronizing workspace...`,
+              type: 'info'
+            })
+          }
+        } else if (data?.newlyConnected && data.newlyConnected.length > 0) {
           playSuccess()
           showToast({
             title: 'Drive Connected',
             message: `External drive detected (${data.newlyConnected.join(', ')}). Synchronizing automatically...`,
             type: 'info'
+          })
+        }
+        if (data?.disconnected && data.disconnected.length > 0) {
+          showToast({
+            title: 'Drive Disconnected',
+            message: `Drive ${data.disconnected.join(', ').replace(/[\\/]/g, '')} disconnected.`,
+            type: 'warn'
           })
         }
         // Background silent refresh and scan
@@ -581,6 +602,8 @@ export default function TaskTracker(): JSX.Element {
           message: `Generated Premiere Pro project and timeline sequence for ${task.dateFolder}.`,
           type: 'success'
         })
+        setSelectedTasks({})
+        setSelectedSafars([])
         await doScan()
       } else {
         showToast({
@@ -651,6 +674,8 @@ export default function TaskTracker(): JSX.Element {
           message: `Created ${count} project file(s) across ${safar.safarName}${skipped > 0 ? ` (${skipped} already existed)` : ''}.`,
           type: 'success'
         })
+        setSelectedTasks({})
+        setSelectedSafars([])
         await doScan()
       } else {
         showToast({
@@ -975,7 +1000,56 @@ export default function TaskTracker(): JSX.Element {
     )
   }
 
-  const handleClearSelection = () => setSelectedSafars([])
+  const selectedTaskKeysList = useMemo(() => {
+    return Object.entries(selectedTasks)
+      .filter(([_, sel]) => Boolean(sel))
+      .map(([key]) => {
+        const [safarName, dateFolder] = key.split('::')
+        return { safarName, dateFolder }
+      })
+  }, [selectedTasks])
+
+  const toggleTaskSelection = (safarName: string, dateFolder: string, e?: React.MouseEvent | React.ChangeEvent) => {
+    if (e && 'stopPropagation' in e) e.stopPropagation()
+    const key = `${safarName}::${dateFolder}`
+    setSelectedTasks(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }))
+  }
+
+  const toggleAllTasksInSafar = (safar: SafarGroupItem, e?: React.MouseEvent | React.ChangeEvent) => {
+    if (e && 'stopPropagation' in e) e.stopPropagation()
+    const tasks = safar.filteredTasks || safar.tasks || []
+    const allSelected = tasks.length > 0 && tasks.every(t => Boolean(selectedTasks[`${safar.safarName}::${t.dateFolder}`]))
+    setSelectedTasks(prev => {
+      const next = { ...prev }
+      for (const t of tasks) {
+        const key = `${safar.safarName}::${t.dateFolder}`
+        if (allSelected) {
+          delete next[key]
+        } else {
+          next[key] = true
+        }
+      }
+      return next
+    })
+  }
+
+  const isSafarAllTasksSelected = (safar: SafarGroupItem) => {
+    const tasks = safar.filteredTasks || safar.tasks || []
+    return tasks.length > 0 && tasks.every(t => Boolean(selectedTasks[`${safar.safarName}::${t.dateFolder}`]))
+  }
+
+  const isSafarSomeTasksSelected = (safar: SafarGroupItem) => {
+    const tasks = safar.filteredTasks || safar.tasks || []
+    return tasks.some(t => Boolean(selectedTasks[`${safar.safarName}::${t.dateFolder}`]))
+  }
+
+  const handleClearSelection = () => {
+    setSelectedSafars([])
+    setSelectedTasks({})
+  }
 
   const handleSetManualStatus = async (
     target: { safarNames?: string[]; taskKeys?: { safarName: string; dateFolder: string }[] },
@@ -1007,6 +1081,8 @@ export default function TaskTracker(): JSX.Element {
           message: `Marked ${targetLabel} as ${statusLabels[status] || status}.`,
           type: 'success'
         })
+        setSelectedTasks({})
+        setSelectedSafars([])
         await doScan()
       } else {
         showToast({ title: 'Update Failed', message: res?.error || 'Could not update status', type: 'error' })
@@ -1684,22 +1760,68 @@ export default function TaskTracker(): JSX.Element {
               title={isAllSelected ? 'Deselect all Safars' : 'Select all visible Safars'}
             >
               <span style={{ display: 'inline-flex', alignItems: 'center', marginRight: 4 }}>
-                {isAllSelected ? (
-                  <PageIcon pageKey="check_circle" size={15} color="var(--accent, #6366F1)" />
-                ) : selectedSafars.length > 0 ? (
+                {isAllSelected ? <PageIcon pageKey="check_circle" size={15} color="var(--accent, #6366F1)" /> : selectedSafars.length > 0 ? <PageIcon pageKey="check" size={15} color="var(--accent, #6366F1)" /> : <span style={{ display: 'inline-block', width: 13, height: 13, border: '1.5px solid currentColor', borderRadius: 3 }} />}</span>{/*
+
+
+                )}
+      {selectedSafars.length > 0 && selectedTaskKeysList.length === 0 && (
                   <PageIcon pageKey="check" size={15} color="var(--accent, #6366F1)" />
                 ) : (
                   <span style={{ display: 'inline-block', width: 13, height: 13, border: '1.5px solid currentColor', borderRadius: 3 }} />
                 )}
               </span>
-              <span>{isAllSelected ? 'Deselect All' : selectedSafars.length > 0 ? `Selected (${selectedSafars.length})` : 'Select All'}</span>
+*/}<span>{isAllSelected ? 'Deselect All' : selectedSafars.length > 0 ? `Selected (${selectedSafars.length})` : 'Select All'}</span>
             </button>
           </div>
         )}
       </div>
 
       {/* ── 4.5 Batch Multi-Safar Action Bar ── */}
-      {selectedSafars.length > 0 && (
+      {selectedTaskKeysList.length > 0 && (
+        <div className="tracker-batch-action-bar">
+          <div className="batch-bar-left">
+            <span className="batch-count-pill" style={{ background: 'rgba(99, 102, 241, 0.15)', borderColor: 'rgba(99, 102, 241, 0.35)', color: '#818CF8' }}>
+              <PageIcon pageKey="sparkles" size={13} color="#818CF8" style={{ marginRight: 5 }} />
+              <strong>{selectedTaskKeysList.length}</strong> Deliverable{selectedTaskKeysList.length > 1 ? 's' : ''} Selected
+            </span>
+            <span className="batch-hint-text">
+              Bulk update status across selected sessions:
+            </span>
+          </div>
+
+          <div className="batch-bar-actions">
+            <button
+              className="batch-action-btn batch-upload"
+              onClick={() => handleSetManualStatus({ taskKeys: selectedTaskKeysList }, 'uploaded')}
+              title="Mark selected deliverables as Uploaded"
+            >
+              <PageIcon pageKey="check_circle" size={13} color="#34D399" style={{ marginRight: 6 }} /> Mark as Uploaded
+            </button>
+            <button
+              className="batch-action-btn batch-submit"
+              onClick={() => handleSetManualStatus({ taskKeys: selectedTaskKeysList }, 'submitted')}
+              title="Mark selected deliverables as Submitted to AlJamea"
+            >
+              <PageIcon pageKey="landmark" size={13} color="#10B981" style={{ marginRight: 6 }} /> Mark as Finalized
+            </button>
+            <button
+              className="batch-action-btn batch-auto"
+              onClick={() => handleSetManualStatus({ taskKeys: selectedTaskKeysList }, 'auto')}
+              title="Reset selected deliverables to automatic file detection"
+            >
+              <PageIcon pageKey="bolt" size={13} color="#F59E0B" style={{ marginRight: 6 }} /> Reset to Auto
+            </button>
+            <button
+              className="batch-action-btn batch-clear"
+              onClick={handleClearSelection}
+              title="Deselect all"
+            >
+              <PageIcon pageKey="cross" size={11} style={{ marginRight: 5 }} /> Clear
+            </button>
+          </div>
+        </div>
+      )}
+      {selectedSafars.length > 0 && selectedTaskKeysList.length === 0 && (
         <div className="tracker-batch-action-bar">
           <div className="batch-bar-left">
             <span className="batch-count-pill">
@@ -1922,6 +2044,20 @@ export default function TaskTracker(): JSX.Element {
                         Move
                       </button>
                       <button
+                        type="button"
+                        className={`safar-action-btn select-all-tasks-btn ${isSafarAllTasksSelected(safar) ? 'is-all-selected' : isSafarSomeTasksSelected(safar) ? 'is-some-selected' : ''}`}
+                        onClick={(e) => toggleAllTasksInSafar(safar, e)}
+                        title="Select all sessions in this Safar for bulk action"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSafarAllTasksSelected(safar)}
+                          onChange={() => {}}
+                          style={{ pointerEvents: 'none', marginRight: 4 }}
+                        />
+                        <span>{isSafarAllTasksSelected(safar) ? 'Deselect All' : 'Select All Sessions'}</span>
+                      </button>
+                      <button
                         className="safar-action-btn add-date-btn"
                         onClick={() => { playTick(); handleAddDateFolder(safar.safarName) }}
                         title="Manually add or include a date folder to this Safar"
@@ -1994,6 +2130,18 @@ export default function TaskTracker(): JSX.Element {
                           <div key={task.dateFolder} className="date-item-row">
                             {/* Col 1: Date Name & Visual Milestone Stepper */}
                             <div className="date-item-name-col">
+                              <label
+                                className="task-select-checkbox-label"
+                                onClick={(e) => e.stopPropagation()}
+                                title={selectedTasks[`${safar.safarName}::${task.dateFolder}`] ? 'Deselect session' : 'Select session'}
+                              >
+                                <input
+                                  type="checkbox"
+                                  className="task-select-checkbox"
+                                  checked={Boolean(selectedTasks[`${safar.safarName}::${task.dateFolder}`])}
+                                  onChange={(e) => toggleTaskSelection(safar.safarName, task.dateFolder, e)}
+                                />
+                              </label>
                               <span className="date-icon" style={{ display: 'inline-flex', alignItems: 'center' }}>
                                 <PageIcon pageKey={cfg.icon} size={15} color={cfg.color} />
                               </span>

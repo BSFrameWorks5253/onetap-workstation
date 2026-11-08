@@ -18,6 +18,7 @@ import fs from 'fs'
 import { is } from '@electron-toolkit/utils'
 import { get, setAndSave } from './settingsManager'
 import { pauseJob, resumeJob, cancelJob } from './ffmpegRunner'
+import { getVideoEncoder } from './gpuDetector'
 
 export interface IslandState {
   active: boolean
@@ -33,6 +34,8 @@ export interface IslandState {
   thumbnailPath: string
   task: string
   outputFolder: string
+  lastOutputPath?: string
+  encoder?: string
   done: boolean
   success: boolean
   isPaused: boolean
@@ -59,6 +62,8 @@ const state: IslandState = {
   thumbnailPath: '',
   task: 'Idle',
   outputFolder: '',
+  lastOutputPath: '',
+  encoder: '',
   done: false,
   success: true,
   isPaused: false
@@ -86,6 +91,10 @@ function calculateEta(percent: number, speedStr: string): string {
 
 export function initDynamicIsland(mainWinGetter: () => BrowserWindow | null): void {
   mainWindowRef = mainWinGetter
+  try {
+    const enc = getVideoEncoder()
+    state.encoder = enc.label
+  } catch {}
 
   registerIslandIPC()
 }
@@ -381,9 +390,16 @@ function registerIslandIPC(): void {
         cancelJob(state.jobId)
         updateIslandState({ active: false, done: true, success: false })
       }
-    } else if (action === 'open-folder') {
-      if (state.outputFolder && fs.existsSync(state.outputFolder)) {
-        openInEcosystemExplorer(state.outputFolder)
+    } else if (action === 'open-folder' || action === 'reveal-output') {
+      const folder = state.outputFolder || (state.lastOutputPath ? path.dirname(state.lastOutputPath) : '')
+      if (folder && fs.existsSync(folder)) {
+        openInEcosystemExplorer(folder)
+      }
+    } else if (action === 'play-video' || action === 'open-video') {
+      if (state.lastOutputPath && fs.existsSync(state.lastOutputPath)) {
+        shell.openPath(state.lastOutputPath)
+      } else if (state.outputFolder && fs.existsSync(state.outputFolder)) {
+        shell.openPath(state.outputFolder)
       }
     } else if (action === 'focus-app') {
       const mainWin = mainWindowRef ? mainWindowRef() : null
@@ -409,6 +425,7 @@ export function onTitleAdderProgressBridge(evt: any, meta?: {
   totalVideos?: number
   thumbnailPath?: string
   outputFolder?: string
+  lastOutputPath?: string
   task?: string
 }): void {
   const percent = Math.round(evt.percent ?? 0)

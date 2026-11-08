@@ -1187,7 +1187,16 @@ export default function TitleAdder(): JSX.Element {
 
   const [lastRenderedOutputDir, setLastRenderedOutputDir] = useState<string>(() => localStorage.getItem('ot_converter_video_target') || '')
 
-  const [_gpuLabel, _setGpuLabel] = useState('Detecting…')
+  const [gpuLabel, setGpuLabel] = useState<string>('')
+
+  useEffect(() => {
+    const apiInst = (window as any).api
+    if (apiInst?.system?.getEncoder) {
+      apiInst.system.getEncoder().then((enc: any) => {
+        if (enc?.label) setGpuLabel(enc.label)
+      }).catch(() => {})
+    }
+  }, [])
   const [ffmpegOk, setFfmpegOk] = useState<boolean | null>(true)
 
   const addToStats = storeState.addToStats
@@ -3290,6 +3299,12 @@ export default function TitleAdder(): JSX.Element {
 
               {/* Dynamic Status Pills for Videos: Found, Completed, Pending & Progress */}
               <div className="ta-dynamic-status-pills">
+                {gpuLabel && (
+                  <div className={`ta-pill ta-pill-gpu ${gpuLabel.includes('GPU') || gpuLabel.includes('NVENC') || gpuLabel.includes('QSV') ? 'is-gpu' : 'is-cpu'}`} title={`Active Video Rendering Engine: ${gpuLabel}`}>
+                    <span className={`ta-pill-dot ${gpuLabel.includes('GPU') || gpuLabel.includes('NVENC') || gpuLabel.includes('QSV') ? 'done' : 'pending'}`} />
+                    <span className="ta-pill-label">{gpuLabel.includes('NVENC') ? '⚡ NVENC GPU' : gpuLabel.includes('QSV') ? '⚡ QSV GPU' : gpuLabel.includes('AMF') ? '⚡ AMF GPU' : '💻 CPU'}</span>
+                  </div>
+                )}
                 <div className="ta-pill ta-pill-found" title="Total videos detected in selected source">
                   <span className="ta-pill-dot found" />
                   <span className="ta-pill-label">Found:</span>

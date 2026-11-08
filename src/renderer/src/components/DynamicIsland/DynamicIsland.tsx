@@ -16,6 +16,8 @@ export interface IslandState {
   thumbnailPath: string
   task: string
   outputFolder: string
+  lastOutputPath?: string
+  encoder?: string
   done: boolean
   success: boolean
   isPaused: boolean
@@ -36,6 +38,8 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
     thumbnailPath: '',
     task: 'Initializing render pipeline...',
     outputFolder: '',
+    lastOutputPath: '',
+    encoder: '',
     done: false,
     success: true,
     isPaused: false
@@ -68,6 +72,13 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
       if (initial) setState(initial)
     })
 
+    const sysApi = (window as any).api?.system
+    if (sysApi?.getEncoder) {
+      sysApi.getEncoder().then((enc: any) => {
+        if (enc?.label) setState(prev => ({ ...prev, encoder: enc.label }))
+      }).catch(() => {})
+    }
+
     // Listen to real-time updates from Title Adder / Main Process
     const unsub = api.onUpdate((data: IslandState) => {
       if (!data) return
@@ -80,7 +91,7 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
         setIsDissolving(false)
       } else if (data.done) {
         // When batch completes or ends, display celebratory capsule briefly, then smoothly dissolve
-        const displayDuration = data.success ? 2800 : 1500
+        const displayDuration = data.success ? 12000 : 3500
         if (dissolveTimerRef.current) clearTimeout(dissolveTimerRef.current)
         if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
 
@@ -339,6 +350,11 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
             )}
 
             <div className="pill-right">
+              {state.encoder && (
+                <span className={`pill-encoder-badge ${state.encoder.includes('GPU') || state.encoder.includes('NVENC') || state.encoder.includes('QSV') ? 'is-gpu' : 'is-cpu'}`} title={`Encoder: ${state.encoder}`}>
+                  {state.encoder.includes('NVENC') ? '⚡ NVENC' : state.encoder.includes('QSV') ? '⚡ QSV' : state.encoder.includes('AMF') ? '⚡ AMF' : '💻 CPU'}
+                </span>
+              )}
               {!state.done ? (
                 <>
                   <span className="pill-percent">
@@ -376,9 +392,16 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
               <div className="card-header-left">
                 <div className={`card-activity-dot ${state.done ? 'beacon-done' : state.isPaused ? 'beacon-paused' : 'beacon-active'}`} />
                 <div className="card-title-group">
-                  <h4 className="card-title">
-                    {state.done ? 'Render Queue Completed' : state.task || 'Title Adder Studio'}
-                  </h4>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <h4 className="card-title">
+                      {state.done ? 'Render Queue Completed' : state.task || 'Title Adder Studio'}
+                    </h4>
+                    {state.encoder && (
+                      <span className={`card-encoder-badge ${state.encoder.includes('GPU') || state.encoder.includes('NVENC') || state.encoder.includes('QSV') ? 'is-gpu' : 'is-cpu'}`} title={`Active Encoder: ${state.encoder}`}>
+                        {state.encoder.includes('NVENC') ? '⚡ NVENC GPU' : state.encoder.includes('QSV') ? '⚡ QSV GPU' : state.encoder.includes('AMF') ? '⚡ AMF GPU' : '💻 CPU'}
+                      </span>
+                    )}
+                  </div>
                   <span className="card-sub">
                     Video {state.currentIdx || 1} of {state.totalVideos || 1}
                     {remainingCount > 0 && ` (${remainingCount} left)`}
@@ -508,7 +531,37 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
                   </>
                 )}
 
-                {state.outputFolder && (
+                {state.done ? (
+                  <>
+                    <button
+                      className="card-action-btn btn-success-play"
+                      onClick={() => triggerAction('play-video')}
+                      title="Play rendered video in default media player"
+                      type="button"
+                    >
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                          <polygon points="5 3 19 12 5 21 5 3" />
+                        </svg>
+                        Play Video
+                      </span>
+                    </button>
+
+                    <button
+                      className="card-action-btn btn-folder"
+                      onClick={() => triggerAction('open-folder')}
+                      title="Open Output Folder in Explorer"
+                      type="button"
+                    >
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z" />
+                        </svg>
+                        Open Folder
+                      </span>
+                    </button>
+                  </>
+                ) : state.outputFolder && (
                   <button
                     className="card-action-btn btn-folder"
                     onClick={() => triggerAction('open-folder')}

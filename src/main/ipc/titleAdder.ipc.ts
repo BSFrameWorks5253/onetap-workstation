@@ -1722,6 +1722,7 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
               totalVideos: videos.length,
               thumbnailPath: titleImg || '',
               outputFolder: targetOut,
+              lastOutputPath: outputPath,
               task: `Rendering subtitle typography for ${path.basename(videoPath)}`
             })
           }
@@ -1860,6 +1861,7 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
       success: !cancelled,
       percent: 100,
       nextVideoName: '',
+      outputFolder: finalOutputDir,
       task: cancelled ? 'Cancelled' : 'All videos rendered successfully!'
     })
     send('titleAdder:done', { jobId: params.jobId, success: !cancelled, done, total: videos.length, outputFolder: finalOutputDir, batchOutputs })

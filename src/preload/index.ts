@@ -207,7 +207,7 @@ contextBridge.exposeInMainWorld('api', {
       ipcRenderer.on('taskTracker:changed', sub)
       return () => ipcRenderer.removeListener('taskTracker:changed', sub)
     },
-    onDrivesChanged:       (cb: (d: { connected: string[]; newlyConnected: string[] }) => void) => {
+    onDrivesChanged:       (cb: (d: { connected: string[]; newlyConnected: string[]; disconnected?: string[]; driveDetails?: Array<{ driveRoot: string; safarCount: number; safarNames: string[]; auto?: any }> }) => void) => {
       const sub = (_e: any, d: any): void => cb(d)
       ipcRenderer.on('taskTracker:drives-changed', sub)
       return () => ipcRenderer.removeListener('taskTracker:drives-changed', sub)

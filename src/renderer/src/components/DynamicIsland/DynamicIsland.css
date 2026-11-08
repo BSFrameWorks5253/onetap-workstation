@@ -795,3 +795,63 @@ body, html, #root {
   background: #DC2626;
   box-shadow: 0 6px 18px rgba(239, 68, 68, 0.5);
 }
+
+/* Hardware Acceleration Encoder Badges */
+.pill-encoder-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-right: 4px;
+}
+
+.pill-encoder-badge.is-gpu {
+  background: rgba(16, 185, 129, 0.18);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #34D399;
+  text-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+}
+
+.pill-encoder-badge.is-cpu {
+  background: rgba(148, 163, 184, 0.12);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  color: #94A3B8;
+}
+
+.card-encoder-badge {
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.card-encoder-badge.is-gpu {
+  background: rgba(16, 185, 129, 0.18);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #10B981;
+}
+
+.card-encoder-badge.is-cpu {
+  background: rgba(148, 163, 184, 0.12);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  color: #94A3B8;
+}
+
+.card-action-btn.btn-success-play {
+  background: rgba(16, 185, 129, 0.2);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #34D399;
+}
+
+.card-action-btn.btn-success-play:hover {
+  background: rgba(16, 185, 129, 0.35);
+  color: #6EE7B7;
+  border-color: rgba(16, 185, 129, 0.6);
+}

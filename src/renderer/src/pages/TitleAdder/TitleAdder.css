@@ -2763,6 +2763,26 @@
   font-weight: 700;
 }
 
+.ta-pill-gpu.is-gpu {
+  background: color-mix(in srgb, #10b981 14%, var(--surface-card, #fff));
+  border-color: rgba(16, 185, 129, 0.45);
+}
+
+.ta-pill-gpu.is-gpu .ta-pill-label {
+  color: #059669;
+  font-weight: 700;
+}
+
+.ta-pill-gpu.is-cpu {
+  background: var(--surface-card, #fff);
+  border-color: var(--border-subtle);
+}
+
+.ta-pill-dot.gpu {
+  background: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3);
+}
+
 .ta-pill-sub {
   font-size: 10px;
   color: var(--text-muted);

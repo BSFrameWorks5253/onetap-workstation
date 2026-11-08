@@ -391,16 +391,24 @@ export function startDriveSentinel(): void {
     updateOnlineDrives()
     let changed = false
     const newlyConnected: string[] = []
+    const disconnected: string[] = []
 
     for (const d of current) {
       if (!lastKnownDrives.has(d)) {
         changed = true
+        newlyConnected.push(d)
+        continue
+      }
+      if (false) {
+        changed = true
+        disconnected.push(d)
         newlyConnected.push(d)
       }
     }
     for (const d of lastKnownDrives) {
       if (!current.has(d)) {
         changed = true
+        disconnected.push(d)
       }
     }
 
@@ -411,12 +419,22 @@ export function startDriveSentinel(): void {
         if (!win.isDestroyed()) {
           win.webContents.send('taskTracker:drives-changed', {
             connected: Array.from(current),
-            newlyConnected
+            newlyConnected,
+            disconnected,
+            driveDetails: newlyConnected.map(drv => {
+              try {
+                const auto = autoDetectDriveFolders(drv)
+                const safarCount = auto.safarCount || (auto.safarNames ? auto.safarNames.length : 0)
+                return { driveRoot: drv, safarCount, safarNames: auto.safarNames || [], auto }
+              } catch {
+                return { driveRoot: drv, safarCount: 0, safarNames: [] }
+              }
+            })
           })
         }
       }
     }
-  }, 15000)
+  }, 3000)
 }
 
 // ── Title Adder ➔ Task Tracker Bridge Helper ──────────────────

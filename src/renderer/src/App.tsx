@@ -276,11 +276,28 @@ function AppInner(): JSX.Element {
     } catch (e) {
       console.warn('Realtime nexus init failed:', e)
     }
+    const unsubs: Array<(() => void) | undefined> = []
+    const electronApi = (window as any).api
+    if (electronApi?.titleAdder?.onVideoFinished) {
+      unsubs.push(electronApi.titleAdder.onVideoFinished(() => {
+        syncTrackerSnapshot()
+      }))
+    }
+    try {
+      if (electronApi?.titleAdder?.onDone) {
+      unsubs.push(electronApi.titleAdder.onDone(() => {
+        syncTrackerSnapshot()
+      }))
+    }
+    } catch (e) {
+      console.warn('Realtime nexus init failed:', e)
+    }
     const initialSync = window.setTimeout(syncTrackerSnapshot, 8000)
     const syncTimer = window.setInterval(syncTrackerSnapshot, 10 * 60 * 1000)
     return () => {
       window.clearTimeout(initialSync)
       window.clearInterval(syncTimer)
+      unsubs.forEach(u => u?.())
       anyShareRealtimeService.destroy()
     }
   }, [showToast])
