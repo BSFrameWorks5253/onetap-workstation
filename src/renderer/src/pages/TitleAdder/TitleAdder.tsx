@@ -1224,6 +1224,7 @@ export default function TitleAdder(): JSX.Element {
 
   const [isWatermarkOverlayOpen, setIsWatermarkOverlayOpen] = useState(false)
   const [watermarkSearch, setWatermarkSearch] = useState('')
+  const [excludedWatermarks, setExcludedWatermarks] = useState<Set<string>>(new Set())
   const [fps, setFps] = useState('')
   const [speed, setSpeed] = useState('')
   const [eta, setEta] = useState('')
@@ -1812,6 +1813,17 @@ export default function TitleAdder(): JSX.Element {
     for (const v of videos) {
       const stem = getCanonicalStem(v)
       const matchingPrev = Array.from(prevWatermarked).find(p => getCanonicalStem(p) === stem)
+      const isWmExcluded = excludedWatermarks.has(v) || excludedWatermarks.has(stem)
+      if (matchingPrev !== undefined) {
+        if (!isWmExcluded) nextWatermarked.add(v)
+      } else if (addWatermarkGlobal && !isWmExcluded) {
+        nextWatermarked.add(v)
+      }
+    }
+    if (false)
+    for (const v of videos) {
+      const stem = getCanonicalStem(v)
+      const matchingPrev = Array.from(prevWatermarked).find(p => getCanonicalStem(p) === stem)
       if (matchingPrev !== undefined) {
         nextWatermarked.add(v)
       } else {
@@ -2014,9 +2026,12 @@ export default function TitleAdder(): JSX.Element {
   const clearAllVideoFiles = () => {
     setVideoFiles([])
     setAvailableVideos([])
-    setMutedVideos(new Set())
-    setWatermarkedVideos(new Set())
     setFileOutputFolders({})
+    setMutedVideos(new Set())
+    setExcludedWatermarks(new Set())
+    setWatermarkedVideos(new Set())
+
+
   }
 
   const handleDragEnter = (e: React.DragEvent) => {
@@ -2681,8 +2696,8 @@ export default function TitleAdder(): JSX.Element {
         })
         return nextSet
       })
-      if (watermarkedVideos.size === 0 && res.assignments.length > 0) {
-        setWatermarkedVideos(new Set(res.assignments.map((a: any) => a.videoName)))
+      if (addWatermarkGlobal && res.assignments.length > 0) {
+        setWatermarkedVideos(new Set(res.assignments.map((a: any) => a.videoName).filter((vn: string) => !excludedWatermarks.has(vn) && !excludedWatermarks.has(getCanonicalStem(vn)))))
       }
       setIsAudioModalOpen(true)
     } catch (err: any) {
@@ -2937,7 +2952,8 @@ export default function TitleAdder(): JSX.Element {
         if (match !== undefined) {
           next.add(f)
         } else {
-          const wasAvailable = prevAvailable.some(a => getCanonicalStem(a) === stem)
+          const isExcluded = excludedWatermarks.has(f) || excludedWatermarks.has(stem)
+          const wasAvailable = !addWatermarkGlobal || isExcluded
           if (!wasAvailable) {
             next.add(f)
           }
@@ -3016,7 +3032,8 @@ export default function TitleAdder(): JSX.Element {
         if (match !== undefined) {
           next.add(f)
         } else {
-          const wasAvailable = prevAvailable.some(a => getCanonicalStem(a) === stem)
+          const isExcluded = excludedWatermarks.has(f) || excludedWatermarks.has(stem)
+          const wasAvailable = !addWatermarkGlobal || isExcluded
           if (!wasAvailable) {
             next.add(f)
           }
@@ -3300,6 +3317,48 @@ export default function TitleAdder(): JSX.Element {
             </div>
 
             <div className="ta-audio-strip-actions">
+              <Button
+                size="sm"
+                onClick={() => {
+                  const nextVal = !storeState.autoStartOnEncoderSignal
+                  setStoreState({ autoStartOnEncoderSignal: nextVal })
+                  const api = (window as any).api
+                  if (api?.titleAutomode?.saveSettings) {
+                    api.titleAutomode.saveSettings({ autoStartOnEncoderSignal: nextVal })
+                  }
+                  showToast({
+                    title: nextVal ? '⚡ Auto Render ON' : '⏸ Auto Render OFF',
+                    message: nextVal
+                      ? 'Media Encoder signals will automatically render clips.'
+                      : 'Media Encoder signals will open Preflight Review for customization.',
+                    type: nextVal ? 'success' : 'info'
+                  })
+                }}
+                style={{
+                  background: storeState.autoStartOnEncoderSignal
+                    ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.25) 100%)'
+                    : 'var(--surface-sunken)',
+                  border: storeState.autoStartOnEncoderSignal
+                    ? '1px solid rgba(16, 185, 129, 0.5)'
+                    : '1px solid var(--border)',
+                  color: storeState.autoStartOnEncoderSignal ? '#10B981' : 'var(--text-secondary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontWeight: 600,
+                  transition: 'all 0.2s ease'
+                }}
+                title={storeState.autoStartOnEncoderSignal ? 'Auto Render is ON: Click to turn OFF (opens review preflight instead)' : 'Auto Render is OFF: Click to turn ON (auto renders on AME completion)'}
+              >
+                <span style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  background: storeState.autoStartOnEncoderSignal ? '#10B981' : '#64748B',
+                  boxShadow: storeState.autoStartOnEncoderSignal ? '0 0 8px #10B981' : 'none'
+                }} />
+                {storeState.autoStartOnEncoderSignal ? '⚡ Auto Render: ON' : '⏸ Auto Render: OFF'}
+              </Button>
               <Button
                 size="sm"
                 onClick={() => setIsPredefineModalOpen(true)}
@@ -3869,8 +3928,10 @@ export default function TitleAdder(): JSX.Element {
                     if (next) {
                       setWatermarkedVideos(new Set(availableVideos))
                     } else {
-                      setWatermarkedVideos(new Set())
-    setFileOutputFolders({})
+                      setExcludedWatermarks(new Set(availableVideos.flatMap(v => [v, getCanonicalStem(v)])))
+    setWatermarkedVideos(new Set())
+
+
                     }
                   }}
                 >
@@ -3888,8 +3949,10 @@ export default function TitleAdder(): JSX.Element {
                         if (next) {
                           setWatermarkedVideos(new Set(availableVideos))
                         } else {
-                          setWatermarkedVideos(new Set())
-    setFileOutputFolders({})
+                          setExcludedWatermarks(new Set(availableVideos.flatMap(v => [v, getCanonicalStem(v)])))
+    setWatermarkedVideos(new Set())
+
+
                         }
                       }}
                     >
@@ -4131,8 +4194,10 @@ export default function TitleAdder(): JSX.Element {
                   <GhostButton
                     size="sm"
                     onClick={() => {
-                      setWatermarkedVideos(new Set())
-    setFileOutputFolders({})
+                      setExcludedWatermarks(new Set(availableVideos.flatMap(v => [v, getCanonicalStem(v)])))
+    setWatermarkedVideos(new Set())
+
+
                       playTick()
                     }}
                   >
@@ -4153,6 +4218,22 @@ export default function TitleAdder(): JSX.Element {
                           checked={isWatermarked}
                           onChange={() => {
                             const next = new Set(watermarkedVideos)
+                            const stem = getCanonicalStem(f)
+                            if (next.has(f)) {
+                              next.delete(f)
+                              setExcludedWatermarks(prev => new Set([...prev, f, stem]))
+                            } else {
+                              next.add(f)
+                              setExcludedWatermarks(prev => {
+                                const s = new Set(prev)
+                                s.delete(f)
+                                s.delete(stem)
+                                return s
+                              })
+                            }
+                            setWatermarkedVideos(next)
+                            playTick()
+                            if (false)
                             if (next.has(f)) next.delete(f)
                             else next.add(f)
                             setWatermarkedVideos(next)
@@ -4322,7 +4403,65 @@ export default function TitleAdder(): JSX.Element {
                       placeholder="🔍 Search videos..."
                       value={predefineSearch}
                       onChange={e => setPredefineSearch(e.target.value)}
-                      style={{ width: '180px', height: '30px', fontSize: '11px' }}
+                      style={{ width: '150px', height: '30px', fontSize: '11px' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const allVids = Array.from(new Set([
+                          ...availableVideos,
+                          ...(storeState.expectedVideos || []),
+                          ...Object.keys(storeState.predefinedVideoMutes || {}),
+                          ...Object.keys(storeState.predefinedTitleImages || {})
+                        ]))
+                        setExcludedWatermarks(new Set(availableVideos.flatMap(v => [v, getCanonicalStem(v)])))
+                        setWatermarkedVideos(new Set(allVids))
+                        showToast({ title: 'Watermark All', message: 'Watermark enabled for all predefined videos', type: 'info' })
+                      }}
+                      style={{
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        padding: '4px 8px',
+                        borderRadius: '6px',
+                        background: 'var(--surface-sunken)',
+                        border: '1px solid var(--border)',
+                        color: 'var(--text-primary)',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap'
+                      }}
+                      title="Enable watermark for all predefined videos"
+                    >
+                      💧 WM All
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const allVids = Array.from(new Set([
+                          ...availableVideos,
+                          ...(storeState.expectedVideos || []),
+                          ...Object.keys(storeState.predefinedVideoMutes || {}),
+                          ...Object.keys(storeState.predefinedTitleImages || {})
+                        ]))
+                        setExcludedWatermarks(new Set(allVids.flatMap(v => [v, getCanonicalStem(v)])))
+                        setWatermarkedVideos(new Set())
+                        showToast({ title: 'Remove All WM', message: 'Watermark removed for all predefined videos', type: 'info' })
+                      }}
+                      style={{
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        padding: '4px 8px',
+                        borderRadius: '6px',
+                        background: 'var(--surface-sunken)',
+                        border: '1px solid var(--border)',
+                        color: 'var(--text-primary)',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap'
+                      }}
+                      title="Remove watermark from all predefined videos"
+                    >
+                      🚫 No WM All
+                    </button>
+                    <span style={{ display: 'none' }}
                     />
                   </div>
                 </div>
@@ -4398,6 +4537,85 @@ export default function TitleAdder(): JSX.Element {
 
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                             {/* Predefined Thumbnail / Title Image Selector */}
+                            {/* Predefined Watermark Toggle */}
+                            {(() => {
+                              const isWmExcluded = excludedWatermarks.has(vid) || excludedWatermarks.has(stem)
+                              const isWm = !isWmExcluded && (watermarkedVideos.has(vid) || addWatermarkGlobal)
+                              return (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const nextVal = !isWm
+                                    setExcludedWatermarks(prev => {
+                                      const nextSet = new Set(prev)
+                                      if (!nextVal) {
+                                        nextSet.add(vid)
+                                        nextSet.add(stem)
+                                      } else {
+                                        nextSet.delete(vid)
+                                        nextSet.delete(stem)
+                                      }
+                                      return nextSet
+                                    })
+                                    setWatermarkedVideos(prev => {
+                                      const nextSet = new Set(prev)
+                                      if (nextVal) {
+                                        nextSet.add(vid)
+                                      } else {
+                                        nextSet.delete(vid)
+                                      }
+                                      return nextSet
+                                    })
+                                  }}
+                                  style={{
+                                    padding: '5px 10px',
+                                    borderRadius: '6px',
+                                    border: 'none',
+                                    fontSize: '11px',
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                    transition: 'all 0.15s ease',
+                                    background: isWm
+                                      ? 'linear-gradient(135deg, #0284C7 0%, #0369A1 100%)'
+                                      : 'rgba(255,255,255,0.08)',
+                                    color: isWm ? '#FFFFFF' : 'var(--text-secondary)',
+                                    boxShadow: isWm ? '0 2px 8px rgba(2, 132, 199, 0.3)' : 'none'
+                                  }}
+                                  title={isWm ? 'Watermark is enabled. Click to exclude watermark.' : 'Watermark is excluded. Click to enable watermark.'}
+                                >
+                                  {isWm ? '💧 WM' : '🚫 No WM'}
+                                </button>
+                              )
+                            })()}
+
+                            {/* Predefined Custom Audio Selector */}
+                            <div style={{ width: '190px' }} title="Set custom audio track for this video">
+                              <CustomAudioSelect
+                                value={storeState.predefinedAudioTracks?.[vid] || storeState.predefinedAudioTracks?.[stem] || userAudioSelections[vid] || ''}
+                                options={availableAudioOptions}
+                                defaultPath=""
+                                defaultName="Auto Audio"
+                                onChange={(newPath) => {
+                                  const updated = {
+                                    ...(storeState.predefinedAudioTracks || {}),
+                                    [vid]: newPath,
+                                    [stem]: newPath
+                                  }
+                                  setStoreState({ predefinedAudioTracks: updated })
+                                  const api = (window as any).api
+                                  if (api?.titleAutomode?.saveSettings) {
+                                    api.titleAutomode.saveSettings({ predefinedAudioTracks: updated })
+                                  }
+                                  setUserAudioSelections(prev => ({
+                                    ...prev,
+                                    [vid]: newPath,
+                                    [stem]: newPath
+                                  }))
+                                  showToast({ title: 'Audio Selected', message: `Predefined audio track set for ${vid}`, type: 'success' })
+                                }}
+                              />
+                            </div>
+
                             <div style={{ width: '210px' }} title="Set custom title overlay thumbnail image for this video">
                               <CustomImageSelect
                                 value={currentImg}
@@ -4799,7 +5017,7 @@ export default function TitleAdder(): JSX.Element {
                   Watermarked:
                 </span>
                 <strong>
-                  {audioPreviewAssignments.filter(item => watermarkedVideos.has(item.videoName)).length}
+                  {audioPreviewAssignments.filter(item => !excludedWatermarks.has(item.videoName) && !excludedWatermarks.has(getCanonicalStem(item.videoName)) && (watermarkedVideos.has(item.videoName) || addWatermarkGlobal)).length}
                 </strong>
               </div>
               <div className="ta-audio-summary-badge">
@@ -4934,7 +5152,142 @@ export default function TitleAdder(): JSX.Element {
               </div>
             </div>
 
-            {/* Search filter */}
+            {/* Auto Render Toggle & Quick Controls */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', padding: '8px 12px', background: 'var(--surface-sunken)', border: '1px solid var(--border)', borderRadius: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>⚡ Auto Render Mode:</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const nextVal = !storeState.autoStartOnEncoderSignal
+                    setStoreState({ autoStartOnEncoderSignal: nextVal })
+                    const api = (window as any).api
+                    if (api?.titleAutomode?.saveSettings) {
+                      api.titleAutomode.saveSettings({ autoStartOnEncoderSignal: nextVal })
+                    }
+                    showToast({
+                      title: nextVal ? '⚡ Auto Render ON' : '⏸ Auto Render OFF',
+                      message: nextVal ? 'Batches will render automatically.' : 'Batches will pause for review.',
+                      type: nextVal ? 'success' : 'info'
+                    })
+                  }}
+                  style={{
+                    padding: '4px 10px',
+                    borderRadius: '6px',
+                    border: storeState.autoStartOnEncoderSignal ? '1px solid rgba(16, 185, 129, 0.5)' : '1px solid var(--border)',
+                    background: storeState.autoStartOnEncoderSignal ? 'rgba(16, 185, 129, 0.15)' : 'var(--surface)',
+                    color: storeState.autoStartOnEncoderSignal ? '#10B981' : 'var(--text-secondary)',
+                    fontWeight: 700,
+                    fontSize: '11px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {storeState.autoStartOnEncoderSignal ? '⚡ ON (Auto Start)' : '⏸ OFF (Review First)'}
+                </button>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const allNames = audioPreviewAssignments.map(a => a.videoName)
+                    setExcludedWatermarks(new Set())
+                    setWatermarkedVideos(new Set(allNames))
+                    showToast({ title: 'Watermark Applied', message: `Watermark enabled for all ${allNames.length} videos`, type: 'info' })
+                  }}
+                  style={{
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    padding: '5px 10px',
+                    borderRadius: '6px',
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border)',
+                    color: 'var(--text-primary)',
+                    cursor: 'pointer'
+                  }}
+                  title="Enable watermark for all videos in this batch"
+                >
+                  💧 Watermark All
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const allNames = audioPreviewAssignments.map(a => a.videoName)
+                    setExcludedWatermarks(new Set(allNames.flatMap(n => [n, getCanonicalStem(n)])))
+                    setWatermarkedVideos(new Set())
+                    showToast({ title: 'Watermark Removed', message: `Watermark removed for all ${allNames.length} videos`, type: 'info' })
+                  }}
+                  style={{
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    padding: '5px 10px',
+                    borderRadius: '6px',
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border)',
+                    color: 'var(--text-primary)',
+                    cursor: 'pointer'
+                  }}
+                  title="Remove watermark from all videos in this batch"
+                >
+                  🚫 Remove All WM
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const updatedMute: Record<string, boolean> = { ...userMuteSelections }
+                    const nextMuted = new Set(mutedVideos)
+                    audioPreviewAssignments.forEach(a => {
+                      updatedMute[a.videoPath] = false
+                      updatedMute[a.videoName] = false
+                      nextMuted.delete(a.videoName)
+                    })
+                    setUserMuteSelections(updatedMute)
+                    setMutedVideos(nextMuted)
+                    showToast({ title: 'Original Audio Kept', message: 'Original audio enabled for all videos (Unmuted)', type: 'info' })
+                  }}
+                  style={{
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    padding: '5px 10px',
+                    borderRadius: '6px',
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border)',
+                    color: 'var(--text-primary)',
+                    cursor: 'pointer'
+                  }}
+                  title="Preserve original audio for all videos (do not mute)"
+                >
+                  🔊 Unmute All
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const updatedMute: Record<string, boolean> = { ...userMuteSelections }
+                    const nextMuted = new Set(mutedVideos)
+                    audioPreviewAssignments.forEach(a => {
+                      updatedMute[a.videoPath] = true
+                      updatedMute[a.videoName] = true
+                      nextMuted.add(a.videoName)
+                    })
+                    setUserMuteSelections(updatedMute)
+                    setMutedVideos(nextMuted)
+                    showToast({ title: 'Muted All', message: 'Original audio muted for all videos', type: 'info' })
+                  }}
+                  style={{
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    padding: '5px 10px',
+                    borderRadius: '6px',
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border)',
+                    color: 'var(--text-primary)',
+                    cursor: 'pointer'
+                  }}
+                  title="Mute original audio for all videos"
+                >
+                  🔇 Mute All
+                </button>
+              </div>
+            </div>
             <div>
               <Input
                 placeholder="🔍 Search videos by filename, prefix, or image name..."
@@ -4980,7 +5333,8 @@ export default function TitleAdder(): JSX.Element {
                         ?? userMuteSelections[item.videoName]
                         ?? userMuteSelections[getCanonicalStem(item.videoName)]
                         ?? (!isSpecial)
-                      const isWatermarked = watermarkedVideos.has(item.videoName)
+                      const isStemExcluded = excludedWatermarks.has(item.videoName) || excludedWatermarks.has(getCanonicalStem(item.videoName))
+                      const isWatermarked = !isStemExcluded && (watermarkedVideos.has(item.videoName) || (addWatermarkGlobal && !excludedWatermarks.has(item.videoName)))
                       const pTheme = getPrefixColorTheme(item.prefix)
                       const curThumbMode = userThumbnailModeSelections[item.videoPath]
                         ?? userThumbnailModeSelections[item.videoName]
@@ -5152,6 +5506,18 @@ export default function TitleAdder(): JSX.Element {
                               className={`ta-watermark-toggle-btn ${isWatermarked ? 'watermarked' : 'no-watermark'}`}
                               onClick={() => {
                                 const nextVal = !isWatermarked
+                                const stem = getCanonicalStem(item.videoName)
+                                setExcludedWatermarks(prev => {
+                                  const nextSet = new Set(prev)
+                                  if (!nextVal) {
+                                    nextSet.add(item.videoName)
+                                    nextSet.add(stem)
+                                  } else {
+                                    nextSet.delete(item.videoName)
+                                    nextSet.delete(stem)
+                                  }
+                                  return nextSet
+                                })
                                 setWatermarkedVideos(prev => {
                                   const nextSet = new Set(prev)
                                   if (nextVal) {

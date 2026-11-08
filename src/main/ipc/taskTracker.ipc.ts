@@ -506,6 +506,11 @@ export function isSafarFolder(name: string, dirPath?: string): boolean {
   const rootKey = clean.toUpperCase().replace(/[\s_-]+/g, ' ').trim()
   if (['IN PROCESS', 'TO UPLOAD', 'TO DELETE', 'UPLOADED DATA', 'UPLOADED', 'UPLOAD', 'PENDING', 'SAFARS', 'SAFAR', 'WORKING SAFAR', 'WORKING', 'CLIENT', 'CLIENTS'].includes(rootKey)) return false
   if (/^(?:intelvga|dptf|mei|realtek|nvidia|amd|driver|drivers|windows|system|\$recycle\.bin)/i.test(clean)) return false
+  if (/^\d{4}[\s._-]\d{1,2}[\s._-]\d{1,2}(?:\s*_\d{2}[A-Za-z]|\s*_\d{2}|\s*waaz|\s*isteqbal|\s*majlis|\s*urs|\s*ziyarat|\s*session|\s*morning|\s*evening|\s*night|\s*day|\s*part|$)/i.test(clean)) return false
+  if (/^day[\s._-]?\d+/i.test(clean)) return false
+  if (/^\d{1,2}$/.test(clean)) return false
+  if (/^\d{1,3}[\s\-_.]+(?:waaz|majlis|isteqbal|misaaq|ziyarat|event|session|morning|evening|night|day)\b/i.test(clean)) return false
+  if (/^(?:waaz|majlis|isteqbal|misaaq|ziyarat|event|session|morning|evening|night)\b/i.test(clean)) return false
 
   // If a directory on disk contains a Final subfolder or subdirectories that match dates, it is definitely a Safar
   if (dirPath && fs.existsSync(dirPath)) {
@@ -525,7 +530,7 @@ export function isSafarFolder(name: string, dirPath?: string): boolean {
 
   // Pure date deliverables without city or with event session tags are dates, not Safars:
   // e.g. "1448-05-08 _01M", "1448-05-08 _02E", "2026-11-05", "1448-05-08"
-  if (/^\d{4}[\s._-]\d{1,2}[\s._-]\d{1,2}(?:\s*_\d{2}[A-Za-z]|\s*_\d{2}|\s*waaz|\s*isteqbal|\s*majlis|\s*urs|\s*ziyarat|$)/i.test(clean)) {
+  if (/^\d{4}[\s._-]\d{1,2}[\s._-]\d{1,2}(?:\s*_\d{2}[A-Za-z]|\s*_\d{2}|\s*waaz|\s*isteqbal|\s*majlis|\s*urs|\s*ziyarat|\s*session|\s*morning|\s*evening|\s*night|\s*day|\s*part|$)/i.test(clean)) {
     return false
   }
 
@@ -810,7 +815,7 @@ function getFolderNamesSet(rootPath: string): Map<string, string> {
 export function autoDetectDriveFolders(driveRoot: string): DriveAutoDetectResult {
   let root = (driveRoot || '').trim()
   if (/^[A-Za-z]:$/.test(root)) {
-    root = root + '\\'
+    root = root + '\\'; driveRoot = root
   }
 
   const result: DriveAutoDetectResult = {
@@ -821,7 +826,7 @@ export function autoDetectDriveFolders(driveRoot: string): DriveAutoDetectResult
     toUploadExists: false,
     toDeletePath: path.join(root, 'To Delete'),
     toDeleteExists: false,
-    pendingPath: path.join(root, 'Pending'),
+    pendingPath: path.join(driveRoot, 'Pending'),
     pendingExists: false,
     safarCount: 0
   }
@@ -971,6 +976,7 @@ export function autoDetectDriveFolders(driveRoot: string): DriveAutoDetectResult
     const probeDirs = [
       result.inProcessExists ? result.inProcessPath : null,
       result.pendingExists ? result.pendingPath : null,
+      result.toUploadExists ? result.toUploadPath : null,
       result.toDeleteExists ? result.toDeletePath : null
     ].filter(Boolean) as string[]
 
@@ -2082,6 +2088,22 @@ export async function scanTrackerDataAsync(input: {
           allTasksToUpsert.push(...resDelete.tasks)
           allResourcesToUpsert.push(...resDelete.resources)
         }
+        const uploadDir = ws.toUploadPath || (ws.driveRoot ? path.join(ws.driveRoot, 'To Upload') : null)
+        if (uploadDir && fs.existsSync(uploadDir) && !scannedDirs.has(uploadDir.toLowerCase())) {
+          scannedDirs.add(uploadDir.toLowerCase())
+          const resUpload = scanSingleWorkspace(uploadDir, ws.toUploadPath, ws.toDeletePath, ws.driveRoot, ws.pendingPath)
+          for (const s of resUpload.safars.filter(s => !isContainerFolderName(s.safarName))) {
+            s.currentFolder = 'to_upload'
+          }
+          for (const t of resUpload.tasks.filter(t => !isContainerFolderName(t.safarName))) {
+            if (t.status === 'editing_pending' || t.status === 'editing') {
+              t.status = 'upload_pending'
+            }
+          }
+          allSafarsToUpsert.push(...resUpload.safars)
+          allTasksToUpsert.push(...resUpload.tasks.filter(t => !isContainerFolderName(t.safarName)))
+          allResourcesToUpsert.push(...resUpload.resources)
+        }
         if (false as boolean) { /* legacy */
           const res = scanSingleWorkspace(resolvedWorkingDir, ws.toUploadPath, ws.toDeletePath, ws.driveRoot, ws.pendingPath)
           allSafarsToUpsert.push(...res.safars)
@@ -2098,6 +2120,21 @@ export async function scanTrackerDataAsync(input: {
         allSafarsToUpsert = res.safars
         allTasksToUpsert = res.tasks
         allResourcesToUpsert = res.resources
+
+        if (input.toUploadPath && fs.existsSync(input.toUploadPath) && input.toUploadPath.toLowerCase() !== input.workingPath.toLowerCase()) {
+          const resUpload = scanSingleWorkspace(input.toUploadPath, input.toUploadPath, input.toDeletePath)
+          for (const s of resUpload.safars.filter(s => !isContainerFolderName(s.safarName))) {
+            s.currentFolder = 'to_upload'
+          }
+          for (const t of resUpload.tasks.filter(t => !isContainerFolderName(t.safarName))) {
+            if (t.status === 'editing_pending' || t.status === 'editing') {
+              t.status = 'upload_pending'
+            }
+          }
+          allSafarsToUpsert.push(...resUpload.safars)
+          allTasksToUpsert.push(...resUpload.tasks.filter(t => !isContainerFolderName(t.safarName)))
+          allResourcesToUpsert.push(...resUpload.resources)
+        }
 
         if (input.toDeletePath && fs.existsSync(input.toDeletePath) && input.toDeletePath.toLowerCase() !== input.workingPath.toLowerCase()) {
           const resDelete = scanSingleWorkspace(input.toDeletePath, input.toUploadPath, input.toDeletePath)
@@ -2163,7 +2200,7 @@ export async function scanTrackerDataAsync(input: {
           deduplicateTasks(
             (pyRes.data.tasks || []).filter((task: TaskRecord) =>
               allowedNames.has(task.safarName) &&
-              (presentTaskKeys.has(`${task.safarName.toLowerCase()}::${normalizeDateFolderKey(task.dateFolder)}`) || task.status === 'submitted')
+              (presentTaskKeys.has(`${task.safarName.toLowerCase()}::${normalizeDateFolderKey(task.dateFolder)}`) || task.status === 'submitted' || retainedOfflineNames.has(task.safarName))
             )
           )
         ),
@@ -2517,7 +2554,7 @@ export function registerTaskTrackerIPC(): void {
         toUploadExists: false,
         toDeletePath: path.join(driveRoot, 'TO DELETE'),
         toDeleteExists: false,
-    pendingPath: path.join(root, 'Pending'),
+    pendingPath: path.join(driveRoot, 'Pending'),
     pendingExists: false,
         safarCount: 0
       }

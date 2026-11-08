@@ -1647,7 +1647,17 @@ export function registerPrprojIPC(): void {
 
   // Alias for scan
   ipcMain.handle('prproj:scan', async (_e, params) => {
-    const parentFolder = typeof params === 'string' ? params : params?.parentFolder
+    let parentFolder = typeof params === 'string' ? params : params?.parentFolder
+    if (parentFolder && typeof parentFolder === 'string') {
+      parentFolder = parentFolder.trim().replace(/^["']|["']$/g, '')
+      if (fs.existsSync(parentFolder)) {
+        try {
+          if (fs.statSync(parentFolder).isFile()) {
+            parentFolder = path.dirname(parentFolder)
+          }
+        } catch {}
+      }
+    }
     const ignoreOutput = typeof params === 'object' ? params.ignoreOutputFolders !== false : true
     const requestedMode = (typeof params === 'object' ? params.mode : 'auto') || 'auto'
     if (!parentFolder || !fs.existsSync(parentFolder)) {
@@ -1704,7 +1714,17 @@ export function registerPrprojIPC(): void {
 
   // Scan parent folder and return subfolders with .prproj status, mode detection & cameraman breakdowns
   ipcMain.handle('prproj:scanSubfolders', async (_e, params: { parentFolder: string; ignoreOutputFolders?: boolean; mode?: 'auto' | 'master' | 'single' } | string) => {
-    const parentFolder = typeof params === 'string' ? params : params?.parentFolder
+    let parentFolder = typeof params === 'string' ? params : params?.parentFolder
+    if (parentFolder && typeof parentFolder === 'string') {
+      parentFolder = parentFolder.trim().replace(/^["']|["']$/g, '')
+      if (fs.existsSync(parentFolder)) {
+        try {
+          if (fs.statSync(parentFolder).isFile()) {
+            parentFolder = path.dirname(parentFolder)
+          }
+        } catch {}
+      }
+    }
     const ignoreOutput = typeof params === 'object' ? params.ignoreOutputFolders !== false : true
     const requestedMode = (typeof params === 'object' ? params.mode : 'auto') || 'auto'
 
@@ -1820,9 +1840,18 @@ export function registerPrprojIPC(): void {
   // Generate Media Relink Manifest (.xlsx & .json) near project file
   ipcMain.handle('prproj:generateRelinkManifest', async (_e, params) => {
     try {
-      const targetFolders: string[] = Array.isArray(params?.targetFolders)
+      const rawFolders: string[] = Array.isArray(params?.targetFolders)
         ? params.targetFolders
         : params?.parentFolder ? [params.parentFolder] : []
+      const targetFolders: string[] = rawFolders.map(tf => {
+        let p = (tf || '').trim().replace(/^["']|["']$/g, '')
+        if (p && fs.existsSync(p)) {
+          try {
+            if (fs.statSync(p).isFile()) p = path.dirname(p)
+          } catch {}
+        }
+        return p
+      }).filter(Boolean)
 
       if (targetFolders.length === 0) {
         return { success: false, error: 'No target folder specified for relink manifest generation.' }
@@ -1907,6 +1936,15 @@ export function registerPrprojIPC(): void {
     excludedPaths?: string[]
   }) => {
     try {
+      let pFolder = params.parentFolder ? params.parentFolder.trim().replace(/^["']|["']$/g, '') : ''
+      if (pFolder && fs.existsSync(pFolder)) {
+        try {
+          if (fs.statSync(pFolder).isFile()) {
+            pFolder = path.dirname(pFolder)
+          }
+        } catch {}
+      }
+      params.parentFolder = pFolder
       if (!params.parentFolder || !fs.existsSync(params.parentFolder)) {
         return { success: false, error: 'Target parent directory does not exist.', created: [], skipped: [] }
       }

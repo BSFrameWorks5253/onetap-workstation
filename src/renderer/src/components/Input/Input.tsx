@@ -41,28 +41,66 @@ interface BrowseRowProps {
 
 export function BrowseRow({ label, value, placeholder, accent, onBrowse, onChange, onBlur, onKeyDown, readOnly }: BrowseRowProps): JSX.Element {
   const [isDragActive, setIsDragActive] = React.useState(false)
+  const dragCounter = React.useRef(0)
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    dragCounter.current += 1
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'copy'
+    }
+    setIsDragActive(true)
+  }
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    setIsDragActive(true)
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'copy'
+    }
+    if (!isDragActive) setIsDragActive(true)
   }
 
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    setIsDragActive(false)
+    dragCounter.current -= 1
+    if (dragCounter.current <= 0) {
+      dragCounter.current = 0
+      setIsDragActive(false)
+    }
   }
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
+    dragCounter.current = 0
     setIsDragActive(false)
-    const files = e.dataTransfer.files
+    const files = e.dataTransfer?.files
+    let droppedPath = ''
     if (files && files.length > 0) {
-      const path = (files[0] as any).path
-      if (path && onChange) {
-        onChange(path)
+      const file = files[0]
+      const api = (window as any).api
+      if (api?.webUtils?.getPathForFile) {
+        try {
+          droppedPath = api.webUtils.getPathForFile(file)
+        } catch {}
+      }
+      if (!droppedPath) {
+        droppedPath = (file as any)?.path || ''
+      }
+    }
+    if (!droppedPath) {
+      droppedPath = e.dataTransfer?.getData('text/plain') || ''
+    }
+    if (droppedPath) {
+      let clean = droppedPath.trim().replace(/^["']|["']$/g, '')
+      if (clean.startsWith('file:///')) {
+        clean = decodeURIComponent(clean.replace(/^file:\/\/\//, '')).replace(/^\/([a-zA-Z]:)/, '$1')
+      }
+      if (onChange) {
+        onChange(clean)
       }
     }
   }
@@ -70,6 +108,7 @@ export function BrowseRow({ label, value, placeholder, accent, onBrowse, onChang
   return (
     <div 
       className={`input-wrap browse-row-wrap ${isDragActive ? 'drag-active' : ''}`}
+      onDragEnter={handleDragEnter}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}

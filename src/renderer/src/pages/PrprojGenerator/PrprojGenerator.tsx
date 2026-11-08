@@ -230,11 +230,26 @@ export default function PrprojGenerator(): JSX.Element {
     setExcludedPaths(subfolders.map(s => s.path))
   }
 
+  const cleanDroppedPath = (rawPath: string): string => {
+    if (!rawPath) return ''
+    let p = rawPath.trim().replace(/^["']|["']$/g, '')
+    if (p.startsWith('file:///')) {
+      p = decodeURIComponent(p.replace(/^file:\/\/\//, ''))
+      p = p.replace(/^\/([a-zA-Z]:)/, '$1')
+    }
+    // If dropped item is a file (e.g. .prproj, .mp4, .mov, .xml), resolve its containing directory
+    if (/\.[a-zA-Z0-9]{2,6}$/.test(p)) {
+      p = p.replace(/[\\/][^\\/]+$/, '')
+    }
+    return p
+  }
+
   const handleFolderSelect = async (path: string, overrideMode?: 'auto' | 'master' | 'single') => {
-    setParentFolder(path)
-    if (path) {
+    const cleanPath = cleanDroppedPath(path)
+    setParentFolder(cleanPath)
+    if (cleanPath) {
       playTick()
-      await scanFolder(path, overrideMode || mode)
+      await scanFolder(cleanPath, overrideMode || mode)
     } else {
       setStore({
         subfolders: [],
@@ -331,32 +346,73 @@ export default function PrprojGenerator(): JSX.Element {
     }
   }
 
+  const dragCounter = useRef(0)
+
+  const extractPathFromDrop = (e: React.DragEvent): string => {
+    const files = e.dataTransfer?.files
+    if (files && files.length > 0) {
+      const file = files[0]
+      let p = ''
+      const apiObj = (window as any).api
+      if (apiObj?.webUtils?.getPathForFile) {
+        try {
+          p = apiObj.webUtils.getPathForFile(file)
+        } catch {}
+      }
+      if (!p) {
+        p = (file as any)?.path || ''
+      }
+      if (p) return cleanDroppedPath(p)
+    }
+    const text = e.dataTransfer?.getData('text/plain')
+    if (text) {
+      return cleanDroppedPath(text)
+    }
+    return ''
+  }
+
   const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
+    dragCounter.current += 1
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'copy'
+    }
     setIsDragging(true)
   }
 
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    setIsDragging(false)
+    dragCounter.current -= 1
+    if (dragCounter.current <= 0) {
+      dragCounter.current = 0
+      setIsDragging(false)
+    }
   }
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'copy'
+    }
     if (!isDragging) setIsDragging(true)
   }
 
   const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
+    dragCounter.current = 0
     setIsDragging(false)
-    const files = e.dataTransfer.files
-    if (files && files.length > 0) {
-      const p = (files[0] as any).path
-      if (p) await handleFolderSelect(p)
+    const p = extractPathFromDrop(e)
+    if (p) {
+      await handleFolderSelect(p)
+      showToast({
+        title: 'Directory Loaded 📂',
+        message: `Selected: ${p}`,
+        type: 'success'
+      })
     }
   }
 
@@ -721,7 +777,13 @@ export default function PrprojGenerator(): JSX.Element {
       {/* ── Main Folder Selector Card ── */}
       <Card>
         <CardHeader title="1. Select Directory (Drop Date Folder or Master Folder)" accent="#9999FF" />
-        <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div 
+          style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}
+          onDragEnter={handleDragEnter}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
           <BrowseRow
             label="Target Directory"
             value={parentFolder}

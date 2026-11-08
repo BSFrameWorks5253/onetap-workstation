@@ -255,6 +255,10 @@
   overflow: hidden;
 }
 
+.prproj-dropzone * {
+  pointer-events: none;
+}
+
 .prproj-dropzone:hover,
 .prproj-dropzone.drag-active {
   border-color: #9999FF;

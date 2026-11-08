@@ -113,12 +113,13 @@ export default function OngoingSafarKanban({
 }) {
   // 1. Available ongoing (non-archived) Safars
   const ongoingSafars = useMemo(() => {
+    const archivedNames = new Set(safars.filter(s => s.isArchived).map(s => s.safarName));
     const names = new Set<string>();
     safars
       .filter(s => !s.isArchived && !isJunkSafarName(s.safarName))
       .forEach(s => s.safarName && names.add(s.safarName));
     tasks
-      .filter(t => !isJunkSafarName(t.safarName))
+      .filter(t => !isJunkSafarName(t.safarName) && !archivedNames.has(t.safarName))
       .forEach(t => t.safarName && names.add(t.safarName));
     return Array.from(names);
   }, [safars, tasks]);

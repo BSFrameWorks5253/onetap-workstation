@@ -30,6 +30,7 @@ const FILE_ACCEPTING_PAGES = new Set<string>([
   'cleaner',
   'folder',
   'prproj',
+  'pr-proj',
   'utilities',
   'excelmerger',
   'archivevault'

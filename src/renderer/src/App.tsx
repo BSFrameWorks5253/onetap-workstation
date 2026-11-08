@@ -247,7 +247,19 @@ function AppInner(): JSX.Element {
         }
         const legacyPath = localStorage.getItem('ot_tracker_working_path') || ''
         const result = await api.taskTracker.scan(workspaces.length > 0 ? { workspaces } : legacyPath ? { workingPath: legacyPath } : {})
-        anyShareRealtimeService.syncSafarTrackerSnapshot(result?.websiteSafars || result?.safars || [], result?.websiteTasks || result?.tasks || [], Boolean(result?.websiteScanComplete))
+        let archivedNames: string[] = []
+        let removedNames: string[] = []
+        try {
+          archivedNames = JSON.parse(localStorage.getItem('ot_tracker_archived_safar_names') || '[]')
+          removedNames = JSON.parse(localStorage.getItem('ot_tracker_removed_safar_names') || '[]')
+        } catch {}
+        const rawSafars = result?.websiteSafars || result?.safars || []
+        const rawTasks = result?.websiteTasks || result?.tasks || []
+        const websiteSafars = rawSafars
+          .filter((s: any) => !removedNames.includes(s.safarName))
+          .map((s: any) => ({ ...s, isArchived: archivedNames.includes(s.safarName) }))
+        const websiteTasks = rawTasks.filter((task: any) => !removedNames.includes(task.safarName))
+        anyShareRealtimeService.syncSafarTrackerSnapshot(websiteSafars, websiteTasks, Boolean(result?.websiteScanComplete))
       } catch (error) {
         console.warn('[App] Background Safar sync failed:', error)
       }
