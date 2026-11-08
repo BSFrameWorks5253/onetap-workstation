@@ -126,7 +126,7 @@ const initialState: TitleAdderState = {
   hasReceivedExtensionPath: false,
   expectedVideos: JSON.parse(safeGet('ot_ta_expected_videos', '[]')),
   autoStartOnEncoderSignal: safeGet('ot_ta_auto_start_ame', 'true') === 'true',
-  alwaysKeepOgAudioKeywords: JSON.parse(safeGet('ot_ta_og_keywords', '["WAAZ", "ID", "SPEECH", "BAYAAN"]')),
+  alwaysKeepOgAudioKeywords: JSON.parse(safeGet('ot_ta_og_keywords', '[]')),
   predefinedVideoMutes: JSON.parse(safeGet('ot_ta_predefined_mutes', '{}')),
   predefinedAudioTracks: JSON.parse(safeGet('ot_ta_predefined_audio', '{}')),
   predefinedTitleImages: JSON.parse(safeGet('ot_ta_predefined_images', '{}')),
@@ -236,7 +236,7 @@ class TitleAdderStoreManager {
                 const dotIdx = lowerF.lastIndexOf('.')
                 const stemF = dotIdx > 0 ? lowerF.substring(0, dotIdx) : lowerF
                 // ID and WAAZ videos default to keeping original audio (not muted)
-                if (isSpecialWaazOrId(f)) return false
+                // By default all videos (including ID and WAAZ) are muted unless in exceptions
                 return !exceptionsSet.has(lowerF) && !exceptionsSet.has(stemF)
               })
             } else {

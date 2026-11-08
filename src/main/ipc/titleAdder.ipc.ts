@@ -1496,7 +1496,7 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
         shouldMute = explicitMute
       } else {
         // Thumbnails and videos that are NOT ID or WAAZ MUST be muted automatically!
-        shouldMute = !isWaazId
+        shouldMute = params.muteOriginal !== false && !isExcluded
       }
 
       const isWatermarkExcluded = params.watermarkExceptions?.some(ex => {
@@ -1564,7 +1564,7 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
         }
       }
 
-      if (!primary && !(isWaazId || (isExcluded && !isNikah))) {
+      if (!primary && shouldMute) {
         // Skip if no audio AND not a WAAZ/ID (which keeps OG audio) AND not a mute exception
         send('titleAdder:log', { jobId: params.jobId, message: `  ✖ SKIP — No audio found for prefix "${prefix}". Pool has ${pool.length} file(s).`, level: 'warn' })
         send('titleAdder:log', { jobId: params.jobId, message: `       Add "Audio 1.mp3" (or more) to: ${titlesFolder}`, level: 'warn' })
@@ -1640,7 +1640,7 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
       let nonSilentSegs: Array<[number, number]> | undefined = undefined
 
       // Run silence detection for WAAZ/ID (always), mute-exceptions (isExcluded), and non-muted normal videos
-      if (!isNikah && (isWaazId || !shouldMute || isExcluded)) {
+      if (!isNikah && (!shouldMute || isExcluded)) {
         send('titleAdder:log', { jobId: params.jobId, message: `  🔍 Analysing audio silence…`, level: 'info' })
         const res = detectSilence(videoPath, info.duration)
         nonSilentSegs = res.nonSilent
@@ -1657,9 +1657,9 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
       }
 
       // ── Per-video decision summary ────────────────────────────
-      send('titleAdder:log', { jobId: params.jobId, message: `  🔇 Mute original audio: ${isWaazId ? 'NO (WAAZ/ID keeps OG audio)' : shouldMute ? 'YES' : 'NO (kept)'}${params.muteOriginal && isExcluded ? ' [mute exception — OG audio preserved]' : ''}`, level: 'info' })
+      send('titleAdder:log', { jobId: params.jobId, message: `  🔇 Mute original audio: ${shouldMute ? 'YES' : 'NO (kept)'}${params.muteOriginal && isExcluded ? ' [mute exception — OG audio preserved]' : ''}`, level: 'info' })
       send('titleAdder:log', { jobId: params.jobId, message: `  🏷 Watermark: ${shouldAddWatermark ? 'YES' : 'NO (skipped)'}${isWatermarkExcluded ? ' [exception applied]' : ''}`, level: 'info' })
-      if (isWaazId) {
+      if (isWaazId && !shouldMute) {
         send('titleAdder:log', { jobId: params.jobId, message: `  ⭐ [WAAZ/ID] Instrumental fill mode: OG audio preserved + ${primary ? path.basename(primary) : 'no fill audio'} fills silent gaps`, level: 'info' })
       } else if (!isNikah) {
         send('titleAdder:log', { jobId: params.jobId, message: `  🎵 Audio: ${primary ? path.basename(primary) : '—'}`, level: 'info' })
@@ -1694,9 +1694,9 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
           width: info.width,
           height: info.height,
           vidDuration: info.duration,
-          muteOriginal: isWaazId ? false : shouldMute,
+          muteOriginal: shouldMute,
           addWatermark: shouldAddWatermark,
-          isWaazId: isWaazId,
+          isWaazId: isWaazId && !shouldMute,
           hasAudio,
           skipFront,
           skipBack,

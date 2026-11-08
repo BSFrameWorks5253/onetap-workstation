@@ -142,7 +142,7 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
   // ────────────────────────────────────────────────────────────
   const leadMs = Math.round(leadDuration * 1000)
 
-  if ((isWaazId || !muteOriginal) && !useNikahLogic) {
+  if (isWaazId && !muteOriginal && !useNikahLogic) {
     const hasFillAudio = !!audioPrimary && fs.existsSync(audioPrimary)
 
     if (hasFillAudio) {
