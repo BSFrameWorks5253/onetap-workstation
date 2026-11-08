@@ -1056,7 +1056,7 @@ export default function TitleAdder(): JSX.Element {
     }
 
     setFileOutputFolders(newMap)
-    if (primaryTarget && !outputFolder) {
+    if (primaryTarget) {
       setOutputFolder(primaryTarget)
       setSafarFinalInfo(primaryInfo)
       const check = await validatePathOnDisk(primaryTarget)
@@ -1689,6 +1689,12 @@ export default function TitleAdder(): JSX.Element {
 
     setMode('batch')
     setBatchSource(cleanPath)
+
+    // Clear any stale output folder from previous batch so it gets re-detected for the new source
+    setStoreState({ outputFolder: '' })
+    try { localStorage.removeItem('ot_ta_output_folder') } catch {}
+    // Immediately auto-detect the output folder from the new batch source path
+    autoDetectSafarFinal(cleanPath)
 
     if (autoRenderLockRef.current) return
     autoRenderLockRef.current = true

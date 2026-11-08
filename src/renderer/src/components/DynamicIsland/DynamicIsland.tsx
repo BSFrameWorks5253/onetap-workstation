@@ -44,8 +44,12 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
   const [isExpanded, setIsExpanded] = useState<boolean>(false)
   const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState<boolean>(false)
   const [isHoveringProgress, setIsHoveringProgress] = useState<boolean>(false)
+  const [isDissolving, setIsDissolving] = useState<boolean>(false)
+  const [isDismissed, setIsDismissed] = useState<boolean>(false)
   const [scrubPercent, setScrubPercent] = useState<number | null>(null)
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const dissolveTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const closeTimerRef = useRef<NodeJS.Timeout | null>(null)
   const isHoveringProgressRef = useRef<boolean>(false)
 
   useEffect(() => {
@@ -66,16 +70,57 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
 
     // Listen to real-time updates from Title Adder / Main Process
     const unsub = api.onUpdate((data: IslandState) => {
-      if (data) setState(data)
-      if (data?.done) {
-        setTimeout(() => {
-          handleClose()
-        }, 4000)
+      if (!data) return
+      setState(data)
+
+      if (data.active) {
+        if (dissolveTimerRef.current) clearTimeout(dissolveTimerRef.current)
+        if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
+        setIsDismissed(false)
+        setIsDissolving(false)
+      } else if (data.done) {
+        // When batch completes or ends, display celebratory capsule briefly, then smoothly dissolve
+        const displayDuration = data.success ? 2800 : 1500
+        if (dissolveTimerRef.current) clearTimeout(dissolveTimerRef.current)
+        if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
+
+        dissolveTimerRef.current = setTimeout(() => {
+          setIsDissolving(true)
+          closeTimerRef.current = setTimeout(() => {
+            setIsDismissed(true)
+            setIsDissolving(false)
+            if (!floating) {
+              const apiInst = (window as any).api?.island
+              if (apiInst?.close) apiInst.close()
+              else if (apiInst?.hide) apiInst.hide()
+            }
+          }, 600)
+        }, displayDuration)
+      } else if (!data.active && !data.done) {
+        // Idle state broadcast from main process
+        setIsDissolving(true)
+        if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
+        closeTimerRef.current = setTimeout(() => {
+          setIsDismissed(true)
+          setIsDissolving(false)
+        }, 500)
       }
+    })
+
+    const unsubDissolve = api.onDissolve?.(() => {
+      setIsDissolving(true)
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
+      closeTimerRef.current = setTimeout(() => {
+        setIsDismissed(true)
+        setIsDissolving(false)
+      }, 600)
     })
 
     return () => {
       if (typeof unsub === 'function') unsub()
+      if (typeof unsubDissolve === 'function') unsubDissolve()
+      if (dissolveTimerRef.current) clearTimeout(dissolveTimerRef.current)
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
     }
   }, [floating])
 
@@ -150,12 +195,20 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
       e.stopPropagation()
       e.preventDefault()
     }
-    const api = (window as any).api?.island
-    if (api?.close) {
-      api.close()
-    } else if (api?.hide) {
-      api.hide()
-    }
+    setIsDissolving(true)
+    if (dissolveTimerRef.current) clearTimeout(dissolveTimerRef.current)
+    if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
+
+    closeTimerRef.current = setTimeout(() => {
+      setIsDismissed(true)
+      setIsDissolving(false)
+      const api = (window as any).api?.island
+      if (api?.close) {
+        api.close()
+      } else if (api?.hide) {
+        api.hide()
+      }
+    }, 500)
   }
 
   const handleConfirmCancel = () => {
@@ -172,15 +225,15 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
   const thumbUrl = getThumbnailSrc()
   const remainingCount = Math.max(0, (state.totalVideos || 1) - (state.currentIdx || 1))
 
-  // If used in floating in-app mode, hide when idle
-  if (floating && !state.active && !state.done) {
+  // When idle, dismissed, or removed from view, unmount completely
+  if (isDismissed || (floating && !state.active && !state.done)) {
     return null
   }
 
   return (
     <>
       <div
-        className={`dynamic-island-container ${isExpanded ? 'is-expanded' : 'is-compact'} ${state.done ? 'is-done' : ''} ${floating ? 'is-in-app-floating' : ''}`}
+        className={`dynamic-island-container ${isExpanded ? 'is-expanded' : 'is-compact'} ${state.done ? 'is-done' : ''} ${floating ? 'is-in-app-floating' : ''} ${isDissolving ? 'is-dissolving' : ''}`}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         onContextMenu={handleClose}

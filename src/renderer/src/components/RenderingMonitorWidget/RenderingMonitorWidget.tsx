@@ -62,12 +62,19 @@ export function RenderingMonitorWidget(): JSX.Element | null {
       setState(data)
       if (data?.active) setIslandVisible(true)
       if (data?.done) {
-        setTimeout(() => setIslandVisible(false), 6000)
+        setTimeout(() => setIslandVisible(false), 3500)
+      } else if (!data?.active && !data?.done) {
+        setIslandVisible(false)
       }
+    })
+
+    const unsubDissolve = api.onDissolve?.(() => {
+      setIslandVisible(false)
     })
 
     return () => {
       if (unsub) unsub()
+      if (unsubDissolve) unsubDissolve()
     }
   }, [])
 

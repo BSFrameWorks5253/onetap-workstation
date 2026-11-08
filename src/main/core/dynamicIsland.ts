@@ -225,12 +225,36 @@ function handleQueueCompletion(): void {
     notif.show()
   }
 
-  // 2. Hide island smoothly after 3.5 seconds of displaying the celebration capsule
+  // 2. Display completion capsule briefly, then smoothly dissolve & remove island from screen and app
+  const waitMs = state.success ? 2800 : 1500
   setTimeout(() => {
+    // Notify both windows to play the dissolve animation
     if (islandWindow && !islandWindow.isDestroyed()) {
-      islandWindow.hide()
+      islandWindow.webContents.send('island:dissolve')
     }
-  }, 3500)
+    const mainWin = mainWindowRef ? mainWindowRef() : null
+    if (mainWin && !mainWin.isDestroyed()) {
+      mainWin.webContents.send('island:dissolve')
+    }
+
+    // After dissolve animation completes (650ms), hide standalone window and clear active/done state
+    setTimeout(() => {
+      if (islandWindow && !islandWindow.isDestroyed()) {
+        islandWindow.hide()
+      }
+      state.active = false
+      state.done = false
+      state.task = 'Idle'
+      userDismissed = false
+
+      if (islandWindow && !islandWindow.isDestroyed()) {
+        islandWindow.webContents.send('island:update', state)
+      }
+      if (mainWin && !mainWin.isDestroyed()) {
+        mainWin.webContents.send('island:update', state)
+      }
+    }, 650)
+  }, waitMs)
 }
 
 function registerIslandIPC(): void {
@@ -254,12 +278,33 @@ function registerIslandIPC(): void {
     return { ...state }
   })
 
-  // Dismiss / Close / Hide handler
+  // Dismiss / Close / Hide handler with dissolve transition
   const dismissIsland = () => {
     userDismissed = true
     if (islandWindow && !islandWindow.isDestroyed()) {
-      islandWindow.hide()
+      islandWindow.webContents.send('island:dissolve')
     }
+    const mainWin = mainWindowRef ? mainWindowRef() : null
+    if (mainWin && !mainWin.isDestroyed()) {
+      mainWin.webContents.send('island:dissolve')
+    }
+
+    setTimeout(() => {
+      if (islandWindow && !islandWindow.isDestroyed()) {
+        islandWindow.hide()
+      }
+      state.active = false
+      state.done = false
+      state.task = 'Idle'
+
+      if (islandWindow && !islandWindow.isDestroyed()) {
+        islandWindow.webContents.send('island:update', state)
+      }
+      if (mainWin && !mainWin.isDestroyed()) {
+        mainWin.webContents.send('island:update', state)
+      }
+    }, 550)
+
     return { success: true }
   }
 

@@ -46,6 +46,36 @@ body, html, #root {
   padding-top: 0;
 }
 
+/* Dissolve & exit animations when batch mode is over */
+.dynamic-island-container.is-dissolving {
+  opacity: 0 !important;
+  transform: translateY(-16px) scale(0.92) !important;
+  filter: blur(10px) !important;
+  pointer-events: none !important;
+  transition:
+    opacity 0.55s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.55s cubic-bezier(0.16, 1, 0.3, 1),
+    filter 0.55s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.dynamic-island-container.is-in-app-floating.is-dissolving {
+  opacity: 0 !important;
+  transform: translateX(-50%) translateY(-16px) scale(0.92) !important;
+  filter: blur(10px) !important;
+  pointer-events: none !important;
+  transition:
+    opacity 0.55s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.55s cubic-bezier(0.16, 1, 0.3, 1),
+    filter 0.55s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.dynamic-island-container.is-dissolving .dynamic-island-pill,
+.dynamic-island-container.is-dissolving .dynamic-island-card {
+  box-shadow: 0 0 0 rgba(0, 0, 0, 0) !important;
+  border-color: rgba(255, 255, 255, 0) !important;
+  transition: box-shadow 0.4s ease, border-color 0.4s ease !important;
+}
+
 /* ── Compact Apple Pill State ───────────────────────────────────── */
 .dynamic-island-pill {
   width: 434px;

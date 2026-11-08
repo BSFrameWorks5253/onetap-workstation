@@ -628,6 +628,11 @@ contextBridge.exposeInMainWorld('api', {
       const sub = (_e: any, d: any): void => cb(d)
       ipcRenderer.on('island:update', sub)
       return () => ipcRenderer.removeListener('island:update', sub)
+    },
+    onDissolve: (cb: () => void) => {
+      const sub = (): void => cb()
+      ipcRenderer.on('island:dissolve', sub)
+      return () => ipcRenderer.removeListener('island:dissolve', sub)
     }
   }
 })

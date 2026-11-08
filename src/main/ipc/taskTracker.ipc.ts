@@ -512,7 +512,13 @@ export function isSafarFolder(name: string, dirPath?: string): boolean {
     try {
       const subs = fs.readdirSync(dirPath, { withFileTypes: true })
       const hasFinal = subs.some(e => e.isDirectory() && (e.name.toLowerCase() === 'final' || e.name.toLowerCase() === 'final titles'))
-      const hasDateSub = subs.some(e => e.isDirectory() && (extractCleanDateFolder(e.name) !== null || /^\d{4}[\s._-]\d{1,2}/.test(e.name)))
+      const hasDateSub = subs.some(e => e.isDirectory() && (
+        /^\d{4}[\s._-]\d{1,2}[\s._-]\d{1,2}/.test(e.name) ||
+        /^\d{4}[\s._-]\d{1,2}$/.test(e.name) ||
+        /^day[\s._-]?\d+/i.test(e.name) ||
+        /^\d{1,2}[\s._-]\d{1,2}[\s._-]\d{2,4}/.test(e.name) ||
+        extractCleanDateFolder(e.name) !== null
+      ))
       if (hasFinal || hasDateSub) return true
     } catch {}
   }
@@ -1120,7 +1126,7 @@ function scanSingleWorkspace(
     e => e.isDirectory() && (e.name.toLowerCase() === 'final' || e.name.toLowerCase() === 'final titles')
   )
   const hasSubDateFolders = rootEntries.some(e => e.isDirectory() && isDateFolder(e.name))
-  const workingFolderIsSafar = isSafarFolder(path.basename(actualWorkingPath))
+  const workingFolderIsSafar = isSafarFolder(path.basename(actualWorkingPath), actualWorkingPath)
 
   if (workingFolderIsSafar && (hasSubFinal || hasSubDateFolders)) {
     safarDirs = [actualWorkingPath]
