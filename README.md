@@ -28,7 +28,7 @@
 <!-- ========================================== -->
 [![Release](https://img.shields.io/badge/Release-v26.10.21-6366F1?style=for-the-badge&logo=electron&logoColor=white)](https://github.com/BSFrameWorks5253/onetap-workstation/releases)
 [![Build Status](https://img.shields.io/badge/Build-Passing%20(100%25)-10B981?style=for-the-badge&logo=githubactions&logoColor=white)](https://github.com/BSFrameWorks5253/onetap-workstation)
-[![Electron](https://img.shields.io/badge/Electron-26.11.21-475569?style=for-the-badge&logo=electron&logoColor=white)](https://electronjs.org)
+[![Electron](https://img.shields.io/badge/Electron-26.11.22-475569?style=for-the-badge&logo=electron&logoColor=white)](https://electronjs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.5.4-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://typescriptlang.org)
 [![React](https://img.shields.io/badge/React-18.3.1-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev)
 [![FFmpeg](https://img.shields.io/badge/FFmpeg-NVENC%20%2B%20QSV-007808?style=for-the-badge&logo=ffmpeg&logoColor=white)](https://ffmpeg.org)
