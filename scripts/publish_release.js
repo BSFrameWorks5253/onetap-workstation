@@ -168,6 +168,8 @@ async function uploadOrReplaceAsset(releaseData, filePath, assetName, token) {
           'Accept': 'application/vnd.github.v3+json'
         }
       })
+      // GitHub release asset deletion requires a brief moment to propagate across replicas
+      await new Promise((r) => setTimeout(r, 1500))
     } catch (delErr) {
       logWarn(`Could not delete asset ${assetName}: ${delErr.message}`)
     }
@@ -181,6 +183,7 @@ async function uploadOrReplaceAsset(releaseData, filePath, assetName, token) {
     if (err.message && err.message.includes('already_exists')) {
       logWarn(`Asset ${assetName} was still flagged as existing. Retrying clean replacement...`)
       try {
+        await new Promise((r) => setTimeout(r, 2000))
         const retryListRes = await httpsRequest({
           hostname: 'api.github.com',
           path: `/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/${releaseData.id}/assets`,
@@ -204,6 +207,7 @@ async function uploadOrReplaceAsset(releaseData, filePath, assetName, token) {
                 'Accept': 'application/vnd.github.v3+json'
               }
             })
+            await new Promise((r) => setTimeout(r, 1500))
           }
         }
         await uploadReleaseAsset(releaseData.upload_url, filePath, assetName, token)
@@ -294,8 +298,12 @@ async function publishToGitHubReleases(version, exePath, releaseNotes) {
     const latestYmlPath = path.join(ROOT_DIR, 'release', 'latest.yml')
     if (fs.existsSync(latestYmlPath)) {
       log('Uploading latest.yml for auto-updater...')
-      await uploadOrReplaceAsset(releaseData, latestYmlPath, 'latest.yml', token)
-      logSuccess('latest.yml uploaded successfully.')
+      try {
+        await uploadOrReplaceAsset(releaseData, latestYmlPath, 'latest.yml', token)
+        logSuccess('latest.yml uploaded successfully.')
+      } catch (ymlErr) {
+        logWarn(`Could not upload latest.yml: ${ymlErr.message}`)
+      }
     }
 
     return true

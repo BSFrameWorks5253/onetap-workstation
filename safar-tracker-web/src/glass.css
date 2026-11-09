@@ -553,3 +553,299 @@ td { color: #514d43; font-size: .875rem; }
 @media (prefers-reduced-motion: reduce) {
   .skeleton-section-heading i::after, .skeleton-card i::after { animation: none; }
 }
+
+/* Multi-Color Pipeline Stage Progress Bar & Vibrant Styling */
+.multicolor-progress-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  margin-top: 14px;
+}
+.multicolor-progress-bar {
+  display: flex;
+  height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(226, 232, 240, 0.7);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  width: 100%;
+}
+.multicolor-progress-bar.large {
+  height: 16px;
+  border-radius: 999px;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-top: 14px;
+}
+.multicolor-progress-bar.mini {
+  height: 7px;
+  border-radius: 999px;
+  margin-top: 4px;
+}
+.stage-segment {
+  display: block;
+  height: 100%;
+  transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+.stage-segment:first-child {
+  border-top-left-radius: inherit;
+  border-bottom-left-radius: inherit;
+}
+.stage-segment:last-child {
+  border-top-right-radius: inherit;
+  border-bottom-right-radius: inherit;
+}
+
+/* Vivid Stage Colors */
+.stage-segment.stage-editing {
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.45);
+}
+.stage-segment.stage-rendering {
+  background: linear-gradient(90deg, #2563eb, #3b82f6);
+  box-shadow: 0 0 10px rgba(37, 99, 235, 0.45);
+}
+.stage-segment.stage-upload {
+  background: linear-gradient(90deg, #059669, #10b981);
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.45);
+}
+.stage-segment.stage-jameya {
+  background: linear-gradient(90deg, #7c3aed, #8b5cf6);
+  box-shadow: 0 0 10px rgba(124, 58, 237, 0.45);
+}
+
+/* Legend Chips */
+.multicolor-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  align-items: center;
+  margin-top: 6px;
+}
+.multicolor-legend.compact {
+  gap: 4px 8px;
+  margin-top: 3px;
+}
+.legend-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: rgba(241, 245, 249, 0.8);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  color: #475569;
+  letter-spacing: 0.01em;
+}
+.multicolor-legend.compact .legend-chip {
+  font-size: 0.6875rem;
+  padding: 1px 5px;
+}
+.chip-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+.chip-editing .chip-dot, .dot-editing {
+  background: #f59e0b;
+  box-shadow: 0 0 6px #f59e0b;
+}
+.chip-rendering .chip-dot, .dot-rendering {
+  background: #3b82f6;
+  box-shadow: 0 0 6px #3b82f6;
+}
+.chip-upload .chip-dot, .dot-upload {
+  background: #10b981;
+  box-shadow: 0 0 6px #10b981;
+}
+.chip-jameya .chip-dot, .dot-jameya {
+  background: #8b5cf6;
+  box-shadow: 0 0 6px #8b5cf6;
+}
+
+/* Stage Tags */
+.stage-tag {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  text-transform: capitalize;
+  display: inline-block;
+}
+.stage-tag.stage-editing {
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+.stage-tag.stage-rendering {
+  background: #dbeafe;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+.stage-tag.stage-upload {
+  background: #d1fae5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+.stage-tag.stage-jameya {
+  background: #ede9fe;
+  color: #6d28d9;
+  border: 1px solid #ddd6fe;
+}
+
+/* Studio-Wide Pipeline Summary Panel */
+.studio-pipeline-summary {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.9));
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 18px;
+  padding: 22px 24px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04), inset 0 1px 0 #fff;
+  margin-bottom: 22px;
+}
+.studio-pipeline-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.studio-pipeline-header h2 {
+  margin: 4px 0 2px;
+  font-size: 1.1875rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+.studio-pipeline-header p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #64748b;
+}
+.studio-pipeline-badge {
+  text-align: right;
+  flex-shrink: 0;
+}
+.studio-pipeline-badge strong {
+  display: block;
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #7c3aed;
+  line-height: 1;
+}
+.studio-pipeline-badge span {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Modern Card Polish */
+.dashboard-safar-card {
+  border-radius: 18px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(226, 232, 240, 0.85);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.dashboard-safar-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(99, 102, 241, 0.3);
+  box-shadow: 0 12px 32px rgba(99, 102, 241, 0.08);
+}
+.dashboard-safar-percent {
+  color: #4f46e5;
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+.preview-remove-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 3px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.preview-remove-btn:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.08);
+}
+.button-safar-remove {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.button-safar-remove:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.08);
+}
+
+/* Safar Group Header Progress Column */
+.safar-group-progress-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 220px;
+}
+.safar-group-progress-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.safar-group-progress-info strong {
+  font-size: 0.9375rem;
+  font-weight: 800;
+  color: #4f46e5;
+}
+.safar-group-progress-info span {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+/* Vibrant App Background and Sidebar */
+body {
+  background:
+    radial-gradient(circle at 12% 8%, rgba(99, 102, 241, 0.08), transparent 32%),
+    radial-gradient(circle at 88% 12%, rgba(6, 182, 212, 0.08), transparent 32%),
+    radial-gradient(circle at 85% 82%, rgba(139, 92, 246, 0.07), transparent 36%),
+    radial-gradient(circle at 15% 88%, rgba(16, 185, 129, 0.06), transparent 36%),
+    linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
+  background-attachment: fixed !important;
+}
+.brand-mark {
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #06b6d4 100%) !important;
+  box-shadow: 0 8px 20px rgba(79, 70, 229, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.45) !important;
+}
+.nav-link.active {
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.12), rgba(6, 182, 212, 0.06)) !important;
+  color: #4338ca !important;
+  border-left: 3px solid #4f46e5;
+}
+.nav-count {
+  background: rgba(99, 102, 241, 0.15) !important;
+  color: #4338ca !important;
+  font-weight: 700 !important;
+}
+.button-primary {
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%) !important;
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+}

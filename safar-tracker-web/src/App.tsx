@@ -61,8 +61,25 @@ type SafarSummary = {
   archivePriorStages?: Record<string, Stage>
   updatedAt?: string
 }
-type Snapshot = { tasks: SafarTask[]; folders: string[]; safars: SafarSummary[]; updatedAt: string; source?: string }
-type SafarGroup = SafarSummary & { tasks: SafarTask[]; total: number; completed: number; percent: number }
+type Snapshot = {
+  tasks: SafarTask[]
+  folders: string[]
+  safars: SafarSummary[]
+  deletedTasks?: string[]
+  deletedSafars?: string[]
+  updatedAt: string
+  source?: string
+}
+type SafarGroup = SafarSummary & {
+  tasks: SafarTask[]
+  total: number
+  completed: number
+  percent: number
+  editingCount: number
+  renderingCount: number
+  uploadCount: number
+  jameyaCount: number
+}
 
 const STAGES: { id: Stage; label: string }[] = [
   { id: 'editing', label: 'In Editing' },
@@ -71,6 +88,42 @@ const STAGES: { id: Stage; label: string }[] = [
   { id: 'jameya', label: 'AlJamea submission' }
 ]
 const localKey = 'ot_safar_tracker_snapshot'
+const deletedTasksKey = 'ot_safar_tracker_deleted_tasks'
+const deletedSafarsKey = 'ot_safar_tracker_deleted_safars'
+
+export function getDeletedTasks(): Set<string> {
+  try {
+    const val = localStorage.getItem(deletedTasksKey)
+    if (val) return new Set(JSON.parse(val))
+  } catch {}
+  return new Set()
+}
+
+export function saveDeletedTasks(set: Set<string>) {
+  try {
+    localStorage.setItem(deletedTasksKey, JSON.stringify(Array.from(set)))
+  } catch {}
+}
+
+export function getDeletedSafars(): Set<string> {
+  try {
+    const val = localStorage.getItem(deletedSafarsKey)
+    if (val) return new Set(JSON.parse(val))
+  } catch {}
+  return new Set()
+}
+
+export function saveDeletedSafars(set: Set<string>) {
+  try {
+    localStorage.setItem(deletedSafarsKey, JSON.stringify(Array.from(set)))
+  } catch {}
+}
+
+export function getTaskKey(safarName?: string, dateFolder?: string): string {
+  const s = String(safarName || '').trim().toLowerCase()
+  const d = String(dateFolder || '').trim().toLowerCase().replace(/[\s_\-]/g, '')
+  return `${s}::${d}`
+}
 const HIJRI_MONTHS = ['Muharram', 'Safar', 'Rabi al-Awwal', 'Rabi al-Thani', 'Jumada al-Awwal', 'Jumada al-Thani', 'Rajab', 'Sha’ban', 'Ramadan', 'Shawwal', 'Dhu al-Qi’dah', 'Dhu al-Hijjah']
 
 function hijriYearLabel(year?: string | number): string {
@@ -137,8 +190,24 @@ function isJunkSafarOrHardware(name: string): boolean {
 }
 
 function normalizeSnapshot(value: Partial<Snapshot> | null | undefined): Snapshot {
+  const deletedSafars = getDeletedSafars()
+  const deletedTasks = getDeletedTasks()
+  if (Array.isArray(value?.deletedSafars)) {
+    for (const s of value.deletedSafars) if (s) deletedSafars.add(String(s).trim().toLowerCase())
+    saveDeletedSafars(deletedSafars)
+  }
+  if (Array.isArray(value?.deletedTasks)) {
+    for (const t of value.deletedTasks) if (t) deletedTasks.add(String(t).trim().toLowerCase())
+    saveDeletedTasks(deletedTasks)
+  }
+
   const safars = (Array.isArray(value?.safars) ? value.safars : [])
-    .filter(safar => Boolean(safar?.safarName) && !isJunkSafarOrHardware(safar.safarName))
+    .filter(safar => {
+      const name = String(safar?.safarName || '').trim()
+      if (!name || isJunkSafarOrHardware(name)) return false
+      if (deletedSafars.has(name.toLowerCase())) return false
+      return true
+    })
     .map(safar => ({
       safarName: String(safar.safarName),
       safarYear: safar.safarYear,
@@ -151,7 +220,15 @@ function normalizeSnapshot(value: Partial<Snapshot> | null | undefined): Snapsho
   const yearByName = new Map(safars.map(safar => [safar.safarName, safar.safarYear]))
 
   const rawTasks = (Array.isArray(value?.tasks) ? value.tasks : [])
-    .filter((raw: any) => !isJunkSafarOrHardware(String(raw?.safarName || '')))
+    .filter((raw: any) => {
+      const safarName = String(raw?.safarName || '').trim()
+      if (!safarName || isJunkSafarOrHardware(safarName)) return false
+      if (deletedSafars.has(safarName.toLowerCase())) return false
+      const rawFolder = String(raw?.dateFolder || '').trim()
+      const taskKey = getTaskKey(safarName, rawFolder)
+      if (deletedTasks.has(taskKey)) return false
+      return true
+    })
     .map((raw: any, index): SafarTask => {
       const dateFolder = dateFolderName({ dateFolder: String(raw.dateFolder || '') })
       const safarName = String(raw.safarName || '')
@@ -171,12 +248,18 @@ function normalizeSnapshot(value: Partial<Snapshot> | null | undefined): Snapsho
         isMissing,
         is_present: isPresent
       }
-    }).filter(task => task.safarName && task.dateFolder && task.dateFolder !== 'Date folder unavailable')
+    }).filter(task => {
+      if (!task.safarName || !task.dateFolder || task.dateFolder === 'Date folder unavailable') return false
+      const key = getTaskKey(task.safarName, task.dateFolder)
+      if (deletedTasks.has(key)) return false
+      return true
+    })
 
   // Strict deduplication by normalized key: safarName + normalized date folder
   const seenKeys = new Map<string, SafarTask>()
   for (const t of rawTasks) {
-    const key = `${t.safarName.toLowerCase()}::${t.dateFolder.toLowerCase().replace(/[\s_\-]/g, '')}`
+    const key = getTaskKey(t.safarName, t.dateFolder)
+    if (deletedTasks.has(key)) continue
     if (!seenKeys.has(key)) {
       seenKeys.set(key, t)
     } else {
@@ -194,7 +277,15 @@ function normalizeSnapshot(value: Partial<Snapshot> | null | undefined): Snapsho
   }
   const tasks = Array.from(seenKeys.values())
 
-  return { tasks, folders: [...new Set(tasks.map(task => task.dateFolder))], safars, updatedAt: String(value?.updatedAt || ''), source: value?.source }
+  return {
+    tasks,
+    folders: [...new Set(tasks.map(task => task.dateFolder))],
+    safars,
+    deletedTasks: Array.from(deletedTasks),
+    deletedSafars: Array.from(deletedSafars),
+    updatedAt: String(value?.updatedAt || ''),
+    source: value?.source
+  }
 }
 
 const env = (import.meta as any).env
@@ -249,20 +340,44 @@ function SafarLoadingSkeleton({ variant }: { variant: 'dashboard' | 'tracker' | 
   </section>
 }
 
-function SafarProductionGroup({ group, expanded, onToggle, onArchive, onUpdateTask, onDelete }: {
+function SafarProductionGroup({ group, expanded, onToggle, onArchive, onUpdateTask, onDelete, onRemoveTask }: {
   group: SafarGroup
   expanded: boolean
   onToggle: () => void
   onArchive: (isArchived: boolean) => void
   onUpdateTask: (task: SafarTask, changes: Partial<SafarTask>) => void
   onDelete?: (safarName: string) => void
+  onRemoveTask?: (task: SafarTask) => void
 }): JSX.Element {
   const year = hijriYearLabel(group.safarYear)
+  const total = Math.max(group.total, group.tasks.length, 1)
+  const editingPct = (group.editingCount / total) * 100
+  const renderingPct = (group.renderingCount / total) * 100
+  const uploadPct = (group.uploadCount / total) * 100
+  const jameyaPct = (group.jameyaCount / total) * 100
+
   return <article className="panel safar-group-card">
     <div className="safar-group-header">
       <button type="button" className="safar-group-toggle" aria-expanded={expanded} onClick={onToggle}>
         <span className="safar-group-heading"><strong>{group.safarName}</strong><small>{year}{year && ' · '}{group.total} {group.total === 1 ? 'date' : 'dates'}</small></span>
-        <span className="safar-group-progress"><strong>{group.percent}%</strong><span>{group.completed} of {group.total} submitted</span><i role="progressbar" aria-label={`${group.safarName} completion`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={group.percent}><b style={{ width: `${group.percent}%` }}/></i></span>
+        <div className="safar-group-progress-wrap">
+          <div className="safar-group-progress-info">
+            <strong>{group.percent}%</strong>
+            <span>{group.completed} of {group.total} submitted</span>
+          </div>
+          <div className="multicolor-progress-bar mini" role="progressbar" aria-label={`${group.safarName} pipeline progress`}>
+            {editingPct > 0 && <span className="stage-segment stage-editing" style={{ width: `${editingPct}%` }} title={`Editing: ${group.editingCount}`} />}
+            {renderingPct > 0 && <span className="stage-segment stage-rendering" style={{ width: `${renderingPct}%` }} title={`Rendered: ${group.renderingCount}`} />}
+            {uploadPct > 0 && <span className="stage-segment stage-upload" style={{ width: `${uploadPct}%` }} title={`Uploaded: ${group.uploadCount}`} />}
+            {jameyaPct > 0 && <span className="stage-segment stage-jameya" style={{ width: `${jameyaPct}%` }} title={`Submitted: ${group.jameyaCount}`} />}
+          </div>
+          <div className="multicolor-legend compact">
+            <span className="legend-chip chip-editing"><i className="chip-dot" />{group.editingCount} E</span>
+            <span className="legend-chip chip-rendering"><i className="chip-dot" />{group.renderingCount} R</span>
+            <span className="legend-chip chip-upload"><i className="chip-dot" />{group.uploadCount} U</span>
+            <span className="legend-chip chip-jameya"><i className="chip-dot" />{group.jameyaCount} S</span>
+          </div>
+        </div>
         <ChevronDown aria-hidden="true" size={19} className={expanded ? 'expanded' : ''}/>
       </button>
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -273,12 +388,40 @@ function SafarProductionGroup({ group, expanded, onToggle, onArchive, onUpdateTa
       </div>
     </div>
     {expanded && <div className="safar-date-list">
-      <div className="safar-date-list-heading"><span>Date folder</span><span>Editor</span><span>Stage</span><span>Due date</span></div>
+      <div className="safar-date-list-heading"><span>Date folder</span><span>Editor</span><span>Stage</span><span>Due date</span><span>Action</span></div>
       {group.tasks.length ? group.tasks.map(task => <div className="safar-date-row" key={task.id}>
         <span className="safar-date-value" title={dateFolderName(task)}>{dateFolderName(task)}</span>
         <div className="safar-edit-cell" data-label="Editor"><EditorAssignment label={`Editor assigned to ${dateFolderName(task)}`} value={task.editorName || ''} onSave={editorName => onUpdateTask(task, { editorName })}/></div>
         <div className="safar-edit-cell" data-label="Stage"><select aria-label={`Production stage for ${dateFolderName(task)}`} className={`stage-select stage-${task.stage}`} value={task.stage} onChange={event => onUpdateTask(task, { stage: event.target.value as Stage })}>{STAGES.map((stage, index) => <option key={stage.id} value={stage.id}>{index + 1}. {stage.label}</option>)}</select></div>
         <div className="safar-edit-cell" data-label="Due date"><input className="due-input" aria-label={`Due date for ${dateFolderName(task)}`} type="date" value={task.dueDate} onChange={event => onUpdateTask(task, { dueDate: event.target.value})}/></div>
+        <div className="safar-edit-cell" data-label="Action">
+          {onRemoveTask && (
+            <button
+              type="button"
+              className="button-icon-subtle"
+              title={`Exclude "${dateFolderName(task)}"`}
+              onClick={() => {
+                if (window.confirm(`Exclude "${dateFolderName(task)}" from tracking?`)) {
+                  onRemoveTask(task)
+                }
+              }}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: '#94a3b8',
+                cursor: 'pointer',
+                padding: '4px',
+                borderRadius: '6px',
+                display: 'inline-flex',
+                alignItems: 'center'
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#ef4444' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#94a3b8' }}
+            >
+              <Trash2 size={14} />
+            </button>
+          )}
+        </div>
       </div>) : <p className="safar-empty-dates">No date folders match these filters.</p>}
     </div>}
   </article>
@@ -338,11 +481,26 @@ export default function App(): JSX.Element {
     }
     return [...grouped.values()].map(({ summary, tasks }) => {
       tasks.sort((a, b) => a.dateFolder.localeCompare(b.dateFolder, undefined, { numeric: true }))
-      const submitted = tasks.filter(task => task.stage === 'jameya').length
+      const editingCount = tasks.filter(task => task.stage === 'editing').length
+      const renderingCount = tasks.filter(task => task.stage === 'rendering').length
+      const uploadCount = tasks.filter(task => task.stage === 'upload').length
+      const jameyaCount = tasks.filter(task => task.stage === 'jameya').length
       const total = Math.max(tasks.length, Number(summary.totalDays) || 0)
-      const isArchived = Boolean(summary.isArchived || (total > 0 && submitted >= total))
-      const completed = isArchived ? total : submitted
-      return { ...summary, isArchived, isDone: Boolean(summary.isDone || isArchived), tasks, total, completed, percent: isArchived ? 100 : total ? Math.round(completed / total * 100) : 0 }
+      const isArchived = Boolean(summary.isArchived || (total > 0 && jameyaCount >= total))
+      const completed = isArchived ? total : jameyaCount
+      return {
+        ...summary,
+        isArchived,
+        isDone: Boolean(summary.isDone || isArchived),
+        tasks,
+        total,
+        completed,
+        percent: isArchived ? 100 : total ? Math.round(completed / total * 100) : 0,
+        editingCount: isArchived ? 0 : editingCount,
+        renderingCount: isArchived ? 0 : renderingCount,
+        uploadCount: isArchived ? 0 : uploadCount,
+        jameyaCount: isArchived ? total : jameyaCount
+      }
     }).sort((a, b) => a.safarName.localeCompare(b.safarName, undefined, { numeric: true }))
   }, [snapshot.safars, snapshot.tasks])
 
@@ -381,6 +539,23 @@ export default function App(): JSX.Element {
 
   const activeSafarGroups = safarGroups.filter(group => !group.isArchived)
   const archiveSafarGroups = safarGroups.filter(group => group.isArchived)
+
+  const studioStats = useMemo(() => {
+    let totalDates = 0
+    let editing = 0
+    let rendering = 0
+    let upload = 0
+    let jameya = 0
+    for (const g of activeSafarGroups) {
+      totalDates += g.total
+      editing += g.editingCount
+      rendering += g.renderingCount
+      upload += g.uploadCount
+      jameya += g.jameyaCount
+    }
+    const percent = totalDates > 0 ? Math.round((jameya / totalDates) * 100) : 0
+    return { totalDates, editing, rendering, upload, jameya, percent }
+  }, [activeSafarGroups])
   const hasTaskFilters = Boolean(search.trim()) || filter !== 'all' || selectedEditor !== 'all'
   const visibleSafarGroups = matchingSafarGroups.filter(group =>
     (view === 'archive' ? group.isArchived : !group.isArchived && (selectedSafar === 'all' || group.safarName === selectedSafar)) &&
@@ -513,14 +688,39 @@ export default function App(): JSX.Element {
   }, [menuOpen, isMobile])
 
   function applySnapshot(next: Snapshot) {
+    const delSafars = getDeletedSafars()
+    const delTasks = getDeletedTasks()
+    if (Array.isArray((next as any)?.deletedSafars)) {
+      for (const s of (next as any).deletedSafars) if (s) delSafars.add(String(s).trim().toLowerCase())
+      saveDeletedSafars(delSafars)
+    }
+    if (Array.isArray((next as any)?.deletedTasks)) {
+      for (const t of (next as any).deletedTasks) if (t) delTasks.add(String(t).trim().toLowerCase())
+      saveDeletedTasks(delTasks)
+    }
     const normalized = normalizeSnapshot(next)
     const current = snapshotRef.current
     const previousSafars = new Map((current.safars || []).map(safar => [safar.safarName, safar]))
     const hasSafarMetadata = Array.isArray((next as any)?.safars)
-    const mergedSafars = hasSafarMetadata
-      ? normalized.safars.map(safar => ({ ...previousSafars.get(safar.safarName), ...safar, isArchived: safar.isArchived ?? previousSafars.get(safar.safarName)?.isArchived ?? false }))
-      : current.safars
-    const merged = { ...normalized, safars: mergedSafars }
+    const rawSafars = hasSafarMetadata ? normalized.safars : current.safars
+    const mergedSafars = rawSafars
+      .filter(safar => !delSafars.has(safar.safarName.trim().toLowerCase()))
+      .map(safar => ({
+        ...previousSafars.get(safar.safarName),
+        ...safar,
+        isArchived: safar.isArchived ?? previousSafars.get(safar.safarName)?.isArchived ?? false
+      }))
+    const mergedTasks = normalized.tasks.filter(t =>
+      !delSafars.has(t.safarName.trim().toLowerCase()) &&
+      !delTasks.has(getTaskKey(t.safarName, t.dateFolder))
+    )
+    const merged: Snapshot = {
+      ...normalized,
+      tasks: mergedTasks,
+      safars: mergedSafars,
+      deletedTasks: Array.from(delTasks),
+      deletedSafars: Array.from(delSafars)
+    }
     const incomingTime = merged.updatedAt ? Date.parse(merged.updatedAt) : 0
     const currentTime = snapshotRef.current.updatedAt ? Date.parse(snapshotRef.current.updatedAt) : 0
     if (incomingTime && currentTime && incomingTime < currentTime) return
@@ -680,11 +880,26 @@ export default function App(): JSX.Element {
   }
 
   // Remove / Exclude a task from tracking
-  async function handleRemoveTask(taskToRemove: SafarTaskItem) {
+  async function handleRemoveTask(taskToRemove: { safarName: string; dateFolder: string; id?: string }) {
+    const targetKey = getTaskKey(taskToRemove.safarName, taskToRemove.dateFolder)
+    const delTasks = getDeletedTasks()
+    delTasks.add(targetKey)
+    saveDeletedTasks(delTasks)
+
     const current = snapshotRef.current
-    const tasks = current.tasks.filter(t => t.id !== taskToRemove.id && !(t.safarName === taskToRemove.safarName && t.dateFolder === taskToRemove.dateFolder))
+    const tasks = current.tasks.filter(t => {
+      if (taskToRemove.id && t.id === taskToRemove.id) return false
+      if (getTaskKey(t.safarName, t.dateFolder) === targetKey) return false
+      return true
+    })
     const updatedAt = new Date().toISOString()
-    const next: Snapshot = { ...current, tasks, updatedAt, source: 'website' }
+    const next: Snapshot = {
+      ...current,
+      tasks,
+      deletedTasks: Array.from(delTasks),
+      updatedAt,
+      source: 'website'
+    }
     applySnapshot(next)
     await persistSnapshot(next)
     await nexusChannelRef.current?.send({
@@ -699,7 +914,7 @@ export default function App(): JSX.Element {
         body: JSON.stringify({ safarName: taskToRemove.safarName, dateFolder: taskToRemove.dateFolder })
       })
     } catch {}
-    setNotice(`Excluded "${taskToRemove.dateFolder}" from tracking.`)
+    setNotice(`Excluded "${taskToRemove.dateFolder}" from tracking across all pages.`)
   }
 
   // Manually add a date folder to the active Safar
@@ -707,6 +922,15 @@ export default function App(): JSX.Element {
     const current = snapshotRef.current
     const cleanFolder = dateFolder.trim()
     if (!cleanFolder) return
+
+    // Un-delete if previously excluded
+    const targetKey = getTaskKey(safarName, cleanFolder)
+    const delTasks = getDeletedTasks()
+    if (delTasks.has(targetKey)) {
+      delTasks.delete(targetKey)
+      saveDeletedTasks(delTasks)
+    }
+
     const id = `${safarName}::${cleanFolder}::${Date.now()}`
     const newTask: SafarTask = {
       id,
@@ -721,7 +945,13 @@ export default function App(): JSX.Element {
     const cleanNorm = cleanFolder.toLowerCase().replace(/[\s_\-]/g, '')
     const tasks = [...current.tasks.filter(t => !(t.safarName === safarName && t.dateFolder.toLowerCase().replace(/[\s_\-]/g, '') === cleanNorm)), newTask]
     const updatedAt = new Date().toISOString()
-    const next: Snapshot = { ...current, tasks, updatedAt, source: 'website' }
+    const next: Snapshot = {
+      ...current,
+      tasks,
+      deletedTasks: Array.from(delTasks),
+      updatedAt,
+      source: 'website'
+    }
     applySnapshot(next)
     await persistSnapshot(next)
     await nexusChannelRef.current?.send({
@@ -742,14 +972,21 @@ export default function App(): JSX.Element {
   // Permanently delete a Safar and all its tasks
   async function handleDeleteSafar(safarName: string) {
     if (!window.confirm(`Permanently remove "${safarName}" and all its task records?`)) return
+    const normName = safarName.trim().toLowerCase()
+    const delSafars = getDeletedSafars()
+    delSafars.add(normName)
+    saveDeletedSafars(delSafars)
+
     const current = snapshotRef.current
-    const tasks = current.tasks.filter(t => t.safarName !== safarName)
-    const safars = (current.safars || []).filter(s => s.safarName !== safarName)
+    const tasks = current.tasks.filter(t => t.safarName.trim().toLowerCase() !== normName)
+    const safars = (current.safars || []).filter(s => s.safarName.trim().toLowerCase() !== normName)
+    const updatedAt = new Date().toISOString()
     const next: Snapshot = {
       ...current,
       tasks,
       safars,
-      updatedAt: new Date().toISOString(),
+      deletedSafars: Array.from(delSafars),
+      updatedAt,
       source: 'website'
     }
     applySnapshot(next)
@@ -766,14 +1003,16 @@ export default function App(): JSX.Element {
         body: JSON.stringify({ safarName })
       })
     } catch {}
-    setNotice(`Removed ${safarName} from tracker.`)
+    setNotice(`Removed ${safarName} permanently from all views.`)
   }
 
   // Reset and Rescan present folders on workstation disk
   async function handleResetAndRescan() {
-    setNotice('Resetting tasks and rescanning workstation disk...')
+    setNotice('Resetting tasks, clearing tombstones, and rescanning workstation disk...')
     try {
       localStorage.removeItem(localKey)
+      localStorage.removeItem(deletedTasksKey)
+      localStorage.removeItem(deletedSafarsKey)
     } catch {}
     await nexusChannelRef.current?.send({
       type: 'broadcast',
@@ -975,6 +1214,7 @@ export default function App(): JSX.Element {
                 onRemoveTask={task => void handleRemoveTask(task as SafarTask)}
                 onAddTask={(safarName, folder) => void handleAddTask(safarName, folder)}
                 onResetAndRescan={handleResetAndRescan}
+                onDeleteSafar={safarName => void handleDeleteSafar(safarName)}
                 saving={saving}
                 connected={connected}
               />
@@ -998,46 +1238,116 @@ export default function App(): JSX.Element {
           {/* VIEW: DASHBOARD */}
           {view === 'dashboard' && initialLoading ? <SafarLoadingSkeleton variant="dashboard"/> : view === 'dashboard' && <section className="dashboard-safars" aria-labelledby="dashboard-safars-title">
             <div className="dashboard-safars-heading">
-              <div><h2 id="dashboard-safars-title">Safars in production</h2><p>Progress and the next dates for each active Safar.</p></div>
+              <div><h2 id="dashboard-safars-title">Safars in production</h2><p>Multi-stage pipeline and completion across all campaigns.</p></div>
               <button type="button" className="button-secondary" onClick={() => { setSelectedSafar('all'); setSelectedEditor('all'); navigateTo('archive') }}><Archive aria-hidden="true" size={16}/> Archive <span className="nav-count">{archiveSafarGroups.length}</span></button>
             </div>
-            {!activeSafarGroups.length ? <div className="panel safar-empty-state"><h3>No active Safars yet</h3><p>Safar folders from One Tap will appear here as they sync.</p></div> : <div className="dashboard-safar-grid">{activeSafarGroups.map(group => <article className="panel dashboard-safar-card" key={group.safarName}>
-              <div className="dashboard-safar-top">
-                <button type="button" className="dashboard-safar-title" onClick={() => { setSelectedSafar(group.safarName); navigateTo('ongoing') }}>
-                  <span>{group.safarName}</span>
-                  <small>{hijriYearLabel(group.safarYear)}{group.safarYear && ' · '}{group.total} {group.total === 1 ? 'date' : 'dates'}</small>
-                </button>
-                <strong className="dashboard-safar-percent">{group.percent}%</strong>
+
+            {/* Overall Studio Multi-Color Stage Pipeline Bar */}
+            {activeSafarGroups.length > 0 && (
+              <div className="panel studio-pipeline-summary">
+                <div className="studio-pipeline-header">
+                  <div>
+                    <span className="eyebrow"><span className="live-pip" aria-hidden="true" /> ACTIVE STUDIO WORKLOAD</span>
+                    <h2>Production Stage Pipeline Distribution</h2>
+                    <p>Live cross-stage status across all {activeSafarGroups.length} campaigns ({studioStats.totalDates} scheduled dates)</p>
+                  </div>
+                  <div className="studio-pipeline-badge">
+                    <strong>{studioStats.percent}%</strong>
+                    <span>Delivered</span>
+                  </div>
+                </div>
+                <div className="multicolor-progress-bar large" role="progressbar" aria-label="Studio-wide pipeline stage distribution">
+                  {studioStats.editing > 0 && <span className="stage-segment stage-editing" style={{ width: `${(studioStats.editing / (studioStats.totalDates || 1)) * 100}%` }} title={`In Editing: ${studioStats.editing}`} />}
+                  {studioStats.rendering > 0 && <span className="stage-segment stage-rendering" style={{ width: `${(studioStats.rendering / (studioStats.totalDates || 1)) * 100}%` }} title={`Rendered: ${studioStats.rendering}`} />}
+                  {studioStats.upload > 0 && <span className="stage-segment stage-upload" style={{ width: `${(studioStats.upload / (studioStats.totalDates || 1)) * 100}%` }} title={`Ready/Uploaded: ${studioStats.upload}`} />}
+                  {studioStats.jameya > 0 && <span className="stage-segment stage-jameya" style={{ width: `${(studioStats.jameya / (studioStats.totalDates || 1)) * 100}%` }} title={`AlJamea Submitted: ${studioStats.jameya}`} />}
+                </div>
+                <div className="multicolor-legend">
+                  <div className="legend-chip chip-editing"><span className="chip-dot" /><strong>{studioStats.editing}</strong> In Editing</div>
+                  <div className="legend-chip chip-rendering"><span className="chip-dot" /><strong>{studioStats.rendering}</strong> Rendered</div>
+                  <div className="legend-chip chip-upload"><span className="chip-dot" /><strong>{studioStats.upload}</strong> Uploaded</div>
+                  <div className="legend-chip chip-jameya"><span className="chip-dot" /><strong>{studioStats.jameya}</strong> Submitted</div>
+                </div>
               </div>
-              <div className="dashboard-progress" role="progressbar" aria-label={`${group.safarName} completion`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={group.percent}><span style={{ width: `${group.percent}%` }}/></div>
-              <p className="dashboard-safar-progress-copy">{group.completed} of {group.total} dates submitted</p>
-              {group.tasks.length ? <ul className="safar-preview-list">{group.tasks.slice(0, 3).map(task => <li key={task.id}><strong title={dateFolderName(task)}>{dateFolderName(task)}</strong></li>)}</ul> : <p className="safar-preview-empty">Waiting for date folders to sync.</p>}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginTop: '6px' }}>
-                <button type="button" className="safar-open-link" onClick={() => { setSelectedSafar(group.safarName); navigateTo('ongoing') }}>View Safar Kanban <ArrowUpRight aria-hidden="true" size={15}/></button>
-                <button
-                  type="button"
-                  title={`Remove ${group.safarName} from tracker`}
-                  onClick={e => { e.stopPropagation(); void handleDeleteSafar(group.safarName) }}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: '#94a3b8',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    fontSize: '11px',
-                    padding: '3px 6px',
-                    borderRadius: '6px'
-                  }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#ef4444' }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#94a3b8' }}
-                >
-                  <Trash2 size={13} />
-                  <span>Remove</span>
-                </button>
-              </div>
-            </article>)}</div>}
+            )}
+
+            {!activeSafarGroups.length ? <div className="panel safar-empty-state"><h3>No active Safars yet</h3><p>Safar folders from One Tap will appear here as they sync.</p></div> : <div className="dashboard-safar-grid">{activeSafarGroups.map(group => {
+              const total = Math.max(group.total, group.tasks.length, 1)
+              const editingPct = (group.editingCount / total) * 100
+              const renderingPct = (group.renderingCount / total) * 100
+              const uploadPct = (group.uploadCount / total) * 100
+              const jameyaPct = (group.jameyaCount / total) * 100
+
+              return <article className="panel dashboard-safar-card" key={group.safarName}>
+                <div className="dashboard-safar-top">
+                  <button type="button" className="dashboard-safar-title" onClick={() => { setSelectedSafar(group.safarName); navigateTo('ongoing') }}>
+                    <span>{group.safarName}</span>
+                    <small>{hijriYearLabel(group.safarYear)}{group.safarYear && ' · '}{group.total} {group.total === 1 ? 'date' : 'dates'}</small>
+                  </button>
+                  <strong className="dashboard-safar-percent">{group.percent}%</strong>
+                </div>
+
+                {/* Multi-Color Stage Progress Bar */}
+                <div className="multicolor-progress-wrap">
+                  <div className="multicolor-progress-bar" role="progressbar" aria-label={`${group.safarName} pipeline progress`}>
+                    {editingPct > 0 && <span className="stage-segment stage-editing" style={{ width: `${editingPct}%` }} title={`In Editing: ${group.editingCount} dates (${Math.round(editingPct)}%)`} />}
+                    {renderingPct > 0 && <span className="stage-segment stage-rendering" style={{ width: `${renderingPct}%` }} title={`Rendered: ${group.renderingCount} dates (${Math.round(renderingPct)}%)`} />}
+                    {uploadPct > 0 && <span className="stage-segment stage-upload" style={{ width: `${uploadPct}%` }} title={`Uploaded: ${group.uploadCount} dates (${Math.round(uploadPct)}%)`} />}
+                    {jameyaPct > 0 && <span className="stage-segment stage-jameya" style={{ width: `${jameyaPct}%` }} title={`Submitted: ${group.jameyaCount} dates (${Math.round(jameyaPct)}%)`} />}
+                  </div>
+                  <div className="multicolor-legend">
+                    <span className="legend-chip chip-editing" title="In Editing"><span className="chip-dot" />{group.editingCount} Editing</span>
+                    <span className="legend-chip chip-rendering" title="Rendered"><span className="chip-dot" />{group.renderingCount} Rendered</span>
+                    <span className="legend-chip chip-upload" title="Uploaded"><span className="chip-dot" />{group.uploadCount} Upload</span>
+                    <span className="legend-chip chip-jameya" title="Submitted to Jameya"><span className="chip-dot" />{group.jameyaCount} Submit</span>
+                  </div>
+                </div>
+
+                <p className="dashboard-safar-progress-copy">
+                  {group.completed} of {group.total} dates submitted to Jameya {group.total > group.completed ? `(${group.total - group.completed} in progress)` : '· All stages complete!'}
+                </p>
+
+                {group.tasks.length ? <ul className="safar-preview-list">{group.tasks.slice(0, 4).map(task => (
+                  <li key={task.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                      <span className={`chip-dot dot-${task.stage}`} title={`Stage: ${task.stage}`} />
+                      <strong title={dateFolderName(task)} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{dateFolderName(task)}</strong>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                      <span className={`stage-tag stage-${task.stage}`}>{STAGES.find(s => s.id === task.stage)?.label || task.stage}</span>
+                      <button
+                        type="button"
+                        className="preview-remove-btn"
+                        title={`Exclude ${dateFolderName(task)}`}
+                        onClick={e => {
+                          e.stopPropagation()
+                          if (window.confirm(`Exclude "${dateFolderName(task)}" from tracking?`)) {
+                            void handleRemoveTask(task)
+                          }
+                        }}
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  </li>
+                ))}</ul> : <p className="safar-preview-empty">Waiting for date folders to sync.</p>}
+
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginTop: '12px', paddingTop: '10px', borderTop: '1px solid var(--border)' }}>
+                  <button type="button" className="safar-open-link" onClick={() => { setSelectedSafar(group.safarName); navigateTo('ongoing') }}>
+                    View Safar Kanban <ArrowUpRight aria-hidden="true" size={15}/>
+                  </button>
+                  <button
+                    type="button"
+                    title={`Remove ${group.safarName} from tracker`}
+                    onClick={e => { e.stopPropagation(); void handleDeleteSafar(group.safarName) }}
+                    className="button-safar-remove"
+                  >
+                    <Trash2 size={13} />
+                    <span>Remove</span>
+                  </button>
+                </div>
+              </article>
+            })}</div>}
           </section>}
 
           {/* VIEW: SAFAR TRACKER / ARCHIVE */}
@@ -1065,7 +1375,7 @@ export default function App(): JSX.Element {
               </div>
             </div>
             <div className="safar-groups-list">
-              {visibleSafarGroups.map(group => <SafarProductionGroup key={group.safarName} group={group} expanded={expandedSafars.has(group.safarName)} onToggle={() => toggleSafarExpanded(group.safarName)} onArchive={archived => void setSafarArchived(group, archived)} onUpdateTask={(task, changes) => void updateTask(task, changes)} onDelete={safarName => void handleDeleteSafar(safarName)}/>)}
+              {visibleSafarGroups.map(group => <SafarProductionGroup key={group.safarName} group={group} expanded={expandedSafars.has(group.safarName)} onToggle={() => toggleSafarExpanded(group.safarName)} onArchive={archived => void setSafarArchived(group, archived)} onUpdateTask={(task, changes) => void updateTask(task, changes)} onDelete={safarName => void handleDeleteSafar(safarName)} onRemoveTask={task => void handleRemoveTask(task)}/>)}
               {!visibleSafarGroups.length && <div className="safar-empty-state">
                 <h3>{view === 'archive' ? archiveSafarGroups.length ? 'No archived dates match' : 'Your archive is empty' : activeSafarGroups.length ? 'No dates match these filters' : 'No active Safars'}</h3>
                 <p>{view === 'archive' ? archiveSafarGroups.length ? 'Clear the filters to see all archived Safars.' : 'Archived Safars will stay here until you restore them.' : activeSafarGroups.length ? 'Try a different search or stage filter.' : 'Safar folders from One Tap will appear here after sync.'}</p>
@@ -1103,8 +1413,8 @@ export default function App(): JSX.Element {
               <div className="search-box"><Search aria-hidden="true" size={16}/><label className="visually-hidden" htmlFor="task-search">Search Safar or date folder</label><input id="task-search" type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search Safar or date folder"/></div>
               <div className="toolbar-actions"><label className="filter-select"><ListFilter aria-hidden="true" size={15}/><span className="visually-hidden">Filter by stage</span><select aria-label="Filter by stage" value={filter} onChange={event => setFilter(event.target.value)}><option value="all">All stages</option>{STAGES.map(stage => <option key={stage.id} value={stage.id}>{stage.label}</option>)}</select></label><button type="button" className="button-secondary export-button" onClick={exportCsv}><Cloud aria-hidden="true" size={15}/> Export CSV</button></div>
             </div>
-            {view === 'pipeline' && <div className="pipeline-board">{STAGES.map((stage, index) => { const stageTasks = tasksByStage.get(stage.id) || []; return <section className="pipeline-column" key={stage.id}><div className="pipeline-column-head"><span className={`pipeline-dot pipeline-${stage.id}`}/><strong>{stage.label}</strong><span>{stageTasks.length}</span></div>{stageTasks.length === 0 ? <div className="pipeline-empty">No dates in this stage</div> : stageTasks.slice(0, pipelineLimits[stage.id]).map(task => <article className="pipeline-task" key={task.id}><strong>{dateFolderName(task)}</strong><small>{task.safarName}{task.editorName ? ` · Editor ${task.editorName}` : ' · Unassigned'}{task.dueDate ? ` · Due ${new Date(`${task.dueDate}T00:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}` : ''}</small>{index < STAGES.length - 1 && <button className="pipeline-advance" onClick={() => updateTask(task, { stage: STAGES[index + 1].id })}>Move to {STAGES[index + 1].label} →</button>}</article>)}{stageTasks.length > pipelineLimits[stage.id] && <button type="button" className="pipeline-load-more" onClick={() => setPipelineLimits(current => ({ ...current, [stage.id]: current[stage.id] + 40 }))}>Show next 40 ({stageTasks.length - pipelineLimits[stage.id]} remaining)</button>}</section> })}</div>}
-            {view === 'editors' && <div className="table-wrap"><table><caption className="visually-hidden">Editor assignments, Safar date folders, and production progress</caption><thead><tr><th scope="col">DATE FOLDER</th><th scope="col">SAFAR</th><th scope="col">EDITOR</th><th scope="col">PROGRESS STAGE</th><th scope="col">DUE DATE</th><th scope="col">LAST UPDATED</th></tr></thead><tbody>{visibleRows.map(task => <tr key={task.id}><td><strong className="event-folder-cell" title={dateFolderName(task)}>{dateFolderName(task)}</strong></td><td><span className="hijri-date">{task.safarName}</span></td><td><EditorAssignment label={`Editor assigned to ${dateFolderName(task)}`} value={task.editorName || ''} onSave={editorName => updateTask(task, { editorName })}/></td><td><select aria-label={`Production stage for ${dateFolderName(task)}`} className={`stage-select stage-${task.stage}`} value={task.stage} onChange={event => updateTask(task, { stage: event.target.value as Stage })}>{STAGES.map((stage, index) => <option key={stage.id} value={stage.id}>{index + 1}. {stage.label}</option>)}</select></td><td><input className="due-input" aria-label={`Due date for ${dateFolderName(task)}`} type="date" value={task.dueDate} onChange={event => updateTask(task, { dueDate: event.target.value })}/></td><td><span className="updated-cell"><time dateTime={task.updatedAt}>{new Date(task.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</time></span></td></tr>)}</tbody></table>{visibleRows.length === 0 && <div className="empty-state" role="status">No dates match your search.</div>}</div>}
+            {view === 'pipeline' && <div className="pipeline-board">{STAGES.map((stage, index) => { const stageTasks = tasksByStage.get(stage.id) || []; return <section className="pipeline-column" key={stage.id}><div className="pipeline-column-head"><span className={`pipeline-dot pipeline-${stage.id}`}/><strong>{stage.label}</strong><span>{stageTasks.length}</span></div>{stageTasks.length === 0 ? <div className="pipeline-empty">No dates in this stage</div> : stageTasks.slice(0, pipelineLimits[stage.id]).map(task => <article className="pipeline-task" key={task.id}><div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '6px' }}><strong>{dateFolderName(task)}</strong><button type="button" title={`Exclude ${dateFolderName(task)}`} onClick={() => { if (window.confirm(`Exclude "${dateFolderName(task)}" from tracking?`)) void handleRemoveTask(task) }} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '2px' }} onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#ef4444' }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#94a3b8' }}><Trash2 size={12} /></button></div><small>{task.safarName}{task.editorName ? ` · Editor ${task.editorName}` : ' · Unassigned'}{task.dueDate ? ` · Due ${new Date(`${task.dueDate}T00:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}` : ''}</small>{index < STAGES.length - 1 && <button className="pipeline-advance" onClick={() => updateTask(task, { stage: STAGES[index + 1].id })}>Move to {STAGES[index + 1].label} →</button>}</article>)}{stageTasks.length > pipelineLimits[stage.id] && <button type="button" className="pipeline-load-more" onClick={() => setPipelineLimits(current => ({ ...current, [stage.id]: current[stage.id] + 40 }))}>Show next 40 ({stageTasks.length - pipelineLimits[stage.id]} remaining)</button>}</section> })}</div>}
+            {view === 'editors' && <div className="table-wrap"><table><caption className="visually-hidden">Editor assignments, Safar date folders, and production progress</caption><thead><tr><th scope="col">DATE FOLDER</th><th scope="col">SAFAR</th><th scope="col">EDITOR</th><th scope="col">PROGRESS STAGE</th><th scope="col">DUE DATE</th><th scope="col">LAST UPDATED</th><th scope="col">ACTION</th></tr></thead><tbody>{visibleRows.map(task => <tr key={task.id}><td><strong className="event-folder-cell" title={dateFolderName(task)}>{dateFolderName(task)}</strong></td><td><span className="hijri-date">{task.safarName}</span></td><td><EditorAssignment label={`Editor assigned to ${dateFolderName(task)}`} value={task.editorName || ''} onSave={editorName => updateTask(task, { editorName })}/></td><td><select aria-label={`Production stage for ${dateFolderName(task)}`} className={`stage-select stage-${task.stage}`} value={task.stage} onChange={event => updateTask(task, { stage: event.target.value as Stage })}>{STAGES.map((stage, index) => <option key={stage.id} value={stage.id}>{index + 1}. {stage.label}</option>)}</select></td><td><input className="due-input" aria-label={`Due date for ${dateFolderName(task)}`} type="date" value={task.dueDate} onChange={event => updateTask(task, { dueDate: event.target.value })}/></td><td><span className="updated-cell"><time dateTime={task.updatedAt}>{new Date(task.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</time></span></td><td><button type="button" title={`Exclude ${dateFolderName(task)}`} onClick={() => { if (window.confirm(`Exclude "${dateFolderName(task)}" from tracking?`)) void handleRemoveTask(task) }} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px' }} onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#ef4444' }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#94a3b8' }}><Trash2 size={13} /></button></td></tr>)}</tbody></table>{visibleRows.length === 0 && <div className="empty-state" role="status">No dates match your search.</div>}</div>}
             {view === 'editors' && rows.length > pageSize && <nav className="pagination" aria-label="Editor assignment pages"><button type="button" className="button-secondary" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}>Previous</button><span>Page {currentPage + 1} of {pageCount}</span><button type="button" className="button-secondary" disabled={currentPage + 1 >= pageCount} onClick={() => setPage(currentPage + 1)}>Next</button></nav>}
             <div className={`table-footer ${view === 'pipeline' ? 'hidden-view' : ''}`}><span>Showing <strong>{visibleRows.length}</strong> of <strong>{rows.length}</strong> matching dates</span><span className="footer-sync">{saving ? 'Syncing changes…' : connected ? 'Changes sync in real time' : 'Changes saved on this device'} <span className={`status-dot ${connected ? 'online' : ''}`}/></span></div>
           </section>}

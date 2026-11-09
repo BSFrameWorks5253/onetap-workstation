@@ -99,6 +99,7 @@ export default function OngoingSafarKanban({
   onRemoveTask,
   onAddTask,
   onResetAndRescan,
+  onDeleteSafar,
   saving,
   connected
 }: {
@@ -108,6 +109,7 @@ export default function OngoingSafarKanban({
   onRemoveTask: (task: SafarTaskItem) => void;
   onAddTask: (safarName: string, dateFolder: string) => void;
   onResetAndRescan: () => void;
+  onDeleteSafar?: (safarName: string) => void;
   saving?: boolean;
   connected?: boolean;
 }) {
@@ -310,10 +312,47 @@ export default function OngoingSafarKanban({
                   <option key={s} value={s}>{s}</option>
                 ))}
               </select>
+
+              {onDeleteSafar && selectedSafar && selectedSafar !== 'Active Safar' && (
+                <button
+                  type="button"
+                  title={`Permanently delete ${selectedSafar} from all views`}
+                  onClick={() => onDeleteSafar(selectedSafar)}
+                  style={{
+                    background: 'rgba(239, 68, 68, 0.08)',
+                    border: '1px solid rgba(239, 68, 68, 0.25)',
+                    color: '#ef4444',
+                    borderRadius: '8px',
+                    padding: '5px 8px',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  <Trash2 size={12} />
+                  <span>Remove Safar</span>
+                </button>
+              )}
+
               <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>
                 {totalCount} dates · <strong style={{ color: '#059669' }}>{uploadedCount} uploaded</strong> · <strong style={{ color: '#d97706' }}>{pendingCount} pending</strong>
               </span>
             </div>
+
+            {/* Mini Multi-Color Stage Pipeline Bar in Kanban Topbar */}
+            {totalCount > 0 && (
+              <div style={{ marginTop: '8px', maxWidth: '380px' }}>
+                <div className="multicolor-progress-bar mini" role="progressbar" aria-label={`${selectedSafar} stage progress`}>
+                  {columnTasks.editing.length > 0 && <span className="stage-segment stage-editing" style={{ width: `${(columnTasks.editing.length / (totalCount || 1)) * 100}%` }} title={`Editing: ${columnTasks.editing.length}`} />}
+                  {columnTasks.rendering.length > 0 && <span className="stage-segment stage-rendering" style={{ width: `${(columnTasks.rendering.length / (totalCount || 1)) * 100}%` }} title={`Rendered: ${columnTasks.rendering.length}`} />}
+                  {columnTasks.upload.length > 0 && <span className="stage-segment stage-upload" style={{ width: `${(columnTasks.upload.length / (totalCount || 1)) * 100}%` }} title={`Uploaded: ${columnTasks.upload.length}`} />}
+                  {columnTasks.jameya.length > 0 && <span className="stage-segment stage-jameya" style={{ width: `${(columnTasks.jameya.length / (totalCount || 1)) * 100}%` }} title={`Submitted: ${columnTasks.jameya.length}`} />}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -623,7 +662,11 @@ export default function OngoingSafarKanban({
                           <button
                             type="button"
                             title="Exclude this date from Safar task manager"
-                            onClick={() => onRemoveTask(task)}
+                            onClick={() => {
+                              if (window.confirm(`Exclude "${task.dateFolder}" from tracking across all views?`)) {
+                                onRemoveTask(task);
+                              }
+                            }}
                             style={{
                               background: 'transparent',
                               border: 'none',
@@ -632,6 +675,8 @@ export default function OngoingSafarKanban({
                               padding: '2px 4px',
                               borderRadius: '4px'
                             }}
+                            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#ef4444' }}
+                            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#94a3b8' }}
                           >
                             <Trash2 size={13} />
                           </button>
