@@ -407,6 +407,45 @@ function readLocal(): Snapshot {
   return { tasks: [], folders: [], safars: [], updatedAt: '' }
 }
 
+export function AnimatedNumber({ value, duration = 650 }: { value: number; duration?: number }): JSX.Element {
+  const [displayValue, setDisplayValue] = useState(value)
+  const prevValueRef = useRef(value)
+
+  useEffect(() => {
+    const startValue = prevValueRef.current
+    const endValue = value
+    prevValueRef.current = value
+
+    if (startValue === endValue) {
+      setDisplayValue(endValue)
+      return
+    }
+
+    const startTime = performance.now()
+    let frameId: number
+
+    const step = (now: number) => {
+      const elapsed = now - startTime
+      const progress = Math.min(elapsed / duration, 1)
+      // Smooth cubic ease-out
+      const ease = 1 - Math.pow(1 - progress, 3)
+      const current = Math.round(startValue + (endValue - startValue) * ease)
+      setDisplayValue(current)
+
+      if (progress < 1) {
+        frameId = requestAnimationFrame(step)
+      } else {
+        setDisplayValue(endValue)
+      }
+    }
+
+    frameId = requestAnimationFrame(step)
+    return () => cancelAnimationFrame(frameId)
+  }, [value, duration])
+
+  return <span className="tabular-num-anim" style={{ fontVariantNumeric: 'tabular-nums' }}>{displayValue}</span>
+}
+
 function EditorAssignment({ value, label, onSave }: { value: string; label: string; onSave: (value: string) => void }): JSX.Element {
   const [draft, setDraft] = useState(value)
   useEffect(() => setDraft(value), [value])
@@ -472,8 +511,8 @@ function SafarProductionGroup({ group, expanded, onToggle, onArchive, onUpdateTa
         <span className="safar-group-heading"><strong>{group.safarName}</strong><small>{year}{year && ' · '}{group.total} {group.total === 1 ? 'date' : 'dates'}</small></span>
         <div className="safar-group-progress-wrap">
           <div className="safar-group-progress-info">
-            <strong>{group.percent}%</strong>
-            <span>{group.completed} of {group.total} completed</span>
+            <strong><AnimatedNumber value={group.percent} />%</strong>
+            <span><AnimatedNumber value={group.completed} /> of {group.total} completed</span>
           </div>
           <div className="multicolor-progress-bar mini" role="progressbar" aria-label={`${group.safarName} pipeline progress`}>
             {editingPct > 0 && <span className="stage-segment stage-editing" style={{ width: `${editingPct}%` }} title={`Editing: ${group.editingCount}`} />}
@@ -483,11 +522,11 @@ function SafarProductionGroup({ group, expanded, onToggle, onArchive, onUpdateTa
             {completedPct > 0 && <span className="stage-segment stage-completed" style={{ width: `${completedPct}%` }} title={`Completed Every Stage: ${group.completedCount}`} />}
           </div>
           <div className="multicolor-legend compact">
-            <span className="legend-chip chip-editing"><i className="chip-dot" />{group.editingCount} E</span>
-            <span className="legend-chip chip-rendering"><i className="chip-dot" />{group.renderingCount} R</span>
-            <span className="legend-chip chip-upload"><i className="chip-dot" />{group.uploadCount} U</span>
-            <span className="legend-chip chip-jameya"><i className="chip-dot" />{group.jameyaCount} J</span>
-            <span className="legend-chip chip-completed"><i className="chip-dot" />{group.completedCount} C</span>
+            <span className="legend-chip chip-editing"><i className="chip-dot" /><AnimatedNumber value={group.editingCount} /> E</span>
+            <span className="legend-chip chip-rendering"><i className="chip-dot" /><AnimatedNumber value={group.renderingCount} /> R</span>
+            <span className="legend-chip chip-upload"><i className="chip-dot" /><AnimatedNumber value={group.uploadCount} /> U</span>
+            <span className="legend-chip chip-jameya"><i className="chip-dot" /><AnimatedNumber value={group.jameyaCount} /> J</span>
+            <span className="legend-chip chip-completed"><i className="chip-dot" /><AnimatedNumber value={group.completedCount} /> C</span>
           </div>
         </div>
         <ChevronDown aria-hidden="true" size={19} className={expanded ? 'expanded' : ''}/>
@@ -2066,7 +2105,7 @@ export default function App(): JSX.Element {
                     <p>Live cross-stage status across all {activeSafarGroups.length} campaigns ({studioStats.totalDates} scheduled dates)</p>
                   </div>
                   <div className="studio-pipeline-badge">
-                    <strong>{studioStats.percent}%</strong>
+                    <strong><AnimatedNumber value={studioStats.percent} />%</strong>
                     <span>Delivered</span>
                   </div>
                 </div>
@@ -2078,11 +2117,11 @@ export default function App(): JSX.Element {
                   {studioStats.completed > 0 && <span className="stage-segment stage-completed" style={{ width: `${(studioStats.completed / (studioStats.totalDates || 1)) * 100}%` }} title={`Completed Every Stage: ${studioStats.completed}`} />}
                 </div>
                 <div className="multicolor-legend">
-                  <div className="legend-chip chip-editing"><span className="chip-dot" /><strong>{studioStats.editing}</strong> In Editing</div>
-                  <div className="legend-chip chip-rendering"><span className="chip-dot" /><strong>{studioStats.rendering}</strong> Rendered</div>
-                  <div className="legend-chip chip-upload"><span className="chip-dot" /><strong>{studioStats.upload}</strong> Uploaded</div>
-                  <div className="legend-chip chip-jameya"><span className="chip-dot" /><strong>{studioStats.jameya}</strong> Jameya</div>
-                  <div className="legend-chip chip-completed"><span className="chip-dot" /><strong>{studioStats.completed}</strong> Completed</div>
+                  <div className="legend-chip chip-editing"><span className="chip-dot" /><strong><AnimatedNumber value={studioStats.editing} /></strong> In Editing</div>
+                  <div className="legend-chip chip-rendering"><span className="chip-dot" /><strong><AnimatedNumber value={studioStats.rendering} /></strong> Rendered</div>
+                  <div className="legend-chip chip-upload"><span className="chip-dot" /><strong><AnimatedNumber value={studioStats.upload} /></strong> Uploaded</div>
+                  <div className="legend-chip chip-jameya"><span className="chip-dot" /><strong><AnimatedNumber value={studioStats.jameya} /></strong> Jameya</div>
+                  <div className="legend-chip chip-completed"><span className="chip-dot" /><strong><AnimatedNumber value={studioStats.completed} /></strong> Completed</div>
                 </div>
               </div>
             )}
@@ -2102,8 +2141,8 @@ export default function App(): JSX.Element {
                     <small>{hijriYearLabel(group.safarYear)}{group.safarYear && ' · '}{group.total} {group.total === 1 ? 'date' : 'dates'}</small>
                   </button>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
-                    <strong className="dashboard-safar-percent">{group.deliveredPercent}%</strong>
-                    <span className="dashboard-safar-percent-sub">{group.deliveredCount}/{group.total} Delivered</span>
+                    <strong className="dashboard-safar-percent"><AnimatedNumber value={group.deliveredPercent} />%</strong>
+                    <span className="dashboard-safar-percent-sub"><AnimatedNumber value={group.deliveredCount} />/{group.total} Delivered</span>
                   </div>
                 </div>
 
@@ -2117,17 +2156,17 @@ export default function App(): JSX.Element {
                     {completedPct > 0 && <span className="stage-segment stage-completed" style={{ width: `${completedPct}%` }} title={`Completed: ${group.completedCount} dates (${Math.round(completedPct)}%)`} />}
                   </div>
                   <div className="multicolor-legend">
-                    <span className="legend-chip chip-editing" title="In Editing"><span className="chip-dot" />{group.editingCount} Editing</span>
-                    <span className="legend-chip chip-rendering" title="Rendered"><span className="chip-dot" />{group.renderingCount} Rendered</span>
-                    <span className="legend-chip chip-upload" title="Uploaded"><span className="chip-dot" />{group.uploadCount} Upload</span>
-                    <span className="legend-chip chip-jameya" title="Submission to Al Jamea tus Saifiyah"><span className="chip-dot" />{group.jameyaCount} Jameya</span>
-                    <span className="legend-chip chip-completed" title="Completed Every Stage"><span className="chip-dot" />{group.completedCount} Completed</span>
+                    <span className="legend-chip chip-editing" title="In Editing"><span className="chip-dot" /><AnimatedNumber value={group.editingCount} /> Editing</span>
+                    <span className="legend-chip chip-rendering" title="Rendered"><span className="chip-dot" /><AnimatedNumber value={group.renderingCount} /> Rendered</span>
+                    <span className="legend-chip chip-upload" title="Uploaded"><span className="chip-dot" /><AnimatedNumber value={group.uploadCount} /> Upload</span>
+                    <span className="legend-chip chip-jameya" title="Submission to Al Jamea tus Saifiyah"><span className="chip-dot" /><AnimatedNumber value={group.jameyaCount} /> Jameya</span>
+                    <span className="legend-chip chip-completed" title="Completed Every Stage"><span className="chip-dot" /><AnimatedNumber value={group.completedCount} /> Completed</span>
                   </div>
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', fontSize: '11px', color: '#64748b', margin: '6px 0 8px', flexWrap: 'wrap' }}>
-                  <span><strong>{group.deliveredCount}</strong> of <strong>{group.total}</strong> dates delivered · {group.progressPercent}% pipeline</span>
-                  <span style={{ color: '#047857', fontWeight: 700 }}>📷 Photos: {group.photoUploadedCount}/{group.total} ({group.photoPercent}%)</span>
+                  <span><strong><AnimatedNumber value={group.deliveredCount} /></strong> of <strong>{group.total}</strong> dates delivered · <AnimatedNumber value={group.progressPercent} />% pipeline</span>
+                  <span style={{ color: '#047857', fontWeight: 700 }}>📷 Photos: <AnimatedNumber value={group.photoUploadedCount} />/{group.total} (<AnimatedNumber value={group.photoPercent} />%)</span>
                 </div>
 
                 {group.tasks.length ? <ul className="safar-preview-list">{group.tasks.slice(0, 4).map(task => {

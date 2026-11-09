@@ -32,6 +32,7 @@ import {
   PhotoStats
 } from '../lib/googleAppsScript';
 import { isJunkSafarName } from './OngoingSafarKanban';
+import { AnimatedNumber } from '../App';
 
 export const DEFAULT_PHOTO_EDITOR = 'Muffadal Peti';
 export const DEFAULT_VIDEO_EDITOR = 'Murtaza';
@@ -500,15 +501,15 @@ export default function PhotoTracker({
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', fontSize: '11px', fontWeight: 700 }}>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', color: '#7C3AED' }}>
             <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#8B5CF6' }} />
-            {editedCount} In Editing
+            <AnimatedNumber value={editedCount} /> In Editing
           </span>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', color: '#1D4ED8' }}>
             <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#3B82F6' }} />
-            {murtazaCount} Given To Murtaza
+            <AnimatedNumber value={murtazaCount} /> Given To Murtaza
           </span>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', color: '#047857' }}>
             <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10B981' }} />
-            {uploadedCount} Uploaded
+            <AnimatedNumber value={uploadedCount} /> Uploaded
           </span>
         </div>
       </div>
@@ -592,7 +593,7 @@ export default function PhotoTracker({
                   <span className="mobile-stage-name">
                     {col.id === 'edited' ? 'Edited' : col.id === 'given_to_murtaza' ? 'To Murtaza' : 'Uploaded'}
                   </span>
-                  <span className="mobile-stage-count">{count}</span>
+                  <span className="mobile-stage-count"><AnimatedNumber value={count} /></span>
                 </button>
               );
             })}

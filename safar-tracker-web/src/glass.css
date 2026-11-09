@@ -1546,3 +1546,177 @@ body {
 .spinning {
   animation: spin-anim 1s linear infinite;
 }
+
+/* ==========================================================================
+   Luxury Studio Workstation UI / UX Polish: Number Animations & Micro-Craft
+   ========================================================================== */
+
+/* Tabular Numerals for Jitter-Free Counter Animations */
+.tabular-num-anim {
+  display: inline-block;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+  letter-spacing: -0.01em;
+}
+
+/* Breathing Pulse for Live Sync Dot */
+@keyframes breath-pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.45);
+  }
+  70% {
+    transform: scale(1.1);
+    box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
+.status-dot.online {
+  background: #10b981 !important;
+  animation: breath-pulse 2.2s infinite ease-in-out;
+}
+
+/* Elevated Dashboard Safar Cards */
+.dashboard-safar-card {
+  position: relative;
+  background: rgba(255, 255, 255, 0.9) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(226, 232, 240, 0.95) !important;
+  border-radius: 20px !important;
+  padding: 22px !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.035), 0 1px 3px rgba(0, 0, 0, 0.02) !important;
+  transition: transform 0.22s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.22s cubic-bezier(0.23, 1, 0.32, 1), border-color 0.2s ease !important;
+  overflow: hidden;
+}
+.dashboard-safar-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 36px rgba(79, 70, 229, 0.09), 0 4px 12px rgba(0, 0, 0, 0.03) !important;
+  border-color: rgba(99, 102, 241, 0.4) !important;
+}
+.dashboard-safar-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #4f46e5, #06b6d4, #10b981);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.dashboard-safar-card:hover::before {
+  opacity: 1;
+}
+
+/* Studio Workload Pipeline Panel */
+.studio-pipeline-summary {
+  position: relative;
+  border-radius: 20px !important;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.9)) !important;
+  border: 1px solid rgba(99, 102, 241, 0.2) !important;
+  box-shadow: 0 8px 30px rgba(79, 70, 229, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.95) !important;
+}
+.studio-pipeline-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  background: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 14px;
+  padding: 8px 14px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+.studio-pipeline-badge strong {
+  font-size: 22px;
+  font-weight: 800;
+  color: #4f46e5;
+  font-family: var(--font-display, sans-serif);
+  line-height: 1;
+}
+.studio-pipeline-badge span {
+  font-size: 10px;
+  font-weight: 700;
+  color: #059669;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-top: 2px;
+}
+
+/* Multi-Color Stage Progress Bar Animations & Shimmer */
+.multicolor-progress-bar {
+  display: flex;
+  height: 10px;
+  width: 100%;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.06);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+.multicolor-progress-bar.large {
+  height: 14px;
+  border-radius: 999px;
+}
+.multicolor-progress-bar .stage-segment {
+  height: 100%;
+  transition: width 0.75s cubic-bezier(0.23, 1, 0.32, 1);
+  position: relative;
+}
+.stage-segment.stage-editing {
+  background: linear-gradient(90deg, #f59e0b, #fbbf24) !important;
+}
+.stage-segment.stage-rendering {
+  background: linear-gradient(90deg, #2563eb, #60a5fa) !important;
+}
+.stage-segment.stage-upload {
+  background: linear-gradient(90deg, #059669, #34d399) !important;
+}
+.stage-segment.stage-jameya {
+  background: linear-gradient(90deg, #7c3aed, #a78bfa) !important;
+}
+.stage-segment.stage-completed {
+  background: linear-gradient(90deg, #0d9488, #2dd4bf) !important;
+}
+
+/* Kanban Column Enhancements with Stage Accent Stripes */
+#kanban-col-editing {
+  border-top: 3px solid #f59e0b !important;
+}
+#kanban-col-rendering {
+  border-top: 3px solid #2563eb !important;
+}
+#kanban-col-upload {
+  border-top: 3px solid #059669 !important;
+}
+#kanban-col-jameya {
+  border-top: 3px solid #7c3aed !important;
+}
+#kanban-col-completed {
+  border-top: 3px solid #0d9488 !important;
+}
+
+#photo-col-edited {
+  border-top: 3px solid #8b5cf6 !important;
+}
+#photo-col-given_to_murtaza {
+  border-top: 3px solid #3b82f6 !important;
+}
+#photo-col-uploaded {
+  border-top: 3px solid #10b981 !important;
+}
+
+/* Tactile Spring Press Feedback Across Interactive Components */
+button:active,
+.mobile-nav-item:active,
+.mobile-stage-tab:active,
+.safar-group-toggle:active,
+.kanban-stage-advance-btn:active,
+.photo-stage-advance-btn:active,
+.briefing-btn-whatsapp:active,
+.briefing-btn-copy:active {
+  transform: scale(0.97) !important;
+  transition: transform 90ms cubic-bezier(0.23, 1, 0.32, 1) !important;
+}

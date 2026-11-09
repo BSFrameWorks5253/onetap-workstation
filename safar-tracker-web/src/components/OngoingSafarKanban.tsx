@@ -24,6 +24,7 @@ import {
   MessageCircle
 } from 'lucide-react';
 import { sendWhatsAppAlert, DEFAULT_WHATSAPP_PHONE } from '../lib/googleAppsScript';
+import { AnimatedNumber } from '../App';
 
 const JUNK_SAFAR_REGEX = /^(?:in[\s_-]?process|pending|to[\s_-]?delete|intel|intelvga|amd|nvidia|system|temp|program|windows|\$rec|delivery|renders?|output|exports?|dptf|mei)$/i;
 
@@ -414,7 +415,7 @@ export default function OngoingSafarKanban({
               )}
 
               <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>
-                {totalCount} dates · <strong style={{ color: '#059669' }}>{uploadedCount} uploaded</strong> · <strong style={{ color: '#d97706' }}>{pendingCount} pending</strong>
+                <AnimatedNumber value={totalCount} /> dates · <strong style={{ color: '#059669' }}><AnimatedNumber value={uploadedCount} /> uploaded</strong> · <strong style={{ color: '#d97706' }}><AnimatedNumber value={pendingCount} /> pending</strong>
               </span>
             </div>
 
@@ -422,8 +423,8 @@ export default function OngoingSafarKanban({
             {totalCount > 0 && (
               <div style={{ marginTop: '8px', maxWidth: '420px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', fontWeight: 700, marginBottom: '4px' }}>
-                  <span style={{ color: '#4f46e5' }}>{Math.round(((columnTasks.editing.length * 20 + columnTasks.rendering.length * 45 + columnTasks.upload.length * 75 + columnTasks.jameya.length * 90 + columnTasks.completed.length * 100) / (totalCount || 1)) / 100 * 100)}% Pipeline</span>
-                  <span style={{ color: '#059669' }}>{Math.round((uploadedCount / (totalCount || 1)) * 100)}% Delivered ({uploadedCount}/{totalCount})</span>
+                  <span style={{ color: '#4f46e5' }}><AnimatedNumber value={Math.round(((columnTasks.editing.length * 20 + columnTasks.rendering.length * 45 + columnTasks.upload.length * 75 + columnTasks.jameya.length * 90 + columnTasks.completed.length * 100) / (totalCount || 1)) / 100 * 100)} />% Pipeline</span>
+                  <span style={{ color: '#059669' }}><AnimatedNumber value={Math.round((uploadedCount / (totalCount || 1)) * 100)} />% Delivered (<AnimatedNumber value={uploadedCount} />/{totalCount})</span>
                 </div>
                 <div className="multicolor-progress-bar mini" role="progressbar" aria-label={`${selectedSafar} stage progress`}>
                   {columnTasks.editing.length > 0 && <span className="stage-segment stage-editing" style={{ width: `${(columnTasks.editing.length / (totalCount || 1)) * 100}%` }} title={`Editing: ${columnTasks.editing.length}`} />}
@@ -623,7 +624,7 @@ export default function OngoingSafarKanban({
               <span className="mobile-stage-name">
                 {col.id === 'editing' ? 'Editing' : col.id === 'rendering' ? 'Render' : col.id === 'upload' ? 'Upload' : col.id === 'jameya' ? 'Jameya' : 'Done'}
               </span>
-              <span className="mobile-stage-count">{count}</span>
+              <span className="mobile-stage-count"><AnimatedNumber value={count} /></span>
             </button>
           );
         })}
@@ -694,7 +695,7 @@ export default function OngoingSafarKanban({
                     color: '#ffffff'
                   }}
                 >
-                  {list.length}
+                  <AnimatedNumber value={list.length} />
                 </span>
               </div>
 
