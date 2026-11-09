@@ -131,6 +131,91 @@ async function uploadReleaseAsset(uploadUrl, assetPath, assetName, token) {
   })
 }
 
+async function uploadOrReplaceAsset(releaseData, filePath, assetName, token) {
+  if (!filePath || !fs.existsSync(filePath)) return
+
+  // Query live assets list from GitHub to guarantee we have the absolute latest assets
+  let assets = releaseData.assets || []
+  try {
+    const listRes = await httpsRequest({
+      hostname: 'api.github.com',
+      path: `/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/${releaseData.id}/assets`,
+      method: 'GET',
+      headers: {
+        'User-Agent': 'OneTap-Release-Publisher',
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/vnd.github.v3+json'
+      }
+    })
+    if (listRes.statusCode === 200 && Array.isArray(listRes.body)) {
+      assets = listRes.body
+    }
+  } catch (e) {
+    // fallback to releaseData.assets
+  }
+
+  const existingAsset = assets.find((a) => a.name === assetName)
+  if (existingAsset) {
+    log(`Replacing existing asset ${assetName} on GitHub Release...`)
+    try {
+      await httpsRequest({
+        hostname: 'api.github.com',
+        path: `/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/assets/${existingAsset.id}`,
+        method: 'DELETE',
+        headers: {
+          'User-Agent': 'OneTap-Release-Publisher',
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/vnd.github.v3+json'
+        }
+      })
+    } catch (delErr) {
+      logWarn(`Could not delete asset ${assetName}: ${delErr.message}`)
+    }
+  }
+
+  log(`Uploading ${assetName} (${(fs.statSync(filePath).size / (1024 * 1024)).toFixed(2)} MB) to GitHub Releases...`)
+  try {
+    await uploadReleaseAsset(releaseData.upload_url, filePath, assetName, token)
+  } catch (err) {
+    // If it failed with 422 already_exists, do one retry with explicit delete
+    if (err.message && err.message.includes('already_exists')) {
+      logWarn(`Asset ${assetName} was still flagged as existing. Retrying clean replacement...`)
+      try {
+        const retryListRes = await httpsRequest({
+          hostname: 'api.github.com',
+          path: `/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/${releaseData.id}/assets`,
+          method: 'GET',
+          headers: {
+            'User-Agent': 'OneTap-Release-Publisher',
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/vnd.github.v3+json'
+          }
+        })
+        if (retryListRes.statusCode === 200 && Array.isArray(retryListRes.body)) {
+          const match = retryListRes.body.find((a) => a.name === assetName)
+          if (match) {
+            await httpsRequest({
+              hostname: 'api.github.com',
+              path: `/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/assets/${match.id}`,
+              method: 'DELETE',
+              headers: {
+                'User-Agent': 'OneTap-Release-Publisher',
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/vnd.github.v3+json'
+              }
+            })
+          }
+        }
+        await uploadReleaseAsset(releaseData.upload_url, filePath, assetName, token)
+      } catch (retryErr) {
+        throw new Error(`Asset upload retry failed for ${assetName}: ${retryErr.message}`)
+      }
+    } else {
+      throw err
+    }
+  }
+}
+
 async function publishToGitHubReleases(version, exePath, releaseNotes) {
   const token = getGithubToken()
   if (!token) {
@@ -199,34 +284,17 @@ async function publishToGitHubReleases(version, exePath, releaseNotes) {
     for (const file of filesToUpload) {
       if (file && fs.existsSync(file)) {
         const assetName = path.basename(file)
-        const existingAsset = (releaseData.assets || []).find((a) => a.name === assetName)
-
-        if (existingAsset) {
-          log(`Replacing existing asset ${assetName} on GitHub Release...`)
-          await httpsRequest({
-            hostname: 'api.github.com',
-            path: `/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/assets/${existingAsset.id}`,
-            method: 'DELETE',
-            headers: {
-              'User-Agent': 'OneTap-Release-Publisher',
-              'Authorization': `Bearer ${token}`,
-              'Accept': 'application/vnd.github.v3+json'
-            }
-          })
-        }
-
-        log(`Uploading ${assetName} (${(fs.statSync(file).size / (1024 * 1024)).toFixed(1)} MB) to GitHub Releases...`)
-        await uploadReleaseAsset(releaseData.upload_url, file, assetName, token)
+        await uploadOrReplaceAsset(releaseData, file, assetName, token)
         logSuccess(`Executable ${assetName} successfully pushed to GitHub Releases!`)
         logSuccess(`Direct Download URL: https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/download/${tagName}/${assetName}`)
       }
     }
 
-    // 4. Also upload latest.yml if present
+    // 4. Also upload latest.yml if present (with duplicate replacement protection)
     const latestYmlPath = path.join(ROOT_DIR, 'release', 'latest.yml')
     if (fs.existsSync(latestYmlPath)) {
       log('Uploading latest.yml for auto-updater...')
-      await uploadReleaseAsset(releaseData.upload_url, latestYmlPath, 'latest.yml', token)
+      await uploadOrReplaceAsset(releaseData, latestYmlPath, 'latest.yml', token)
       logSuccess('latest.yml uploaded successfully.')
     }
 
