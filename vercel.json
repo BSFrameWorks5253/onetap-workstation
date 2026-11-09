@@ -2,7 +2,6 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "cd safar-tracker-web && npm install && npm run build",
   "outputDirectory": "safar-tracker-web/dist",
-  "cleanUrls": true,
   "rewrites": [
     {
       "source": "/(.*)",
