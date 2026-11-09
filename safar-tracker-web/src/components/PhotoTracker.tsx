@@ -156,6 +156,7 @@ export default function PhotoTracker({
   const [gsUrlInput, setGsUrlInput] = useState(() => getGsUrl());
   const [sendingAlert, setSendingAlert] = useState(false);
   const [viewMode, setViewMode] = useState<'kanban' | 'grid'>('kanban');
+  const [activeMobileStage, setActiveMobileStage] = useState<PhotoStage>('edited');
 
   // Sync photo folders with Google Drive & Sheet
   const loadPhotoStatus = async () => {
@@ -511,7 +512,7 @@ export default function PhotoTracker({
 
       {/* Filter Pills and Search */}
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#F1F5F9', padding: '3px', borderRadius: '12px', flexWrap: 'wrap' }}>
+        <div className="photo-filter-scroll-container">
           {[
             { id: 'all', label: `All (${totalCount})` },
             { id: 'edited', label: `🟣 Edited (${editedCount})` },
@@ -529,10 +530,12 @@ export default function PhotoTracker({
               style={{
                 fontSize: '11px',
                 fontWeight: 700,
-                padding: '5px 10px',
+                padding: '6px 12px',
                 borderRadius: '8px',
                 border: 'none',
                 cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
                 background: filter === tab.id ? '#0F172A' : 'transparent',
                 color: filter === tab.id ? '#FFFFFF' : '#64748B',
                 transition: 'all 0.15s ease'
@@ -543,14 +546,14 @@ export default function PhotoTracker({
           ))}
         </div>
 
-        <div style={{ position: 'relative', minWidth: '220px' }}>
+        <div style={{ position: 'relative', minWidth: '220px', flex: 1, maxWidth: '360px' }}>
           <Search size={14} color="#94A3B8" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} />
           <input
             type="search"
             placeholder="Search date folder..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            style={{ width: '100%', fontSize: '12px', padding: '7px 12px 7px 32px', borderRadius: '10px', border: '1px solid #CBD5E1', outline: 'none' }}
+            style={{ width: '100%', fontSize: '13px', padding: '8px 12px 8px 32px', borderRadius: '10px', border: '1px solid #CBD5E1', outline: 'none' }}
           />
         </div>
       </div>
@@ -561,23 +564,55 @@ export default function PhotoTracker({
           No date folders match the selected filter.
         </div>
       ) : viewMode === 'kanban' ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px', alignItems: 'flex-start' }}>
-          {PHOTO_COLUMNS.map(col => {
-            const list = filteredColumnTasks[col.id] || [];
-            return (
-              <div
-                key={col.id}
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  background: '#FFFFFF',
-                  border: '1px solid #E2E8F0',
-                  borderRadius: '16px',
-                  overflow: 'hidden',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-                  minHeight: '440px'
-                }}
-              >
+        <>
+          {/* Mobile Stage Switcher for Photo Kanban */}
+          <div className="mobile-kanban-stage-tabs" role="tablist" aria-label="Photo stages">
+            {PHOTO_COLUMNS.map(col => {
+              const count = (filteredColumnTasks[col.id] || []).length;
+              return (
+                <button
+                  key={col.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={activeMobileStage === col.id}
+                  className={`mobile-stage-tab ${activeMobileStage === col.id ? 'active' : ''}`}
+                  onClick={() => {
+                    setActiveMobileStage(col.id);
+                    const el = document.getElementById(`photo-col-${col.id}`);
+                    if (el) {
+                      el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                    }
+                  }}
+                >
+                  <span className="mobile-stage-dot" style={{ backgroundColor: col.color }} />
+                  <span className="mobile-stage-name">
+                    {col.id === 'edited' ? 'Edited' : col.id === 'given_to_murtaza' ? 'To Murtaza' : 'Uploaded'}
+                  </span>
+                  <span className="mobile-stage-count">{count}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="kanban-board-grid">
+            {PHOTO_COLUMNS.map(col => {
+              const list = filteredColumnTasks[col.id] || [];
+              return (
+                <div
+                  key={col.id}
+                  id={`photo-col-${col.id}`}
+                  className="kanban-column"
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    background: '#FFFFFF',
+                    border: '1px solid #E2E8F0',
+                    borderRadius: '16px',
+                    overflow: 'hidden',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                    minHeight: '440px'
+                  }}
+                >
                 {/* Column Header */}
                 <div style={{ padding: '12px 16px', background: col.headerBg, borderBottom: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div>
@@ -742,6 +777,7 @@ export default function PhotoTracker({
             );
           })}
         </div>
+        </>
       ) : (
         /* Card Grid View */
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>

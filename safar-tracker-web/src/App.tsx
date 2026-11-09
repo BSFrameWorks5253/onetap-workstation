@@ -1891,8 +1891,8 @@ export default function App(): JSX.Element {
 
           {/* VIEW: DASHBOARD */}
           {view === 'dashboard' && initialLoading ? <SafarLoadingSkeleton variant="dashboard"/> : view === 'dashboard' && <section className="dashboard-safars" aria-labelledby="dashboard-safars-title">
-            <div className="dashboard-safars-heading" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+            <div className="dashboard-safars-heading">
+              <div className="dashboard-title-row">
                 <div>
                   <h2 id="dashboard-safars-title">Safars in production</h2>
                   <p>Multi-stage pipeline and completion across all campaigns.</p>
@@ -1900,21 +1900,12 @@ export default function App(): JSX.Element {
 
                 {/* Active Ongoing Safar Selector */}
                 {activeSafarGroups.length > 0 && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(79, 70, 229, 0.08)', padding: '6px 12px', borderRadius: '12px', border: '1px solid rgba(79, 70, 229, 0.2)' }}>
-                    <span style={{ fontSize: '12px', fontWeight: 700, color: '#4338ca' }}>📍 Ongoing Safar:</span>
+                  <div className="ongoing-safar-selector-pill">
+                    <span className="selector-label">📍 Ongoing Safar:</span>
                     <select
                       value={effectiveOngoingSafar}
                       onChange={e => handleSetOngoingSafar(e.target.value)}
-                      style={{
-                        background: '#ffffff',
-                        border: '1px solid #c7d2fe',
-                        borderRadius: '8px',
-                        fontSize: '12px',
-                        fontWeight: 700,
-                        color: '#1e293b',
-                        padding: '4px 8px',
-                        cursor: 'pointer'
-                      }}
+                      className="ongoing-select"
                       title="Set active ongoing safar for WhatsApp updates"
                     >
                       {activeSafarGroups.map(g => (
@@ -1926,62 +1917,41 @@ export default function App(): JSX.Element {
               </div>
 
               {/* Action Buttons */}
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+              <div className="dashboard-action-buttons">
                 <button
                   type="button"
+                  className="briefing-btn-whatsapp"
                   onClick={() => shareDailyBriefingWhatsApp(effectiveOngoingSafar)}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    background: '#25D366',
-                    color: '#ffffff',
-                    fontWeight: 700,
-                    boxShadow: '0 4px 12px rgba(37, 211, 102, 0.25)',
-                    border: 'none',
-                    borderRadius: '10px',
-                    padding: '8px 14px',
-                    cursor: 'pointer'
-                  }}
                   title={`Send Ongoing Safar (${effectiveOngoingSafar}) briefing to WhatsApp`}
                 >
-                  <MessageCircle size={15} />
+                  <MessageCircle size={16} />
                   <span>WhatsApp Briefing ({effectiveOngoingSafar ? effectiveOngoingSafar.split('-').slice(-1)[0].trim() : 'Ongoing'})</span>
                 </button>
 
                 <button
                   type="button"
-                  className="button-primary"
+                  className="briefing-btn-copy"
                   onClick={() => copyDailyBriefing(effectiveOngoingSafar)}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
-                    color: '#ffffff',
-                    fontWeight: 700,
-                    boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)',
-                    border: 'none',
-                    borderRadius: '10px',
-                    padding: '8px 14px',
-                    cursor: 'pointer'
-                  }}
                   title={`Copy Ongoing Safar (${effectiveOngoingSafar}) briefing to clipboard`}
                 >
-                  <Share2 size={15} />
+                  <Share2 size={16} />
                   <span>Copy Ongoing Briefing</span>
                 </button>
 
                 <button
                   type="button"
-                  className="button-secondary"
+                  className="button-secondary briefing-btn-secondary"
                   onClick={() => copyDailyBriefing('ALL')}
                   title="Copy full summary of all active Safars to clipboard"
                 >
                   <span>Copy All Safars</span>
                 </button>
 
-                <button type="button" className="button-secondary" onClick={() => { setSelectedSafar('all'); setSelectedEditor('all'); navigateTo('archive') }}>
+                <button
+                  type="button"
+                  className="button-secondary briefing-btn-secondary"
+                  onClick={() => { setSelectedSafar('all'); setSelectedEditor('all'); navigateTo('archive') }}
+                >
                   <Archive aria-hidden="true" size={16}/> Archive <span className="nav-count">{archiveSafarGroups.length}</span>
                 </button>
               </div>
@@ -2274,6 +2244,68 @@ export default function App(): JSX.Element {
           <span>{snapshot.updatedAt ? `Last update ${new Date(snapshot.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Ready for workstation sync'}</span>
         </footer>
       </main>
+
+      {/* Native-Feel Mobile Fixed Bottom Navigation Bar (Thumb Zone) */}
+      <nav className="mobile-bottom-bar" aria-label="Mobile navigation">
+        <button
+          type="button"
+          className={`mobile-nav-item ${view === 'dashboard' ? 'active' : ''}`}
+          onClick={() => navigateTo('dashboard')}
+          aria-label="Dashboard"
+        >
+          <LayoutDashboard size={20} />
+          <span>Dashboard</span>
+        </button>
+
+        <button
+          type="button"
+          className={`mobile-nav-item ${view === 'ongoing' ? 'active' : ''}`}
+          onClick={() => navigateTo('ongoing')}
+          aria-label="Kanban Board"
+        >
+          <div className="mobile-nav-icon-wrap">
+            <Kanban size={20} />
+            {effectiveOngoingSafar ? (
+              <span className="mobile-nav-badge">
+                {snapshot.tasks.filter(t => t.safarName === effectiveOngoingSafar && t.stage !== 'completed' && t.stage !== 'jameya').length}
+              </span>
+            ) : null}
+          </div>
+          <span>Kanban</span>
+        </button>
+
+        <button
+          type="button"
+          className={`mobile-nav-item ${view === 'photos' ? 'active' : ''}`}
+          onClick={() => navigateTo('photos')}
+          aria-label="Photos Tracker"
+        >
+          <div className="mobile-nav-icon-wrap">
+            <Camera size={20} />
+          </div>
+          <span>Photos</span>
+        </button>
+
+        <button
+          type="button"
+          className={`mobile-nav-item ${view === 'tracker' ? 'active' : ''}`}
+          onClick={() => navigateTo('tracker')}
+          aria-label="Safars Tracker"
+        >
+          <CalendarDays size={20} />
+          <span>Safars</span>
+        </button>
+
+        <button
+          type="button"
+          className={`mobile-nav-item ${view === 'settings' ? 'active' : ''}`}
+          onClick={() => navigateTo('settings')}
+          aria-label="Settings"
+        >
+          <Settings2 size={20} />
+          <span>Settings</span>
+        </button>
+      </nav>
     </div>
   )
 }

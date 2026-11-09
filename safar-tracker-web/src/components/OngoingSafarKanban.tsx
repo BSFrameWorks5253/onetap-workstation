@@ -173,6 +173,7 @@ export default function OngoingSafarKanban({
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [rescanTriggered, setRescanTriggered] = useState(false);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
+  const [activeMobileStage, setActiveMobileStage] = useState<KanbanStage>('editing');
 
   const showToast = (msg: string) => {
     setActionNotice(msg);
@@ -594,20 +595,44 @@ export default function OngoingSafarKanban({
         </div>
       )}
 
+      {/* Mobile Stage Switcher Tabs (Thumb-Friendly Native Navigation) */}
+      <div className="mobile-kanban-stage-tabs" role="tablist" aria-label="Kanban stage selector">
+        {COLUMNS.map(col => {
+          const count = (columnTasks[col.id] || []).length;
+          return (
+            <button
+              key={col.id}
+              type="button"
+              role="tab"
+              aria-selected={activeMobileStage === col.id}
+              className={`mobile-stage-tab ${activeMobileStage === col.id ? 'active' : ''}`}
+              onClick={() => {
+                setActiveMobileStage(col.id);
+                const el = document.getElementById(`kanban-col-${col.id}`);
+                if (el) {
+                  el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                }
+              }}
+            >
+              <span className="mobile-stage-dot" style={{ backgroundColor: col.badgeColor }} />
+              <span className="mobile-stage-name">
+                {col.id === 'editing' ? 'Editing' : col.id === 'rendering' ? 'Render' : col.id === 'upload' ? 'Upload' : col.id === 'jameya' ? 'Jameya' : 'Done'}
+              </span>
+              <span className="mobile-stage-count">{count}</span>
+            </button>
+          );
+        })}
+      </div>
+
       {/* 5-Column Kanban Board */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-          gap: '16px',
-          alignItems: 'flex-start'
-        }}
-      >
+      <div className="kanban-board-grid">
         {COLUMNS.map((col, colIdx) => {
           const list = columnTasks[col.id] || [];
           return (
             <div
               key={col.id}
+              id={`kanban-col-${col.id}`}
+              className="kanban-column"
               style={{
                 display: 'flex',
                 flexDirection: 'column',
@@ -860,6 +885,7 @@ export default function OngoingSafarKanban({
                             {colIdx > 0 ? (
                               <button
                                 type="button"
+                                className="kanban-stage-prev-btn"
                                 onClick={() => handleMoveStage(task, COLUMNS[colIdx - 1].id)}
                                 style={{
                                   display: 'flex',
@@ -871,7 +897,7 @@ export default function OngoingSafarKanban({
                                   background: 'transparent',
                                   border: 'none',
                                   cursor: 'pointer',
-                                  padding: '2px 4px'
+                                  padding: '4px 6px'
                                 }}
                               >
                                 <ArrowLeft size={11} /> Prev
@@ -881,6 +907,7 @@ export default function OngoingSafarKanban({
                             {colIdx < COLUMNS.length - 1 ? (
                               <button
                                 type="button"
+                                className="kanban-stage-advance-btn"
                                 onClick={() => handleMoveStage(task, COLUMNS[colIdx + 1].id)}
                                 style={{
                                   display: 'flex',
@@ -893,7 +920,7 @@ export default function OngoingSafarKanban({
                                   border: '1px solid rgba(0,0,0,0.06)',
                                   borderRadius: '6px',
                                   cursor: 'pointer',
-                                  padding: '3px 8px'
+                                  padding: '5px 10px'
                                 }}
                               >
                                 <span>Move to {COLUMNS[colIdx + 1].title.split(':')[1]?.trim() || COLUMNS[colIdx + 1].id}</span>

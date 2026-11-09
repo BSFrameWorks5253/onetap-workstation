@@ -938,26 +938,355 @@ body {
   color: #059669;
 }
 
-/* Mobile PWA & Touch Optimizations */
+/* Dashboard Ongoing Hero & Actions Layout */
+.dashboard-safars-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.dashboard-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.ongoing-safar-selector-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(79, 70, 229, 0.08);
+  padding: 6px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(79, 70, 229, 0.2);
+}
+.ongoing-safar-selector-pill .selector-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #4338ca;
+}
+.ongoing-safar-selector-pill .ongoing-select {
+  background: #ffffff;
+  border: 1px solid #c7d2fe;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #1e293b;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+.dashboard-action-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.briefing-btn-whatsapp {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: #25d366;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 13px;
+  box-shadow: 0 4px 12px rgba(37, 211, 102, 0.25);
+  border: none;
+  border-radius: 10px;
+  padding: 9px 16px;
+  cursor: pointer;
+  min-height: 42px;
+  transition: transform 0.1s ease, box-shadow 0.15s ease;
+}
+.briefing-btn-whatsapp:active {
+  transform: scale(0.97);
+}
+.briefing-btn-copy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 13px;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+  border: none;
+  border-radius: 10px;
+  padding: 9px 16px;
+  cursor: pointer;
+  min-height: 42px;
+  transition: transform 0.1s ease, box-shadow 0.15s ease;
+}
+.briefing-btn-copy:active {
+  transform: scale(0.97);
+}
+
+/* Mobile Bottom Navigation Bar (Hidden by default on Desktop) */
+.mobile-bottom-bar {
+  display: none;
+}
+.mobile-kanban-stage-tabs {
+  display: none;
+}
+
+/* Photo Filter Horizontal Scroll Container */
+.photo-filter-scroll-container {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #f1f5f9;
+  padding: 4px;
+  border-radius: 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+}
+.photo-filter-scroll-container::-webkit-scrollbar {
+  display: none;
+}
+
+/* Mobile & PWA Responsive System */
 @media (max-width: 768px) {
-  body {
+  html, body {
     overscroll-behavior-y: contain;
     -webkit-tap-highlight-color: transparent;
   }
-  
-  .kanban-board-grid {
+
+  /* Safe Area Insets for iOS Notch / Dynamic Island */
+  .topbar {
+    padding-top: max(8px, env(safe-area-inset-top, 0px)) !important;
+    height: calc(56px + max(8px, env(safe-area-inset-top, 0px))) !important;
+  }
+
+  /* Prevent Bottom Bar Overlap & Home Indicator Safe Padding */
+  .content-wrap {
+    padding: 14px 14px calc(76px + env(safe-area-inset-bottom, 0px)) 14px !important;
+  }
+
+  /* Fixed Native-like Bottom Navigation Bar */
+  .mobile-bottom-bar {
+    display: flex !important;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    height: calc(58px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: rgba(255, 255, 255, 0.94);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-top: 1px solid rgba(226, 232, 240, 0.9);
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05);
+    align-items: stretch;
+    justify-content: space-around;
+  }
+
+  .mobile-nav-item {
+    flex: 1;
     display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    background: transparent;
+    border: none;
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 6px 0;
+    -webkit-tap-highlight-color: transparent;
+    transition: color 0.15s ease, transform 0.1s ease;
+  }
+  .mobile-nav-item:active {
+    transform: scale(0.93);
+  }
+  .mobile-nav-item.active {
+    color: #4f46e5;
+    font-weight: 700;
+  }
+  .mobile-nav-item.active svg {
+    color: #4f46e5;
+    stroke-width: 2.4;
+  }
+  .mobile-nav-icon-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .mobile-nav-badge {
+    position: absolute;
+    top: -4px;
+    right: -9px;
+    background: #ef4444;
+    color: #ffffff;
+    font-size: 9px;
+    font-weight: 800;
+    border-radius: 999px;
+    min-width: 15px;
+    height: 15px;
+    line-height: 15px;
+    padding: 0 4px;
+    text-align: center;
+    border: 1.5px solid #ffffff;
+  }
+
+  /* Sticky Mobile Stage Switcher for Kanban & Photos */
+  .mobile-kanban-stage-tabs {
+    display: flex !important;
+    gap: 6px;
     overflow-x: auto;
-    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
-    gap: 16px;
-    padding-bottom: 24px;
+    padding: 6px 2px 10px 2px;
+    margin-bottom: 8px;
+    position: sticky;
+    top: calc(56px + max(8px, env(safe-area-inset-top, 0px)));
+    z-index: 15;
+    background: rgba(250, 249, 244, 0.94);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+  .mobile-kanban-stage-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .mobile-stage-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.88);
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    font-size: 11px;
+    font-weight: 700;
+    color: #475569;
+    white-space: nowrap;
+    flex-shrink: 0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .mobile-stage-tab:active {
+    transform: scale(0.95);
+  }
+  .mobile-stage-tab.active {
+    background: #0f172a;
+    color: #ffffff;
+    border-color: #0f172a;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.25);
+  }
+  .mobile-stage-tab.active .mobile-stage-count {
+    background: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+  }
+  .mobile-stage-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .mobile-stage-name {
+    font-size: 11px;
+    letter-spacing: -0.01em;
+  }
+  .mobile-stage-count {
+    font-size: 10px;
+    font-weight: 800;
+    background: rgba(0, 0, 0, 0.06);
+    padding: 1px 6px;
+    border-radius: 999px;
+    color: #334155;
+  }
+
+  /* Horizontal Scroll-Snap Kanban Columns */
+  .kanban-board-grid {
+    display: flex !important;
+    flex-direction: row !important;
+    overflow-x: auto !important;
+    scroll-snap-type: x mandatory !important;
+    -webkit-overflow-scrolling: touch !important;
+    gap: 12px !important;
+    padding: 2px 4px 18px 4px !important;
+    margin: 0 -12px !important;
+    padding-inline: 12px !important;
+  }
+  .kanban-board-grid::-webkit-scrollbar {
+    display: none;
   }
 
   .kanban-column {
-    min-width: 84vw;
-    scroll-snap-align: center;
-    flex-shrink: 0;
+    min-width: calc(100vw - 38px) !important;
+    max-width: calc(100vw - 38px) !important;
+    scroll-snap-align: center !important;
+    flex-shrink: 0 !important;
+  }
+
+  .kanban-stage-advance-btn {
+    min-height: 40px !important;
+    font-size: 12px !important;
+    padding: 8px 12px !important;
+  }
+  .kanban-stage-prev-btn {
+    min-height: 40px !important;
+    font-size: 12px !important;
+    padding: 8px 10px !important;
+  }
+
+  /* Dashboard Action Stack on Mobile */
+  .dashboard-action-buttons {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+    width: 100% !important;
+  }
+  .briefing-btn-whatsapp {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+    min-height: 48px !important;
+    font-size: 14px !important;
+  }
+  .briefing-btn-copy {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+    min-height: 46px !important;
+    font-size: 13px !important;
+  }
+  .briefing-btn-secondary {
+    min-height: 44px !important;
+    justify-content: center !important;
+  }
+
+  .ongoing-safar-selector-pill {
+    width: 100% !important;
+    justify-content: space-between !important;
+    padding: 8px 12px !important;
+  }
+  .ongoing-safar-selector-pill .ongoing-select {
+    flex: 1 !important;
+    max-width: 220px !important;
+    height: 38px !important;
+    font-size: 14px !important;
+  }
+
+  .dashboard-safar-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Prevent iOS Safari Auto-Zoom on form input focus */
+  input[type="text"],
+  input[type="search"],
+  input[type="email"],
+  input[type="password"],
+  input[type="date"],
+  select,
+  textarea {
+    font-size: 16px !important;
   }
 }
 
