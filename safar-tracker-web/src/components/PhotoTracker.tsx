@@ -150,7 +150,8 @@ export default function PhotoTracker({
   const [records, setRecords] = useState<PhotoDeliverable[]>([]);
   const [stats, setStats] = useState<PhotoStats>({ total: 0, uploadedCount: 0, downloadedCount: 0, pendingCount: 0, percentComplete: 0 });
   const [loading, setLoading] = useState(false);
-  const [filter, setFilter] = useState<'all' | 'edited' | 'given_to_murtaza' | 'uploaded' | 'both_uploaded' | 'photo_only' | 'video_only' | 'both_pending'>('all');
+  const [filter, setFilter] = useState<'all' | 'edited' | 'given_to_murtaza' | 'uploaded'>('all');
+  const [syncFilter, setSyncFilter] = useState<'all' | 'both_uploaded' | 'photo_only' | 'video_only' | 'both_pending'>('all');
   const [search, setSearch] = useState('');
   const [notice, setNotice] = useState('');
   const [isConfigOpen, setIsConfigOpen] = useState(false);
@@ -306,13 +307,16 @@ export default function PhotoTracker({
       const isPUp = pStage === 'uploaded';
       const isVUp = t.stage === 'upload' || t.stage === 'jameya' || t.stage === 'completed';
 
+      // 1. Core Photo Stage Filter
       if (filter === 'edited' && pStage !== 'edited') return false;
       if (filter === 'given_to_murtaza' && pStage !== 'given_to_murtaza') return false;
       if (filter === 'uploaded' && !isPUp) return false;
-      if (filter === 'both_uploaded' && !(isPUp && isVUp)) return false;
-      if (filter === 'photo_only' && !(isPUp && !isVUp)) return false;
-      if (filter === 'video_only' && !(!isPUp && isVUp)) return false;
-      if (filter === 'both_pending' && !(!isPUp && !isVUp)) return false;
+
+      // 2. Deliverables Cross-Sync Sub-Filter
+      if (syncFilter === 'both_uploaded' && !(isPUp && isVUp)) return false;
+      if (syncFilter === 'photo_only' && !(isPUp && !isVUp)) return false;
+      if (syncFilter === 'video_only' && !(!isPUp && isVUp)) return false;
+      if (syncFilter === 'both_pending' && !(!isPUp && !isVUp)) return false;
 
       if (search.trim()) {
         const query = search.trim().toLowerCase();
@@ -321,7 +325,7 @@ export default function PhotoTracker({
       }
       return true;
     });
-  }, [safarTasks, filter, search]);
+  }, [safarTasks, filter, syncFilter, search]);
 
   // Group filtered tasks for kanban columns
   const filteredColumnTasks = useMemo(() => {
@@ -514,51 +518,84 @@ export default function PhotoTracker({
         </div>
       </div>
 
-      {/* Filter Pills and Search */}
+      {/* Category Pills, Sync Filter, and Search */}
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
-        <div className="photo-filter-scroll-container">
+        {/* Core 4 Categories: All, Edited, Given to Murtaza, Uploaded */}
+        <div className="photo-category-tabs" style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#f1f5f9', padding: '4px', borderRadius: '12px', flexWrap: 'wrap' }}>
           {[
-            { id: 'all', label: `All (${totalCount})` },
-            { id: 'edited', label: `🟣 Edited (${editedCount})` },
-            { id: 'given_to_murtaza', label: `🔵 Given To Murtaza (${murtazaCount})` },
-            { id: 'uploaded', label: `🟢 Uploaded (${uploadedCount})` },
-            { id: 'both_uploaded', label: `✓ Both Uploaded (${crossStatusCounts.bothUp})` },
-            { id: 'photo_only', label: `📷 Photo Up · 🎬 Video Pend (${crossStatusCounts.photoOnly})` },
-            { id: 'video_only', label: `🎬 Video Up · 📷 Photo Pend (${crossStatusCounts.videoOnly})` },
-            { id: 'both_pending', label: `⏳ Both Pend (${crossStatusCounts.bothPend})` }
+            { id: 'all', label: 'All', count: totalCount },
+            { id: 'edited', label: 'In Editing', count: editedCount, dot: '#8b5cf6' },
+            { id: 'given_to_murtaza', label: 'Given To Murtaza', count: murtazaCount, dot: '#3b82f6' },
+            { id: 'uploaded', label: 'Uploaded', count: uploadedCount, dot: '#10b981' }
           ].map(tab => (
             <button
               key={tab.id}
               type="button"
-              onClick={() => setFilter(tab.id as any)}
+              onClick={() => {
+                try { if ('vibrate' in navigator) navigator.vibrate(10) } catch {}
+                setFilter(tab.id as any);
+              }}
               style={{
-                fontSize: '11px',
+                fontSize: '12px',
                 fontWeight: 700,
-                padding: '6px 12px',
+                padding: '6px 14px',
                 borderRadius: '8px',
                 border: 'none',
                 cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                flexShrink: 0,
-                background: filter === tab.id ? '#0F172A' : 'transparent',
-                color: filter === tab.id ? '#FFFFFF' : '#64748B',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                background: filter === tab.id ? '#0f172a' : 'transparent',
+                color: filter === tab.id ? '#ffffff' : '#64748b',
+                boxShadow: filter === tab.id ? '0 2px 6px rgba(15, 23, 42, 0.2)' : 'none',
                 transition: 'all 0.15s ease'
               }}
             >
-              {tab.label}
+              {tab.dot && <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: tab.dot }} />}
+              <span>{tab.label}</span>
+              <span style={{ fontSize: '10px', fontWeight: 800, padding: '1px 6px', borderRadius: '999px', background: filter === tab.id ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.06)', color: filter === tab.id ? '#ffffff' : '#334155' }}>
+                <AnimatedNumber value={tab.count} />
+              </span>
             </button>
           ))}
         </div>
 
-        <div style={{ position: 'relative', minWidth: '220px', flex: 1, maxWidth: '360px' }}>
-          <Search size={14} color="#94A3B8" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} />
-          <input
-            type="search"
-            placeholder="Search date folder..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            style={{ width: '100%', fontSize: '13px', padding: '8px 12px 8px 32px', borderRadius: '10px', border: '1px solid #CBD5E1', outline: 'none' }}
-          />
+        {/* Deliverables Cross-Sync Dropdown & Search */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', flex: 1, justifyContent: 'flex-end', maxWidth: '520px' }}>
+          <select
+            value={syncFilter}
+            onChange={e => setSyncFilter(e.target.value as any)}
+            title="Filter by Photo & Video cross-sync status"
+            style={{
+              padding: '7px 12px',
+              borderRadius: '10px',
+              border: '1px solid #cbd5e1',
+              background: '#ffffff',
+              color: '#334155',
+              fontSize: '12px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              outline: 'none',
+              maxWidth: '240px'
+            }}
+          >
+            <option value="all">Deliverables: All Sync States</option>
+            <option value="both_uploaded">✓ Both Uploaded ({crossStatusCounts.bothUp})</option>
+            <option value="photo_only">📷 Photo Up · 🎬 Video Pend ({crossStatusCounts.photoOnly})</option>
+            <option value="video_only">🎬 Video Up · 📷 Photo Pend ({crossStatusCounts.videoOnly})</option>
+            <option value="both_pending">⏳ Both Pending ({crossStatusCounts.bothPend})</option>
+          </select>
+
+          <div style={{ position: 'relative', minWidth: '170px', flex: 1 }}>
+            <Search size={14} color="#94A3B8" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} />
+            <input
+              type="search"
+              placeholder="Search date folder..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              style={{ width: '100%', fontSize: '13px', padding: '8px 12px 8px 32px', borderRadius: '10px', border: '1px solid #CBD5E1', outline: 'none' }}
+            />
+          </div>
         </div>
       </div>
 
