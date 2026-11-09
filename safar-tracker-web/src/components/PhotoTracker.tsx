@@ -8,11 +8,17 @@ import {
   Download,
   ExternalLink,
   MessageSquare,
-  Smartphone,
   Search,
   Settings,
   Check,
-  AlertCircle
+  Film,
+  UserRound,
+  ArrowRight,
+  ArrowLeft,
+  Sparkles,
+  Trash2,
+  Kanban,
+  LayoutGrid
 } from 'lucide-react';
 import {
   fetchPhotoFolders,
@@ -27,14 +33,78 @@ import {
 } from '../lib/googleAppsScript';
 import { isJunkSafarName } from './OngoingSafarKanban';
 
+export const DEFAULT_PHOTO_EDITOR = 'Muffadal Peti';
+export const DEFAULT_VIDEO_EDITOR = 'Murtaza';
+
+export type PhotoStage = 'edited' | 'given_to_murtaza' | 'uploaded';
+
+export interface PhotoTaskItem {
+  id: string;
+  safarName: string;
+  dateFolder: string;
+  hijriDate?: string;
+  stage: string;
+  dueDate?: string;
+  editorName?: string;
+  photoStage?: PhotoStage;
+  photoEditorName?: string;
+  photoUploaded?: boolean;
+  isPresent?: boolean;
+  isMissing?: boolean;
+}
+
+interface PhotoColumnConfig {
+  id: PhotoStage;
+  title: string;
+  subtitle: string;
+  color: string;
+  headerBg: string;
+  badgeBg: string;
+}
+
+const PHOTO_COLUMNS: PhotoColumnConfig[] = [
+  {
+    id: 'edited',
+    title: 'Stage 1: Edited',
+    subtitle: 'Photos color-graded & exported',
+    color: '#8b5cf6',
+    headerBg: 'rgba(139, 92, 246, 0.08)',
+    badgeBg: 'rgba(139, 92, 246, 0.15)'
+  },
+  {
+    id: 'given_to_murtaza',
+    title: 'Stage 2: Given To Murtaza',
+    subtitle: 'Handed over to video lead Murtaza',
+    color: '#2563eb',
+    headerBg: 'rgba(37, 99, 235, 0.08)',
+    badgeBg: 'rgba(37, 99, 235, 0.15)'
+  },
+  {
+    id: 'uploaded',
+    title: 'Stage 3: Uploaded',
+    subtitle: 'Uploaded to Google Drive & Cloud',
+    color: '#059669',
+    headerBg: 'rgba(5, 150, 105, 0.08)',
+    badgeBg: 'rgba(5, 150, 105, 0.15)'
+  }
+];
+
 export default function PhotoTracker({
   tasks,
   safars,
-  onUpdateTaskStage
+  selectedSafar: propSelectedSafar,
+  onSelectSafar,
+  onUpdateTask,
+  onUpdateTaskStage,
+  onRemoveTask
 }: {
-  tasks: Array<{ id: string; safarName: string; dateFolder: string; stage: string }>;
-  safars: Array<{ safarName: string }>;
-  onUpdateTaskStage: (dateFolder: string, safarName: string, stage: string) => void;
+  tasks: PhotoTaskItem[];
+  safars: Array<{ safarName: string; safarYear?: string | number }>;
+  selectedSafar?: string;
+  onSelectSafar?: (safar: string) => void;
+  onUpdateTask?: (task: PhotoTaskItem, changes: Partial<PhotoTaskItem>) => void;
+  onUpdateTaskStage?: (dateFolder: string, safarName: string, stage: string) => void;
+  onRemoveTask?: (task: PhotoTaskItem) => void;
 }) {
   // Determine available Safars from Task Tracker
   const safarNames = useMemo(() => {
@@ -44,32 +114,48 @@ export default function PhotoTracker({
     return Array.from(set);
   }, [safars, tasks]);
 
-  const [selectedSafar, setSelectedSafar] = useState<string>(() => safarNames[0] || 'Active Safar');
+  const [internalSelectedSafar, setInternalSelectedSafar] = useState<string>(() => {
+    if (propSelectedSafar && propSelectedSafar !== 'all' && safarNames.includes(propSelectedSafar)) {
+      return propSelectedSafar;
+    }
+    return safarNames[0] || 'Active Safar';
+  });
+
+  const selectedSafar = (propSelectedSafar && propSelectedSafar !== 'all') ? propSelectedSafar : internalSelectedSafar;
+
+  const handleSafarChange = (name: string) => {
+    setInternalSelectedSafar(name);
+    if (onSelectSafar) onSelectSafar(name);
+  };
 
   // Keep selection valid
   useEffect(() => {
     if (!safarNames.includes(selectedSafar) && safarNames.length > 0) {
-      setSelectedSafar(safarNames[0]);
+      handleSafarChange(safarNames[0]);
     }
   }, [safarNames, selectedSafar]);
 
-  // Extract expected date folders from Task Tracker for this Safar (single source of truth!)
-  const expectedDateFolders = useMemo(() => {
-    const list = tasks
-      .filter(t => t.safarName === selectedSafar)
-      .map(t => t.dateFolder);
-    return Array.from(new Set(list)).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  // Tasks for the selected Safar
+  const safarTasks = useMemo(() => {
+    return tasks.filter(t => t.safarName === selectedSafar);
   }, [tasks, selectedSafar]);
+
+  // Expected date folders
+  const expectedDateFolders = useMemo(() => {
+    const list = safarTasks.map(t => t.dateFolder);
+    return Array.from(new Set(list)).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  }, [safarTasks]);
 
   const [records, setRecords] = useState<PhotoDeliverable[]>([]);
   const [stats, setStats] = useState<PhotoStats>({ total: 0, uploadedCount: 0, downloadedCount: 0, pendingCount: 0, percentComplete: 0 });
   const [loading, setLoading] = useState(false);
-  const [filter, setFilter] = useState<'all' | 'uploaded' | 'pending' | 'downloaded'>('all');
+  const [filter, setFilter] = useState<'all' | 'edited' | 'given_to_murtaza' | 'uploaded' | 'both_uploaded' | 'photo_only' | 'video_only' | 'both_pending'>('all');
   const [search, setSearch] = useState('');
   const [notice, setNotice] = useState('');
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [gsUrlInput, setGsUrlInput] = useState(() => getGsUrl());
   const [sendingAlert, setSendingAlert] = useState(false);
+  const [viewMode, setViewMode] = useState<'kanban' | 'grid'>('kanban');
 
   // Sync photo folders with Google Drive & Sheet
   const loadPhotoStatus = async () => {
@@ -92,89 +178,166 @@ export default function PhotoTracker({
     loadPhotoStatus();
   }, [selectedSafar, expectedDateFolders.length]);
 
-  // 1. Mark as Uploaded in Google Drive + System Tracker + Trigger WhatsApp Alert (+91 8369811201)
-  const handleMarkUploaded = async (folderName: string) => {
-    try {
-      // A. Call Google Apps Script to tag Drive folder
-      await markDriveFolderUploaded(selectedSafar, folderName, 'One Tap User', window.location.origin);
+  // Helper to resolve photo stage
+  const getPhotoStage = (task: PhotoTaskItem): PhotoStage => {
+    if (task.photoStage) return task.photoStage;
+    if (task.photoUploaded || task.stage === 'upload' || task.stage === 'jameya' || task.stage === 'completed') {
+      return 'uploaded';
+    }
+    return 'edited';
+  };
 
-      // B. Update Task Tracker stage to upload
-      onUpdateTaskStage(folderName, selectedSafar, 'upload');
+  // Group tasks by photo stage
+  const tasksByPhotoStage = useMemo(() => {
+    const map: Record<PhotoStage, PhotoTaskItem[]> = {
+      edited: [],
+      given_to_murtaza: [],
+      uploaded: []
+    };
+    for (const t of safarTasks) {
+      const st = getPhotoStage(t);
+      if (map[st]) map[st].push(t);
+      else map['edited'].push(t);
+    }
+    // Sort folders numerically inside each column
+    Object.keys(map).forEach(key => {
+      map[key as PhotoStage].sort((a, b) => a.dateFolder.localeCompare(b.dateFolder, undefined, { numeric: true }));
+    });
+    return map;
+  }, [safarTasks]);
 
-      // C. Update local state
-      setRecords(prev => prev.map(r => r.dateFolder === folderName ? { ...r, isUploaded: true, status: r.isDownloaded ? 'downloaded' : 'uploaded' } : r));
+  // Overall counts
+  const totalCount = safarTasks.length;
+  const editedCount = tasksByPhotoStage.edited.length;
+  const murtazaCount = tasksByPhotoStage.given_to_murtaza.length;
+  const uploadedCount = tasksByPhotoStage.uploaded.length;
+  const photoPercent = totalCount > 0 ? Math.round((uploadedCount / totalCount) * 100) : 0;
 
-      const updatedUploaded = records.filter(r => r.isUploaded || r.dateFolder === folderName).length;
-      const updatedPending = Math.max(0, records.length - updatedUploaded);
+  // Cross-status calculations
+  const crossStatusCounts = useMemo(() => {
+    let bothUp = 0;
+    let photoOnly = 0;
+    let videoOnly = 0;
+    let bothPend = 0;
+    for (const t of safarTasks) {
+      const pUp = getPhotoStage(t) === 'uploaded';
+      const vUp = t.stage === 'upload' || t.stage === 'jameya' || t.stage === 'completed';
+      if (pUp && vUp) bothUp++;
+      else if (pUp && !vUp) photoOnly++;
+      else if (!pUp && vUp) videoOnly++;
+      else bothPend++;
+    }
+    return { bothUp, photoOnly, videoOnly, bothPend };
+  }, [safarTasks]);
 
-      // D. Send WhatsApp milestone notification
-      await sendWhatsAppAlert({
-        folderName,
+  // Execute task update with full cross-sync
+  const executeUpdate = (task: PhotoTaskItem, changes: Partial<PhotoTaskItem>) => {
+    if (onUpdateTask) {
+      onUpdateTask(task, changes);
+    } else if (onUpdateTaskStage && changes.stage) {
+      onUpdateTaskStage(task.dateFolder, task.safarName, changes.stage);
+    }
+  };
+
+  // Move Photo Stage
+  const handleMovePhotoStage = async (task: PhotoTaskItem, nextStage: PhotoStage) => {
+    const isUploading = nextStage === 'uploaded';
+    const changes: Partial<PhotoTaskItem> = {
+      photoStage: nextStage,
+      photoUploaded: isUploading
+    };
+
+    // Cross-sync rule: when marked uploaded in photo tracker, also mark video as upload!
+    if (isUploading) {
+      if (task.stage === 'editing' || task.stage === 'rendering') {
+        changes.stage = 'upload';
+      }
+    }
+
+    executeUpdate(task, changes);
+
+    if (isUploading) {
+      try {
+        await markDriveFolderUploaded(selectedSafar, task.dateFolder, 'Muffadal Peti', window.location.origin);
+      } catch {}
+
+      const updatedUploaded = uploadedCount + 1;
+      const updatedPending = Math.max(0, totalCount - updatedUploaded);
+      sendWhatsAppAlert({
+        folderName: task.dateFolder,
         uploadedCount: updatedUploaded,
         pendingCount: updatedPending,
         websiteUrl: window.location.origin,
         phone: DEFAULT_WHATSAPP_PHONE
-      });
+      }).catch(() => {});
 
-      setNotice(`Folder ${folderName} marked uploaded in Google Drive & WhatsApp alert sent to +91 ${DEFAULT_WHATSAPP_PHONE}!`);
+      setNotice(`Folder "${task.dateFolder}" marked as Uploaded across Photo & Video!`);
       setTimeout(() => setNotice(''), 4500);
-    } catch (err: any) {
-      setNotice('Notice: ' + (err?.message || 'Updated locally'));
+    } else {
+      setNotice(`Moved "${task.dateFolder}" to ${nextStage === 'given_to_murtaza' ? 'Given To Murtaza' : 'Edited'}.`);
       setTimeout(() => setNotice(''), 3000);
     }
   };
 
-  // 2. Mark as Downloaded
-  const handleMarkDownloaded = async (folderName: string) => {
-    try {
-      await markDriveFolderDownloaded(selectedSafar, folderName, 'Studio Archive');
-      setRecords(prev => prev.map(r => r.dateFolder === folderName ? { ...r, isDownloaded: true, status: 'downloaded' } : r));
-      setNotice(`Folder ${folderName} marked as downloaded to studio storage.`);
-      setTimeout(() => setNotice(''), 3000);
-    } catch (err) {}
-  };
-
-  // 3. Manual WhatsApp Alert Dispatch
-  const handleSendManualWhatsApp = async () => {
-    setSendingAlert(true);
-    try {
-      const uploadedCount = records.filter(r => r.isUploaded).length;
-      const pendingCount = Math.max(0, records.length - uploadedCount);
-      const targetFolder = records.find(r => r.isUploaded)?.dateFolder || expectedDateFolders[0] || 'Latest Batch';
-
-      const res = await sendWhatsAppAlert({
-        folderName: targetFolder,
-        uploadedCount,
-        pendingCount,
-        websiteUrl: window.location.origin,
-        phone: DEFAULT_WHATSAPP_PHONE
+  // One-click toggle upload
+  const handleToggleUpload = (task: PhotoTaskItem) => {
+    const isCurrentlyUploaded = getPhotoStage(task) === 'uploaded';
+    if (isCurrentlyUploaded) {
+      executeUpdate(task, {
+        photoStage: 'edited',
+        photoUploaded: false,
+        stage: 'editing'
       });
-
-      setNotice(res?.success
-        ? `WhatsApp milestone pushed to +91 ${DEFAULT_WHATSAPP_PHONE} (${uploadedCount} uploaded · ${pendingCount} pending)`
-        : 'WhatsApp alert dispatched.');
-      setTimeout(() => setNotice(''), 4000);
-    } finally {
-      setSendingAlert(false);
+      setNotice(`Reset "${task.dateFolder}" to Edited / In Progress.`);
+    } else {
+      handleMovePhotoStage(task, 'uploaded');
     }
   };
 
-  // Filtered rows
-  const filtered = useMemo(() => {
-    return records.filter(r => {
-      if (filter === 'uploaded' && !r.isUploaded) return false;
-      if (filter === 'pending' && r.isUploaded) return false;
-      if (filter === 'downloaded' && !r.isDownloaded) return false;
-      if (search.trim() && !r.dateFolder.toLowerCase().includes(search.trim().toLowerCase())) return false;
+  // Filter tasks
+  const filteredTasks = useMemo(() => {
+    return safarTasks.filter(t => {
+      const pStage = getPhotoStage(t);
+      const isPUp = pStage === 'uploaded';
+      const isVUp = t.stage === 'upload' || t.stage === 'jameya' || t.stage === 'completed';
+
+      if (filter === 'edited' && pStage !== 'edited') return false;
+      if (filter === 'given_to_murtaza' && pStage !== 'given_to_murtaza') return false;
+      if (filter === 'uploaded' && !isPUp) return false;
+      if (filter === 'both_uploaded' && !(isPUp && isVUp)) return false;
+      if (filter === 'photo_only' && !(isPUp && !isVUp)) return false;
+      if (filter === 'video_only' && !(!isPUp && isVUp)) return false;
+      if (filter === 'both_pending' && !(!isPUp && !isVUp)) return false;
+
+      if (search.trim()) {
+        const query = search.trim().toLowerCase();
+        const str = `${t.dateFolder} ${t.hijriDate || ''} ${t.photoEditorName || ''}`.toLowerCase();
+        if (!str.includes(query)) return false;
+      }
       return true;
     });
-  }, [records, filter, search]);
+  }, [safarTasks, filter, search]);
+
+  // Group filtered tasks for kanban columns
+  const filteredColumnTasks = useMemo(() => {
+    const map: Record<PhotoStage, PhotoTaskItem[]> = {
+      edited: [],
+      given_to_murtaza: [],
+      uploaded: []
+    };
+    for (const t of filteredTasks) {
+      const st = getPhotoStage(t);
+      if (map[st]) map[st].push(t);
+      else map['edited'].push(t);
+    }
+    return map;
+  }, [filteredTasks]);
 
   return (
     <section className="panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {/* Notice Banner */}
       {notice && (
-        <div style={{ padding: '12px 16px', borderRadius: '12px', background: '#ECFDF5', border: '1px solid #A7F3D0', color: '#065F46', fontSize: '13px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ padding: '12px 16px', borderRadius: '12px', background: '#ECFDF5', border: '1px solid #A7F3D0', color: '#065F46', fontSize: '13px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', animation: 'fadeIn 0.2s ease' }}>
           <CheckCircle2 size={16} />
           <span>{notice}</span>
         </div>
@@ -184,18 +347,21 @@ export default function PhotoTracker({
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '16px', borderBottom: '1px solid #E2E8F0', paddingBottom: '18px' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.6px', padding: '3px 8px', borderRadius: '6px', background: '#FFE4E6', color: '#BE123C' }}>
-              Google Drive Photo Tracking
+            <span style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.6px', padding: '3px 8px', borderRadius: '6px', background: 'rgba(139, 92, 246, 0.12)', color: '#7c3aed' }}>
+              <Camera size={12} style={{ display: 'inline', marginRight: '4px' }} /> Photo Data Tracker
+            </span>
+            <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '6px', background: '#EEF2FF', color: '#4338CA' }}>
+              Lead Photo Editor: <strong>{DEFAULT_PHOTO_EDITOR}</strong>
             </span>
             <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '6px', background: '#ECFDF5', color: '#047857' }}>
               WA: +91 {DEFAULT_WHATSAPP_PHONE}
             </span>
           </div>
           <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: '#0F172A' }}>
-            Photo Data & Drive Sync
+            Photo Pipeline & Delivery Tracker
           </h2>
           <p style={{ margin: 0, fontSize: '12px', color: '#64748B' }}>
-            Track date folder uploads in Google Drive and notify WhatsApp (+91 8369811201). Date deliverables derived from Task Tracker.
+            Track photo deliverables from Edited to Given To Murtaza to Uploaded. When marked Uploaded, changes instantly sync across both Photo & Safar Trackers.
           </p>
         </div>
 
@@ -204,12 +370,60 @@ export default function PhotoTracker({
           {safarNames.length > 1 && (
             <select
               value={selectedSafar}
-              onChange={e => setSelectedSafar(e.target.value)}
-              style={{ fontSize: '12px', fontWeight: 700, padding: '7px 12px', borderRadius: '10px', border: '1px solid #CBD5E1', background: '#F8FAFC', color: '#0F172A' }}
+              onChange={e => handleSafarChange(e.target.value)}
+              style={{ fontSize: '12px', fontWeight: 700, padding: '7px 12px', borderRadius: '10px', border: '1px solid #CBD5E1', background: '#F8FAFC', color: '#0F172A', cursor: 'pointer' }}
             >
               {safarNames.map(name => <option key={name} value={name}>{name}</option>)}
             </select>
           )}
+
+          {/* Toggle view mode */}
+          <div style={{ display: 'flex', background: '#F1F5F9', padding: '2px', borderRadius: '8px' }}>
+            <button
+              type="button"
+              onClick={() => setViewMode('kanban')}
+              style={{
+                border: 'none',
+                background: viewMode === 'kanban' ? '#FFFFFF' : 'transparent',
+                color: viewMode === 'kanban' ? '#0F172A' : '#64748B',
+                padding: '6px 10px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontSize: '11px',
+                fontWeight: 700,
+                boxShadow: viewMode === 'kanban' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+              }}
+              title="Kanban 3-Stage Pipeline View"
+            >
+              <Kanban size={13} />
+              <span>Kanban</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('grid')}
+              style={{
+                border: 'none',
+                background: viewMode === 'grid' ? '#FFFFFF' : 'transparent',
+                color: viewMode === 'grid' ? '#0F172A' : '#64748B',
+                padding: '6px 10px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontSize: '11px',
+                fontWeight: 700,
+                boxShadow: viewMode === 'grid' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+              }}
+              title="Card Grid View"
+            >
+              <LayoutGrid size={13} />
+              <span>Grid</span>
+            </button>
+          </div>
 
           <button
             type="button"
@@ -218,17 +432,7 @@ export default function PhotoTracker({
             style={{ fontSize: '12px', fontWeight: 700, padding: '7px 14px', borderRadius: '10px', background: '#4F46E5', color: '#FFF', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', opacity: loading ? 0.6 : 1 }}
           >
             <RefreshCw size={14} className={loading ? 'spinning' : ''} />
-            <span>Sync with Drive</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={handleSendManualWhatsApp}
-            disabled={sendingAlert}
-            style={{ fontSize: '12px', fontWeight: 700, padding: '7px 14px', borderRadius: '10px', background: '#059669', color: '#FFF', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', opacity: sendingAlert ? 0.6 : 1 }}
-          >
-            <MessageSquare size={14} />
-            <span>WhatsApp Alert</span>
+            <span>Sync Drive</span>
           </button>
 
           <button
@@ -242,34 +446,81 @@ export default function PhotoTracker({
         </div>
       </div>
 
-      {/* KPI Stats Bar */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' }}>
-        <div style={{ padding: '14px', borderRadius: '14px', background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
-          <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 600 }}>Total Date Folders</span>
-          <div style={{ fontSize: '20px', fontWeight: 800, color: '#0F172A', marginTop: '4px' }}>{stats.total || expectedDateFolders.length}</div>
+      {/* Photo Pipeline KPI & Multi-Color Stage Progress Bar */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', background: '#F8FAFC', padding: '16px', borderRadius: '16px', border: '1px solid #E2E8F0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A' }}>
+              {selectedSafar} Photo Progress
+            </span>
+            <span style={{ fontSize: '12px', color: '#64748B' }}>
+              ({uploadedCount} of {totalCount} dates uploaded)
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <strong style={{ fontSize: '18px', fontWeight: 800, color: '#059669' }}>
+              {photoPercent}%
+            </strong>
+            <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748B' }}>
+              Photos Delivered
+            </span>
+          </div>
         </div>
-        <div style={{ padding: '14px', borderRadius: '14px', background: '#ECFDF5', border: '1px solid #A7F3D0' }}>
-          <span style={{ fontSize: '11px', color: '#047857', fontWeight: 600 }}>Uploaded to Drive</span>
-          <div style={{ fontSize: '20px', fontWeight: 800, color: '#065F46', marginTop: '4px' }}>{stats.uploadedCount}</div>
+
+        {/* 3-Stage Photo Pipeline Bar */}
+        <div className="photo-progress-bar" role="progressbar" aria-label="Photo stage progress">
+          {editedCount > 0 && (
+            <span
+              className="photo-stage-segment stage-photo-edited"
+              style={{ width: `${(editedCount / (totalCount || 1)) * 100}%` }}
+              title={`Stage 1: Edited: ${editedCount} dates (${Math.round((editedCount / (totalCount || 1)) * 100)}%)`}
+            />
+          )}
+          {murtazaCount > 0 && (
+            <span
+              className="photo-stage-segment stage-photo-murtaza"
+              style={{ width: `${(murtazaCount / (totalCount || 1)) * 100}%` }}
+              title={`Stage 2: Given To Murtaza: ${murtazaCount} dates (${Math.round((murtazaCount / (totalCount || 1)) * 100)}%)`}
+            />
+          )}
+          {uploadedCount > 0 && (
+            <span
+              className="photo-stage-segment stage-photo-uploaded"
+              style={{ width: `${(uploadedCount / (totalCount || 1)) * 100}%` }}
+              title={`Stage 3: Uploaded: ${uploadedCount} dates (${Math.round((uploadedCount / (totalCount || 1)) * 100)}%)`}
+            />
+          )}
         </div>
-        <div style={{ padding: '14px', borderRadius: '14px', background: '#FFFBEB', border: '1px solid #FDE68A' }}>
-          <span style={{ fontSize: '11px', color: '#B45309', fontWeight: 600 }}>Pending Upload</span>
-          <div style={{ fontSize: '20px', fontWeight: 800, color: '#92400E', marginTop: '4px' }}>{stats.pendingCount || expectedDateFolders.length - stats.uploadedCount}</div>
-        </div>
-        <div style={{ padding: '14px', borderRadius: '14px', background: '#FAF5FF', border: '1px solid #E9D5FF' }}>
-          <span style={{ fontSize: '11px', color: '#7E22CE', fontWeight: 600 }}>Downloaded</span>
-          <div style={{ fontSize: '20px', fontWeight: 800, color: '#581C87', marginTop: '4px' }}>{stats.downloadedCount}</div>
+
+        {/* Stage Legend */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', fontSize: '11px', fontWeight: 700 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', color: '#7C3AED' }}>
+            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#8B5CF6' }} />
+            {editedCount} In Editing
+          </span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', color: '#1D4ED8' }}>
+            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#3B82F6' }} />
+            {murtazaCount} Given To Murtaza
+          </span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', color: '#047857' }}>
+            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10B981' }} />
+            {uploadedCount} Uploaded
+          </span>
         </div>
       </div>
 
-      {/* Filter and Search Bar */}
+      {/* Filter Pills and Search */}
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#F1F5F9', padding: '3px', borderRadius: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#F1F5F9', padding: '3px', borderRadius: '12px', flexWrap: 'wrap' }}>
           {[
-            { id: 'all', label: `All (${records.length})` },
-            { id: 'uploaded', label: `Uploaded (${records.filter(r => r.isUploaded).length})` },
-            { id: 'pending', label: `Pending (${records.filter(r => !r.isUploaded).length})` },
-            { id: 'downloaded', label: `Downloaded (${records.filter(r => r.isDownloaded).length})` }
+            { id: 'all', label: `All (${totalCount})` },
+            { id: 'edited', label: `🟣 Edited (${editedCount})` },
+            { id: 'given_to_murtaza', label: `🔵 Given To Murtaza (${murtazaCount})` },
+            { id: 'uploaded', label: `🟢 Uploaded (${uploadedCount})` },
+            { id: 'both_uploaded', label: `✓ Both Uploaded (${crossStatusCounts.bothUp})` },
+            { id: 'photo_only', label: `📷 Photo Up · 🎬 Video Pend (${crossStatusCounts.photoOnly})` },
+            { id: 'video_only', label: `🎬 Video Up · 📷 Photo Pend (${crossStatusCounts.videoOnly})` },
+            { id: 'both_pending', label: `⏳ Both Pend (${crossStatusCounts.bothPend})` }
           ].map(tab => (
             <button
               key={tab.id}
@@ -278,12 +529,13 @@ export default function PhotoTracker({
               style={{
                 fontSize: '11px',
                 fontWeight: 700,
-                padding: '6px 12px',
-                borderRadius: '9px',
+                padding: '5px 10px',
+                borderRadius: '8px',
                 border: 'none',
                 cursor: 'pointer',
                 background: filter === tab.id ? '#0F172A' : 'transparent',
-                color: filter === tab.id ? '#FFFFFF' : '#64748B'
+                color: filter === tab.id ? '#FFFFFF' : '#64748B',
+                transition: 'all 0.15s ease'
               }}
             >
               {tab.label}
@@ -303,106 +555,311 @@ export default function PhotoTracker({
         </div>
       </div>
 
-      {/* Date Cards Grid */}
-      {loading ? (
+      {/* Main Content: Kanban Columns or Grid */}
+      {filteredTasks.length === 0 ? (
         <div style={{ padding: '40px', textAlign: 'center', color: '#64748B', fontSize: '13px' }}>
-          Syncing Google Drive folders with Task Tracker dates...
+          No date folders match the selected filter.
         </div>
-      ) : filtered.length === 0 ? (
-        <div style={{ padding: '40px', textAlign: 'center', color: '#64748B', fontSize: '13px' }}>
-          No date folders found for {selectedSafar}. Check your Task Tracker scan.
+      ) : viewMode === 'kanban' ? (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px', alignItems: 'flex-start' }}>
+          {PHOTO_COLUMNS.map(col => {
+            const list = filteredColumnTasks[col.id] || [];
+            return (
+              <div
+                key={col.id}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  background: '#FFFFFF',
+                  border: '1px solid #E2E8F0',
+                  borderRadius: '16px',
+                  overflow: 'hidden',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                  minHeight: '440px'
+                }}
+              >
+                {/* Column Header */}
+                <div style={{ padding: '12px 16px', background: col.headerBg, borderBottom: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '13px', fontWeight: 800, color: '#0F172A' }}>
+                      {col.title}
+                    </h3>
+                    <p style={{ margin: 0, fontSize: '11px', color: '#64748B' }}>
+                      {col.subtitle}
+                    </p>
+                  </div>
+                  <span style={{ fontSize: '11px', fontWeight: 800, background: col.badgeBg, color: col.color, padding: '2px 8px', borderRadius: '999px' }}>
+                    {list.length}
+                  </span>
+                </div>
+
+                {/* Column Cards */}
+                <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '10px', flex: 1, overflowY: 'auto', maxHeight: '620px' }}>
+                  {list.length === 0 ? (
+                    <div style={{ padding: '32px 16px', textAlign: 'center', color: '#94A3B8', fontSize: '12px' }}>
+                      No date folders in this stage
+                    </div>
+                  ) : (
+                    list.map(task => {
+                      const isPhotoUp = getPhotoStage(task) === 'uploaded';
+                      const isVideoUp = task.stage === 'upload' || task.stage === 'jameya' || task.stage === 'completed';
+
+                      return (
+                        <div
+                          key={task.id}
+                          style={{
+                            background: '#F8FAFC',
+                            border: '1px solid #E2E8F0',
+                            borderRadius: '12px',
+                            padding: '12px 14px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '8px',
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
+                          }}
+                        >
+                          {/* Folder Name & Cross Status Badge */}
+                          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
+                            <div>
+                              <span style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A', display: 'block' }}>
+                                {task.dateFolder}
+                              </span>
+                              {task.hijriDate && (
+                                <span style={{ fontSize: '11px', color: '#64748B' }}>
+                                  {task.hijriDate}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Remove button */}
+                            {onRemoveTask && (
+                              <button
+                                type="button"
+                                title="Exclude date"
+                                onClick={() => {
+                                  if (window.confirm(`Exclude "${task.dateFolder}" from tracking?`)) {
+                                    onRemoveTask(task);
+                                  }
+                                }}
+                                style={{ background: 'transparent', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: '2px 4px' }}
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            )}
+                          </div>
+
+                          {/* Cross-Status Visual Chip */}
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', flexWrap: 'wrap' }}>
+                            {isPhotoUp && isVideoUp ? (
+                              <span className="media-sync-badge both-uploaded" title="Both Photo & Video Uploaded">
+                                <CheckCircle2 size={11} /> ✓ Both Uploaded
+                              </span>
+                            ) : isPhotoUp && !isVideoUp ? (
+                              <span className="media-sync-badge photo-only" title="Photo Uploaded by Muffadal Peti · Video Pending">
+                                <Camera size={11} /> Photo Up · Video Pend
+                              </span>
+                            ) : !isPhotoUp && isVideoUp ? (
+                              <span className="media-sync-badge video-only" title="Video Uploaded by Murtaza · Photo Pending">
+                                <Film size={11} /> Video Up · Photo Pend
+                              </span>
+                            ) : (
+                              <span className="media-sync-badge both-pending" title="Both Photo & Video Pending Upload">
+                                <Clock size={11} /> Both Pending
+                              </span>
+                            )}
+
+                            {/* Quick Upload Checkbox */}
+                            <label
+                              title="Click to toggle Uploaded for both Photo & Video"
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 700, color: (isPhotoUp && isVideoUp) ? '#059669' : '#64748B' }}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isPhotoUp && isVideoUp}
+                                onChange={() => handleToggleUpload(task)}
+                              />
+                              <span>{isPhotoUp && isVideoUp ? 'Uploaded' : 'Upload'}</span>
+                            </label>
+                          </div>
+
+                          {/* Editor Assignments */}
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', color: '#64748B', background: '#FFFFFF', padding: '6px 8px', borderRadius: '8px', border: '1px solid #F1F5F9' }}>
+                            <span>Photo: <strong style={{ color: '#7C3AED' }}>{task.photoEditorName || DEFAULT_PHOTO_EDITOR}</strong></span>
+                            <span>Video: <strong style={{ color: '#0F172A' }}>{task.editorName || DEFAULT_VIDEO_EDITOR}</strong></span>
+                          </div>
+
+                          {/* Stage Transition Buttons */}
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', paddingTop: '6px', borderTop: '1px solid #F1F5F9' }}>
+                            {col.id === 'edited' && (
+                              <button
+                                type="button"
+                                onClick={() => handleMovePhotoStage(task, 'given_to_murtaza')}
+                                style={{ width: '100%', fontSize: '11px', fontWeight: 700, padding: '6px 10px', borderRadius: '8px', background: '#EEF2FF', color: '#4338CA', border: '1px solid #C7D2FE', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                              >
+                                <span>Hand to Murtaza</span>
+                                <ArrowRight size={12} />
+                              </button>
+                            )}
+
+                            {col.id === 'given_to_murtaza' && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleMovePhotoStage(task, 'edited')}
+                                  style={{ fontSize: '11px', fontWeight: 600, padding: '6px 10px', borderRadius: '8px', background: '#F1F5F9', color: '#475569', border: '1px solid #E2E8F0', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                >
+                                  <ArrowLeft size={12} />
+                                  <span>Edit</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleMovePhotoStage(task, 'uploaded')}
+                                  style={{ flex: 1, fontSize: '11px', fontWeight: 700, padding: '6px 10px', borderRadius: '8px', background: '#ECFDF5', color: '#065F46', border: '1px solid #A7F3D0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                                >
+                                  <UploadCloud size={12} />
+                                  <span>Mark Uploaded</span>
+                                </button>
+                              </>
+                            )}
+
+                            {col.id === 'uploaded' && (
+                              <button
+                                type="button"
+                                onClick={() => handleMovePhotoStage(task, 'given_to_murtaza')}
+                                style={{ width: '100%', fontSize: '11px', fontWeight: 600, padding: '6px 10px', borderRadius: '8px', background: '#F1F5F9', color: '#475569', border: '1px solid #E2E8F0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                              >
+                                <ArrowLeft size={12} />
+                                <span>Revert to Murtaza</span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       ) : (
+        /* Card Grid View */
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
-          {filtered.map(rec => (
-            <div
-              key={rec.dateFolder}
-              style={{
-                padding: '16px',
-                borderRadius: '16px',
-                background: '#FFFFFF',
-                border: '1px solid #E2E8F0',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '12px'
-              }}
-            >
-              {/* Header */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                <span style={{ fontSize: '14px', fontWeight: 800, fontFamily: 'monospace', color: '#0F172A' }}>
-                  {rec.dateFolder}
-                </span>
-                {rec.isUploaded ? (
-                  <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '999px', background: '#ECFDF5', color: '#065F46', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <CheckCircle2 size={13} />
-                    Uploaded
-                  </span>
-                ) : (
-                  <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '999px', background: '#FFFBEB', color: '#92400E', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <Clock size={13} />
-                    Pending
-                  </span>
-                )}
-              </div>
+          {filteredTasks.map(task => {
+            const photoStage = getPhotoStage(task);
+            const isPhotoUp = photoStage === 'uploaded';
+            const isVideoUp = task.stage === 'upload' || task.stage === 'jameya' || task.stage === 'completed';
 
-              {/* Status details */}
-              <div style={{ fontSize: '11px', color: '#64748B', background: '#F8FAFC', padding: '10px 12px', borderRadius: '10px', display: 'grid', gap: '4px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Google Drive:</span>
-                  <strong style={{ color: rec.isUploaded ? '#059669' : '#D97706' }}>{rec.isUploaded ? '[UPLOADED] Tagged' : 'Awaiting upload'}</strong>
+            return (
+              <div
+                key={task.id}
+                style={{
+                  padding: '16px',
+                  borderRadius: '16px',
+                  background: '#FFFFFF',
+                  border: '1px solid #E2E8F0',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px'
+                }}
+              >
+                {/* Header */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
+                  <div>
+                    <span style={{ fontSize: '14px', fontWeight: 800, color: '#0F172A' }}>
+                      {task.dateFolder}
+                    </span>
+                    {task.hijriDate && (
+                      <span style={{ fontSize: '11px', color: '#64748B', display: 'block' }}>
+                        {task.hijriDate}
+                      </span>
+                    )}
+                  </div>
+                  <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '999px', background: photoStage === 'uploaded' ? '#ECFDF5' : photoStage === 'given_to_murtaza' ? '#EEF2FF' : '#F5F3FF', color: photoStage === 'uploaded' ? '#047857' : photoStage === 'given_to_murtaza' ? '#1D4ED8' : '#7C3AED' }}>
+                    {photoStage === 'uploaded' ? 'Uploaded' : photoStage === 'given_to_murtaza' ? 'Given To Murtaza' : 'Edited'}
+                  </span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Archive Vault:</span>
-                  <strong style={{ color: rec.isDownloaded ? '#7E22CE' : '#64748B' }}>{rec.isDownloaded ? 'Downloaded' : 'Pending'}</strong>
-                </div>
-              </div>
 
-              {/* Action Buttons */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', paddingTop: '8px', borderTop: '1px solid #F1F5F9' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  {!rec.isUploaded ? (
-                    <button
-                      type="button"
-                      onClick={() => handleMarkUploaded(rec.dateFolder)}
-                      style={{ fontSize: '11px', fontWeight: 700, padding: '6px 12px', borderRadius: '8px', background: '#059669', color: '#FFF', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                    >
-                      <UploadCloud size={13} />
-                      <span>Mark Uploaded</span>
-                    </button>
+                {/* Cross-Status Visual Chip */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', flexWrap: 'wrap' }}>
+                  {isPhotoUp && isVideoUp ? (
+                    <span className="media-sync-badge both-uploaded" title="Both Photo & Video Uploaded">
+                      <CheckCircle2 size={12} /> ✓ Both Uploaded
+                    </span>
+                  ) : isPhotoUp && !isVideoUp ? (
+                    <span className="media-sync-badge photo-only" title="Photo Uploaded by Muffadal Peti · Video Pending">
+                      <Camera size={12} /> Photo Up · Video Pend
+                    </span>
+                  ) : !isPhotoUp && isVideoUp ? (
+                    <span className="media-sync-badge video-only" title="Video Uploaded by Murtaza · Photo Pending">
+                      <Film size={12} /> Video Up · Photo Pend
+                    </span>
                   ) : (
-                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#059669', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Check size={13} />
-                      Synced
+                    <span className="media-sync-badge both-pending" title="Both Photo & Video Pending Upload">
+                      <Clock size={12} /> Both Pending
                     </span>
                   )}
 
-                  {!rec.isDownloaded && rec.isUploaded && (
-                    <button
-                      type="button"
-                      onClick={() => handleMarkDownloaded(rec.dateFolder)}
-                      style={{ fontSize: '11px', fontWeight: 600, padding: '6px 10px', borderRadius: '8px', background: '#F3E8FF', color: '#6B21A8', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                    >
-                      <Download size={13} />
-                      <span>Downloaded</span>
-                    </button>
-                  )}
+                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 700, color: (isPhotoUp && isVideoUp) ? '#059669' : '#64748B' }}>
+                    <input
+                      type="checkbox"
+                      checked={isPhotoUp && isVideoUp}
+                      onChange={() => handleToggleUpload(task)}
+                    />
+                    <span>{isPhotoUp && isVideoUp ? 'Uploaded' : 'Upload'}</span>
+                  </label>
                 </div>
 
-                {rec.driveFolderUrl && (
-                  <a
-                    href={rec.driveFolderUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    style={{ color: '#4F46E5', padding: '4px', display: 'flex', alignItems: 'center' }}
-                    title="Open Google Drive folder"
-                  >
-                    <ExternalLink size={15} />
-                  </a>
-                )}
+                {/* Editors */}
+                <div style={{ fontSize: '11px', color: '#64748B', background: '#F8FAFC', padding: '10px 12px', borderRadius: '10px', display: 'grid', gap: '4px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Photo Editor:</span>
+                    <strong style={{ color: '#7C3AED' }}>{task.photoEditorName || DEFAULT_PHOTO_EDITOR}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Video Lead:</span>
+                    <strong style={{ color: '#0F172A' }}>{task.editorName || DEFAULT_VIDEO_EDITOR}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Video Stage:</span>
+                    <strong style={{ color: isVideoUp ? '#059669' : '#D97706' }}>{task.stage}</strong>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', paddingTop: '8px', borderTop: '1px solid #F1F5F9' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    {photoStage !== 'uploaded' ? (
+                      <button
+                        type="button"
+                        onClick={() => handleMovePhotoStage(task, 'uploaded')}
+                        style={{ fontSize: '11px', fontWeight: 700, padding: '6px 12px', borderRadius: '8px', background: '#059669', color: '#FFF', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                      >
+                        <UploadCloud size={13} />
+                        <span>Mark Uploaded</span>
+                      </button>
+                    ) : (
+                      <span style={{ fontSize: '11px', fontWeight: 700, color: '#059669', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Check size={13} />
+                        Uploaded & Synced
+                      </span>
+                    )}
+
+                    {photoStage === 'edited' && (
+                      <button
+                        type="button"
+                        onClick={() => handleMovePhotoStage(task, 'given_to_murtaza')}
+                        style={{ fontSize: '11px', fontWeight: 600, padding: '6px 10px', borderRadius: '8px', background: '#EEF2FF', color: '#4338CA', border: '1px solid #C7D2FE', cursor: 'pointer' }}
+                      >
+                        Hand to Murtaza
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

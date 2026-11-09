@@ -154,6 +154,9 @@ class AnyShareRealtimeService {
         isMissing,
         dueDate: previous?.dueDate || '',
         editorName: previous?.editorName || 'Murtaza',
+        photoStage: (previous as any)?.photoStage || (resolvedStage === 'upload' || resolvedStage === 'jameya' || resolvedStage === 'completed' ? 'uploaded' : 'edited'),
+        photoEditorName: (previous as any)?.photoEditorName || 'Muffadal Peti',
+        photoUploaded: (previous as any)?.photoUploaded !== undefined ? (previous as any).photoUploaded : (resolvedStage === 'upload' || resolvedStage === 'jameya' || resolvedStage === 'completed'),
         updatedAt: now,
         order: index
       };

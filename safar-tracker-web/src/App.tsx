@@ -24,7 +24,8 @@ import {
   LogOut,
   CheckCircle2,
   RefreshCw,
-  Trash2
+  Trash2,
+  Clock
 } from 'lucide-react'
 import OngoingSafarKanban, { type SafarTaskItem, isJunkSafarName } from './components/OngoingSafarKanban'
 import PhotoTracker from './components/PhotoTracker'
@@ -39,7 +40,9 @@ import {
 } from './lib/googleAppsScript'
 
 type Stage = 'editing' | 'rendering' | 'upload' | 'jameya' | 'completed'
+export type PhotoStage = 'edited' | 'given_to_murtaza' | 'uploaded'
 export const DEFAULT_EDITOR = 'Murtaza'
+export const DEFAULT_PHOTO_EDITOR = 'Muffadal Peti'
 type View = 'dashboard' | 'ongoing' | 'photos' | 'tracker' | 'archive' | 'editors' | 'pipeline' | 'settings'
 
 const VIEW_PATHS: Record<View, string> = {
@@ -81,6 +84,9 @@ type SafarTask = {
   stage: Stage
   dueDate: string
   editorName?: string
+  photoStage?: PhotoStage
+  photoEditorName?: string
+  photoUploaded?: boolean
   updatedAt: string
   isPresent?: boolean
   isMissing?: boolean
@@ -109,6 +115,11 @@ type SafarGroup = SafarSummary & {
   total: number
   completed: number
   percent: number
+  deliveredPercent: number
+  progressPercent: number
+  deliveredCount: number
+  photoUploadedCount: number
+  photoPercent: number
   editingCount: number
   renderingCount: number
   uploadCount: number
@@ -132,6 +143,9 @@ export type TaskStageOverride = {
   stage?: Stage
   editorName?: string
   dueDate?: string
+  photoStage?: PhotoStage
+  photoEditorName?: string
+  photoUploaded?: boolean
   updatedAt: string
 }
 
@@ -308,6 +322,10 @@ function normalizeSnapshot(value: Partial<Snapshot> | null | undefined): Snapsho
       const stage: Stage = override?.stage || defaultStage
       const editorName = override?.editorName !== undefined ? override.editorName : (raw.editorName?.trim() || DEFAULT_EDITOR)
       const dueDate = override?.dueDate !== undefined ? override.dueDate : String(raw.dueDate || '')
+      const defaultPhotoStage: PhotoStage = (stage === 'upload' || stage === 'jameya' || stage === 'completed' || raw.photoUploaded) ? 'uploaded' : (raw.photoStage || 'edited')
+      const photoStage: PhotoStage = override?.photoStage || defaultPhotoStage
+      const photoEditorName = override?.photoEditorName !== undefined ? override.photoEditorName : (raw.photoEditorName?.trim() || DEFAULT_PHOTO_EDITOR)
+      const photoUploaded = Boolean(photoStage === 'uploaded' || override?.photoUploaded || raw.photoUploaded)
       return {
         id: String(raw.id || `${safarName}::${dateFolder}::${index}`),
         safarName,
@@ -316,6 +334,9 @@ function normalizeSnapshot(value: Partial<Snapshot> | null | undefined): Snapsho
         stage,
         editorName,
         dueDate,
+        photoStage,
+        photoEditorName,
+        photoUploaded,
         updatedAt: String(override?.updatedAt || raw.updatedAt || value?.updatedAt || ''),
         isPresent,
         isMissing,
@@ -344,7 +365,10 @@ function normalizeSnapshot(value: Partial<Snapshot> | null | undefined): Snapsho
         ...t,
         stage,
         editorName: override?.editorName ?? (t.editorName || existing.editorName || DEFAULT_EDITOR),
-        dueDate: override?.dueDate ?? (t.dueDate || existing.dueDate || '')
+        dueDate: override?.dueDate ?? (t.dueDate || existing.dueDate || ''),
+        photoStage: override?.photoStage ?? (t.photoStage || existing.photoStage || 'edited'),
+        photoEditorName: override?.photoEditorName ?? (t.photoEditorName || existing.photoEditorName || DEFAULT_PHOTO_EDITOR),
+        photoUploaded: override?.photoUploaded ?? (t.photoUploaded || existing.photoUploaded || false)
       })
     }
   }
@@ -464,13 +488,50 @@ function SafarProductionGroup({ group, expanded, onToggle, onArchive, onUpdateTa
       </div>
     </div>
     {expanded && <div className="safar-date-list">
-      <div className="safar-date-list-heading"><span>Date folder</span><span>Editor</span><span>Stage</span><span>Due date</span><span>Action</span></div>
-      {group.tasks.length ? group.tasks.map(task => <div className="safar-date-row" key={task.id}>
-        <span className="safar-date-value" title={dateFolderName(task)}>{dateFolderName(task)}</span>
-        <div className="safar-edit-cell" data-label="Editor"><EditorAssignment label={`Editor assigned to ${dateFolderName(task)}`} value={task.editorName || ''} onSave={editorName => onUpdateTask(task, { editorName })}/></div>
-        <div className="safar-edit-cell" data-label="Stage"><select aria-label={`Production stage for ${dateFolderName(task)}`} className={`stage-select stage-${task.stage}`} value={task.stage} onChange={event => onUpdateTask(task, { stage: event.target.value as Stage })}>{STAGES.map((stage, index) => <option key={stage.id} value={stage.id}>{index + 1}. {stage.label}</option>)}</select></div>
-        <div className="safar-edit-cell" data-label="Due date"><input className="due-input" aria-label={`Due date for ${dateFolderName(task)}`} type="date" value={task.dueDate} onChange={event => onUpdateTask(task, { dueDate: event.target.value})}/></div>
-        <div className="safar-edit-cell" data-label="Action">
+      <div className="safar-date-list-heading"><span>Date folder</span><span>Deliverables</span><span>Editor</span><span>Stage</span><span>Due date</span><span>Action</span></div>
+      {group.tasks.length ? group.tasks.map(task => {
+        const isPhotoUp = task.photoStage === 'uploaded' || Boolean(task.photoUploaded) || (task.stage === 'upload' || task.stage === 'jameya' || task.stage === 'completed')
+        const isVideoUp = task.stage === 'upload' || task.stage === 'jameya' || task.stage === 'completed'
+        return <div className="safar-date-row" key={task.id}>
+          <span className="safar-date-value" title={dateFolderName(task)}>{dateFolderName(task)}</span>
+          <div className="safar-edit-cell" data-label="Deliverables" style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+            {isPhotoUp && isVideoUp ? (
+              <span className="media-sync-badge both-uploaded" title="Both Photo & Video Uploaded">
+                <CheckCircle2 size={11} /> Both Uploaded
+              </span>
+            ) : isPhotoUp && !isVideoUp ? (
+              <span className="media-sync-badge photo-only" title="Photo Uploaded by Muffadal Peti · Video Pending">
+                <Camera size={11} /> Photo Up · Video Pend
+              </span>
+            ) : !isPhotoUp && isVideoUp ? (
+              <span className="media-sync-badge video-only" title="Video Uploaded by Murtaza · Photo Pending">
+                <Film size={11} /> Video Up · Photo Pend
+              </span>
+            ) : (
+              <span className="media-sync-badge both-pending" title="Both Photo & Video Pending Upload">
+                <Clock size={11} /> Both Pending
+              </span>
+            )}
+            <label title={isVideoUp && isPhotoUp ? 'Folder Uploaded across Photo & Video' : 'Click to mark Uploaded across both trackers'} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 700, color: (isVideoUp && isPhotoUp) ? '#059669' : '#64748b' }}>
+              <input
+                type="checkbox"
+                checked={isVideoUp && isPhotoUp}
+                onChange={e => {
+                  const willUpload = e.target.checked
+                  onUpdateTask(task, {
+                    stage: willUpload ? 'upload' : 'editing',
+                    photoStage: willUpload ? 'uploaded' : 'edited',
+                    photoUploaded: willUpload
+                  })
+                }}
+              />
+              <span>{isVideoUp && isPhotoUp ? 'Uploaded' : 'Upload'}</span>
+            </label>
+          </div>
+          <div className="safar-edit-cell" data-label="Editor"><EditorAssignment label={`Editor assigned to ${dateFolderName(task)}`} value={task.editorName || ''} onSave={editorName => onUpdateTask(task, { editorName })}/></div>
+          <div className="safar-edit-cell" data-label="Stage"><select aria-label={`Production stage for ${dateFolderName(task)}`} className={`stage-select stage-${task.stage}`} value={task.stage} onChange={event => onUpdateTask(task, { stage: event.target.value as Stage })}>{STAGES.map((stage, index) => <option key={stage.id} value={stage.id}>{index + 1}. {stage.label}</option>)}</select></div>
+          <div className="safar-edit-cell" data-label="Due date"><input className="due-input" aria-label={`Due date for ${dateFolderName(task)}`} type="date" value={task.dueDate} onChange={event => onUpdateTask(task, { dueDate: event.target.value})}/></div>
+          <div className="safar-edit-cell" data-label="Action">
           {onRemoveTask && (
             <button
               type="button"
@@ -498,7 +559,7 @@ function SafarProductionGroup({ group, expanded, onToggle, onArchive, onUpdateTa
             </button>
           )}
         </div>
-      </div>) : <p className="safar-empty-dates">No date folders match these filters.</p>}
+      </div>}) : <p className="safar-empty-dates">No date folders match these filters.</p>}
     </div>}
   </article>
 }
@@ -563,10 +624,15 @@ export default function App(): JSX.Element {
       const uploadCount = tasks.filter(task => task.stage === 'upload').length
       const jameyaCount = tasks.filter(task => task.stage === 'jameya').length
       const completedCount = tasks.filter(task => task.stage === 'completed').length
+      const photoUploadedCount = tasks.filter(task => task.photoStage === 'uploaded' || task.photoUploaded).length
       const total = Math.max(tasks.length, Number(summary.totalDays) || 0)
       const finishedDates = jameyaCount + completedCount
       const isArchived = Boolean(summary.isArchived || (total > 0 && finishedDates >= total))
       const completed = isArchived ? total : finishedDates
+      const deliveredCount = isArchived ? total : (uploadCount + jameyaCount + completedCount)
+      const deliveredPercent = isArchived ? 100 : total ? Math.min(100, Math.round((deliveredCount / total) * 100)) : 0
+      const progressPercent = isArchived ? 100 : total ? Math.min(100, Math.round(((editingCount * 20 + renderingCount * 45 + uploadCount * 75 + jameyaCount * 90 + completedCount * 100) / total) / 100 * 100)) : 0
+      const photoPercent = total ? Math.min(100, Math.round((photoUploadedCount / total) * 100)) : 0
       return {
         ...summary,
         isArchived,
@@ -574,7 +640,12 @@ export default function App(): JSX.Element {
         tasks,
         total,
         completed,
-        percent: isArchived ? 100 : total ? Math.min(100, Math.round(completed / total * 100)) : 0,
+        percent: deliveredPercent,
+        deliveredPercent,
+        progressPercent,
+        deliveredCount,
+        photoUploadedCount,
+        photoPercent,
         editingCount: isArchived ? 0 : editingCount,
         renderingCount: isArchived ? 0 : renderingCount,
         uploadCount: isArchived ? 0 : uploadCount,
@@ -630,6 +701,7 @@ export default function App(): JSX.Element {
     let upload = 0
     let jameya = 0
     let completed = 0
+    let photoUploaded = 0
     for (const g of activeSafarGroups) {
       totalDates += g.total
       editing += g.editingCount
@@ -637,9 +709,13 @@ export default function App(): JSX.Element {
       upload += g.uploadCount
       jameya += g.jameyaCount
       completed += g.completedCount
+      photoUploaded += g.photoUploadedCount
     }
-    const percent = totalDates > 0 ? Math.min(100, Math.round(((jameya + completed) / totalDates) * 100)) : 0
-    return { totalDates, editing, rendering, upload, jameya, completed, percent }
+    const deliveredDates = upload + jameya + completed
+    const deliveredPercent = totalDates > 0 ? Math.min(100, Math.round((deliveredDates / totalDates) * 100)) : 0
+    const progressPercent = totalDates > 0 ? Math.min(100, Math.round(((editing * 20 + rendering * 45 + upload * 75 + jameya * 90 + completed * 100) / totalDates) / 100 * 100)) : 0
+    const photoPercent = totalDates > 0 ? Math.min(100, Math.round((photoUploaded / totalDates) * 100)) : 0
+    return { totalDates, editing, rendering, upload, jameya, completed, deliveredDates, deliveredPercent, progressPercent, photoUploaded, photoPercent, percent: deliveredPercent }
   }, [activeSafarGroups])
   const hasTaskFilters = Boolean(search.trim()) || filter !== 'all' || selectedEditor !== 'all'
   const visibleSafarGroups = matchingSafarGroups.filter(group =>
@@ -810,7 +886,10 @@ export default function App(): JSX.Element {
             ...t,
             stage: override.stage || t.stage,
             editorName: override.editorName !== undefined ? override.editorName : t.editorName,
-            dueDate: override.dueDate !== undefined ? override.dueDate : t.dueDate
+            dueDate: override.dueDate !== undefined ? override.dueDate : t.dueDate,
+            photoStage: override.photoStage || t.photoStage,
+            photoEditorName: override.photoEditorName !== undefined ? override.photoEditorName : t.photoEditorName,
+            photoUploaded: override.photoUploaded !== undefined ? override.photoUploaded : t.photoUploaded
           }
         }
         return t
@@ -946,14 +1025,31 @@ export default function App(): JSX.Element {
     const updatedAt = new Date().toISOString()
     const targetKey = getTaskKey(task.safarName, task.dateFolder)
 
+    // Cross-sync rule: when marked as Uploaded in either Photo Tracker or Safar Tracker,
+    // mark that date/session folder as Uploaded in BOTH trackers!
+    const effectiveChanges: Partial<SafarTask> = { ...changes }
+    if (changes.photoStage === 'uploaded' || changes.photoUploaded === true) {
+      effectiveChanges.photoStage = 'uploaded'
+      effectiveChanges.photoUploaded = true
+      if (task.stage === 'editing' || task.stage === 'rendering') {
+        effectiveChanges.stage = 'upload'
+      }
+    } else if (changes.stage === 'upload' || changes.stage === 'jameya' || changes.stage === 'completed') {
+      effectiveChanges.photoStage = 'uploaded'
+      effectiveChanges.photoUploaded = true
+    }
+
     // Save changes into persistent overrides store so they survive reloads and desktop scans
     const overrides = getStageOverrides()
     const currentOverride = overrides.get(targetKey) || { updatedAt }
     overrides.set(targetKey, {
       ...currentOverride,
-      ...(changes.stage ? { stage: changes.stage } : {}),
-      ...(changes.editorName !== undefined ? { editorName: changes.editorName } : {}),
-      ...(changes.dueDate !== undefined ? { dueDate: changes.dueDate } : {}),
+      ...(effectiveChanges.stage ? { stage: effectiveChanges.stage } : {}),
+      ...(effectiveChanges.editorName !== undefined ? { editorName: effectiveChanges.editorName } : {}),
+      ...(effectiveChanges.dueDate !== undefined ? { dueDate: effectiveChanges.dueDate } : {}),
+      ...(effectiveChanges.photoStage ? { photoStage: effectiveChanges.photoStage } : {}),
+      ...(effectiveChanges.photoEditorName !== undefined ? { photoEditorName: effectiveChanges.photoEditorName } : {}),
+      ...(effectiveChanges.photoUploaded !== undefined ? { photoUploaded: effectiveChanges.photoUploaded } : {}),
       updatedAt
     })
     saveStageOverrides(overrides)
@@ -964,7 +1060,7 @@ export default function App(): JSX.Element {
       source: 'website',
       tasks: snapshot.tasks.map(row => {
         if (row.id === task.id || getTaskKey(row.safarName, row.dateFolder) === targetKey) {
-          return { ...row, ...changes, updatedAt }
+          return { ...row, ...effectiveChanges, updatedAt }
         }
         return row
       })
@@ -976,12 +1072,12 @@ export default function App(): JSX.Element {
       const { error } = await supabase.from('safar_tracker_snapshots').upsert({ id: 'primary', snapshot: next, updated_at: updatedAt })
       if (error) setNotice('Saved on this device. Cloud history needs the Safar Tracker database setup.')
       await trackerChannelRef.current?.send({ type: 'broadcast', event: 'snapshot', payload: { snapshot: next } })
-      if (changes.stage) {
-        const status = (changes.stage === 'jameya' || changes.stage === 'completed') ? 'submitted' : changes.stage === 'upload' ? 'uploaded' : 'auto'
+      if (effectiveChanges.stage) {
+        const status = (effectiveChanges.stage === 'jameya' || effectiveChanges.stage === 'completed') ? 'submitted' : effectiveChanges.stage === 'upload' ? 'uploaded' : 'auto'
         await nexusChannelRef.current?.send({ type: 'broadcast', event: 'task_mark_done', payload: { safarName: task.safarName, dateFolder: task.dateFolder, status } })
 
         // Trigger WhatsApp alert on completion of upload, jameya or completed
-        if (changes.stage === 'upload' || changes.stage === 'jameya' || changes.stage === 'completed') {
+        if (effectiveChanges.stage === 'upload' || effectiveChanges.stage === 'jameya' || effectiveChanges.stage === 'completed') {
           const uploadedCount = next.tasks.filter(t => t.safarName === task.safarName && (t.stage === 'upload' || t.stage === 'jameya' || t.stage === 'completed')).length
           const totalCount = next.tasks.filter(t => t.safarName === task.safarName).length
           const pendingCount = Math.max(0, totalCount - uploadedCount)
@@ -1403,12 +1499,10 @@ export default function App(): JSX.Element {
             <PhotoTracker
               tasks={snapshot.tasks}
               safars={snapshot.safars}
-              onUpdateTaskStage={(dateFolder, safarName, stage) => {
-                const targetTask = snapshot.tasks.find(t => t.safarName === safarName && t.dateFolder === dateFolder)
-                if (targetTask) {
-                  void updateTask(targetTask, { stage: stage as Stage })
-                }
-              }}
+              selectedSafar={selectedSafar}
+              onSelectSafar={safar => setSelectedSafar(safar)}
+              onUpdateTask={(task, changes) => void updateTask(task as SafarTask, changes as Partial<SafarTask>)}
+              onRemoveTask={task => void handleRemoveTask(task as SafarTask)}
             />
           )}
 
@@ -1464,7 +1558,10 @@ export default function App(): JSX.Element {
                     <span>{group.safarName}</span>
                     <small>{hijriYearLabel(group.safarYear)}{group.safarYear && ' · '}{group.total} {group.total === 1 ? 'date' : 'dates'}</small>
                   </button>
-                  <strong className="dashboard-safar-percent">{group.percent}%</strong>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
+                    <strong className="dashboard-safar-percent">{group.deliveredPercent}%</strong>
+                    <span className="dashboard-safar-percent-sub">{group.deliveredCount}/{group.total} Delivered</span>
+                  </div>
                 </div>
 
                 {/* Multi-Color Stage Progress Bar */}
@@ -1485,34 +1582,56 @@ export default function App(): JSX.Element {
                   </div>
                 </div>
 
-                <p className="dashboard-safar-progress-copy">
-                  {group.completed} of {group.total} dates completed {group.total > group.completed ? `(${group.total - group.completed} in progress)` : '· All stages complete!'}
-                </p>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', fontSize: '11px', color: '#64748b', margin: '6px 0 8px', flexWrap: 'wrap' }}>
+                  <span><strong>{group.deliveredCount}</strong> of <strong>{group.total}</strong> dates delivered · {group.progressPercent}% pipeline</span>
+                  <span style={{ color: '#047857', fontWeight: 700 }}>📷 Photos: {group.photoUploadedCount}/{group.total} ({group.photoPercent}%)</span>
+                </div>
 
-                {group.tasks.length ? <ul className="safar-preview-list">{group.tasks.slice(0, 4).map(task => (
-                  <li key={task.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
-                      <span className={`chip-dot dot-${task.stage}`} title={`Stage: ${task.stage}`} />
-                      <strong title={dateFolderName(task)} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{dateFolderName(task)}</strong>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-                      <span className={`stage-tag stage-${task.stage}`}>{STAGES.find(s => s.id === task.stage)?.label || task.stage}</span>
-                      <button
-                        type="button"
-                        className="preview-remove-btn"
-                        title={`Exclude ${dateFolderName(task)}`}
-                        onClick={e => {
-                          e.stopPropagation()
-                          if (window.confirm(`Exclude "${dateFolderName(task)}" from tracking?`)) {
-                            void handleRemoveTask(task)
-                          }
-                        }}
-                      >
-                        <Trash2 size={12} />
-                      </button>
-                    </div>
-                  </li>
-                ))}</ul> : <p className="safar-preview-empty">Waiting for date folders to sync.</p>}
+                {group.tasks.length ? <ul className="safar-preview-list">{group.tasks.slice(0, 4).map(task => {
+                  const isPhotoUp = task.photoStage === 'uploaded' || Boolean(task.photoUploaded) || (task.stage === 'upload' || task.stage === 'jameya' || task.stage === 'completed')
+                  const isVideoUp = task.stage === 'upload' || task.stage === 'jameya' || task.stage === 'completed'
+                  return (
+                    <li key={task.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                        <span className={`chip-dot dot-${task.stage}`} title={`Stage: ${task.stage}`} />
+                        <strong title={dateFolderName(task)} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{dateFolderName(task)}</strong>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                        {isPhotoUp && isVideoUp ? (
+                          <span className="media-sync-badge both-uploaded" title="Both Photo & Video Uploaded">
+                            <CheckCircle2 size={11} /> Both Uploaded
+                          </span>
+                        ) : isPhotoUp && !isVideoUp ? (
+                          <span className="media-sync-badge photo-only" title="Photo Uploaded by Muffadal Peti · Video Pending">
+                            <Camera size={11} /> Photo Up · Video Pend
+                          </span>
+                        ) : !isPhotoUp && isVideoUp ? (
+                          <span className="media-sync-badge video-only" title="Video Uploaded by Murtaza · Photo Pending">
+                            <Film size={11} /> Video Up · Photo Pend
+                          </span>
+                        ) : (
+                          <span className="media-sync-badge both-pending" title="Both Photo & Video Pending Upload">
+                            <Clock size={11} /> Both Pending
+                          </span>
+                        )}
+                        <span className={`stage-tag stage-${task.stage}`}>{STAGES.find(s => s.id === task.stage)?.label || task.stage}</span>
+                        <button
+                          type="button"
+                          className="preview-remove-btn"
+                          title={`Exclude ${dateFolderName(task)}`}
+                          onClick={e => {
+                            e.stopPropagation()
+                            if (window.confirm(`Exclude "${dateFolderName(task)}" from tracking?`)) {
+                              void handleRemoveTask(task)
+                            }
+                          }}
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    </li>
+                  )
+                })}</ul> : <p className="safar-preview-empty">Waiting for date folders to sync.</p>}
 
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginTop: '12px', paddingTop: '10px', borderTop: '1px solid var(--border)' }}>
                   <button type="button" className="safar-open-link" onClick={() => { setSelectedSafar(group.safarName); navigateTo('ongoing') }}>

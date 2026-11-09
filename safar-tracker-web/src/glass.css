@@ -864,3 +864,76 @@ body {
   box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3) !important;
   border: 1px solid rgba(255, 255, 255, 0.3) !important;
 }
+
+/* Media Sync Badges: Photo & Video Cross-Status */
+.media-sync-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 3px 8px;
+  border-radius: 999px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.media-sync-badge.both-uploaded {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+  box-shadow: 0 1px 2px rgba(4, 120, 87, 0.08);
+}
+.media-sync-badge.photo-only {
+  background: #ecfeff;
+  color: #0e7490;
+  border: 1px solid #a5f3fc;
+  box-shadow: 0 1px 2px rgba(14, 116, 144, 0.08);
+}
+.media-sync-badge.video-only {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+  box-shadow: 0 1px 2px rgba(29, 78, 216, 0.08);
+}
+.media-sync-badge.both-pending {
+  background: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+/* Photo Pipeline Progress Bar */
+.photo-progress-bar {
+  display: flex;
+  height: 8px;
+  width: 100%;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.06);
+}
+.photo-stage-segment {
+  height: 100%;
+  transition: width 0.3s ease;
+}
+.photo-stage-segment.stage-photo-edited {
+  background: linear-gradient(90deg, #8b5cf6, #a78bfa);
+}
+.photo-stage-segment.stage-photo-murtaza {
+  background: linear-gradient(90deg, #3b82f6, #60a5fa);
+}
+.photo-stage-segment.stage-photo-uploaded {
+  background: linear-gradient(90deg, #10b981, #34d399);
+}
+
+/* Dashboard Percentage Styling */
+.dashboard-safar-percent {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #4f46e5;
+  font-family: var(--font-display, sans-serif);
+}
+.dashboard-safar-percent-sub {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #059669;
+}

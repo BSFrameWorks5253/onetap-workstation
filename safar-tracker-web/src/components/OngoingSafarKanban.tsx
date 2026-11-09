@@ -17,7 +17,10 @@ import {
   Sparkles,
   RefreshCw,
   ExternalLink,
-  Archive
+  Archive,
+  Camera,
+  CheckCircle2,
+  Clock
 } from 'lucide-react';
 import { sendWhatsAppAlert, DEFAULT_WHATSAPP_PHONE } from '../lib/googleAppsScript';
 
@@ -33,8 +36,10 @@ export function isJunkSafarName(name: string): boolean {
 }
 
 export const DEFAULT_EDITOR = 'Murtaza';
+export const DEFAULT_PHOTO_EDITOR = 'Muffadal Peti';
 
 export type KanbanStage = 'editing' | 'rendering' | 'upload' | 'jameya' | 'completed';
+export type PhotoStage = 'edited' | 'given_to_murtaza' | 'uploaded';
 
 export interface SafarTaskItem {
   id: string;
@@ -44,6 +49,9 @@ export interface SafarTaskItem {
   stage: KanbanStage;
   dueDate?: string;
   editorName?: string;
+  photoStage?: PhotoStage;
+  photoEditorName?: string;
+  photoUploaded?: boolean;
   updatedAt?: string;
   isPresent?: boolean;
   isMissing?: boolean;
@@ -251,7 +259,12 @@ export default function OngoingSafarKanban({
       return;
     }
 
-    onUpdateTask(task, { stage: nextStage });
+    // Cross-sync rule: when video moves to upload, jameya or completed, also mark photo as uploaded!
+    const photoUpdates = (nextStage === 'upload' || nextStage === 'jameya' || nextStage === 'completed')
+      ? { photoStage: 'uploaded' as PhotoStage, photoUploaded: true }
+      : {};
+
+    onUpdateTask(task, { stage: nextStage, ...photoUpdates });
 
     // WhatsApp milestone notification when marked uploaded or jameya or completed
     if (nextStage === 'upload' || nextStage === 'jameya' || nextStage === 'completed') {
@@ -371,7 +384,11 @@ export default function OngoingSafarKanban({
 
             {/* Mini Multi-Color Stage Pipeline Bar in Kanban Topbar */}
             {totalCount > 0 && (
-              <div style={{ marginTop: '8px', maxWidth: '380px' }}>
+              <div style={{ marginTop: '8px', maxWidth: '420px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', fontWeight: 700, marginBottom: '4px' }}>
+                  <span style={{ color: '#4f46e5' }}>{Math.round(((columnTasks.editing.length * 20 + columnTasks.rendering.length * 45 + columnTasks.upload.length * 75 + columnTasks.jameya.length * 90 + columnTasks.completed.length * 100) / (totalCount || 1)) / 100 * 100)}% Pipeline</span>
+                  <span style={{ color: '#059669' }}>{Math.round((uploadedCount / (totalCount || 1)) * 100)}% Delivered ({uploadedCount}/{totalCount})</span>
+                </div>
                 <div className="multicolor-progress-bar mini" role="progressbar" aria-label={`${selectedSafar} stage progress`}>
                   {columnTasks.editing.length > 0 && <span className="stage-segment stage-editing" style={{ width: `${(columnTasks.editing.length / (totalCount || 1)) * 100}%` }} title={`Editing: ${columnTasks.editing.length}`} />}
                   {columnTasks.rendering.length > 0 && <span className="stage-segment stage-rendering" style={{ width: `${(columnTasks.rendering.length / (totalCount || 1)) * 100}%` }} title={`Rendered: ${columnTasks.rendering.length}`} />}
@@ -710,6 +727,65 @@ export default function OngoingSafarKanban({
                           </button>
                         </div>
 
+                        {/* Deliverable Cross-Status Badge & Quick Upload Checkbox */}
+                        {(() => {
+                          const isPhotoUp = task.photoStage === 'uploaded' || Boolean(task.photoUploaded) || (task.stage === 'upload' || task.stage === 'jameya' || task.stage === 'completed');
+                          const isVideoUp = task.stage === 'upload' || task.stage === 'jameya' || task.stage === 'completed';
+                          return (
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', flexWrap: 'wrap', marginTop: '2px' }}>
+                              {isPhotoUp && isVideoUp ? (
+                                <span className="media-sync-badge both-uploaded" title="Both Photo & Video Uploaded">
+                                  <CheckCircle2 size={12} />
+                                  <span>✓ Both Uploaded</span>
+                                </span>
+                              ) : isPhotoUp && !isVideoUp ? (
+                                <span className="media-sync-badge photo-only" title="Photo Uploaded by Muffadal Peti · Video Pending">
+                                  <Camera size={12} />
+                                  <span>📷 Photo Uploaded · 🎬 Video Pending</span>
+                                </span>
+                              ) : !isPhotoUp && isVideoUp ? (
+                                <span className="media-sync-badge video-only" title="Video Uploaded by Murtaza · Photo Pending">
+                                  <Film size={12} />
+                                  <span>🎬 Video Uploaded · 📷 Photo Pending</span>
+                                </span>
+                              ) : (
+                                <span className="media-sync-badge both-pending" title="Both Photo & Video Pending Upload">
+                                  <Clock size={12} />
+                                  <span>⏳ Both Pending Upload</span>
+                                </span>
+                              )}
+
+                              <label
+                                title={isVideoUp && isPhotoUp ? 'Folder Uploaded across Photo & Video' : 'Tick to mark Uploaded in both trackers'}
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  fontSize: '11px',
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                  color: (isVideoUp && isPhotoUp) ? '#059669' : '#64748b'
+                                }}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isVideoUp && isPhotoUp}
+                                  onChange={e => {
+                                    const willUpload = e.target.checked;
+                                    if (willUpload) {
+                                      handleMoveStage(task, 'upload');
+                                    } else {
+                                      onUpdateTask(task, { stage: 'editing', photoStage: 'edited', photoUploaded: false });
+                                      showToast(`Reset "${task.dateFolder}" to Editing`);
+                                    }
+                                  }}
+                                />
+                                <span>{isVideoUp && isPhotoUp ? 'Uploaded' : 'Upload'}</span>
+                              </label>
+                            </div>
+                          );
+                        })()}
+
                         {/* Missing badge constraint */}
                         {isMissing && (
                           <div
@@ -734,7 +810,7 @@ export default function OngoingSafarKanban({
                         {/* Editor & Metadata */}
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', color: '#64748b' }}>
                           <span>Editor: <strong style={{ color: '#0f172a' }}>{task.editorName?.trim() || DEFAULT_EDITOR}</strong></span>
-                          {task.dueDate && <span>Due: {task.dueDate}</span>}
+                          <span>Photo: <strong style={{ color: '#4f46e5' }}>{task.photoEditorName?.trim() || DEFAULT_PHOTO_EDITOR}</strong></span>
                         </div>
 
                         {/* Action buttons to change stage */}
