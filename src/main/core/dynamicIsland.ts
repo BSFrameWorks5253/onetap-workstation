@@ -140,7 +140,8 @@ function createIslandWindow(): BrowserWindow {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
       contextIsolation: true,
-      nodeIntegration: false
+      nodeIntegration: false,
+      webSecurity: false
     }
   })
 
@@ -339,6 +340,7 @@ function registerIslandIPC(): void {
       fps: '59.94 fps',
       speed: '1.8x',
       eta: '01:24',
+      thumbnailPath: getAppIconPath(),
       task: 'Rendering subtitle typography for Video_02.mp4',
       outputFolder: (get('last_output_adder') as string) || ''
     })

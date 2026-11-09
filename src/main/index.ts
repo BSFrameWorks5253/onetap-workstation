@@ -792,7 +792,9 @@ app.whenReady().then(() => {
       rawPath = path.resolve(rawPath.replace(/\//g, '\\'));
 
       // Security hardening: disallow access to system directory / sensitive files
-      const sensitivePattern = /\\(windows|system32|system volume information|\.ssh|\.git|\.env|sam|security|software|system)\b/i;
+      const isSystemRoot = /^[a-zA-Z]:\\(windows|system32|recovery|\$recycle\.bin|system volume information)\b/i.test(rawPath);
+      const isSensitiveFile = /\\(\.ssh|\.gnupg|\.aws|\.env|sam|ntuser\.dat)\b/i.test(rawPath);
+      const sensitivePattern = { test: () => isSystemRoot || isSensitiveFile };
       if (sensitivePattern.test(rawPath)) {
         return new Response('Access Denied', { status: 403 });
       }

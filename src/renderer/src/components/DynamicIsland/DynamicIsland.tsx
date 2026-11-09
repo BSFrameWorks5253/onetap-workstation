@@ -51,6 +51,11 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
   const [isDissolving, setIsDissolving] = useState<boolean>(false)
   const [isDismissed, setIsDismissed] = useState<boolean>(false)
   const [scrubPercent, setScrubPercent] = useState<number | null>(null)
+  const [thumbFailed, setThumbFailed] = useState<boolean>(false)
+
+  useEffect(() => {
+    setThumbFailed(false)
+  }, [state.thumbnailPath])
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const dissolveTimerRef = useRef<NodeJS.Timeout | null>(null)
   const closeTimerRef = useRef<NodeJS.Timeout | null>(null)
@@ -230,8 +235,10 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
   const getThumbnailSrc = () => {
     if (!state.thumbnailPath) return null
     if (state.thumbnailPath.startsWith('http') || state.thumbnailPath.startsWith('data:')) return state.thumbnailPath
+    if (state.thumbnailPath.startsWith('local-resource://')) return state.thumbnailPath
+    if (state.thumbnailPath.startsWith('file://')) return state.thumbnailPath.replace(/^file:\/\//, 'local-resource://')
     const forward = state.thumbnailPath.replace(/\\/g, '/')
-    const encoded = encodeURI(forward)
+    const encoded = encodeURI(forward).replace(/#/g, '%23')
     return `local-resource:///${encoded.replace(/^\//, '')}`
   }
 
@@ -265,15 +272,13 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
               />
 
               {/* Apple Equalizer Audio/Render Waves or Mini Thumbnail */}
-              {thumbUrl ? (
+              {thumbUrl && !thumbFailed ? (
                 <div className="pill-mini-thumb" style={{ width: 18, height: 18, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, border: '1px solid rgba(255,255,255,0.25)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
                   <img
                     src={thumbUrl}
                     alt=""
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    onError={(e) => {
-                      (e.currentTarget as HTMLElement).style.display = 'none'
-                    }}
+                    onError={() => setThumbFailed(true)}
                   />
                 </div>
               ) : (!state.done && !state.isPaused && (
@@ -437,13 +442,11 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
             {/* Card Body: Thumbnail & Details */}
             <div className="card-body">
               <div className="card-thumb-preview">
-                {thumbUrl ? (
+                {thumbUrl && !thumbFailed ? (
                   <img
                     src={thumbUrl}
                     alt="Thumbnail preview"
-                    onError={(e) => {
-                      (e.currentTarget as HTMLElement).style.display = 'none'
-                    }}
+                    onError={() => setThumbFailed(true)}
                   />
                 ) : (
                   <div className="card-thumb-placeholder">

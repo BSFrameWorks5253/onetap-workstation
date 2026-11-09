@@ -376,6 +376,47 @@ function findTitleImageForVideo(
   return null
 }
 
+function resolveVideoThumbnail(
+  videoPath: string,
+  titlesFolder: string,
+  availableImages: Array<{ name: string; path: string }>,
+  titleImageAssignments?: Record<string, string>
+): string {
+  if (!videoPath) return ''
+  const cleanBase = path.basename(videoPath).replace(/\.(tmp|temp)$/i, '')
+  const stem = cleanBase.replace(/\.[^/.]+$/, '')
+  const canonicalStem = getCanonicalStem(videoPath)
+  let explicit =
+    titleImageAssignments?.[videoPath] ||
+    titleImageAssignments?.[cleanBase] ||
+    titleImageAssignments?.[stem] ||
+    titleImageAssignments?.[canonicalStem] ||
+    titleImageAssignments?.[videoPath.replace(/\\/g, '/')] ||
+    null
+  if (!explicit && titleImageAssignments) {
+    for (const [k, v] of Object.entries(titleImageAssignments)) {
+      if (getCanonicalStem(k) === canonicalStem) {
+        explicit = v
+        break
+      }
+    }
+  }
+  if (explicit && fs.existsSync(explicit)) return explicit
+  const prefix = getPrefix(cleanBase) || extractEventCodeFromPath(videoPath, stem)
+  const found = findTitleImageForVideo(titlesFolder, prefix, videoPath, availableImages)
+  if (found) return found
+  try {
+    const vidDir = path.dirname(videoPath)
+    for (const ext of IMG_EXTS) {
+      const c1 = path.join(vidDir, `${stem}_V${ext}`)
+      if (fs.existsSync(c1)) return c1
+      const c2 = path.join(vidDir, `${stem}${ext}`)
+      if (fs.existsSync(c2)) return c2
+    }
+  } catch {}
+  return ''
+}
+
 function getVideoInfo(filePath: string): {
   width: number; height: number; duration: number; fps: string
 } | null {
@@ -1336,6 +1377,7 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
       percent: 0,
       videoName: firstVideoName,
       nextVideoName: initialNextName,
+      thumbnailPath: resolveVideoThumbnail(videos[0] || '', titlesFolder, availableTitleImages, params.titleImageAssignments),
       outputFolder: targetOut,
       task: 'Preparing video render queue...'
     })
@@ -1404,7 +1446,9 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
         currentIdx: done + 1,
         videoName: path.basename(videoPath),
         nextVideoName: currentNextVideoName,
+
         task: `Rendering ${path.basename(videoPath)}`,
+        thumbnailPath: resolveVideoThumbnail(videoPath, titlesFolder, availableTitleImages, params.titleImageAssignments),
         outputFolder: targetOut
       })
 
@@ -1718,6 +1762,7 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
               jobId: params.jobId,
               videoName: path.basename(videoPath),
               nextVideoName: currentNextVideoName,
+
               currentIdx: done + 1,
               totalVideos: videos.length,
               thumbnailPath: titleImg || '',

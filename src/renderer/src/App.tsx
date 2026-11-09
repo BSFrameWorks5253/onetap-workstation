@@ -1134,7 +1134,7 @@ function AppInner(): JSX.Element {
         />
 
         <div className="app-main-container">
-          <DynamicIsland floating />
+
           <Toolbar
             activePage={activePage}
             onOpenCmdPalette={() => setCmdPaletteOpen(true)}
