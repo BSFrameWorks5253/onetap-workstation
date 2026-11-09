@@ -124,6 +124,10 @@ export default function TaskTracker(): JSX.Element {
   const [collapsedSafars, setCollapsedSafars] = useState<Record<string, boolean>>({})
   const [selectedSafars, setSelectedSafars] = useState<string[]>([])
   const [selectedTasks, setSelectedTasks] = useState<Record<string, boolean>>({})
+  const [quickFilter, setQuickFilter] = useState<'all' | 'missing_prproj' | 'in_process' | 'to_upload' | 'offline_drives'>('all')
+  const [focusedSafarIndex, setFocusedSafarIndex] = useState<number>(-1)
+  const searchInputRef = useRef<HTMLInputElement>(null)
+  const safarCardRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
   // ── Inspect Modal State ──
   const [inspectTask, setInspectTask] = useState<TrackerTaskItem | null>(null)
@@ -1171,6 +1175,19 @@ export default function TaskTracker(): JSX.Element {
     return { safarPending, inProcess, toDelete, toUpload }
   }, [driveFilteredSafars])
 
+  // ── One-Click Quick Filter Counts ──
+  const quickFilterCounts = useMemo(() => {
+    const archivedNames = new Set(archivedSafarNames)
+    const removedNames = new Set(removedSafarNames)
+    const active = driveFilteredSafars.filter(s => !archivedNames.has(s.safarName) && !removedNames.has(s.safarName))
+    const all = active.length
+    const missingPrproj = active.filter(s => (s.tasks || []).some(t => !t.prprojPath)).length
+    const inProcess = active.filter(s => (s.tasks || []).some(t => t.status === 'editing' || t.status === 'review' || t.status === 'editing_pending')).length
+    const toUpload = active.filter(s => (s.tasks || []).some(t => t.status === 'upload_pending' || (t.renderedAt && !t.uploadedAt && !t.submittedAt))).length
+    const offlineDrives = active.filter(s => s.isDriveConnected === false || s.isPathExists === false).length
+    return { all, missingPrproj, inProcess, toUpload, offlineDrives }
+  }, [driveFilteredSafars, archivedSafarNames, removedSafarNames])
+
   // ── Filtered Safars & Tasks (Search & Status, with Safar-level filter) ──
   const filteredSafars = useMemo(() => {
     const q = searchQuery.toLowerCase().trim()
@@ -1181,16 +1198,31 @@ export default function TaskTracker(): JSX.Element {
       .filter(s => safarStatusFilter === 'archived'
         ? archivedNames.has(s.safarName)
         : !archivedNames.has(s.safarName) && !removedNames.has(s.safarName))
-      .map(s => {
+      .filter(s => {
+        if (quickFilter === 'missing_prproj') return (s.tasks || []).some(t => !t.prprojPath)
+        if (quickFilter === 'in_process') return (s.tasks || []).some(t => t.status === 'editing' || t.status === 'review' || t.status === 'editing_pending')
+        if (quickFilter === 'to_upload') return (s.tasks || []).some(t => t.status === 'upload_pending' || (t.renderedAt && !t.uploadedAt && !t.submittedAt))
+        if (quickFilter === 'offline_drives') return s.isDriveConnected === false || s.isPathExists === false
+        return true
+      }) /*
+      })
+        ? archivedNames.has(s.safarName)
+        : !archivedNames.has(s.safarName) && !removedNames.has(s.safarName))
+      */ .map(s => {
         const tasksList = s.tasks || []
         const matchingTasks = tasksList.filter(t => {
+          const matchQuick =
+            quickFilter === 'missing_prproj' ? !t.prprojPath :
+            quickFilter === 'in_process' ? (t.status === 'editing' || t.status === 'review' || t.status === 'editing_pending') :
+            quickFilter === 'to_upload' ? (t.status === 'upload_pending' || (t.renderedAt && !t.uploadedAt && !t.submittedAt)) :
+            true
           const matchStatus = statusFilter === 'all' || t.status === statusFilter
           const matchSearch =
             !q ||
             t.dateFolder.toLowerCase().includes(q) ||
             s.safarName.toLowerCase().includes(q) ||
             (s.city || '').toLowerCase().includes(q)
-          return matchStatus && matchSearch
+          return matchQuick && matchStatus && matchSearch
         })
 
         const matchSafarSearch = !q || s.safarName.toLowerCase().includes(q) || (s.city || '').toLowerCase().includes(q)
@@ -1211,12 +1243,12 @@ export default function TaskTracker(): JSX.Element {
 
         return {
           ...s,
-          filteredTasks: statusFilter === 'all' && !q ? tasksList : matchingTasks,
-          shouldShow: matchSafarStatus && (matchingTasks.length > 0 || (matchSafarSearch && statusFilter === 'all'))
+          filteredTasks: (statusFilter === 'all' && quickFilter === 'all' && !q) ? tasksList : matchingTasks,
+          shouldShow: matchSafarStatus && (matchingTasks.length > 0 || (matchSafarSearch && statusFilter === 'all' && quickFilter === 'all'))
         }
       })
       .filter(s => s.shouldShow)
-  }, [driveFilteredSafars, searchQuery, statusFilter, safarStatusFilter, archivedSafarNames, removedSafarNames])
+  }, [driveFilteredSafars, searchQuery, statusFilter, safarStatusFilter, quickFilter, archivedSafarNames, removedSafarNames])
 
 
 
@@ -1242,8 +1274,125 @@ export default function TaskTracker(): JSX.Element {
     setCollapsedSafars(prev => ({ ...prev, [name]: !prev[name] }))
   }
 
+  // ── Keyboard Navigation Accelerators (/ for search, Up/Down for Safars, Space to expand/collapse) ──
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeTag = (e.target as HTMLElement)?.tagName?.toUpperCase()
+      const isInputActive = activeTag === 'INPUT' || activeTag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable
+
+      if (e.key === '/' && !isInputActive) {
+        e.preventDefault()
+        searchInputRef.current?.focus()
+        searchInputRef.current?.select()
+        return
+      }
+
+      if (e.key === 'Escape') {
+        if (document.activeElement === searchInputRef.current) {
+          searchInputRef.current?.blur()
+        }
+        return
+      }
+
+      if (isInputActive) return
+      if (filteredSafars.length === 0) return
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        setFocusedSafarIndex(prev => {
+          const next = prev < filteredSafars.length - 1 ? prev + 1 : 0
+          const safar = filteredSafars[next]
+          if (safar) safarCardRefs.current[safar.safarName]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+          return next
+        })
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        setFocusedSafarIndex(prev => {
+          const next = prev > 0 ? prev - 1 : filteredSafars.length - 1
+          const safar = filteredSafars[next]
+          if (safar) safarCardRefs.current[safar.safarName]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+          return next
+        })
+      } else if (e.key === ' ') {
+        if (focusedSafarIndex >= 0 && focusedSafarIndex < filteredSafars.length) {
+          e.preventDefault()
+          const safar = filteredSafars[focusedSafarIndex]
+          if (safar) {
+            playTick()
+            setCollapsedSafars(prev => ({ ...prev, [safar.safarName]: !prev[safar.safarName] }))
+          }
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [filteredSafars, focusedSafarIndex, playTick])
+
   const isAllSelected = filteredSafars.length > 0 && filteredSafars.every(s => selectedSafars.includes(s.safarName))
-  const handleToggleSelectAll = () => {
+  const handleToggleSelectAll = () => { isAllSelected ? setSelectedSafars([]) : setSelectedSafars(filteredSafars.map(s => s.safarName)) }
+
+  const renderEmptyState = () => {
+    if (searchQuery || quickFilter !== 'all' || statusFilter !== 'all' || safarStatusFilter !== 'all') {
+      return (
+        <div className="tracker-empty-card search-empty-state">
+          <div className="tracker-empty-icon-wrap search-pulse">
+            <PageIcon pageKey="search" size={40} color="var(--accent, #6366F1)" />
+          </div>
+          <h3 className="tracker-empty-title">No Matching Safars or Deliverables</h3>
+          <p className="tracker-empty-sub">
+            {searchQuery ? (
+              <>No Safars match query &ldquo;<strong>{searchQuery}</strong>&rdquo; with current active filters.</>
+            ) : (
+              <>No Safars currently match the active <strong>{quickFilter !== 'all' ? quickFilter.replace('_', ' ') : statusFilter}</strong> filter.</>
+            )}
+          </p>
+          <div className="tracker-empty-actions">
+            <button
+              className="btn-primary-action"
+              onClick={() => {
+                playTick()
+                setSearchQuery('')
+                setQuickFilter('all')
+                setStatusFilter('all')
+                setSafarStatusFilter('all')
+              }}
+            >
+              <PageIcon pageKey="bolt" size={13} style={{ marginRight: 6 }} /> Reset Filters &amp; Clear Search
+            </button>
+          </div>
+        </div>
+      )
+    }
+
+    return (
+      <div className="tracker-empty-card">
+        <div className="tracker-empty-icon-wrap">
+          <PageIcon pageKey="folder_open" size={44} color="var(--theme-accent, #6366F1)" />
+        </div>
+        <h3 className="tracker-empty-title">No Safars Discovered in Selected Workspaces</h3>
+        <p className="tracker-empty-sub">
+          {drives.some(d => !driveSpaces[normalizeDrive(d.driveRoot)]?.isOnline) ? (
+            <>
+              Configured external drives (<span className="offline-pill-text">{drives.filter(d => !driveSpaces[normalizeDrive(d.driveRoot)]?.isOnline).map(d => d.driveRoot.replace(/[\\/]/g, '')).join(', ')}</span>) are offline. Plug in your external drives or select a local working folder below.
+            </>
+          ) : (
+            'Select your In Process or Safar working folder to automatically track date renders, projects, and deliverables.'
+          )}
+        </p>
+        <div className="tracker-empty-actions">
+          <button className="btn-primary-action" onClick={handleSelectWorkingFolder}>
+            <PageIcon pageKey="folder_open" size={14} style={{ marginRight: 6 }} /> Select Safar / Working Directory
+          </button>
+          <button className="btn-secondary-action" onClick={handleOpenSettings}>
+            <PageIcon pageKey="settings" size={14} style={{ marginRight: 6 }} /> Manage Drives in Settings
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  const _legacyToggleSelectAll = () => {
     if (isAllSelected) {
       setSelectedSafars([])
     } else {
@@ -1706,6 +1855,54 @@ export default function TaskTracker(): JSX.Element {
         </div>
       </div>
 
+      {/* ── 3.9 One-Click Pro Filter Pills ── */}
+      <div className="tracker-quick-filters-row">
+        <button
+          className={`quick-filter-pill ${quickFilter === 'all' ? 'active' : ''}`}
+          onClick={() => { playTick(); setQuickFilter('all') }}
+        >
+          <PageIcon pageKey="sparkles" size={12} style={{ marginRight: 6 }} />
+          <span>All Safars</span>
+          <span className="pill-count-tag">({quickFilterCounts.all})</span>
+        </button>
+        <button
+          className={`quick-filter-pill pill-missing-prproj ${quickFilter === 'missing_prproj' ? 'active' : ''}`}
+          onClick={() => { playTick(); setQuickFilter('missing_prproj') }}
+          title="Safars with sessions missing Premiere Pro project files (.prproj)"
+        >
+          <PageIcon pageKey="prproj" size={12} color="#EF4444" style={{ marginRight: 6 }} />
+          <span>Missing .prproj</span>
+          <span className="pill-count-tag count-danger">({quickFilterCounts.missingPrproj})</span>
+        </button>
+        <button
+          className={`quick-filter-pill pill-in-process ${quickFilter === 'in_process' ? 'active' : ''}`}
+          onClick={() => { playTick(); setQuickFilter('in_process') }}
+          title="Safars currently undergoing video editing or review"
+        >
+          <PageIcon pageKey="play" size={11} color="#60A5FA" style={{ marginRight: 6 }} />
+          <span>In Process</span>
+          <span className="pill-count-tag count-info">({quickFilterCounts.inProcess})</span>
+        </button>
+        <button
+          className={`quick-filter-pill pill-to-upload ${quickFilter === 'to_upload' ? 'active' : ''}`}
+          onClick={() => { playTick(); setQuickFilter('to_upload') }}
+          title="Safars with rendered deliverables ready to be uploaded or submitted"
+        >
+          <PageIcon pageKey="cloud" size={12} color="#10B981" style={{ marginRight: 6 }} />
+          <span>Ready to Upload</span>
+          <span className="pill-count-tag count-success">({quickFilterCounts.toUpload})</span>
+        </button>
+        <button
+          className={`quick-filter-pill pill-offline ${quickFilter === 'offline_drives' ? 'active' : ''}`}
+          onClick={() => { playTick(); setQuickFilter('offline_drives') }}
+          title="Safars located on offline or disconnected external hard drives"
+        >
+          <PageIcon pageKey="drive" size={12} color="#F59E0B" style={{ marginRight: 6 }} />
+          <span>Offline Drives</span>
+          <span className="pill-count-tag count-warn">({quickFilterCounts.offlineDrives})</span>
+        </button>
+      </div>
+
       {/* ── 4. Toolbar: Search & Filter Pills ── */}
       <div className="tracker-toolbar">
         <div className="tracker-search-box">
@@ -1714,10 +1911,12 @@ export default function TaskTracker(): JSX.Element {
           </span>
           <input
             type="text"
-            placeholder="Search Safar, Date folder, City..."
+            ref={searchInputRef}
+            placeholder="Search Safar, Date folder, City... (Press / to search)"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
           />
+          <kbd className="tracker-search-kbd" title="Press / anywhere to search" onClick={() => searchInputRef.current?.focus()}>/</kbd>
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
@@ -1869,7 +2068,8 @@ export default function TaskTracker(): JSX.Element {
       {/* ── 5. View Mode: Safar Groups Accordion ── */}
       {viewMode === 'safar' && (
         <div className="tracker-safars-container">
-          {filteredSafars.length === 0 ? (
+          {filteredSafars.length === 0 ? renderEmptyState() : null}
+          {filteredSafars.length === 0 && false ? (
             <div className="tracker-empty-card">
               <div className="tracker-empty-icon-wrap">
                 <PageIcon pageKey="folder_open" size={44} color="var(--theme-accent, #6366F1)" />
@@ -1894,13 +2094,18 @@ export default function TaskTracker(): JSX.Element {
               </div>
             </div>
           ) : (
-            filteredSafars.map(safar => {
+            filteredSafars.map((safar, index) => {
               const isCollapsed = collapsedSafars[safar.safarName]
               const isSelected = selectedSafars.includes(safar.safarName)
               const pct = safar.totalDays > 0 ? Math.round((safar.completedDays / safar.totalDays) * 100) : 0
 
               return (
-                <div key={safar.safarName} className={`safar-card ${safar.isSafarDone ? 'done' : ''} ${isSelected ? 'selected' : ''}`}>
+                <div
+                  key={safar.safarName}
+                  ref={el => { safarCardRefs.current[safar.safarName] = el }}
+                  className={`safar-card ${safar.isSafarDone ? 'done' : ''} ${isSelected ? 'selected' : ''} ${focusedSafarIndex === index ? 'keyboard-focused' : ''}`}
+                  onClick={() => setFocusedSafarIndex(index)}
+                >
                   {/* Card Header */}
                   <div className="safar-card-header">
                     <div className="safar-info-left">
@@ -1946,9 +2151,14 @@ export default function TaskTracker(): JSX.Element {
                             </span>
                           )}
                           {safar.safarSerial && (
-                            <span className="safar-serial-chip">#{safar.safarSerial}</span>
+                            <span className="safar-serial-chip">#{safar.safarSerial}</span>)}
+                            {focusedSafarIndex === index && (
+                              <span className="keyboard-focused-hint" title="Press Space to expand or collapse this Safar">
+                                <kbd>Space</kbd> toggle</span>)}{/*
+                              </span>
+                            )}
                           )}
-                          {safar.currentDrive && (
+*/}{safar.currentDrive && (
                             <span className="safar-drive-chip">
                               <PageIcon pageKey="drive" size={11} style={{ marginRight: 4 }} />
                               {safar.currentDrive}
