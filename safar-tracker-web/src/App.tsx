@@ -105,6 +105,7 @@ type Snapshot = {
   tasks: SafarTask[]
   folders: string[]
   safars: SafarSummary[]
+  stageOverrides?: Record<string, TaskStageOverride>
   deletedTasks?: string[]
   deletedSafars?: string[]
   updatedAt: string
@@ -232,7 +233,7 @@ const HIJRI_MONTHS = ['Muharram', 'Safar', 'Rabi al-Awwal', 'Rabi al-Thani', 'Ju
 
 function hijriYearLabel(year?: string | number): string {
   const clean = String(year || '').replace(/\s*(?:AH|H)$/i, '').trim()
-  return clean ? `${clean} AH` : ''
+  return clean ? `${clean} H` : ''
 }
 
 function dateLabel(dateFolder: string, supplied?: string, safarYear?: string | number): string {
@@ -240,10 +241,10 @@ function dateLabel(dateFolder: string, supplied?: string, safarYear?: string | n
   const folderDay = dateFolder.match(/Day[_ -]?(\d{1,2})/i)?.[1]
   const calendar = dateFolder.match(/(\d{4})[-_](\d{1,2})[-_](\d{1,2})/)
   const year = String(calendar?.[1] || safarYear || '').replace(/\s*(?:AH|H)$/i, '').trim()
-  if (folderDay) return `${Number(folderDay)} Safar ${year}${year ? ' AH' : ''}`
+  if (folderDay) return `${Number(folderDay)} Safar ${year}${year ? ' H' : ''}`
   if (calendar) {
     const month = HIJRI_MONTHS[Number(calendar[2]) - 1]
-    if (month) return `${Number(calendar[3])} ${month} ${calendar[1]} AH`
+    if (month) return `${Number(calendar[3])} ${month} ${calendar[1]} H`
   }
   const dayOnly = dateFolder.match(/^\s*(?:Day[_ -]?)?(\d{1,2})\s*$/i)?.[1]
   return dayOnly ? `Day ${Number(dayOnly)}` : 'Date not provided'
@@ -273,6 +274,12 @@ function normalizeSnapshot(value: Partial<Snapshot> | null | undefined): Snapsho
   const deletedTasks = getDeletedTasks()
   const overrides = getStageOverrides()
 
+  if ((value as any)?.stageOverrides && typeof (value as any).stageOverrides === 'object') {
+    for (const [k, v] of Object.entries((value as any).stageOverrides)) {
+      if (v && typeof v === 'object') overrides.set(k, v as TaskStageOverride)
+    }
+    saveStageOverrides(overrides)
+  }
   if (Array.isArray(value?.deletedSafars)) {
     for (const s of value.deletedSafars) if (s) deletedSafars.add(String(s).trim().toLowerCase())
     saveDeletedSafars(deletedSafars)
@@ -853,6 +860,12 @@ export default function App(): JSX.Element {
     const delTasks = getDeletedTasks()
     const overrides = getStageOverrides()
 
+    if ((next as any)?.stageOverrides && typeof (next as any).stageOverrides === 'object') {
+      for (const [k, v] of Object.entries((next as any).stageOverrides)) {
+        if (v && typeof v === 'object') overrides.set(k, v as TaskStageOverride)
+      }
+      saveStageOverrides(overrides)
+    }
     if (Array.isArray((next as any)?.deletedSafars)) {
       for (const s of (next as any).deletedSafars) if (s) delSafars.add(String(s).trim().toLowerCase())
       saveDeletedSafars(delSafars)
@@ -898,6 +911,7 @@ export default function App(): JSX.Element {
       ...normalized,
       tasks: mergedTasks,
       safars: mergedSafars,
+      stageOverrides: Object.fromEntries(overrides.entries()),
       deletedTasks: Array.from(delTasks),
       deletedSafars: Array.from(delSafars)
     }
@@ -921,9 +935,19 @@ export default function App(): JSX.Element {
 
   async function persistSnapshot(next: Snapshot) {
     try {
-      const { error } = await supabase.from('safar_tracker_snapshots').upsert({ id: 'primary', snapshot: next, updated_at: next.updatedAt })
+      const overrides = getStageOverrides()
+      const delSafars = getDeletedSafars()
+      const delTasks = getDeletedTasks()
+      const payload: Snapshot = {
+        ...next,
+        stageOverrides: Object.fromEntries(overrides.entries()),
+        deletedSafars: Array.from(delSafars),
+        deletedTasks: Array.from(delTasks),
+        updatedAt: next.updatedAt || new Date().toISOString()
+      }
+      const { error } = await supabase.from('safar_tracker_snapshots').upsert({ id: 'primary', snapshot: payload, updated_at: payload.updatedAt })
       if (error) throw error
-      await trackerChannelRef.current?.send({ type: 'broadcast', event: 'snapshot', payload: { snapshot: next } })
+      await trackerChannelRef.current?.send({ type: 'broadcast', event: 'snapshot', payload: { snapshot: payload } })
     } catch {
       setNotice('Saved on this device. Cloud sync is temporarily unavailable.')
     }
@@ -1058,6 +1082,9 @@ export default function App(): JSX.Element {
       ...snapshot,
       updatedAt,
       source: 'website',
+      stageOverrides: Object.fromEntries(overrides.entries()),
+      deletedSafars: Array.from(getDeletedSafars()),
+      deletedTasks: Array.from(getDeletedTasks()),
       tasks: snapshot.tasks.map(row => {
         if (row.id === task.id || getTaskKey(row.safarName, row.dateFolder) === targetKey) {
           return { ...row, ...effectiveChanges, updatedAt }

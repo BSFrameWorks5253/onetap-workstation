@@ -100,12 +100,18 @@ class AnyShareRealtimeService {
     const now = new Date().toISOString();
     let priorRows = new Map<string, any>();
     let priorSafars = new Map<string, any>();
+    let priorOverrides: Record<string, any> = {};
+    let priorDeletedSafars = new Set<string>();
+    let priorDeletedTasks = new Set<string>();
     try {
       const { data } = await supabaseNexus.from('safar_tracker_snapshots').select('snapshot').eq('id', 'primary').maybeSingle();
       const previous = data?.snapshot?.tasks;
       if (Array.isArray(previous)) priorRows = new Map(previous.map((row: any) => [row.id || `${row.safarName}::${row.dateFolder}`, row]));
       const previousSafars = Array.isArray(data?.snapshot?.safars) ? data.snapshot.safars : [];
       priorSafars = new Map(previousSafars.map((safar: any) => [safar.safarName, safar]));
+      if (data?.snapshot?.stageOverrides && typeof data.snapshot.stageOverrides === 'object') priorOverrides = data.snapshot.stageOverrides;
+      if (Array.isArray(data?.snapshot?.deletedSafars)) priorDeletedSafars = new Set(data.snapshot.deletedSafars.map((s: any) => String(s).trim().toLowerCase()));
+      if (Array.isArray(data?.snapshot?.deletedTasks)) priorDeletedTasks = new Set(data.snapshot.deletedTasks.map((t: any) => String(t).trim().toLowerCase()));
     } catch {}
     const scannedSafarNames = new Set((safars || []).map((s: any) => String(s.safarName || '')).filter(Boolean));
     const safarByName = new Map((safars || []).map((s: any) => [String(s.safarName || ''), s]));
@@ -132,10 +138,15 @@ class AnyShareRealtimeService {
       } else {
         stage = 'editing';
       }
-      let resolvedStage = stage;
+      const taskKey = `${safarName.toLowerCase()}::${dateFolder.toLowerCase().replace(/[\s_\-]/g, '')}`;
+      const override = priorOverrides[taskKey];
+      let resolvedStage = override?.stage || stage;
       if (isMissing) {
         resolvedStage = 'jameya';
-      } else if (priorTask?.stage && (priorTask.stage === 'jameya' || priorTask.stage === 'completed') && status !== 'upload_pending' && status !== 'uploaded') {
+      } else if (override?.stage) {
+        resolvedStage = override.stage;
+      } else if (priorTask?.stage && (priorTask.stage === 'upload' || priorTask.stage === 'jameya' || priorTask.stage === 'completed')) {
+        resolvedStage = priorTask.stage;
         resolvedStage = priorTask.stage;
       } else if (priorTask?.stage && stage === 'editing' && !task.isManual && !scanComplete) {
         resolvedStage = priorTask.stage;
@@ -152,15 +163,22 @@ class AnyShareRealtimeService {
         stage: resolvedStage,
         isPresent: !isMissing,
         isMissing,
-        dueDate: previous?.dueDate || '',
-        editorName: previous?.editorName || 'Murtaza',
-        photoStage: (previous as any)?.photoStage || (resolvedStage === 'upload' || resolvedStage === 'jameya' || resolvedStage === 'completed' ? 'uploaded' : 'edited'),
-        photoEditorName: (previous as any)?.photoEditorName || 'Muffadal Peti',
-        photoUploaded: (previous as any)?.photoUploaded !== undefined ? (previous as any).photoUploaded : (resolvedStage === 'upload' || resolvedStage === 'jameya' || resolvedStage === 'completed'),
+        dueDate: override?.dueDate || previous?.dueDate || '',
+        editorName: override?.editorName || previous?.editorName || 'Murtaza',
+        photoStage: override?.photoStage || (previous as any)?.photoStage || (resolvedStage === 'upload' || resolvedStage === 'jameya' || resolvedStage === 'completed' ? 'uploaded' : 'edited'),
+        photoEditorName: override?.photoEditorName || (previous as any)?.photoEditorName || 'Muffadal Peti',
+        photoUploaded: override?.photoUploaded !== undefined ? override.photoUploaded : ((previous as any)?.photoUploaded !== undefined ? (previous as any).photoUploaded : (resolvedStage === 'upload' || resolvedStage === 'jameya' || resolvedStage === 'completed')),
         updatedAt: now,
         order: index
       };
-    }).filter((row: any) => row.safarName && row.dateFolder);
+    }).filter((row: any) => {
+      if (!row.safarName || !row.dateFolder) return false;
+      const s = String(row.safarName).trim().toLowerCase();
+      if (priorDeletedSafars.has(s)) return false;
+      const taskKey = `${s}::${String(row.dateFolder).toLowerCase().replace(/[\s_\-]/g, '')}`;
+      if (priorDeletedTasks.has(taskKey)) return false;
+      return true;
+    });
     const archivedSafarNames = new Set([...priorSafars.values()].filter((safar: any) => safar.isArchived).map((safar: any) => safar.safarName));
     const retainedArchivedRows = scanComplete
       ? []
@@ -190,7 +208,7 @@ class AnyShareRealtimeService {
     const snapshot = {
       tasks: cleanRows,
       folders: [...new Set(cleanRows.map((row: any) => row.dateFolder))],
-      safars: [...(safars || []).map((s: any) => {
+      safars: [...(safars || []).filter((s: any) => !priorDeletedSafars.has(String(s.safarName || '').trim().toLowerCase())).map((s: any) => {
         const safarName = String(s.safarName || '');
         const previousSafar = priorSafars.get(safarName);
         const totalDays = Number(s.totalDays || 0);
@@ -209,8 +227,11 @@ class AnyShareRealtimeService {
           archivePriorStages: previousSafar?.archivePriorStages,
           updatedAt: now
         };
-      }).filter((s: any) => s.safarName), ...(scanComplete ? [] : [...priorSafars.values()].filter((safar: any) => safar.isArchived && !scannedSafarNames.has(safar.safarName)))],
+      }).filter((s: any) => s.safarName), ...(scanComplete ? [] : [...priorSafars.values()].filter((safar: any) => safar.isArchived && !scannedSafarNames.has(safar.safarName) && !priorDeletedSafars.has(String(safar.safarName || '').trim().toLowerCase())))],
       updatedAt: now,
+      stageOverrides: priorOverrides,
+      deletedSafars: Array.from(priorDeletedSafars),
+      deletedTasks: Array.from(priorDeletedTasks),
       source: 'onetap-desktop'
     };
 
