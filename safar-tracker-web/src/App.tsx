@@ -1808,12 +1808,18 @@ export default function App(): JSX.Element {
         )}
 
         <header className="topbar">
-          <button ref={menuToggleRef} type="button" className="icon-button menu-toggle" aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'} aria-controls="workspace-navigation" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>
-            <Menu aria-hidden="true" size={20}/>
-          </button>
-          <div className="breadcrumb mobile-view-title" aria-label="Breadcrumb">
-            <span className={`status-dot ${connected ? 'online' : ''}`} title={connected ? 'Live Sync Online' : 'Local Storage Mode'} />
-            <strong>{pageHeading[view]?.title || 'Safar Tracker'}</strong>
+          <div className="topbar-left" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button ref={menuToggleRef} type="button" className="icon-button menu-toggle" aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'} aria-controls="workspace-navigation" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>
+              <Menu aria-hidden="true" size={20}/>
+            </button>
+            <div className="topbar-mobile-brand" onClick={() => navigateTo('dashboard')} title="One Tap Production Workspace" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div className="brand-mark small" style={{ width: '24px', height: '24px', fontSize: '11px', borderRadius: '6px' }} aria-hidden="true">1</div>
+              <strong style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-primary, #0f172a)' }}>One Tap</strong>
+            </div>
+            <div className="breadcrumb mobile-view-title" aria-label="Breadcrumb">
+              <span className={`status-dot ${connected ? 'online' : ''}`} title={connected ? 'Live Sync Online' : 'Local Storage Mode'} />
+              <strong>{pageHeading[view]?.title || 'Safar Tracker'}</strong>
+            </div>
           </div>
           
           <div className="topbar-actions">

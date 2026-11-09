@@ -1032,6 +1032,9 @@ body {
 .mobile-ongoing-hero-card {
   display: none;
 }
+.topbar-mobile-brand {
+  display: none;
+}
 
 /* Photo Filter Horizontal Scroll Container */
 .photo-filter-scroll-container {
@@ -1055,6 +1058,16 @@ body {
   html, body {
     overscroll-behavior-y: contain;
     -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Unify Mobile Navigation into Single Menu: Hide redundant hamburger toggle and drawer */
+  .menu-toggle,
+  .sidebar-overlay,
+  .sidebar {
+    display: none !important;
+  }
+  .topbar-mobile-brand {
+    display: flex !important;
   }
 
   /* Hide massive desktop page heading to maximize above-the-fold content */
