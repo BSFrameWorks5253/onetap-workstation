@@ -25,12 +25,15 @@ import {
   CheckCircle2,
   RefreshCw,
   Trash2,
-  Clock
+  Clock,
+  Mail
 } from 'lucide-react'
 import OngoingSafarKanban, { type SafarTaskItem, isJunkSafarName } from './components/OngoingSafarKanban'
 import PhotoTracker from './components/PhotoTracker'
 import EmailLoginModal from './components/EmailLoginModal'
+import EmailSettingsModal from './components/EmailSettingsModal'
 import AppLoader from './components/AppLoader'
+import { emailNotifier, type EmailQueueStatus } from './services/emailNotifier'
 import {
   sendWhatsAppAlert,
   getStoredAuthUser,
@@ -579,6 +582,16 @@ export default function App(): JSX.Element {
   })
   const [showBootLoader, setShowBootLoader] = useState(true)
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
+  const [emailModalOpen, setEmailModalOpen] = useState(false)
+  const [emailQueueStatus, setEmailQueueStatus] = useState<EmailQueueStatus>(() => emailNotifier.getStatus())
+
+  useEffect(() => {
+    const unsub = emailNotifier.subscribe((st: EmailQueueStatus) => {
+      setEmailQueueStatus(st)
+    })
+    return unsub
+  }, [])
+
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => getStoredAuthUser())
 
   const initialRoute = useMemo(() => parseUrlRoute(), [])
@@ -1111,6 +1124,51 @@ export default function App(): JSX.Element {
           sendWhatsAppAlert(task.dateFolder, uploadedCount, pendingCount, window.location.origin).catch(() => {})
         }
       }
+
+      // Trigger smart compiled stage email notification (5-minute batch debounce)
+      const isStageChanged = Boolean(effectiveChanges.stage && effectiveChanges.stage !== task.stage)
+      const isPhotoStageChanged = Boolean(effectiveChanges.photoStage && effectiveChanges.photoStage !== task.photoStage)
+
+      if (isStageChanged || isPhotoStageChanged) {
+        const activeStage = effectiveChanges.stage || task.stage
+        const activeStageLabel = STAGES.find(s => s.id === activeStage)?.label || activeStage
+        const photoStageLabel = effectiveChanges.photoStage === 'uploaded'
+          ? 'Uploaded'
+          : effectiveChanges.photoStage === 'given_to_murtaza'
+            ? 'Given to Murtaza'
+            : 'Edited'
+
+        const totalCount = next.tasks.filter(t => t.safarName === task.safarName).length
+        const deliveredCount = next.tasks.filter(t => t.safarName === task.safarName && (t.stage === 'upload' || t.stage === 'jameya' || t.stage === 'completed')).length
+        const deliveredPercent = totalCount > 0 ? Math.round((deliveredCount / totalCount) * 100) : 0
+
+        const mediaType: 'video' | 'photo' | 'both' = (isStageChanged && isPhotoStageChanged)
+          ? 'both'
+          : isPhotoStageChanged && !isStageChanged
+            ? 'photo'
+            : 'video'
+
+        emailNotifier.queueStageUpdate(
+          {
+            safarName: task.safarName,
+            dateFolder: task.dateFolder,
+            dateLabel: task.hijriDate || '',
+            fromStage: isStageChanged ? task.stage : task.photoStage,
+            stage: isStageChanged ? activeStage : (effectiveChanges.photoStage || 'uploaded'),
+            stageLabel: mediaType === 'photo' ? photoStageLabel : activeStageLabel,
+            editorName: mediaType === 'photo'
+              ? (effectiveChanges.photoEditorName || task.photoEditorName || DEFAULT_PHOTO_EDITOR)
+              : (effectiveChanges.editorName || task.editorName || DEFAULT_EDITOR),
+            mediaType
+          },
+          {
+            safarName: task.safarName,
+            totalDates: totalCount,
+            deliveredDates: deliveredCount,
+            deliveredPercent
+          }
+        )
+      }
     } catch {
       setNotice('Saved on this device. Cloud sync is temporarily unavailable.')
     } finally {
@@ -1360,6 +1418,13 @@ export default function App(): JSX.Element {
         }}
       />
 
+      {/* Stage Notification Email Settings Modal */}
+      <EmailSettingsModal
+        isOpen={emailModalOpen}
+        onClose={() => setEmailModalOpen(false)}
+        onToast={msg => setNotice(msg)}
+      />
+
       <a className="skip-link" href="#main-content">Skip to main content</a>
       <button type="button" className={`sidebar-overlay ${menuOpen ? 'visible' : ''}`} aria-label="Close navigation menu" onClick={() => { setMenuOpen(false); menuToggleRef.current?.focus() }} tabIndex={menuOpen ? 0 : -1} aria-hidden={!menuOpen}/>
       
@@ -1435,6 +1500,58 @@ export default function App(): JSX.Element {
           <div className="breadcrumb" aria-label="Breadcrumb">Workspace <span aria-hidden="true">/</span> <strong>{pageHeading[view]?.title || 'Safar Tracker'}</strong></div>
           
           <div className="topbar-actions">
+            {/* 5-Minute Batching Email Queue Status Pill */}
+            {emailQueueStatus.queue.length > 0 && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '4px 10px',
+                  backgroundColor: 'rgba(79, 70, 229, 0.08)',
+                  border: '1px solid rgba(79, 70, 229, 0.25)',
+                  borderRadius: '9999px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  color: '#4338ca'
+                }}
+                title={`${emailQueueStatus.queue.length} date update${emailQueueStatus.queue.length > 1 ? 's' : ''} queued in 5-min compile window`}
+              >
+                <span>⚡ {emailQueueStatus.queue.length} update{emailQueueStatus.queue.length > 1 ? 's' : ''} compiled</span>
+                <span style={{ fontFamily: 'monospace', color: '#4f46e5', fontWeight: 700 }}>
+                  {Math.floor(emailQueueStatus.remainingSeconds / 60)}:{(emailQueueStatus.remainingSeconds % 60).toString().padStart(2, '0')}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => void emailNotifier.flushQueue()}
+                  disabled={emailQueueStatus.isSending}
+                  style={{
+                    border: 'none',
+                    background: '#4f46e5',
+                    color: '#ffffff',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    padding: '2px 8px',
+                    borderRadius: '6px',
+                    cursor: emailQueueStatus.isSending ? 'wait' : 'pointer'
+                  }}
+                >
+                  {emailQueueStatus.isSending ? 'Sending…' : 'Send Now ✈'}
+                </button>
+              </div>
+            )}
+
+            {/* Email Alerts Config Button */}
+            <button
+              type="button"
+              className="notification-button"
+              onClick={() => setEmailModalOpen(true)}
+              title="Configure stage email notifications & recipients"
+            >
+              <Mail aria-hidden="true" size={17} />
+              <span>Email Alerts</span>
+            </button>
+
             <button type="button" className="notification-button" onClick={requestNotifications}>
               <Bell aria-hidden="true" size={17}/><span>Notifications</span>
             </button>
@@ -1759,6 +1876,17 @@ export default function App(): JSX.Element {
                 ) : (
                   <button className="button-secondary" onClick={() => setIsLoginModalOpen(true)}>Email Sign In</button>
                 )}
+              </div>
+            </article>
+
+            <article className="panel settings-card">
+              <div className="settings-icon"><Mail size={18}/></div>
+              <div>
+                <h2>Compiled Stage Email Notifications</h2>
+                <p>Zero-domain free Vercel setup · Sends single updates or compiles dates moved within 5 minutes into an executive digest.</p>
+                <button className="button-secondary" onClick={() => setEmailModalOpen(true)}>
+                  Configure Email Settings & Recipients
+                </button>
               </div>
             </article>
 

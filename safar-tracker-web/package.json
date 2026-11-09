@@ -11,10 +11,12 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.119.0",
     "lucide-react": "^0.468.0",
+    "nodemailer": "^10.4.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@types/nodemailer": "^8.0.2",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
