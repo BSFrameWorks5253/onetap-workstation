@@ -1022,6 +1022,217 @@ body {
   transform: scale(0.97);
 }
 
+/* ==========================================================================
+   DESKTOP & RESPONSIVE KANBAN BOARD & PHOTO GRID
+   ========================================================================== */
+
+.kanban-board-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(240px, 1fr));
+  gap: 16px;
+  align-items: start;
+  width: 100%;
+}
+
+.photo-kanban-board-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(280px, 1fr));
+  gap: 16px;
+  align-items: start;
+  width: 100%;
+}
+
+@media (max-width: 1440px) and (min-width: 769px) {
+  .kanban-board-grid {
+    display: flex;
+    flex-direction: row;
+    overflow-x: auto;
+    padding-bottom: 14px;
+    gap: 14px;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+  }
+  .kanban-board-grid > .kanban-column {
+    min-width: 275px;
+    max-width: 320px;
+    flex-shrink: 0;
+  }
+  .photo-kanban-board-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(240px, 1fr));
+    gap: 14px;
+  }
+}
+
+/* Kanban Top Banner Modern Styling */
+.kanban-top-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 18px;
+  padding: 16px 20px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+}
+
+.kanban-banner-hero-section {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.kanban-banner-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+
+.kanban-banner-selector-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.kanban-safar-select {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-primary, #0f172a);
+  background: var(--surface-2, #f8fafc);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 10px;
+  padding: 6px 14px;
+  cursor: pointer;
+  outline: none;
+  max-width: 280px;
+}
+
+.kanban-banner-whatsapp-btn {
+  background: #25d366;
+  color: #ffffff;
+  border: none;
+  border-radius: 9px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  box-shadow: 0 2px 8px rgba(37, 211, 102, 0.25);
+  transition: transform 0.1s ease;
+}
+
+.kanban-banner-whatsapp-btn:active {
+  transform: scale(0.96);
+}
+
+.kanban-banner-delete-btn {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #ef4444;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.kanban-banner-stats-pill {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 600;
+  margin-top: 6px;
+}
+
+.kanban-banner-pipeline-wrap {
+  margin-top: 8px;
+  max-width: 440px;
+  width: 100%;
+}
+
+.kanban-banner-controls-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-top: 10px;
+  border-top: 1px solid var(--border, #e2e8f0);
+}
+
+.kanban-search-box-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 200px;
+}
+
+.kanban-search-input {
+  width: 100%;
+  padding: 8px 12px 8px 34px;
+  font-size: 13px;
+  border-radius: 10px;
+  border: 1px solid var(--border, #e2e8f0);
+  background: var(--surface-2, #f8fafc);
+  color: var(--text-primary, #0f172a);
+  outline: none;
+}
+
+.kanban-rescan-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.kanban-rescan-btn:hover {
+  background: #f1f5f9;
+}
+
+.kanban-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: none;
+  background: #0f172a;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.2);
+}
+
+/* Photo Tracker Panel Padding */
+.photo-tracker-panel {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
 /* Mobile Bottom Navigation Bar & Mobile Hero (Hidden by default on Desktop) */
 .mobile-bottom-bar {
   display: none;
@@ -1033,6 +1244,9 @@ body {
   display: none;
 }
 .topbar-mobile-brand {
+  display: none;
+}
+.mobile-title-slash {
   display: none;
 }
 
@@ -1058,61 +1272,141 @@ body {
   html, body {
     overscroll-behavior-y: contain;
     -webkit-tap-highlight-color: transparent;
+    overflow-x: hidden;
+    width: 100%;
+    min-width: 0 !important;
   }
 
-  /* Unify Mobile Navigation into Single Menu: Hide redundant hamburger toggle and drawer */
+  /* Unify Mobile Navigation into Single Menu: Hide redundant desktop sidebar and drawer */
   .menu-toggle,
   .sidebar-overlay,
   .sidebar {
     display: none !important;
   }
-  .topbar-mobile-brand {
-    display: flex !important;
-  }
 
-  /* Hide massive desktop page heading to maximize above-the-fold content */
-  .page-heading {
-    display: none !important;
-  }
-
-  /* Safe Area Insets for iOS Notch / Dynamic Island */
+  /* Compact, beautiful mobile topbar */
   .topbar {
     padding-top: max(8px, env(safe-area-inset-top, 0px)) !important;
-    height: calc(56px + max(8px, env(safe-area-inset-top, 0px))) !important;
+    height: calc(54px + max(8px, env(safe-area-inset-top, 0px))) !important;
     display: flex !important;
     align-items: center !important;
     justify-content: space-between !important;
     padding-inline: 12px !important;
+    gap: 8px !important;
+  }
+
+  .topbar-left {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    min-width: 0 !important;
+    flex: 1 !important;
+    overflow: hidden !important;
+  }
+
+  .topbar-mobile-brand {
+    display: flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+    flex-shrink: 0 !important;
+  }
+  .topbar-mobile-brand strong {
+    font-size: 13px !important;
+    font-weight: 800 !important;
+    color: var(--text-primary, #0f172a) !important;
+  }
+
+  .mobile-title-slash {
+    display: inline-block !important;
+    color: #cbd5e1 !important;
+    font-size: 12px !important;
   }
 
   .mobile-view-title {
     display: inline-flex !important;
     align-items: center !important;
-    gap: 6px !important;
-    font-size: 14px !important;
+    gap: 4px !important;
+    font-size: 12px !important;
     font-weight: 800 !important;
-    color: #0f172a !important;
+    color: #4f46e5 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
   }
 
   .topbar-actions {
+    display: flex !important;
+    align-items: center !important;
     gap: 6px !important;
+    flex-shrink: 0 !important;
   }
 
   .mobile-sync-btn {
-    min-height: 36px !important;
-    padding: 6px 10px !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    gap: 4px !important;
-    border-radius: 8px !important;
+    min-height: 34px !important;
+    width: 34px !important;
+    padding: 0 !important;
+    display: inline-grid !important;
+    place-items: center !important;
+    border-radius: 9px !important;
     background: rgba(79, 70, 229, 0.08) !important;
     border: 1px solid rgba(79, 70, 229, 0.2) !important;
     color: #4f46e5 !important;
-    font-weight: 700 !important;
-    font-size: 11px !important;
   }
 
-  .notification-bell-btn {
+  .mobile-sync-label,
+  .notification-bell-btn,
+  .install-pwa-btn,
+  .signin-label {
+    display: none !important;
+  }
+
+  .topbar-signin-btn {
+    min-height: 34px !important;
+    width: 34px !important;
+    padding: 0 !important;
+    display: inline-grid !important;
+    place-items: center !important;
+    border-radius: 9px !important;
+    border: 1px solid var(--border, #e2e8f0) !important;
+    background: var(--surface, #ffffff) !important;
+    color: var(--text-primary, #0f172a) !important;
+  }
+
+  /* Mobile Page Headings: compact & elegant */
+  .page-heading {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 4px !important;
+    margin-bottom: 14px !important;
+    padding-bottom: 10px !important;
+    border-bottom: 1px solid var(--border, #e2e8f0) !important;
+  }
+  .page-heading.has-dedicated-hero {
+    display: none !important;
+  }
+  .page-heading .eyebrow {
+    font-size: 8px !important;
+  }
+  .page-heading h1 {
+    font-size: 20px !important;
+    margin: 2px 0 !important;
+  }
+  .page-heading p {
+    font-size: 11px !important;
+    line-height: 1.35 !important;
+  }
+  .page-heading .heading-actions {
+    display: none !important;
+  }
+
+  /* Photo Tracker mobile padding */
+  .photo-tracker-panel {
+    padding: 14px !important;
+    gap: 14px !important;
+  }
+
+  /* Hide Site Footer on Mobile so it doesn't collide with the fixed bottom bar */
+  .site-footer {
     display: none !important;
   }
 
@@ -1438,10 +1732,67 @@ body {
   }
 
   .kanban-column {
-    min-width: calc(100vw - 38px) !important;
-    max-width: calc(100vw - 38px) !important;
+    min-width: calc(100vw - 32px) !important;
+    max-width: calc(100vw - 32px) !important;
     scroll-snap-align: center !important;
     flex-shrink: 0 !important;
+  }
+
+  .kanban-top-banner {
+    padding: 14px !important;
+    gap: 10px !important;
+    border-radius: 16px !important;
+  }
+  .kanban-banner-hero-section {
+    flex-direction: column !important;
+    width: 100% !important;
+  }
+  .kanban-banner-selector-row {
+    width: 100% !important;
+  }
+  .kanban-safar-select {
+    width: 100% !important;
+    max-width: 100% !important;
+    font-size: 15px !important;
+  }
+  .kanban-banner-whatsapp-btn {
+    width: 100% !important;
+    min-height: 44px !important;
+    justify-content: center !important;
+    font-size: 13px !important;
+  }
+  .kanban-banner-controls-wrap {
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+  }
+  .kanban-search-box-wrap {
+    width: 100% !important;
+    min-width: 100% !important;
+  }
+  .kanban-search-input {
+    width: 100% !important;
+    min-height: 40px !important;
+  }
+  .kanban-rescan-btn,
+  .kanban-add-btn {
+    width: 100% !important;
+    min-height: 40px !important;
+    justify-content: center !important;
+  }
+
+  .photo-category-tabs {
+    width: 100% !important;
+    overflow-x: auto !important;
+    flex-wrap: nowrap !important;
+    scrollbar-width: none !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+  .photo-category-tabs button {
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
   }
 
   .kanban-stage-advance-btn {

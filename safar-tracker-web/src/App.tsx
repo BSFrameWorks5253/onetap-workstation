@@ -902,6 +902,18 @@ export default function App(): JSX.Element {
     widget: { title: 'Live Safar Widget', eyebrow: 'MOBILE HOME SCREEN WIDGET', description: 'High-density live status card for home screens and lock screens.' }
   }
 
+  const shortViewTitles: Record<typeof view, string> = {
+    dashboard: 'Dashboard',
+    ongoing: 'Kanban',
+    photos: 'Photos',
+    tracker: 'Safars',
+    archive: 'Archive',
+    editors: 'Editors',
+    pipeline: 'Pipeline',
+    settings: 'Settings',
+    widget: 'Widget'
+  }
+
   const pageSize = 40
   const pageCount = Math.max(1, Math.ceil(rows.length / pageSize))
   const currentPage = Math.min(page, pageCount - 1)
@@ -1825,7 +1837,7 @@ export default function App(): JSX.Element {
         </div>
       </aside>
 
-      <main id="main-content" className="main-content" tabIndex={-1}>
+      <main id="main-content" className={`main-content view-${view}`} tabIndex={-1}>
         {/* Mobile Pull-to-Refresh Visual Indicator */}
         {pullProgress > 0 && (
           <div
@@ -1855,17 +1867,18 @@ export default function App(): JSX.Element {
         )}
 
         <header className="topbar">
-          <div className="topbar-left" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="topbar-left">
             <button ref={menuToggleRef} type="button" className="icon-button menu-toggle" aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'} aria-controls="workspace-navigation" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>
               <Menu aria-hidden="true" size={20}/>
             </button>
-            <div className="topbar-mobile-brand" onClick={() => navigateTo('dashboard')} title="One Tap Production Workspace" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div className="brand-mark small" style={{ width: '24px', height: '24px', fontSize: '11px', borderRadius: '6px' }} aria-hidden="true">1</div>
-              <strong style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-primary, #0f172a)' }}>One Tap</strong>
+            <div className="topbar-mobile-brand" onClick={() => navigateTo('dashboard')} title="One Tap Production Workspace" style={{ cursor: 'pointer' }}>
+              <div className="brand-mark small" style={{ width: '26px', height: '26px', fontSize: '12px', borderRadius: '7px' }} aria-hidden="true">1</div>
+              <strong>One Tap</strong>
             </div>
             <div className="breadcrumb mobile-view-title" aria-label="Breadcrumb">
+              <span className="mobile-title-slash" aria-hidden="true">/</span>
               <span className={`status-dot ${connected ? 'online' : ''}`} title={connected ? 'Live Sync Online' : 'Local Storage Mode'} />
-              <strong>{pageHeading[view]?.title || 'Safar Tracker'}</strong>
+              <strong>{shortViewTitles[view] || pageHeading[view]?.title}</strong>
             </div>
           </div>
           
@@ -1878,7 +1891,7 @@ export default function App(): JSX.Element {
                 try { if ('vibrate' in navigator) navigator.vibrate(10) } catch {}
                 void requestDesktopSync()
               }}
-              title="Sync with One Tap Workstation"
+              title={connected ? "Connected to Cloud Sync · Click to refresh" : "Sync with One Tap Workstation"}
             >
               <Cloud aria-hidden="true" size={16} />
               <span className="mobile-sync-label">Sync</span>
@@ -1909,7 +1922,7 @@ export default function App(): JSX.Element {
 
             {/* User Profile / Email Sign-In via Google Apps Script */}
             {currentUser ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <div className="avatar" role="img" title={currentUser.email} aria-label={`Signed in as ${currentUser.name}`}>
                   {currentUser.name?.[0]?.toUpperCase() || 'U'}
                 </div>
@@ -1936,29 +1949,17 @@ export default function App(): JSX.Element {
               <button
                 type="button"
                 onClick={() => setIsLoginModalOpen(true)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '6px 12px',
-                  borderRadius: '10px',
-                  border: '1px solid var(--border, #e2e8f0)',
-                  background: 'var(--surface, #ffffff)',
-                  color: 'var(--text-primary, #0f172a)',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  cursor: 'pointer'
-                }}
+                className="topbar-signin-btn"
               >
                 <LogIn size={14} />
-                <span>Sign in</span>
+                <span className="signin-label">Sign in</span>
               </button>
             )}
           </div>
         </header>
 
         <div className="content-wrap">
-          <div className="page-heading">
+          <div className={`page-heading ${view === 'ongoing' || view === 'photos' || view === 'dashboard' ? 'has-dedicated-hero' : ''}`}>
             <div>
               <div className="eyebrow"><span className="live-pip" aria-hidden="true"/> {pageHeading[view]?.eyebrow}</div>
               <h1 ref={pageTitleRef} tabIndex={-1}>{pageHeading[view]?.title}</h1>

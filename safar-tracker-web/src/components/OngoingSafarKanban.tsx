@@ -313,28 +313,14 @@ export default function OngoingSafarKanban({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
       {/* Top Banner / Actions Bar */}
-      <div
-        className="kanban-top-banner"
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '16px',
-          background: 'var(--surface, #ffffff)',
-          border: '1px solid var(--border, rgba(0,0,0,0.08))',
-          borderRadius: '16px',
-          padding: '16px 20px',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+      <div className="kanban-top-banner">
+        <div className="kanban-banner-hero-section">
           <div>
-            <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '5px' }}>
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: connected ? '#10b981' : '#f59e0b', display: 'inline-block' }} />
+            <span className="kanban-banner-badge">
+              <span className={`status-dot ${connected ? 'online' : ''}`} />
               Active Safar Pipeline
             </span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '4px' }}>
+            <div className="kanban-banner-selector-row">
               <select
                 aria-label="Select Ongoing Safar"
                 value={selectedSafar}
@@ -343,17 +329,7 @@ export default function OngoingSafarKanban({
                   setSelectedSafar(val);
                   onSelectSafar?.(val);
                 }}
-                style={{
-                  fontSize: '16px',
-                  fontWeight: 700,
-                  color: 'var(--text-primary, #0f172a)',
-                  background: 'var(--surface-sunken, #f8fafc)',
-                  border: '1px solid var(--border, #e2e8f0)',
-                  borderRadius: '10px',
-                  padding: '6px 12px',
-                  cursor: 'pointer',
-                  outline: 'none'
-                }}
+                className="kanban-safar-select"
               >
                 {ongoingSafars.map(s => (
                   <option key={s} value={s}>{s}</option>
@@ -362,6 +338,7 @@ export default function OngoingSafarKanban({
 
               <button
                 type="button"
+                className="kanban-banner-whatsapp-btn"
                 onClick={() => {
                   const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(
                     `📢 *Ongoing Safar Update (${selectedSafar})*\n` +
@@ -370,23 +347,9 @@ export default function OngoingSafarKanban({
                   )}`;
                   window.open(url, '_blank');
                 }}
-                style={{
-                  background: '#25D366',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '8px',
-                  padding: '5px 10px',
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  boxShadow: '0 2px 6px rgba(37, 211, 102, 0.25)'
-                }}
                 title={`Share WhatsApp update for ${selectedSafar}`}
               >
-                <MessageCircle size={13} />
+                <MessageCircle size={14} />
                 <span>WhatsApp Briefing</span>
               </button>
 
@@ -395,33 +358,21 @@ export default function OngoingSafarKanban({
                   type="button"
                   title={`Permanently delete ${selectedSafar} from all views`}
                   onClick={() => onDeleteSafar(selectedSafar)}
-                  style={{
-                    background: 'rgba(239, 68, 68, 0.08)',
-                    border: '1px solid rgba(239, 68, 68, 0.25)',
-                    color: '#ef4444',
-                    borderRadius: '8px',
-                    padding: '5px 8px',
-                    fontSize: '11px',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}
+                  className="kanban-banner-delete-btn"
                 >
                   <Trash2 size={12} />
                   <span>Remove Safar</span>
                 </button>
               )}
+            </div>
 
-              <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>
-                <AnimatedNumber value={totalCount} /> dates · <strong style={{ color: '#059669' }}><AnimatedNumber value={uploadedCount} /> uploaded</strong> · <strong style={{ color: '#d97706' }}><AnimatedNumber value={pendingCount} /> pending</strong>
-              </span>
+            <div className="kanban-banner-stats-pill">
+              <AnimatedNumber value={totalCount} /> dates · <strong style={{ color: '#059669' }}><AnimatedNumber value={uploadedCount} /> uploaded</strong> · <strong style={{ color: '#d97706' }}><AnimatedNumber value={pendingCount} /> pending</strong>
             </div>
 
             {/* Mini Multi-Color Stage Pipeline Bar in Kanban Topbar */}
             {totalCount > 0 && (
-              <div style={{ marginTop: '8px', maxWidth: '420px' }}>
+              <div className="kanban-banner-pipeline-wrap">
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', fontWeight: 700, marginBottom: '4px' }}>
                   <span style={{ color: '#4f46e5' }}><AnimatedNumber value={Math.round(((columnTasks.editing.length * 20 + columnTasks.rendering.length * 45 + columnTasks.upload.length * 75 + columnTasks.jameya.length * 90 + columnTasks.completed.length * 100) / (totalCount || 1)) / 100 * 100)} />% Pipeline</span>
                   <span style={{ color: '#059669' }}><AnimatedNumber value={Math.round((uploadedCount / (totalCount || 1)) * 100)} />% Delivered (<AnimatedNumber value={uploadedCount} />/{totalCount})</span>
@@ -439,69 +390,32 @@ export default function OngoingSafarKanban({
         </div>
 
         {/* Search, Rescan, Add Date Controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+        <div className="kanban-banner-controls-wrap">
+          <div className="kanban-search-box-wrap">
             <Search size={15} style={{ position: 'absolute', left: '10px', color: '#94a3b8' }} />
             <input
               type="text"
               placeholder="Search date folder..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              style={{
-                padding: '7px 12px 7px 32px',
-                fontSize: '13px',
-                borderRadius: '10px',
-                border: '1px solid var(--border, #e2e8f0)',
-                background: 'var(--surface-sunken, #f8fafc)',
-                color: 'var(--text-primary, #0f172a)',
-                outline: 'none',
-                minWidth: '180px'
-              }}
+              className="kanban-search-input"
             />
           </div>
 
-          {/* Reset & Clean Rescan Button */}
           <button
             type="button"
             onClick={handleTriggerRescan}
             title="Reset cache and rescan workstation for present folders only"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '7px 14px',
-              borderRadius: '10px',
-              border: '1px solid #cbd5e1',
-              background: '#ffffff',
-              color: '#334155',
-              fontSize: '13px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              transition: 'all 0.15s ease'
-            }}
+            className="kanban-rescan-btn"
           >
             <RotateCw size={14} className={rescanTriggered ? 'animate-spin' : ''} />
-            <span>Reset & Clean Rescan</span>
+            <span>Rescan Disk</span>
           </button>
 
-          {/* Add Date Folder Button */}
           <button
             type="button"
             onClick={() => setIsAddOpen(!isAddOpen)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '7px 14px',
-              borderRadius: '10px',
-              border: 'none',
-              background: '#0f172a',
-              color: '#ffffff',
-              fontSize: '13px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              boxShadow: '0 2px 6px rgba(15, 23, 42, 0.2)'
-            }}
+            className="kanban-add-btn"
           >
             <Plus size={15} />
             <span>Add Date</span>

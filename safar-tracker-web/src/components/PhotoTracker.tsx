@@ -343,7 +343,7 @@ export default function PhotoTracker({
   }, [filteredTasks]);
 
   return (
-    <section className="panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <section className="panel photo-tracker-panel">
       {/* Notice Banner */}
       {notice && (
         <div style={{ padding: '12px 16px', borderRadius: '12px', background: '#ECFDF5', border: '1px solid #A7F3D0', color: '#065F46', fontSize: '13px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', animation: 'fadeIn 0.2s ease' }}>
@@ -636,7 +636,7 @@ export default function PhotoTracker({
             })}
           </div>
 
-          <div className="kanban-board-grid">
+          <div className="kanban-board-grid photo-kanban-board-grid">
             {PHOTO_COLUMNS.map(col => {
               const list = filteredColumnTasks[col.id] || [];
               return (
