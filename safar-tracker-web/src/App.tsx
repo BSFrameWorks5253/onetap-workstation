@@ -39,6 +39,39 @@ import {
 } from './lib/googleAppsScript'
 
 type Stage = 'rendering' | 'editing' | 'upload' | 'jameya'
+type View = 'dashboard' | 'ongoing' | 'photos' | 'tracker' | 'archive' | 'editors' | 'pipeline' | 'settings'
+
+const VIEW_PATHS: Record<View, string> = {
+  dashboard: '/dashboard',
+  ongoing: '/kanban',
+  photos: '/photos',
+  tracker: '/tracker',
+  archive: '/archive',
+  editors: '/editors',
+  pipeline: '/pipeline',
+  settings: '/settings'
+}
+
+function parseUrlRoute(): { view: View; safar?: string } {
+  try {
+    const rawPath = window.location.pathname.toLowerCase().replace(/\/+$/, '') || '/'
+    const hash = window.location.hash.toLowerCase().replace(/^#\/?/, '').replace(/\/+$/, '')
+    const searchParams = new URLSearchParams(window.location.search)
+    const safarParam = searchParams.get('safar') || undefined
+
+    const candidate = hash || rawPath.replace(/^\//, '')
+
+    if (candidate === 'dashboard') return { view: 'dashboard', safar: safarParam }
+    if (candidate === 'ongoing' || candidate === 'kanban' || candidate === 'pipeline-board') return { view: 'ongoing', safar: safarParam }
+    if (candidate === 'photos' || candidate === 'photo-tracker' || candidate === 'drive') return { view: 'photos', safar: safarParam }
+    if (candidate === 'tracker' || candidate === 'safars' || candidate === 'safar-tracker') return { view: 'tracker', safar: safarParam }
+    if (candidate === 'archive' || candidate === 'archived') return { view: 'archive', safar: safarParam }
+    if (candidate === 'editors' || candidate === 'team') return { view: 'editors', safar: safarParam }
+    if (candidate === 'pipeline' || candidate === 'media') return { view: 'pipeline', safar: safarParam }
+    if (candidate === 'settings') return { view: 'settings', safar: safarParam }
+  } catch {}
+  return { view: 'ongoing' }
+}
 type SafarTask = {
   id: string
   safarName: string
@@ -437,10 +470,11 @@ export default function App(): JSX.Element {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => getStoredAuthUser())
 
+  const initialRoute = useMemo(() => parseUrlRoute(), [])
   const [search, setSearch] = useState('')
-  const [selectedSafar, setSelectedSafar] = useState('all')
+  const [selectedSafar, setSelectedSafar] = useState<string>(() => initialRoute.safar || 'all')
   const [filter, setFilter] = useState('all')
-  const [view, setView] = useState<'dashboard' | 'ongoing' | 'photos' | 'tracker' | 'archive' | 'editors' | 'pipeline' | 'settings'>('ongoing')
+  const [view, setView] = useState<View>(() => initialRoute.view)
   const [selectedEditor, setSelectedEditor] = useState('all')
   const [menuOpen, setMenuOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 760px)').matches)
@@ -1044,10 +1078,49 @@ export default function App(): JSX.Element {
     setNotice('Sync requested. One Tap will send a fresh Safar scan when it is online.')
   }
 
-  function navigateTo(next: typeof view) {
+  // Sync URL on initial mount so home / displays /kanban or /dashboard professionally
+  useEffect(() => {
+    try {
+      const currentPath = window.location.pathname.toLowerCase().replace(/\/+$/, '') || '/'
+      if (currentPath === '/' || currentPath === '') {
+        const basePath = VIEW_PATHS[initialRoute.view] || '/kanban'
+        const url = new URL(window.location.href)
+        url.pathname = basePath
+        if (initialRoute.safar && initialRoute.safar !== 'all') {
+          url.searchParams.set('safar', initialRoute.safar)
+        }
+        window.history.replaceState({ view: initialRoute.view, safar: initialRoute.safar }, '', url.toString())
+      }
+    } catch {}
+
+    const handlePopState = () => {
+      const { view: targetView, safar } = parseUrlRoute()
+      setView(targetView)
+      if (safar) setSelectedSafar(safar)
+    }
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [initialRoute])
+
+  function navigateTo(next: View, safar?: string) {
     setView(next)
+    if (safar !== undefined) {
+      setSelectedSafar(safar)
+    }
     setMenuOpen(false)
     window.requestAnimationFrame(() => pageTitleRef.current?.focus())
+
+    try {
+      const basePath = VIEW_PATHS[next] || `/${next}`
+      const url = new URL(window.location.href)
+      url.pathname = basePath
+      if (safar && safar !== 'all') {
+        url.searchParams.set('safar', safar)
+      } else {
+        url.searchParams.delete('safar')
+      }
+      window.history.pushState({ view: next, safar }, '', url.toString())
+    } catch {}
   }
 
   return (
@@ -1108,7 +1181,7 @@ export default function App(): JSX.Element {
               key={name}
               aria-pressed={selectedSafar === name}
               className={`safar-link ${selectedSafar === name ? 'selected' : ''}`}
-              onClick={() => { setSelectedSafar(selectedSafar === name ? 'all' : name); navigateTo('ongoing') }}
+              onClick={() => navigateTo('ongoing', selectedSafar === name ? 'all' : name)}
             >
               <span className="safar-dot" aria-hidden="true"/>{name}
             </button>
