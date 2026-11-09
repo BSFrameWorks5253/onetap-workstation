@@ -32,7 +32,9 @@ export function isJunkSafarName(name: string): boolean {
   return false;
 }
 
-export type KanbanStage = 'editing' | 'rendering' | 'upload' | 'jameya';
+export const DEFAULT_EDITOR = 'Murtaza';
+
+export type KanbanStage = 'editing' | 'rendering' | 'upload' | 'jameya' | 'completed';
 
 export interface SafarTaskItem {
   id: string;
@@ -84,11 +86,19 @@ const COLUMNS: ColumnConfig[] = [
   },
   {
     id: 'jameya',
-    title: 'Stage 4: Submitted to Jameya',
-    subtitle: 'Archived deliverables & offline dates',
+    title: 'Stage 4: Submission to Al Jamea tus Saifiyah',
+    subtitle: 'Al Jamea tus Saifiyah delivery & verification',
     badgeColor: '#7c3aed',
     headerBg: 'rgba(124, 58, 237, 0.08)',
     icon: <FileCheck2 size={17} color="#7c3aed" />
+  },
+  {
+    id: 'completed',
+    title: 'Stage 5: Completed Every Stage',
+    subtitle: 'All stages finished · Production finalized',
+    badgeColor: '#0d9488',
+    headerBg: 'rgba(13, 148, 136, 0.08)',
+    icon: <CheckCircle size={17} color="#0d9488" />
   }
 ];
 
@@ -192,14 +202,15 @@ export default function OngoingSafarKanban({
     );
   }, [safarTasks, search]);
 
-  // 4. Strict Grouping into 4 Columns with Non-Present constraint
+  // 4. Strict Grouping into 5 Columns with Non-Present constraint
   // "also which arent prsent that should only and only be seen in submitted to jameya"
   const columnTasks = useMemo(() => {
     const map: Record<KanbanStage, SafarTaskItem[]> = {
       editing: [],
       rendering: [],
       upload: [],
-      jameya: []
+      jameya: [],
+      completed: []
     };
 
     for (const task of filteredTasks) {
@@ -229,21 +240,21 @@ export default function OngoingSafarKanban({
 
   // Summary counts
   const totalCount = safarTasks.length;
-  const uploadedCount = safarTasks.filter(t => t.stage === 'upload' || t.stage === 'jameya').length;
+  const uploadedCount = safarTasks.filter(t => t.stage === 'upload' || t.stage === 'jameya' || t.stage === 'completed').length;
   const pendingCount = Math.max(0, totalCount - uploadedCount);
 
   // Move stage
   const handleMoveStage = async (task: SafarTaskItem, nextStage: KanbanStage) => {
     const isMissing = task.isMissing === true || task.isPresent === false || task.is_present === false;
-    if (isMissing && nextStage !== 'jameya') {
+    if (isMissing && nextStage !== 'jameya' && nextStage !== 'completed') {
       showToast(`Cannot move "${task.dateFolder}": missing or unmounted folders stay in Submitted to Jameya archive.`);
       return;
     }
 
     onUpdateTask(task, { stage: nextStage });
 
-    // WhatsApp milestone notification when marked uploaded
-    if (nextStage === 'upload' || nextStage === 'jameya') {
+    // WhatsApp milestone notification when marked uploaded or jameya or completed
+    if (nextStage === 'upload' || nextStage === 'jameya' || nextStage === 'completed') {
       const remaining = Math.max(0, totalCount - (uploadedCount + 1));
       try {
         await sendWhatsAppAlert(
@@ -252,9 +263,9 @@ export default function OngoingSafarKanban({
           remaining,
           window.location.origin
         );
-        showToast(`Moved to ${nextStage.toUpperCase()} · WhatsApp milestone sent to ${DEFAULT_WHATSAPP_PHONE}`);
+        showToast(`Moved to ${nextStage === 'completed' ? 'COMPLETED EVERY STAGE' : nextStage.toUpperCase()} · Milestone alert dispatched`);
       } catch (e) {
-        showToast(`Moved to ${nextStage.toUpperCase()} (WhatsApp alert queued)`);
+        showToast(`Moved to ${nextStage === 'completed' ? 'COMPLETED EVERY STAGE' : nextStage.toUpperCase()}`);
       }
     } else {
       showToast(`Moved "${task.dateFolder}" to ${nextStage}`);
@@ -365,7 +376,8 @@ export default function OngoingSafarKanban({
                   {columnTasks.editing.length > 0 && <span className="stage-segment stage-editing" style={{ width: `${(columnTasks.editing.length / (totalCount || 1)) * 100}%` }} title={`Editing: ${columnTasks.editing.length}`} />}
                   {columnTasks.rendering.length > 0 && <span className="stage-segment stage-rendering" style={{ width: `${(columnTasks.rendering.length / (totalCount || 1)) * 100}%` }} title={`Rendered: ${columnTasks.rendering.length}`} />}
                   {columnTasks.upload.length > 0 && <span className="stage-segment stage-upload" style={{ width: `${(columnTasks.upload.length / (totalCount || 1)) * 100}%` }} title={`Uploaded: ${columnTasks.upload.length}`} />}
-                  {columnTasks.jameya.length > 0 && <span className="stage-segment stage-jameya" style={{ width: `${(columnTasks.jameya.length / (totalCount || 1)) * 100}%` }} title={`Submitted: ${columnTasks.jameya.length}`} />}
+                  {columnTasks.jameya.length > 0 && <span className="stage-segment stage-jameya" style={{ width: `${(columnTasks.jameya.length / (totalCount || 1)) * 100}%` }} title={`Submitted to Jameya: ${columnTasks.jameya.length}`} />}
+                  {columnTasks.completed.length > 0 && <span className="stage-segment stage-completed" style={{ width: `${(columnTasks.completed.length / (totalCount || 1)) * 100}%` }} title={`Completed Every Stage: ${columnTasks.completed.length}`} />}
                 </div>
               </div>
             )}
@@ -534,7 +546,7 @@ export default function OngoingSafarKanban({
         </div>
       )}
 
-      {/* 4-Column Kanban Board */}
+      {/* 5-Column Kanban Board */}
       <div
         style={{
           display: 'grid',
@@ -721,7 +733,7 @@ export default function OngoingSafarKanban({
 
                         {/* Editor & Metadata */}
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', color: '#64748b' }}>
-                          <span>Editor: <strong>{task.editorName || 'Unassigned'}</strong></span>
+                          <span>Editor: <strong style={{ color: '#0f172a' }}>{task.editorName?.trim() || DEFAULT_EDITOR}</strong></span>
                           {task.dueDate && <span>Due: {task.dueDate}</span>}
                         </div>
 

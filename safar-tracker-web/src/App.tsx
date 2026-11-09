@@ -38,7 +38,8 @@ import {
   type AuthUser
 } from './lib/googleAppsScript'
 
-type Stage = 'rendering' | 'editing' | 'upload' | 'jameya'
+type Stage = 'editing' | 'rendering' | 'upload' | 'jameya' | 'completed'
+export const DEFAULT_EDITOR = 'Murtaza'
 type View = 'dashboard' | 'ongoing' | 'photos' | 'tracker' | 'archive' | 'editors' | 'pipeline' | 'settings'
 
 const VIEW_PATHS: Record<View, string> = {
@@ -112,13 +113,15 @@ type SafarGroup = SafarSummary & {
   renderingCount: number
   uploadCount: number
   jameyaCount: number
+  completedCount: number
 }
 
 const STAGES: { id: Stage; label: string }[] = [
   { id: 'editing', label: 'In Editing' },
   { id: 'rendering', label: 'Rendered' },
   { id: 'upload', label: 'Upload' },
-  { id: 'jameya', label: 'AlJamea submission' }
+  { id: 'jameya', label: 'Submission to Al Jamea tus Saifiyah' },
+  { id: 'completed', label: 'Completed Every Stage' }
 ]
 const localKey = 'ot_safar_tracker_snapshot'
 const deletedTasksKey = 'ot_safar_tracker_deleted_tasks'
@@ -303,7 +306,7 @@ function normalizeSnapshot(value: Partial<Snapshot> | null | undefined): Snapsho
       // User rule: non-present items must ONLY and ONLY appear in Stage 4: Submitted to Jameya!
       const defaultStage: Stage = isMissing ? 'jameya' : (STAGES.some(s => s.id === raw.stage) ? raw.stage : 'editing')
       const stage: Stage = override?.stage || defaultStage
-      const editorName = override?.editorName !== undefined ? override.editorName : (raw.editorName || '')
+      const editorName = override?.editorName !== undefined ? override.editorName : (raw.editorName?.trim() || DEFAULT_EDITOR)
       const dueDate = override?.dueDate !== undefined ? override.dueDate : String(raw.dueDate || '')
       return {
         id: String(raw.id || `${safarName}::${dateFolder}::${index}`),
@@ -340,7 +343,7 @@ function normalizeSnapshot(value: Partial<Snapshot> | null | undefined): Snapsho
         ...existing,
         ...t,
         stage,
-        editorName: override?.editorName ?? (t.editorName || existing.editorName || ''),
+        editorName: override?.editorName ?? (t.editorName || existing.editorName || DEFAULT_EDITOR),
         dueDate: override?.dueDate ?? (t.dueDate || existing.dueDate || '')
       })
     }
@@ -371,7 +374,7 @@ function readLocal(): Snapshot {
 function EditorAssignment({ value, label, onSave }: { value: string; label: string; onSave: (value: string) => void }): JSX.Element {
   const [draft, setDraft] = useState(value)
   useEffect(() => setDraft(value), [value])
-  return <input className="editor-input" aria-label={label} value={draft} placeholder="Assign editor" onChange={event => setDraft(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') event.currentTarget.blur(); if (event.key === 'Escape') { setDraft(value); event.currentTarget.blur() } }} onBlur={() => { if (draft.trim() !== value) onSave(draft.trim()) }} />
+  return <input className="editor-input" aria-label={label} value={draft} placeholder={`Assign editor (${DEFAULT_EDITOR})`} onChange={event => setDraft(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') event.currentTarget.blur(); if (event.key === 'Escape') { setDraft(value); event.currentTarget.blur() } }} onBlur={() => { if (draft.trim() !== value) onSave(draft.trim() || DEFAULT_EDITOR) }} />
 }
 
 function SafarLoadingSkeleton({ variant }: { variant: 'dashboard' | 'tracker' | 'kanban' }): JSX.Element {
@@ -425,6 +428,7 @@ function SafarProductionGroup({ group, expanded, onToggle, onArchive, onUpdateTa
   const renderingPct = (group.renderingCount / total) * 100
   const uploadPct = (group.uploadCount / total) * 100
   const jameyaPct = (group.jameyaCount / total) * 100
+  const completedPct = (group.completedCount / total) * 100
 
   return <article className="panel safar-group-card">
     <div className="safar-group-header">
@@ -433,19 +437,21 @@ function SafarProductionGroup({ group, expanded, onToggle, onArchive, onUpdateTa
         <div className="safar-group-progress-wrap">
           <div className="safar-group-progress-info">
             <strong>{group.percent}%</strong>
-            <span>{group.completed} of {group.total} submitted</span>
+            <span>{group.completed} of {group.total} completed</span>
           </div>
           <div className="multicolor-progress-bar mini" role="progressbar" aria-label={`${group.safarName} pipeline progress`}>
             {editingPct > 0 && <span className="stage-segment stage-editing" style={{ width: `${editingPct}%` }} title={`Editing: ${group.editingCount}`} />}
             {renderingPct > 0 && <span className="stage-segment stage-rendering" style={{ width: `${renderingPct}%` }} title={`Rendered: ${group.renderingCount}`} />}
             {uploadPct > 0 && <span className="stage-segment stage-upload" style={{ width: `${uploadPct}%` }} title={`Uploaded: ${group.uploadCount}`} />}
-            {jameyaPct > 0 && <span className="stage-segment stage-jameya" style={{ width: `${jameyaPct}%` }} title={`Submitted: ${group.jameyaCount}`} />}
+            {jameyaPct > 0 && <span className="stage-segment stage-jameya" style={{ width: `${jameyaPct}%` }} title={`Submitted to Jameya: ${group.jameyaCount}`} />}
+            {completedPct > 0 && <span className="stage-segment stage-completed" style={{ width: `${completedPct}%` }} title={`Completed Every Stage: ${group.completedCount}`} />}
           </div>
           <div className="multicolor-legend compact">
             <span className="legend-chip chip-editing"><i className="chip-dot" />{group.editingCount} E</span>
             <span className="legend-chip chip-rendering"><i className="chip-dot" />{group.renderingCount} R</span>
             <span className="legend-chip chip-upload"><i className="chip-dot" />{group.uploadCount} U</span>
-            <span className="legend-chip chip-jameya"><i className="chip-dot" />{group.jameyaCount} S</span>
+            <span className="legend-chip chip-jameya"><i className="chip-dot" />{group.jameyaCount} J</span>
+            <span className="legend-chip chip-completed"><i className="chip-dot" />{group.completedCount} C</span>
           </div>
         </div>
         <ChevronDown aria-hidden="true" size={19} className={expanded ? 'expanded' : ''}/>
@@ -521,7 +527,7 @@ export default function App(): JSX.Element {
   const [panelMenuOpen, setPanelMenuOpen] = useState(false)
   const [expandedSafars, setExpandedSafars] = useState<Set<string>>(() => new Set())
   const [page, setPage] = useState(0)
-  const [pipelineLimits, setPipelineLimits] = useState<Record<Stage, number>>({ rendering: 40, editing: 40, upload: 40, jameya: 40 })
+  const [pipelineLimits, setPipelineLimits] = useState<Record<Stage, number>>({ rendering: 40, editing: 40, upload: 40, jameya: 40, completed: 40 })
 
   const trackerChannelRef = useRef<any>(null)
   const nexusChannelRef = useRef<any>(null)
@@ -556,9 +562,11 @@ export default function App(): JSX.Element {
       const renderingCount = tasks.filter(task => task.stage === 'rendering').length
       const uploadCount = tasks.filter(task => task.stage === 'upload').length
       const jameyaCount = tasks.filter(task => task.stage === 'jameya').length
+      const completedCount = tasks.filter(task => task.stage === 'completed').length
       const total = Math.max(tasks.length, Number(summary.totalDays) || 0)
-      const isArchived = Boolean(summary.isArchived || (total > 0 && jameyaCount >= total))
-      const completed = isArchived ? total : jameyaCount
+      const finishedDates = jameyaCount + completedCount
+      const isArchived = Boolean(summary.isArchived || (total > 0 && finishedDates >= total))
+      const completed = isArchived ? total : finishedDates
       return {
         ...summary,
         isArchived,
@@ -566,11 +574,12 @@ export default function App(): JSX.Element {
         tasks,
         total,
         completed,
-        percent: isArchived ? 100 : total ? Math.round(completed / total * 100) : 0,
+        percent: isArchived ? 100 : total ? Math.min(100, Math.round(completed / total * 100)) : 0,
         editingCount: isArchived ? 0 : editingCount,
         renderingCount: isArchived ? 0 : renderingCount,
         uploadCount: isArchived ? 0 : uploadCount,
-        jameyaCount: isArchived ? total : jameyaCount
+        jameyaCount: isArchived ? 0 : jameyaCount,
+        completedCount: isArchived ? total : completedCount
       }
     }).sort((a, b) => a.safarName.localeCompare(b.safarName, undefined, { numeric: true }))
   }, [snapshot.safars, snapshot.tasks])
@@ -580,19 +589,22 @@ export default function App(): JSX.Element {
   const rows = useMemo(() => snapshot.tasks.filter(task =>
     !isJunkSafarName(task.safarName) &&
     (selectedSafar === 'all' || task.safarName === selectedSafar) &&
-    (selectedEditor === 'all' || task.editorName === selectedEditor) &&
+    (selectedEditor === 'all' || (task.editorName || DEFAULT_EDITOR) === selectedEditor) &&
     (filter === 'all' || task.stage === filter) &&
     `${task.safarName} ${task.dateFolder} ${task.hijriDate}`.toLowerCase().includes(searchTerm)
   ), [snapshot.tasks, selectedSafar, selectedEditor, filter, searchTerm])
 
-  const editors = useMemo(() => [...new Set(snapshot.tasks.map(task => task.editorName?.trim()).filter((name): name is string => Boolean(name)))].sort(), [snapshot.tasks])
+  const editors = useMemo(() => {
+    const set = new Set([DEFAULT_EDITOR, ...snapshot.tasks.map(task => task.editorName?.trim()).filter((name): name is string => Boolean(name))])
+    return Array.from(set).sort()
+  }, [snapshot.tasks])
   const tasksByEditor = useMemo(() => {
     const grouped = new Map<string, SafarTask[]>()
     for (const task of snapshot.tasks) {
-      if (!task.editorName) continue
-      const group = grouped.get(task.editorName) || []
+      const ed = task.editorName?.trim() || DEFAULT_EDITOR
+      const group = grouped.get(ed) || []
       group.push(task)
-      grouped.set(task.editorName, group)
+      grouped.set(ed, group)
     }
     return grouped
   }, [snapshot.tasks])
@@ -617,15 +629,17 @@ export default function App(): JSX.Element {
     let rendering = 0
     let upload = 0
     let jameya = 0
+    let completed = 0
     for (const g of activeSafarGroups) {
       totalDates += g.total
       editing += g.editingCount
       rendering += g.renderingCount
       upload += g.uploadCount
       jameya += g.jameyaCount
+      completed += g.completedCount
     }
-    const percent = totalDates > 0 ? Math.round((jameya / totalDates) * 100) : 0
-    return { totalDates, editing, rendering, upload, jameya, percent }
+    const percent = totalDates > 0 ? Math.min(100, Math.round(((jameya + completed) / totalDates) * 100)) : 0
+    return { totalDates, editing, rendering, upload, jameya, completed, percent }
   }, [activeSafarGroups])
   const hasTaskFilters = Boolean(search.trim()) || filter !== 'all' || selectedEditor !== 'all'
   const visibleSafarGroups = matchingSafarGroups.filter(group =>
@@ -843,7 +857,7 @@ export default function App(): JSX.Element {
       if (task.safarName !== group.safarName) return task
       const priorStage = summary?.archivePriorStages?.[task.id]
       return isArchived
-        ? { ...task, stage: 'jameya' as Stage, updatedAt: new Date().toISOString() }
+        ? { ...task, stage: 'completed' as Stage, updatedAt: new Date().toISOString() }
         : { ...task, stage: priorStage || task.stage, updatedAt: new Date().toISOString() }
     })
     const archivePriorStages = isArchived
@@ -875,7 +889,7 @@ export default function App(): JSX.Element {
         isArchived,
         taskStatuses: tasks.filter(task => task.safarName === group.safarName).map(task => ({
           dateFolder: task.dateFolder,
-          status: isArchived ? 'submitted' : task.stage === 'upload' ? 'uploaded' : task.stage === 'jameya' ? 'submitted' : 'auto'
+          status: isArchived ? 'submitted' : task.stage === 'upload' ? 'uploaded' : (task.stage === 'jameya' || task.stage === 'completed') ? 'submitted' : 'auto'
         }))
       }
     })
@@ -963,12 +977,12 @@ export default function App(): JSX.Element {
       if (error) setNotice('Saved on this device. Cloud history needs the Safar Tracker database setup.')
       await trackerChannelRef.current?.send({ type: 'broadcast', event: 'snapshot', payload: { snapshot: next } })
       if (changes.stage) {
-        const status = changes.stage === 'jameya' ? 'submitted' : changes.stage === 'upload' ? 'uploaded' : 'auto'
+        const status = (changes.stage === 'jameya' || changes.stage === 'completed') ? 'submitted' : changes.stage === 'upload' ? 'uploaded' : 'auto'
         await nexusChannelRef.current?.send({ type: 'broadcast', event: 'task_mark_done', payload: { safarName: task.safarName, dateFolder: task.dateFolder, status } })
 
-        // Trigger WhatsApp alert on completion of upload or jameya
-        if (changes.stage === 'upload' || changes.stage === 'jameya') {
-          const uploadedCount = next.tasks.filter(t => t.safarName === task.safarName && (t.stage === 'upload' || t.stage === 'jameya')).length
+        // Trigger WhatsApp alert on completion of upload, jameya or completed
+        if (changes.stage === 'upload' || changes.stage === 'jameya' || changes.stage === 'completed') {
+          const uploadedCount = next.tasks.filter(t => t.safarName === task.safarName && (t.stage === 'upload' || t.stage === 'jameya' || t.stage === 'completed')).length
           const totalCount = next.tasks.filter(t => t.safarName === task.safarName).length
           const pendingCount = Math.max(0, totalCount - uploadedCount)
           sendWhatsAppAlert(task.dateFolder, uploadedCount, pendingCount, window.location.origin).catch(() => {})
@@ -1045,6 +1059,7 @@ export default function App(): JSX.Element {
       dateFolder: cleanFolder,
       hijriDate: cleanFolder,
       stage: 'editing',
+      editorName: DEFAULT_EDITOR,
       dueDate: '',
       updatedAt: new Date().toISOString(),
       isPresent: true
@@ -1423,12 +1438,14 @@ export default function App(): JSX.Element {
                   {studioStats.rendering > 0 && <span className="stage-segment stage-rendering" style={{ width: `${(studioStats.rendering / (studioStats.totalDates || 1)) * 100}%` }} title={`Rendered: ${studioStats.rendering}`} />}
                   {studioStats.upload > 0 && <span className="stage-segment stage-upload" style={{ width: `${(studioStats.upload / (studioStats.totalDates || 1)) * 100}%` }} title={`Ready/Uploaded: ${studioStats.upload}`} />}
                   {studioStats.jameya > 0 && <span className="stage-segment stage-jameya" style={{ width: `${(studioStats.jameya / (studioStats.totalDates || 1)) * 100}%` }} title={`AlJamea Submitted: ${studioStats.jameya}`} />}
+                  {studioStats.completed > 0 && <span className="stage-segment stage-completed" style={{ width: `${(studioStats.completed / (studioStats.totalDates || 1)) * 100}%` }} title={`Completed Every Stage: ${studioStats.completed}`} />}
                 </div>
                 <div className="multicolor-legend">
                   <div className="legend-chip chip-editing"><span className="chip-dot" /><strong>{studioStats.editing}</strong> In Editing</div>
                   <div className="legend-chip chip-rendering"><span className="chip-dot" /><strong>{studioStats.rendering}</strong> Rendered</div>
                   <div className="legend-chip chip-upload"><span className="chip-dot" /><strong>{studioStats.upload}</strong> Uploaded</div>
-                  <div className="legend-chip chip-jameya"><span className="chip-dot" /><strong>{studioStats.jameya}</strong> Submitted</div>
+                  <div className="legend-chip chip-jameya"><span className="chip-dot" /><strong>{studioStats.jameya}</strong> Jameya</div>
+                  <div className="legend-chip chip-completed"><span className="chip-dot" /><strong>{studioStats.completed}</strong> Completed</div>
                 </div>
               </div>
             )}
@@ -1439,6 +1456,7 @@ export default function App(): JSX.Element {
               const renderingPct = (group.renderingCount / total) * 100
               const uploadPct = (group.uploadCount / total) * 100
               const jameyaPct = (group.jameyaCount / total) * 100
+              const completedPct = (group.completedCount / total) * 100
 
               return <article className="panel dashboard-safar-card" key={group.safarName}>
                 <div className="dashboard-safar-top">
@@ -1456,17 +1474,19 @@ export default function App(): JSX.Element {
                     {renderingPct > 0 && <span className="stage-segment stage-rendering" style={{ width: `${renderingPct}%` }} title={`Rendered: ${group.renderingCount} dates (${Math.round(renderingPct)}%)`} />}
                     {uploadPct > 0 && <span className="stage-segment stage-upload" style={{ width: `${uploadPct}%` }} title={`Uploaded: ${group.uploadCount} dates (${Math.round(uploadPct)}%)`} />}
                     {jameyaPct > 0 && <span className="stage-segment stage-jameya" style={{ width: `${jameyaPct}%` }} title={`Submitted: ${group.jameyaCount} dates (${Math.round(jameyaPct)}%)`} />}
+                    {completedPct > 0 && <span className="stage-segment stage-completed" style={{ width: `${completedPct}%` }} title={`Completed: ${group.completedCount} dates (${Math.round(completedPct)}%)`} />}
                   </div>
                   <div className="multicolor-legend">
                     <span className="legend-chip chip-editing" title="In Editing"><span className="chip-dot" />{group.editingCount} Editing</span>
                     <span className="legend-chip chip-rendering" title="Rendered"><span className="chip-dot" />{group.renderingCount} Rendered</span>
                     <span className="legend-chip chip-upload" title="Uploaded"><span className="chip-dot" />{group.uploadCount} Upload</span>
-                    <span className="legend-chip chip-jameya" title="Submitted to Jameya"><span className="chip-dot" />{group.jameyaCount} Submit</span>
+                    <span className="legend-chip chip-jameya" title="Submission to Al Jamea tus Saifiyah"><span className="chip-dot" />{group.jameyaCount} Jameya</span>
+                    <span className="legend-chip chip-completed" title="Completed Every Stage"><span className="chip-dot" />{group.completedCount} Completed</span>
                   </div>
                 </div>
 
                 <p className="dashboard-safar-progress-copy">
-                  {group.completed} of {group.total} dates submitted to Jameya {group.total > group.completed ? `(${group.total - group.completed} in progress)` : '· All stages complete!'}
+                  {group.completed} of {group.total} dates completed {group.total > group.completed ? `(${group.total - group.completed} in progress)` : '· All stages complete!'}
                 </p>
 
                 {group.tasks.length ? <ul className="safar-preview-list">{group.tasks.slice(0, 4).map(task => (
@@ -1550,7 +1570,7 @@ export default function App(): JSX.Element {
           {view === 'editors' && <section className="editor-overview" aria-label="Editor workloads">
             {editors.length === 0 ? <div className="panel editor-empty"><div className="empty-orb" aria-hidden="true"><Users size={24}/></div><div><h2>No editors assigned yet</h2><p>Assign a date to an editor in the table below. Their workload and stage progress will appear here.</p></div></div> : editors.map((editor, index) => {
               const assigned = tasksByEditor.get(editor) || []
-              const done = assigned.filter(task => task.stage === 'jameya').length
+              const done = assigned.filter(task => task.stage === 'jameya' || task.stage === 'completed').length
               const activeStage = STAGES.find(stage => assigned.some(task => task.stage === stage.id))?.label || 'All caught up'
               return <button type="button" className="editor-card" key={editor} aria-pressed={selectedEditor === editor} onClick={() => setSelectedEditor(selectedEditor === editor ? 'all' : editor)}>
                 <div className={`editor-avatar editor-avatar-${index % 4}`} aria-hidden="true"><UserRound size={19}/></div>
@@ -1575,7 +1595,7 @@ export default function App(): JSX.Element {
               <div className="search-box"><Search aria-hidden="true" size={16}/><label className="visually-hidden" htmlFor="task-search">Search Safar or date folder</label><input id="task-search" type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search Safar or date folder"/></div>
               <div className="toolbar-actions"><label className="filter-select"><ListFilter aria-hidden="true" size={15}/><span className="visually-hidden">Filter by stage</span><select aria-label="Filter by stage" value={filter} onChange={event => setFilter(event.target.value)}><option value="all">All stages</option>{STAGES.map(stage => <option key={stage.id} value={stage.id}>{stage.label}</option>)}</select></label><button type="button" className="button-secondary export-button" onClick={exportCsv}><Cloud aria-hidden="true" size={15}/> Export CSV</button></div>
             </div>
-            {view === 'pipeline' && <div className="pipeline-board">{STAGES.map((stage, index) => { const stageTasks = tasksByStage.get(stage.id) || []; return <section className="pipeline-column" key={stage.id}><div className="pipeline-column-head"><span className={`pipeline-dot pipeline-${stage.id}`}/><strong>{stage.label}</strong><span>{stageTasks.length}</span></div>{stageTasks.length === 0 ? <div className="pipeline-empty">No dates in this stage</div> : stageTasks.slice(0, pipelineLimits[stage.id]).map(task => <article className="pipeline-task" key={task.id}><div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '6px' }}><strong>{dateFolderName(task)}</strong><button type="button" title={`Exclude ${dateFolderName(task)}`} onClick={() => { if (window.confirm(`Exclude "${dateFolderName(task)}" from tracking?`)) void handleRemoveTask(task) }} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '2px' }} onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#ef4444' }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#94a3b8' }}><Trash2 size={12} /></button></div><small>{task.safarName}{task.editorName ? ` · Editor ${task.editorName}` : ' · Unassigned'}{task.dueDate ? ` · Due ${new Date(`${task.dueDate}T00:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}` : ''}</small>{index < STAGES.length - 1 && <button className="pipeline-advance" onClick={() => updateTask(task, { stage: STAGES[index + 1].id })}>Move to {STAGES[index + 1].label} →</button>}</article>)}{stageTasks.length > pipelineLimits[stage.id] && <button type="button" className="pipeline-load-more" onClick={() => setPipelineLimits(current => ({ ...current, [stage.id]: current[stage.id] + 40 }))}>Show next 40 ({stageTasks.length - pipelineLimits[stage.id]} remaining)</button>}</section> })}</div>}
+            {view === 'pipeline' && <div className="pipeline-board">{STAGES.map((stage, index) => { const stageTasks = tasksByStage.get(stage.id) || []; return <section className="pipeline-column" key={stage.id}><div className="pipeline-column-head"><span className={`pipeline-dot pipeline-${stage.id}`}/><strong>{stage.label}</strong><span>{stageTasks.length}</span></div>{stageTasks.length === 0 ? <div className="pipeline-empty">No dates in this stage</div> : stageTasks.slice(0, pipelineLimits[stage.id]).map(task => <article className="pipeline-task" key={task.id}><div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '6px' }}><strong>{dateFolderName(task)}</strong><button type="button" title={`Exclude ${dateFolderName(task)}`} onClick={() => { if (window.confirm(`Exclude "${dateFolderName(task)}" from tracking?`)) void handleRemoveTask(task) }} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '2px' }} onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#ef4444' }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#94a3b8' }}><Trash2 size={12} /></button></div><small>{task.safarName} · Editor {task.editorName || DEFAULT_EDITOR}{task.dueDate ? ` · Due ${new Date(`${task.dueDate}T00:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}` : ''}</small>{index < STAGES.length - 1 && <button className="pipeline-advance" onClick={() => updateTask(task, { stage: STAGES[index + 1].id })}>Move to {STAGES[index + 1].label} →</button>}</article>)}{stageTasks.length > pipelineLimits[stage.id] && <button type="button" className="pipeline-load-more" onClick={() => setPipelineLimits(current => ({ ...current, [stage.id]: current[stage.id] + 40 }))}>Show next 40 ({stageTasks.length - pipelineLimits[stage.id]} remaining)</button>}</section> })}</div>}
             {view === 'editors' && <div className="table-wrap"><table><caption className="visually-hidden">Editor assignments, Safar date folders, and production progress</caption><thead><tr><th scope="col">DATE FOLDER</th><th scope="col">SAFAR</th><th scope="col">EDITOR</th><th scope="col">PROGRESS STAGE</th><th scope="col">DUE DATE</th><th scope="col">LAST UPDATED</th><th scope="col">ACTION</th></tr></thead><tbody>{visibleRows.map(task => <tr key={task.id}><td><strong className="event-folder-cell" title={dateFolderName(task)}>{dateFolderName(task)}</strong></td><td><span className="hijri-date">{task.safarName}</span></td><td><EditorAssignment label={`Editor assigned to ${dateFolderName(task)}`} value={task.editorName || ''} onSave={editorName => updateTask(task, { editorName })}/></td><td><select aria-label={`Production stage for ${dateFolderName(task)}`} className={`stage-select stage-${task.stage}`} value={task.stage} onChange={event => updateTask(task, { stage: event.target.value as Stage })}>{STAGES.map((stage, index) => <option key={stage.id} value={stage.id}>{index + 1}. {stage.label}</option>)}</select></td><td><input className="due-input" aria-label={`Due date for ${dateFolderName(task)}`} type="date" value={task.dueDate} onChange={event => updateTask(task, { dueDate: event.target.value })}/></td><td><span className="updated-cell"><time dateTime={task.updatedAt}>{new Date(task.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</time></span></td><td><button type="button" title={`Exclude ${dateFolderName(task)}`} onClick={() => { if (window.confirm(`Exclude "${dateFolderName(task)}" from tracking?`)) void handleRemoveTask(task) }} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px' }} onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#ef4444' }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#94a3b8' }}><Trash2 size={13} /></button></td></tr>)}</tbody></table>{visibleRows.length === 0 && <div className="empty-state" role="status">No dates match your search.</div>}</div>}
             {view === 'editors' && rows.length > pageSize && <nav className="pagination" aria-label="Editor assignment pages"><button type="button" className="button-secondary" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}>Previous</button><span>Page {currentPage + 1} of {pageCount}</span><button type="button" className="button-secondary" disabled={currentPage + 1 >= pageCount} onClick={() => setPage(currentPage + 1)}>Next</button></nav>}
             <div className={`table-footer ${view === 'pipeline' ? 'hidden-view' : ''}`}><span>Showing <strong>{visibleRows.length}</strong> of <strong>{rows.length}</strong> matching dates</span><span className="footer-sync">{saving ? 'Syncing changes…' : connected ? 'Changes sync in real time' : 'Changes saved on this device'} <span className={`status-dot ${connected ? 'online' : ''}`}/></span></div>

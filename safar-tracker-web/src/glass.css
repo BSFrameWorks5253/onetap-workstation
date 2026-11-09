@@ -200,6 +200,7 @@ tbody tr:hover { background: rgba(255,255,255,.38); }
 .pipeline-editing { background: #91a3b5; }
 .pipeline-upload { background: #88a18a; }
 .pipeline-jameya { background: #a495b4; }
+.pipeline-completed { background: #0d9488; }
 .pipeline-empty { padding: 12px 8px; border: 1px dashed rgba(192,184,164,.6); border-radius: 9px; color: #a09a8d; font-size: 8px; text-align: center; }
 .pipeline-task { display: block; width: 100%; margin-top: 7px; padding: 10px; border: 1px solid rgba(255,255,255,.76); border-radius: 10px; background: rgba(255,255,255,.64); box-shadow: 0 4px 11px rgba(91,77,51,.045), inset 0 1px 0 white; text-align: left; }
 .pipeline-task:hover { background: rgba(255,255,255,.9); transform: translateY(-1px); }
@@ -615,6 +616,10 @@ td { color: #514d43; font-size: .875rem; }
   background: linear-gradient(90deg, #7c3aed, #8b5cf6);
   box-shadow: 0 0 10px rgba(124, 58, 237, 0.45);
 }
+.stage-segment.stage-completed {
+  background: linear-gradient(90deg, #0d9488, #14b8a6);
+  box-shadow: 0 0 10px rgba(13, 148, 136, 0.45);
+}
 
 /* Legend Chips */
 .multicolor-legend {
@@ -668,6 +673,10 @@ td { color: #514d43; font-size: .875rem; }
   background: #8b5cf6;
   box-shadow: 0 0 6px #8b5cf6;
 }
+.chip-completed .chip-dot, .dot-completed {
+  background: #0d9488;
+  box-shadow: 0 0 6px #0d9488;
+}
 
 /* Stage Tags */
 .stage-tag {
@@ -697,6 +706,12 @@ td { color: #514d43; font-size: .875rem; }
   background: #ede9fe;
   color: #6d28d9;
   border: 1px solid #ddd6fe;
+}
+.stage-tag.stage-completed {
+  background: #ccfbf1;
+  color: #0f766e;
+  border: 1px solid #99f6e4;
+  box-shadow: 0 0 6px rgba(13, 148, 136, 0.2);
 }
 
 /* Studio-Wide Pipeline Summary Panel */

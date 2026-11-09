@@ -118,9 +118,11 @@ class AnyShareRealtimeService {
       const status = String(task.status || 'editing_pending');
       const isMissing = task.isMissing === true || task.isPresent === false || task.isAvailable === false;
 
-      let stage: 'editing' | 'rendering' | 'upload' | 'jameya' = 'editing';
+      let stage: 'editing' | 'rendering' | 'upload' | 'jameya' | 'completed' = 'editing';
       if (isMissing || status === 'submitted') {
         stage = 'jameya';
+      } else if (status === 'completed') {
+        stage = 'completed';
       } else if (status === 'uploaded') {
         stage = 'upload';
       } else if (status === 'upload_pending' || (task.renderVideoCount && task.renderVideoCount > 0) || task.finalPath) {
@@ -133,8 +135,8 @@ class AnyShareRealtimeService {
       let resolvedStage = stage;
       if (isMissing) {
         resolvedStage = 'jameya';
-      } else if (priorTask?.stage && priorTask.stage === 'jameya' && status !== 'upload_pending' && status !== 'uploaded') {
-        resolvedStage = 'jameya';
+      } else if (priorTask?.stage && (priorTask.stage === 'jameya' || priorTask.stage === 'completed') && status !== 'upload_pending' && status !== 'uploaded') {
+        resolvedStage = priorTask.stage;
       } else if (priorTask?.stage && stage === 'editing' && !task.isManual && !scanComplete) {
         resolvedStage = priorTask.stage;
       }
@@ -151,7 +153,7 @@ class AnyShareRealtimeService {
         isPresent: !isMissing,
         isMissing,
         dueDate: previous?.dueDate || '',
-        editorName: previous?.editorName || '',
+        editorName: previous?.editorName || 'Murtaza',
         updatedAt: now,
         order: index
       };
@@ -167,7 +169,7 @@ class AnyShareRealtimeService {
         uniqueRowsMap.set(r.id, r);
       } else {
         const existing = uniqueRowsMap.get(r.id)!;
-        const rank = (st: string) => st === 'jameya' ? 4 : st === 'upload' ? 3 : st === 'rendering' ? 2 : 1;
+        const rank = (st: string) => st === 'completed' ? 5 : st === 'jameya' ? 4 : st === 'upload' ? 3 : st === 'rendering' ? 2 : 1;
         if (rank(r.stage) > rank(existing.stage)) uniqueRowsMap.set(r.id, { ...existing, ...r });
       }
     }
@@ -190,7 +192,7 @@ class AnyShareRealtimeService {
         const previousSafar = priorSafars.get(safarName);
         const totalDays = Number(s.totalDays || 0);
         const safarRows = rowsBySafar.get(safarName) || [];
-        const allDatesSubmitted = safarRows.length > 0 && safarRows.every((row: any) => row.stage === 'jameya') && (!totalDays || safarRows.length >= totalDays);
+        const allDatesSubmitted = safarRows.length > 0 && safarRows.every((row: any) => row.stage === 'jameya' || row.stage === 'completed') && (!totalDays || safarRows.length >= totalDays);
         const hasArchiveOverride = typeof s.isArchived === 'boolean' || typeof s.is_archived === 'boolean';
         const isArchived = hasArchiveOverride
           ? Boolean(s.isArchived ?? s.is_archived)
