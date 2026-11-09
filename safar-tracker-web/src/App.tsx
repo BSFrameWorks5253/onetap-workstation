@@ -43,7 +43,7 @@ export const DEFAULT_EDITOR = 'Murtaza'
 type View = 'dashboard' | 'ongoing' | 'photos' | 'tracker' | 'archive' | 'editors' | 'pipeline' | 'settings'
 
 const VIEW_PATHS: Record<View, string> = {
-  dashboard: '/dashboard',
+  dashboard: '/',
   ongoing: '/kanban',
   photos: '/photos',
   tracker: '/tracker',
@@ -62,7 +62,7 @@ function parseUrlRoute(): { view: View; safar?: string } {
 
     const candidate = hash || rawPath.replace(/^\//, '')
 
-    if (candidate === 'dashboard') return { view: 'dashboard', safar: safarParam }
+    if (!candidate || candidate === 'dashboard' || candidate === 'home') return { view: 'dashboard', safar: safarParam }
     if (candidate === 'ongoing' || candidate === 'kanban' || candidate === 'pipeline-board') return { view: 'ongoing', safar: safarParam }
     if (candidate === 'photos' || candidate === 'photo-tracker' || candidate === 'drive') return { view: 'photos', safar: safarParam }
     if (candidate === 'tracker' || candidate === 'safars' || candidate === 'safar-tracker') return { view: 'tracker', safar: safarParam }
@@ -71,7 +71,7 @@ function parseUrlRoute(): { view: View; safar?: string } {
     if (candidate === 'pipeline' || candidate === 'media') return { view: 'pipeline', safar: safarParam }
     if (candidate === 'settings') return { view: 'settings', safar: safarParam }
   } catch {}
-  return { view: 'ongoing' }
+  return { view: 'dashboard' }
 }
 type SafarTask = {
   id: string
@@ -1241,7 +1241,7 @@ export default function App(): JSX.Element {
       <button type="button" className={`sidebar-overlay ${menuOpen ? 'visible' : ''}`} aria-label="Close navigation menu" onClick={() => { setMenuOpen(false); menuToggleRef.current?.focus() }} tabIndex={menuOpen ? 0 : -1} aria-hidden={!menuOpen}/>
       
       <aside ref={sidebarRef} id="workspace-navigation" className={`sidebar ${menuOpen ? 'sidebar-open' : ''}`} aria-label="Workspace navigation" aria-hidden={isMobile && !menuOpen}>
-        <div className="brand">
+        <div className="brand" onClick={() => navigateTo('dashboard')} style={{ cursor: 'pointer' }} title="Go to Dashboard">
           <div className="brand-mark" aria-hidden="true">1</div>
           <div><strong>One Tap</strong><span>PRODUCTION WORKSPACE</span></div>
           <button ref={sidebarCloseRef} type="button" className="sidebar-close" aria-label="Close navigation menu" onClick={() => { setMenuOpen(false); menuToggleRef.current?.focus() }}><X size={18}/></button>
@@ -1249,14 +1249,14 @@ export default function App(): JSX.Element {
 
         <nav aria-label="Main navigation">
           <div className="nav-caption">DELIVERY PIPELINE</div>
+          <button type="button" aria-current={view === 'dashboard' ? 'page' : undefined} className={`nav-link ${view === 'dashboard' ? 'active' : ''}`} onClick={() => navigateTo('dashboard')}>
+            <LayoutDashboard aria-hidden="true" size={17}/> Dashboard
+          </button>
           <button type="button" aria-current={view === 'ongoing' ? 'page' : undefined} className={`nav-link ${view === 'ongoing' ? 'active' : ''}`} onClick={() => navigateTo('ongoing')}>
             <Kanban aria-hidden="true" size={17}/> Ongoing Safar <span className="nav-count">{activeSafarGroups.length}</span>
           </button>
           <button type="button" aria-current={view === 'photos' ? 'page' : undefined} className={`nav-link ${view === 'photos' ? 'active' : ''}`} onClick={() => navigateTo('photos')}>
             <Camera aria-hidden="true" size={17}/> Photo Tracker
-          </button>
-          <button type="button" aria-current={view === 'dashboard' ? 'page' : undefined} className={`nav-link ${view === 'dashboard' ? 'active' : ''}`} onClick={() => navigateTo('dashboard')}>
-            <LayoutDashboard aria-hidden="true" size={17}/> Dashboard
           </button>
           <button type="button" aria-current={view === 'tracker' ? 'page' : undefined} className={`nav-link ${view === 'tracker' ? 'active' : ''}`} onClick={() => navigateTo('tracker')}>
             <CalendarDays aria-hidden="true" size={17}/> Safar tracker <span className="nav-count">{safars.length}</span>
