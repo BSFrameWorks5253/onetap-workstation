@@ -16,5 +16,35 @@
       "type": "image/svg+xml",
       "purpose": "any maskable"
     }
+  ],
+  "shortcuts": [
+    {
+      "name": "Ongoing Kanban",
+      "short_name": "Kanban",
+      "description": "Live production board for the ongoing Safar",
+      "url": "/kanban",
+      "icons": [{ "src": "/logo.svg", "sizes": "192x192" }]
+    },
+    {
+      "name": "Live Safar Widget",
+      "short_name": "Widget",
+      "description": "Compact live status widget for home screen",
+      "url": "/widget",
+      "icons": [{ "src": "/logo.svg", "sizes": "192x192" }]
+    },
+    {
+      "name": "Photo Tracker",
+      "short_name": "Photos",
+      "description": "Photo production stages and drive sync",
+      "url": "/photos",
+      "icons": [{ "src": "/logo.svg", "sizes": "192x192" }]
+    },
+    {
+      "name": "Safars Tracker",
+      "short_name": "Safars",
+      "description": "All Safars delivery progress",
+      "url": "/tracker",
+      "icons": [{ "src": "/logo.svg", "sizes": "192x192" }]
+    }
   ]
 }

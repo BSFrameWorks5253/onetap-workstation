@@ -1729,7 +1729,412 @@ button:active,
 .kanban-stage-advance-btn:active,
 .photo-stage-advance-btn:active,
 .briefing-btn-whatsapp:active,
-.briefing-btn-copy:active {
+.briefing-btn-copy:active,
+.widget-briefing-btn:active,
+.widget-whatsapp-btn:active,
+.widget-nav-btn:active {
   transform: scale(0.97) !important;
   transition: transform 90ms cubic-bezier(0.23, 1, 0.32, 1) !important;
 }
+
+/* ==========================================================================
+   STANDALONE MOBILE HOME SCREEN WIDGET STYLES
+   ========================================================================== */
+
+.standalone-widget-shell {
+  min-height: 100vh;
+  width: 100%;
+  background: radial-gradient(circle at 50% 0%, rgba(222, 212, 183, 0.3) 0%, transparent 60%), #f5f4ee;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.standalone-widget-card {
+  width: 100%;
+  max-width: 440px;
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 24px;
+  box-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.12), 0 0 1px 1px rgba(15, 23, 42, 0.05);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-sizing: border-box;
+}
+
+.widget-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.widget-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.widget-logo-badge {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: #796536;
+  color: #faf9f4;
+  font: 800 16px Manrope, sans-serif;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 4px 10px rgba(121, 101, 54, 0.25);
+}
+
+.widget-brand-label {
+  display: block;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: var(--text-secondary, #64748b);
+}
+
+.widget-sync-status {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 9px;
+  font-weight: 700;
+  color: #059669;
+  letter-spacing: 0.5px;
+}
+
+.widget-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.widget-icon-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--surface-2, #f1f5f9);
+  border: 1px solid var(--border, #e2e8f0);
+  color: var(--text-secondary, #64748b);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.widget-icon-btn:hover {
+  background: #e2e8f0;
+  color: var(--text-primary, #0f172a);
+}
+
+.widget-icon-btn.spinning svg {
+  animation: widget-spin 0.8s linear infinite;
+}
+
+@keyframes widget-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.widget-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.widget-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.widget-pill-active {
+  background: rgba(121, 101, 54, 0.12);
+  color: #796536;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.widget-time {
+  font-size: 10px;
+  color: var(--text-secondary, #64748b);
+  font-weight: 600;
+}
+
+.widget-safar-title {
+  font: 800 20px/1.25 Manrope, sans-serif;
+  color: var(--text-primary, #0f172a);
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+
+.widget-progress-card {
+  background: var(--surface-2, #f8fafc);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 18px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.widget-gauge-wrap {
+  flex: none;
+}
+
+.widget-radial-ring {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  position: relative;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
+}
+
+.widget-radial-inner {
+  position: absolute;
+  inset: 6px;
+  background: var(--surface, #ffffff);
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.widget-percent-num {
+  font: 800 17px/1 Manrope, sans-serif;
+  color: #4f46e5;
+}
+
+.widget-percent-label {
+  font-size: 6px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  color: var(--text-secondary, #64748b);
+  margin-top: 2px;
+}
+
+.widget-gauge-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.widget-metric-highlight strong {
+  font: 700 14px Manrope, sans-serif;
+  color: var(--text-primary, #0f172a);
+}
+
+.widget-metric-highlight span {
+  font-size: 11px;
+  color: var(--text-secondary, #64748b);
+  margin-left: 4px;
+}
+
+.widget-linear-bar-wrap {
+  width: 100%;
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.widget-linear-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4f46e5 0%, #3b82f6 100%);
+  border-radius: 999px;
+  transition: width 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.widget-remaining-subtext {
+  font-size: 10px;
+  font-weight: 600;
+  color: #d97706;
+}
+
+.widget-breakdown-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.widget-breakdown-box {
+  background: var(--surface-2, #f8fafc);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 14px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.widget-box-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-primary, #0f172a);
+}
+
+.widget-box-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.widget-stat-pill {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 6px;
+  border-radius: 6px;
+  font-size: 10px;
+}
+
+.widget-stat-pill .pill-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  margin-right: 4px;
+  flex: none;
+}
+
+.widget-stat-pill.success {
+  background: rgba(5, 150, 105, 0.08);
+  color: #059669;
+}
+.widget-stat-pill.success .pill-dot { background: #059669; }
+
+.widget-stat-pill.warn {
+  background: rgba(217, 119, 6, 0.08);
+  color: #b45309;
+}
+.widget-stat-pill.warn .pill-dot { background: #d97706; }
+
+.widget-stat-pill.info {
+  background: rgba(37, 99, 235, 0.08);
+  color: #1d4ed8;
+}
+.widget-stat-pill.info .pill-dot { background: #2563eb; }
+
+.widget-stat-pill.special {
+  background: rgba(124, 58, 237, 0.08);
+  color: #6d28d9;
+}
+.widget-stat-pill.special .pill-dot { background: #7c3aed; }
+
+.widget-stat-pill .pill-label {
+  flex: 1;
+  font-weight: 500;
+}
+
+.widget-stat-pill .pill-val {
+  font-weight: 800;
+}
+
+.widget-action-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.widget-briefing-btn {
+  width: 100%;
+  height: 44px;
+  border-radius: 12px;
+  background: #10b981;
+  color: #ffffff;
+  border: 1px solid #059669;
+  font: 700 13px Manrope, sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.28);
+  transition: all 0.15s ease;
+}
+
+.widget-briefing-btn:hover {
+  background: #059669;
+}
+
+.widget-whatsapp-btn {
+  width: 100%;
+  height: 38px;
+  border-radius: 10px;
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+  font: 700 12px Manrope, sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.widget-whatsapp-btn:hover {
+  background: #dcfce7;
+}
+
+.widget-nav-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-top: 1px solid var(--border, #e2e8f0);
+  padding-top: 12px;
+}
+
+.widget-nav-btn {
+  width: 100%;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--surface-2, #f8fafc);
+  border: 1px solid var(--border, #e2e8f0);
+  color: var(--text-secondary, #64748b);
+  font-size: 11px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.widget-nav-btn:hover {
+  background: #e2e8f0;
+  color: var(--text-primary, #0f172a);
+}
+
+.widget-tip-box {
+  background: rgba(121, 101, 54, 0.06);
+  border: 1px dashed rgba(121, 101, 54, 0.25);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 10px;
+  color: #796536;
+  line-height: 1.4;
+}
+
+.widget-tip-box svg {
+  flex: none;
+  margin-top: 2px;
+}
+

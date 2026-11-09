@@ -35,6 +35,7 @@ import {
 import OngoingSafarKanban, { type SafarTaskItem, isJunkSafarName } from './components/OngoingSafarKanban'
 import PhotoTracker from './components/PhotoTracker'
 import EmailLoginModal from './components/EmailLoginModal'
+import StandaloneWidgetView from './components/StandaloneWidgetView'
 import AppLoader from './components/AppLoader'
 import {
   sendWhatsAppAlert,
@@ -48,7 +49,7 @@ type Stage = 'editing' | 'rendering' | 'upload' | 'jameya' | 'completed'
 export type PhotoStage = 'edited' | 'given_to_murtaza' | 'uploaded'
 export const DEFAULT_EDITOR = 'Murtaza'
 export const DEFAULT_PHOTO_EDITOR = 'Muffadal Peti'
-type View = 'dashboard' | 'ongoing' | 'photos' | 'tracker' | 'archive' | 'editors' | 'pipeline' | 'settings'
+type View = 'dashboard' | 'ongoing' | 'photos' | 'tracker' | 'archive' | 'editors' | 'pipeline' | 'settings' | 'widget'
 
 const VIEW_PATHS: Record<View, string> = {
   dashboard: '/',
@@ -58,7 +59,8 @@ const VIEW_PATHS: Record<View, string> = {
   archive: '/archive',
   editors: '/editors',
   pipeline: '/pipeline',
-  settings: '/settings'
+  settings: '/settings',
+  widget: '/widget'
 }
 
 function parseUrlRoute(): { view: View; safar?: string } {
@@ -78,6 +80,7 @@ function parseUrlRoute(): { view: View; safar?: string } {
     if (candidate === 'editors' || candidate === 'team') return { view: 'editors', safar: safarParam }
     if (candidate === 'pipeline' || candidate === 'media') return { view: 'pipeline', safar: safarParam }
     if (candidate === 'settings') return { view: 'settings', safar: safarParam }
+    if (candidate === 'widget' || candidate === 'home-widget' || candidate === 'live-widget') return { view: 'widget', safar: safarParam }
   } catch {}
   return { view: 'dashboard' }
 }
@@ -731,6 +734,17 @@ export default function App(): JSX.Element {
   const sidebarCloseRef = useRef<HTMLButtonElement>(null)
   snapshotRef.current = snapshot
 
+  const [showScriptableGuide, setShowScriptableGuide] = useState(false)
+
+  // Clear legacy notification keys to avoid stale browser cache
+  useEffect(() => {
+    try {
+      localStorage.removeItem('ot_email_notifications_config')
+      localStorage.removeItem('ot_email_queue')
+      localStorage.removeItem('email_modal_open')
+    } catch {}
+  }, [])
+
   // Dismiss luxury bootloader after brief animation
   useEffect(() => {
     const timer = window.setTimeout(() => setShowBootLoader(false), 800)
@@ -884,7 +898,8 @@ export default function App(): JSX.Element {
     archive: { title: 'Archived Safars', eyebrow: 'COMPLETED & STORED', description: 'Archived Safars remain available here and can be restored at any time.' },
     editors: { title: 'Editors & assignments', eyebrow: 'TEAM WORKLOAD', description: 'See who is working on each date and where it is in the pipeline.' },
     pipeline: { title: 'Media pipeline', eyebrow: 'PRODUCTION STAGES', description: 'Follow each date from rendering through AlJamea submission.' },
-    settings: { title: 'Workspace settings', eyebrow: 'YOUR WORKSPACE', description: 'Manage alerts, login credentials, and check your One Tap sync connection.' }
+    settings: { title: 'Workspace settings', eyebrow: 'YOUR WORKSPACE', description: 'Manage alerts, login credentials, and check your One Tap sync connection.' },
+    widget: { title: 'Live Safar Widget', eyebrow: 'MOBILE HOME SCREEN WIDGET', description: 'High-density live status card for home screens and lock screens.' }
   }
 
   const pageSize = 40
@@ -1695,6 +1710,38 @@ export default function App(): JSX.Element {
     } catch {}
   }
 
+  if (view === 'widget') {
+    const ongoingGroup = activeSafarGroups.find(g => g.safarName === effectiveOngoingSafar) || activeSafarGroups[0]
+    return (
+      <div className="app-shell" style={{ display: 'block', minHeight: '100vh', background: '#f5f4ee' }}>
+        <StandaloneWidgetView
+          safarName={ongoingGroup?.safarName || effectiveOngoingSafar || 'Active Safar'}
+          totalDates={ongoingGroup?.total || ongoingGroup?.tasks.length || 0}
+          deliveredDates={ongoingGroup?.deliveredCount || 0}
+          deliveredPercent={ongoingGroup?.deliveredPercent || 0}
+          videoStats={{
+            uploaded: ongoingGroup ? ongoingGroup.uploadCount + ongoingGroup.jameyaCount + ongoingGroup.completedCount : 0,
+            rendered: ongoingGroup?.renderingCount || 0,
+            editing: ongoingGroup?.editingCount || 0,
+            completed: ongoingGroup?.completedCount || 0
+          }}
+          photoStats={{
+            uploaded: ongoingGroup?.tasks.filter(t => t.photoStage === 'uploaded' || t.photoUploaded).length || 0,
+            givenToMurtaza: ongoingGroup?.tasks.filter(t => t.photoStage === 'given_to_murtaza').length || 0,
+            editing: ongoingGroup?.tasks.filter(t => t.photoStage === 'edited' && !t.photoUploaded).length || 0
+          }}
+          connected={connected}
+          lastUpdated={snapshot.updatedAt}
+          onRefresh={requestDesktopSync}
+          onCopyBriefing={() => copyDailyBriefing(ongoingGroup?.safarName)}
+          onShareWhatsApp={() => shareDailyBriefingWhatsApp(ongoingGroup?.safarName)}
+          onNavigate={navigateTo}
+        />
+        {notice && <div className="toast-note" role="status" aria-live="polite"><span>{notice}</span><button type="button" onClick={() => setNotice('')}>Dismiss</button></div>}
+      </div>
+    )
+  }
+
   return (
     <div className="app-shell">
       {/* Luxury Cold Boot Loader */}
@@ -2376,6 +2423,87 @@ export default function App(): JSX.Element {
                 <h2>Workstation Disk Rescan</h2>
                 <p>Purge ghost entries and enforce disk synchronization so only present folders appear in active stages.</p>
                 <button className="button-secondary" onClick={handleResetAndRescan}>Reset & Clean Rescan</button>
+              </div>
+            </article>
+
+            <article className="panel settings-card" style={{ gridColumn: 'span 2' }}>
+              <div className="settings-icon"><Smartphone size={18}/></div>
+              <div>
+                <h2>Mobile Home Screen Widgets (PWA & iOS)</h2>
+                <p>Track the active Safar with zero clicks right on your phone's home screen, lock screen, or desktop widget area.</p>
+
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '12px', marginBottom: '14px' }}>
+                  <button
+                    type="button"
+                    className="button-primary"
+                    onClick={() => navigateTo('widget')}
+                  >
+                    <Smartphone size={14} /> Open Live Widget View
+                  </button>
+                  <button
+                    type="button"
+                    className="button-secondary"
+                    onClick={() => {
+                      if (navigator.clipboard) {
+                        navigator.clipboard.writeText(`${window.location.origin}/widget`)
+                        setNotice('✓ Widget URL copied to clipboard!')
+                      }
+                    }}
+                  >
+                    Copy Widget URL
+                  </button>
+                  <button
+                    type="button"
+                    className="button-secondary"
+                    onClick={() => setShowScriptableGuide(prev => !prev)}
+                  >
+                    {showScriptableGuide ? 'Hide iOS Setup' : '🍎 Native iOS Widget (Scriptable)'}
+                  </button>
+                </div>
+
+                <div style={{ fontSize: '11px', color: '#64748b', lineHeight: 1.5 }}>
+                  <p style={{ margin: '4px 0' }}>
+                    📱 <strong>Android PWA Shortcut:</strong> Long-press the One Tap app icon on your phone home screen, then touch & hold <strong>"Live Safar Widget"</strong> and drag it to place it anywhere on your home screen.
+                  </p>
+                  <p style={{ margin: '4px 0' }}>
+                    🌐 <strong>Zero-Domain Free API:</strong> Works natively with Vercel serverless endpoint <code>/api/widget-data</code>.
+                  </p>
+                </div>
+
+                {showScriptableGuide && (
+                  <div
+                    style={{
+                      marginTop: '14px',
+                      padding: '14px',
+                      background: 'var(--surface-2, #f8fafc)',
+                      border: '1px solid var(--border, #e2e8f0)',
+                      borderRadius: '12px'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <strong style={{ fontSize: '12px', color: '#0f172a' }}>
+                        iOS Scriptable Widget Code (1-Tap Copy)
+                      </strong>
+                      <button
+                        type="button"
+                        className="button-secondary"
+                        style={{ height: '28px', fontSize: '10px' }}
+                        onClick={() => {
+                          const script = `// One Tap Safar Production Widget for iOS Scriptable\nconst API_URL = "${window.location.origin}/api/widget-data";\nconst req = new Request(API_URL);\nconst data = await req.loadJSON();\n\nconst widget = new ListWidget();\nwidget.backgroundColor = new Color("#ffffff");\n\nconst title = widget.addText(data.safarName || "Ongoing Safar");\ntitle.font = Font.boldSystemFont(14);\ntitle.textColor = new Color("#0f172a");\n\nwidget.addSpacer(4);\nconst pct = widget.addText(\`\${data.deliveredPercent || 0}% Delivered\`);\npct.font = Font.heavySystemFont(18);\npct.textColor = new Color("#4f46e5");\n\nconst dates = widget.addText(\`\${data.deliveredDates || 0} / \${data.totalDates || 0} dates completed\`);\ndates.font = Font.systemFont(11);\ndates.textColor = new Color("#64748b");\n\nwidget.addSpacer(6);\nconst video = widget.addText(\`🎬 Video: \${data.video?.uploaded || 0} Up · \${data.video?.rendered || 0} Ren\`);\nvideo.font = Font.mediumSystemFont(10);\nvideo.textColor = new Color("#334155");\n\nconst photo = widget.addText(\`📷 Photo: \${data.photos?.uploaded || 0} Up · \${data.photos?.givenToMurtaza || 0} Murtaza\`);\nphoto.font = Font.mediumSystemFont(10);\nphoto.textColor = new Color("#334155");\n\nwidget.url = "${window.location.origin}/widget";\nif (config.runsInWidget) {\n  Script.setWidget(widget);\n} else {\n  widget.presentMedium();\n}\nScript.complete();`
+                          if (navigator.clipboard) {
+                            navigator.clipboard.writeText(script)
+                            setNotice('✓ Scriptable iOS code copied to clipboard!')
+                          }
+                        }}
+                      >
+                        📋 Copy Scriptable Code
+                      </button>
+                    </div>
+                    <p style={{ fontSize: '10px', color: '#64748b', margin: '0 0 8px' }}>
+                      Instructions: Install the free <strong>Scriptable</strong> app from the App Store, create a new script, paste this code, and add a Scriptable widget to your iPhone Home Screen.
+                    </p>
+                  </div>
+                )}
               </div>
             </article>
           </section>}

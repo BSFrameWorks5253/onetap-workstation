@@ -1,4 +1,4 @@
-const CACHE = 'one-tap-safar-v4'
+const CACHE = 'one-tap-safar-v5'
 
 self.addEventListener('install', event => {
   event.waitUntil(
@@ -22,16 +22,35 @@ self.addEventListener('fetch', event => {
   const url = new URL(event.request.url)
   if (url.pathname.startsWith('/api/')) return
 
+  // Network-first for navigation requests so updates show up immediately without stale cache
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          if (response.status === 200) {
+            const copy = response.clone()
+            caches.open(CACHE).then(cache => cache.put(event.request, copy))
+          }
+          return response
+        })
+        .catch(() => caches.match(event.request).then(cached => cached || caches.match('/')))
+    )
+    return
+  }
+
+  // Stale-while-revalidate for static assets
   event.respondWith(
-    fetch(event.request)
-      .then(response => {
-        if (response.status === 200) {
-          const copy = response.clone()
+    caches.match(event.request).then(cachedResponse => {
+      const fetchPromise = fetch(event.request).then(networkResponse => {
+        if (networkResponse.status === 200) {
+          const copy = networkResponse.clone()
           caches.open(CACHE).then(cache => cache.put(event.request, copy))
         }
-        return response
-      })
-      .catch(() => caches.match(event.request).then(cached => cached || caches.match('/')))
+        return networkResponse
+      }).catch(() => null)
+
+      return cachedResponse || fetchPromise
+    })
   )
 })
 
