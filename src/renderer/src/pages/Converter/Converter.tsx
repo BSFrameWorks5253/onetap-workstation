@@ -321,6 +321,7 @@ export default function Converter(): JSX.Element {
           message: `Successfully organized ${totalRenamed} photos across ${batchPairs.length} batches!`,
           type: 'success'
         })
+        window.dispatchEvent(new CustomEvent('tracker:request-sync'))
       } else if (errors.length > 0) {
         playError()
         showToast({
@@ -454,6 +455,7 @@ export default function Converter(): JSX.Element {
           message: `Successfully organized ${res.renamed} photo(s) into video folders!`,
           type: 'success'
         })
+        window.dispatchEvent(new CustomEvent('tracker:request-sync'))
       } else if (res?.error) {
         playError()
         showToast({

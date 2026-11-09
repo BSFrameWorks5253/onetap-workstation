@@ -1304,10 +1304,13 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
     send('titleAdder:log', { jobId: params.jobId, message: `📋 Processing ${videos.length} video(s)`, level: 'info' })
     send('titleAdder:found', { jobId: params.jobId, total: videos.length })
 
-    // Extract date folder name ONLY in single-batch mode
+    // Extract date folder name dynamically
     let actualOutputDir = params.outputFolder || ''
-    if (params.mode === 'batch' && batchSources.length === 1) {
-      const dateFolder = getDateFolderName(batchSources[0])
+    const sampleForDate = batchSources[0] || (videos.length > 0 ? videos[0] : '')
+    if (sampleForDate) {
+      const vidDir = path.dirname(sampleForDate)
+      const parent = path.basename(vidDir).toLowerCase() === 'dvd' ? path.dirname(vidDir) : vidDir
+      const dateFolder = getDateFolderName(sampleForDate) || getDateFolderName(parent) || path.basename(parent)
       if (actualOutputDir && dateFolder) {
         const normOut = path.normalize(actualOutputDir).replace(/[\\/]+$/, '')
         const segments = normOut.split(/[\\/]/).filter(Boolean).map(s => s.toLowerCase())
@@ -1893,7 +1896,8 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
       }
     } catch {}
 
-    const finalOutputDir = (actualOutputDir || params.outputFolder) ? path.resolve(actualOutputDir || params.outputFolder) : ''
+    const firstResolvedBatchOut = Object.values(batchOutputs)[0]
+    const finalOutputDir = firstResolvedBatchOut ? path.resolve(firstResolvedBatchOut) : (actualOutputDir ? path.resolve(actualOutputDir) : (params.outputFolder ? path.resolve(params.outputFolder) : ''))
       
     if (finalOutputDir) {
       setAndSave('converter_video_target', finalOutputDir)

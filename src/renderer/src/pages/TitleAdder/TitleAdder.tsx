@@ -1057,7 +1057,8 @@ export default function TitleAdder(): JSX.Element {
 
     setFileOutputFolders(newMap)
     if (primaryTarget) {
-      setOutputFolder(primaryTarget)
+      const baseFinal = primaryInfo?.finalFolder || (primaryTarget.match(/(.*?[\/\\]final(?:[\/\\]|$))/i)?.[1]?.replace(/[\/\\]$/, '')) || primaryTarget
+      setOutputFolder(baseFinal)
       setSafarFinalInfo(primaryInfo)
       const check = await validatePathOnDisk(primaryTarget)
       setOutputExists(check.valid)
@@ -1119,7 +1120,8 @@ export default function TitleAdder(): JSX.Element {
       const res = await api.titleAdder.resolveSafarFinalPath(samplePath)
       if (res && res.success && res.targetPath) {
         setSafarFinalInfo(res)
-        setOutputFolder(res.targetPath)
+        const baseFinal = res.finalFolder || (res.targetPath.match(/(.*?[\/\\]final(?:[\/\\]|$))/i)?.[1]?.replace(/[\/\\]$/, '')) || res.targetPath
+        setOutputFolder(baseFinal)
         const check = await validatePathOnDisk(res.targetPath)
         setOutputExists(check.valid)
         setOutputPathError(check.reason || null)
@@ -2793,7 +2795,8 @@ export default function TitleAdder(): JSX.Element {
 
     // Save paths and duration
     if (mode === 'batch' && effectiveSource) api.settings.setAndSave('last_source_adder', effectiveSource)
-    api.settings.setAndSave('last_output_adder', outputFolder)
+    const baseOutputToSave = safarFinalInfo?.finalFolder || (outputFolder.match(/(.*?[\/\\]final(?:[\/\\]|$))/i)?.[1]?.replace(/[\/\\]$/, '')) || outputFolder
+    api.settings.setAndSave('last_output_adder', baseOutputToSave)
     api.settings.setAndSave('title_duration', dur)
 
     await api.titleAdder.start({

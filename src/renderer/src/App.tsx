@@ -293,10 +293,15 @@ function AppInner(): JSX.Element {
       console.warn('Realtime nexus init failed:', e)
     }
     const initialSync = window.setTimeout(syncTrackerSnapshot, 8000)
-    const syncTimer = window.setInterval(syncTrackerSnapshot, 10 * 60 * 1000)
+    const handleSyncRequest = () => { syncTrackerSnapshot() }
+    window.addEventListener('tracker:request-sync', handleSyncRequest)
+    window.addEventListener('refresh-converter-paths', handleSyncRequest)
+    const syncTimer = window.setInterval(syncTrackerSnapshot, 2 * 60 * 1000)
     return () => {
       window.clearTimeout(initialSync)
       window.clearInterval(syncTimer)
+      window.removeEventListener('tracker:request-sync', handleSyncRequest)
+      window.removeEventListener('refresh-converter-paths', handleSyncRequest)
       unsubs.forEach(u => u?.())
       anyShareRealtimeService.destroy()
     }
