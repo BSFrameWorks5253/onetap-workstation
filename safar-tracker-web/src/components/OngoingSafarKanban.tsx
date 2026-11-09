@@ -20,7 +20,8 @@ import {
   Archive,
   Camera,
   CheckCircle2,
-  Clock
+  Clock,
+  MessageCircle
 } from 'lucide-react';
 import { sendWhatsAppAlert, DEFAULT_WHATSAPP_PHONE } from '../lib/googleAppsScript';
 
@@ -352,6 +353,36 @@ export default function OngoingSafarKanban({
                   <option key={s} value={s}>{s}</option>
                 ))}
               </select>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(
+                    `📢 *Ongoing Safar Update (${selectedSafar})*\n` +
+                    `📍 Progress: ${uploadedCount} of ${totalCount} dates delivered (${totalCount > 0 ? Math.round((uploadedCount / totalCount) * 100) : 0}%)\n` +
+                    `🔗 ${window.location.origin}/kanban?safar=${encodeURIComponent(selectedSafar)}`
+                  )}`;
+                  window.open(url, '_blank');
+                }}
+                style={{
+                  background: '#25D366',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '5px 10px',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  boxShadow: '0 2px 6px rgba(37, 211, 102, 0.25)'
+                }}
+                title={`Share WhatsApp update for ${selectedSafar}`}
+              >
+                <MessageCircle size={13} />
+                <span>WhatsApp Briefing</span>
+              </button>
 
               {onDeleteSafar && selectedSafar && selectedSafar !== 'Active Safar' && (
                 <button

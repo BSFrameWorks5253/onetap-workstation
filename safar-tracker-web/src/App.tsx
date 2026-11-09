@@ -796,6 +796,29 @@ export default function App(): JSX.Element {
   const activeSafarGroups = safarGroups.filter(group => !group.isArchived)
   const archiveSafarGroups = safarGroups.filter(group => group.isArchived)
 
+  const [ongoingSafarName, setOngoingSafarName] = useState<string>(() => {
+    try {
+      return localStorage.getItem('onetap_ongoing_safar_name') || ''
+    } catch {
+      return ''
+    }
+  })
+
+  const effectiveOngoingSafar = useMemo(() => {
+    if (ongoingSafarName && activeSafarGroups.some(g => g.safarName === ongoingSafarName)) {
+      return ongoingSafarName
+    }
+    return activeSafarGroups[0]?.safarName || ''
+  }, [ongoingSafarName, activeSafarGroups])
+
+  const handleSetOngoingSafar = (name: string) => {
+    setOngoingSafarName(name)
+    try {
+      localStorage.setItem('onetap_ongoing_safar_name', name)
+    } catch {}
+    setNotice(`📍 Set "${name}" as the active Ongoing Safar for WhatsApp reports.`)
+  }
+
   const studioStats = useMemo(() => {
     let totalDates = 0
     let editing = 0
@@ -1010,6 +1033,42 @@ export default function App(): JSX.Element {
       deletedTasks: Array.from(delTasks),
       deletedSafars: Array.from(delSafars)
     }
+
+    // PWA Mobile Notification on remote stage changes from cloud sync
+    if (current.tasks && current.tasks.length > 0) {
+      const prevMap = new Map(current.tasks.map(t => [getTaskKey(t.safarName, t.dateFolder), t]))
+      const moved: { task: SafarTask; newStage: string; isPhoto: boolean }[] = []
+
+      for (const t of mergedTasks) {
+        const prev = prevMap.get(getTaskKey(t.safarName, t.dateFolder))
+        if (prev) {
+          if (t.stage !== prev.stage) {
+            moved.push({ task: t, newStage: t.stage, isPhoto: false })
+          } else if (t.photoStage && t.photoStage !== prev.photoStage) {
+            moved.push({ task: t, newStage: t.photoStage, isPhoto: true })
+          }
+        }
+      }
+
+      if (moved.length === 1) {
+        const item = moved[0]
+        const stLabel = item.isPhoto
+          ? (item.newStage === 'uploaded' ? 'Photos Uploaded' : item.newStage === 'given_to_murtaza' ? 'Photos Given to Murtaza' : 'Photos Edited')
+          : (STAGES.find(s => s.id === item.newStage)?.label || item.newStage)
+        void notify(
+          `${item.isPhoto ? '📷' : '🎬'} ${item.task.dateFolder} advanced`,
+          `Moved to ${stLabel} (${item.task.safarName})`,
+          `/kanban?safar=${encodeURIComponent(item.task.safarName)}`
+        )
+      } else if (moved.length > 1) {
+        void notify(
+          `⚡ ${moved.length} Dates Advanced Stages`,
+          `${moved[0].task.safarName}: ${moved.map(m => m.task.dateFolder).slice(0, 3).join(', ')}${moved.length > 3 ? '...' : ''}`,
+          `/kanban?safar=${encodeURIComponent(moved[0].task.safarName)}`
+        )
+      }
+    }
+
     snapshotRef.current = merged
     setSnapshot(merged)
     try { localStorage.setItem(localKey, JSON.stringify(merged)) } catch {}
@@ -1103,16 +1162,32 @@ export default function App(): JSX.Element {
     })
   }
 
-  async function notify(title: string, body: string) {
+  async function notify(title: string, body: string, targetUrl: string = '/') {
     if ('Notification' in window && Notification.permission === 'granted') {
       try {
-        const registration = await navigator.serviceWorker?.getRegistration()
-        if (registration) await registration.showNotification(title, { body, icon: '/logo.svg', tag: `${title}:${body}` })
-        else if (document.visibilityState === 'visible') new Notification(title, { body, icon: '/logo.svg' })
-      } catch { setNotice('The update arrived, but this device could not display the notification.') }
+        let registration = await navigator.serviceWorker?.getRegistration()
+        if (!registration && navigator.serviceWorker) {
+          registration = await navigator.serviceWorker.ready
+        }
+        if (registration && 'showNotification' in registration) {
+          await registration.showNotification(title, {
+            body,
+            icon: '/logo.svg',
+            badge: '/logo.svg',
+            tag: `onetap-${Date.now()}`,
+            data: { url: targetUrl }
+          } as any)
+          return
+        } else if (document.visibilityState === 'visible') {
+          new Notification(title, { body, icon: '/logo.svg' })
+          return
+        }
+      } catch (err) {
+        console.warn('[PWA Notification Error]', err)
+      }
     } else if (document.visibilityState === 'visible') {
-      setNotice(body)
-      window.setTimeout(() => setNotice(''), 5000)
+      setNotice(`${title} · ${body}`)
+      window.setTimeout(() => setNotice(''), 6000)
     }
   }
 
@@ -1120,8 +1195,12 @@ export default function App(): JSX.Element {
     if (!('Notification' in window)) return setNotice('This browser does not support notifications.')
     try {
       const permission = await Notification.requestPermission()
-      if (permission === 'granted') setNotice('Notifications are enabled on this device.')
-      else setNotice(permission === 'denied' ? 'Notifications are blocked in this browser. Allow them in site settings to receive alerts.' : 'Notifications were not enabled.')
+      if (permission === 'granted') {
+        setNotice('✓ PWA notifications enabled! You will receive live alerts on stage changes.')
+        void notify('One Tap Alerts Activated', 'You will receive real-time stage updates on this device.')
+      } else {
+        setNotice(permission === 'denied' ? 'Notifications are blocked in this browser. Allow them in site settings to receive alerts.' : 'Notifications were not enabled.')
+      }
     } catch { setNotice('This browser could not enable notifications.') }
   }
 
@@ -1140,17 +1219,20 @@ export default function App(): JSX.Element {
     window.setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
 
-  function generateDailyBriefingText(): string {
-    const lines: string[] = []
-    lines.push('📢 Safar Media Production Update (1448 H)')
-    lines.push('')
+  function generateDailyBriefingText(forSafarName?: string): string {
+    const isAllMode = forSafarName === 'ALL'
+    const targetName = isAllMode ? '' : (forSafarName || effectiveOngoingSafar)
+    const g = !isAllMode ? activeSafarGroups.find(group => group.safarName === targetName) : undefined
 
-    activeSafarGroups.forEach(g => {
+    if (g) {
+      const lines: string[] = []
       const total = g.total || g.tasks.length
       const delivered = g.tasks.filter(t => t.stage === 'upload' || t.stage === 'jameya' || t.stage === 'completed').length
       const pct = total > 0 ? Math.round((delivered / total) * 100) : 0
 
-      lines.push(`📍 ${g.safarName}: ${pct}% Delivered (${delivered}/${total} dates)`)
+      lines.push(`📢 *Ongoing Safar Production Update (${g.safarYear || '1448'} H)*`)
+      lines.push(`📍 *${g.safarName}*: *${pct}% Delivered* (${delivered}/${total} dates)`)
+      lines.push('')
 
       // Video stage counts
       const videoCompleted = g.tasks.filter(t => t.stage === 'completed').length
@@ -1167,7 +1249,7 @@ export default function App(): JSX.Element {
       if (videoEditing > 0) videoParts.push(`${videoEditing} In Editing`)
 
       if (videoParts.length > 0) {
-        lines.push(`• 🎬 Video: ${videoParts.join(' · ')}`)
+        lines.push(`• 🎬 *Video Pipeline:* ${videoParts.join(' · ')}`)
       }
 
       // Photo stage counts
@@ -1181,27 +1263,62 @@ export default function App(): JSX.Element {
       if (photoEdited > 0) photoParts.push(`${photoEdited} In Editing`)
 
       if (photoParts.length > 0) {
-        lines.push(`• 📷 Photos: ${photoParts.join(' · ')}`)
+        lines.push(`• 📷 *Photo Pipeline:* ${photoParts.join(' · ')}`)
+      }
+
+      // Delivered & In Progress Dates
+      const deliveredDates = g.tasks.filter(t => t.stage === 'upload' || t.stage === 'jameya' || t.stage === 'completed').map(dateFolderName)
+      const pendingDates = g.tasks.filter(t => t.stage === 'editing' || t.stage === 'rendering').map(dateFolderName)
+
+      if (deliveredDates.length > 0) {
+        lines.push('')
+        lines.push(`✅ *Delivered Dates (${deliveredDates.length}):* ${deliveredDates.slice(-8).join(', ')}${deliveredDates.length > 8 ? ` +${deliveredDates.length - 8} more` : ''}`)
+      }
+      if (pendingDates.length > 0) {
+        lines.push(`⏳ *Pending Video (${pendingDates.length}):* ${pendingDates.slice(0, 6).join(', ')}${pendingDates.length > 6 ? ` +${pendingDates.length - 6} more` : ''}`)
       }
 
       lines.push('')
+      lines.push(`🔗 *Live Safar Kanban:* ${window.location.origin}/kanban?safar=${encodeURIComponent(g.safarName)}`)
+      lines.push(`_Generated via One Tap Workstation_`)
+      return lines.join('\n')
+    }
+
+    // Full multi-safar summary
+    const lines: string[] = []
+    lines.push('📢 *Safar Media Production Update (1448 H)*')
+    lines.push('')
+
+    activeSafarGroups.forEach(item => {
+      const tot = item.total || item.tasks.length
+      const del = item.tasks.filter(t => t.stage === 'upload' || t.stage === 'jameya' || t.stage === 'completed').length
+      const p = tot > 0 ? Math.round((del / tot) * 100) : 0
+      lines.push(`📍 *${item.safarName}*: ${p}% Delivered (${del}/${tot} dates)`)
+
+      const vParts: string[] = []
+      if (item.uploadCount + item.jameyaCount + item.completedCount > 0) vParts.push(`${item.uploadCount + item.jameyaCount + item.completedCount} Uploaded`)
+      if (item.renderingCount > 0) vParts.push(`${item.renderingCount} Rendered`)
+      if (item.editingCount > 0) vParts.push(`${item.editingCount} In Editing`)
+      if (vParts.length > 0) lines.push(`• 🎬 Video: ${vParts.join(' · ')}`)
     })
 
     const allDelivered = studioStats.deliveredDates
     const allTotal = studioStats.totalDates
     const allPct = studioStats.percent
 
-    lines.push(`📊 Overall Total: ${allDelivered} of ${allTotal} dates delivered (${allPct}%)`)
+    lines.push('')
+    lines.push(`📊 *Overall Total:* ${allDelivered} of ${allTotal} dates delivered (${allPct}%)`)
     lines.push(`Generated via One Tap Workstation: ${window.location.origin}`)
 
     return lines.join('\n')
   }
 
-  function copyDailyBriefing() {
-    const text = generateDailyBriefingText()
+  function copyDailyBriefing(forSafarName?: string) {
+    const text = generateDailyBriefingText(forSafarName)
+    const label = forSafarName === 'ALL' ? 'All Safars' : (forSafarName || effectiveOngoingSafar)
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(text).then(() => {
-        setNotice('✓ Daily briefing copied to clipboard! Ready to paste into WhatsApp / Telegram.')
+        setNotice(`✓ WhatsApp daily briefing for "${label}" copied to clipboard! Ready to paste into WhatsApp / Telegram.`)
       }).catch(() => {
         setNotice('Briefing copied to clipboard.')
       })
@@ -1210,8 +1327,8 @@ export default function App(): JSX.Element {
     }
   }
 
-  function shareDailyBriefingWhatsApp() {
-    const text = generateDailyBriefingText()
+  function shareDailyBriefingWhatsApp(forSafarName?: string) {
+    const text = generateDailyBriefingText(forSafarName)
     const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`
     window.open(url, '_blank')
   }
@@ -1325,6 +1442,14 @@ export default function App(): JSX.Element {
             deliveredDates: deliveredCount,
             deliveredPercent
           }
+        )
+
+        // Dispatch local PWA notification immediately
+        const pwaStageLabel = mediaType === 'photo' ? photoStageLabel : activeStageLabel
+        void notify(
+          `${mediaType === 'photo' ? '📷' : '🎬'} ${task.dateFolder} advanced to ${pwaStageLabel}`,
+          `${task.safarName} · Editor: ${mediaType === 'photo' ? (effectiveChanges.photoEditorName || task.photoEditorName || DEFAULT_PHOTO_EDITOR) : (effectiveChanges.editorName || task.editorName || DEFAULT_EDITOR)}`,
+          `/kanban?safar=${encodeURIComponent(task.safarName)}`
         )
       }
     } catch {
@@ -1830,7 +1955,7 @@ export default function App(): JSX.Element {
               <OngoingSafarKanban
                 tasks={snapshot.tasks}
                 safars={snapshot.safars}
-                selectedSafar={selectedSafar}
+                selectedSafar={selectedSafar === 'all' && effectiveOngoingSafar ? effectiveOngoingSafar : selectedSafar}
                 onSelectSafar={safar => navigateTo('ongoing', safar)}
                 onUpdateTask={(task, changes) => void updateTask(task as SafarTask, changes as Partial<SafarTask>)}
                 onRemoveTask={task => void handleRemoveTask(task as SafarTask)}
@@ -1857,13 +1982,68 @@ export default function App(): JSX.Element {
 
           {/* VIEW: DASHBOARD */}
           {view === 'dashboard' && initialLoading ? <SafarLoadingSkeleton variant="dashboard"/> : view === 'dashboard' && <section className="dashboard-safars" aria-labelledby="dashboard-safars-title">
-            <div className="dashboard-safars-heading">
-              <div><h2 id="dashboard-safars-title">Safars in production</h2><p>Multi-stage pipeline and completion across all campaigns.</p></div>
+            <div className="dashboard-safars-heading" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                <div>
+                  <h2 id="dashboard-safars-title">Safars in production</h2>
+                  <p>Multi-stage pipeline and completion across all campaigns.</p>
+                </div>
+
+                {/* Active Ongoing Safar Selector */}
+                {activeSafarGroups.length > 0 && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(79, 70, 229, 0.08)', padding: '6px 12px', borderRadius: '12px', border: '1px solid rgba(79, 70, 229, 0.2)' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: '#4338ca' }}>📍 Ongoing Safar:</span>
+                    <select
+                      value={effectiveOngoingSafar}
+                      onChange={e => handleSetOngoingSafar(e.target.value)}
+                      style={{
+                        background: '#ffffff',
+                        border: '1px solid #c7d2fe',
+                        borderRadius: '8px',
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        color: '#1e293b',
+                        padding: '4px 8px',
+                        cursor: 'pointer'
+                      }}
+                      title="Set active ongoing safar for WhatsApp updates"
+                    >
+                      {activeSafarGroups.map(g => (
+                        <option key={g.safarName} value={g.safarName}>{g.safarName}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              {/* Action Buttons */}
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
                 <button
                   type="button"
+                  onClick={() => shareDailyBriefingWhatsApp(effectiveOngoingSafar)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: '#25D366',
+                    color: '#ffffff',
+                    fontWeight: 700,
+                    boxShadow: '0 4px 12px rgba(37, 211, 102, 0.25)',
+                    border: 'none',
+                    borderRadius: '10px',
+                    padding: '8px 14px',
+                    cursor: 'pointer'
+                  }}
+                  title={`Send Ongoing Safar (${effectiveOngoingSafar}) briefing to WhatsApp`}
+                >
+                  <MessageCircle size={15} />
+                  <span>WhatsApp Briefing ({effectiveOngoingSafar ? effectiveOngoingSafar.split('-').slice(-1)[0].trim() : 'Ongoing'})</span>
+                </button>
+
+                <button
+                  type="button"
                   className="button-primary"
-                  onClick={copyDailyBriefing}
+                  onClick={() => copyDailyBriefing(effectiveOngoingSafar)}
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -1877,32 +2057,19 @@ export default function App(): JSX.Element {
                     padding: '8px 14px',
                     cursor: 'pointer'
                   }}
-                  title="Copy formatted WhatsApp / Telegram daily briefing to clipboard"
+                  title={`Copy Ongoing Safar (${effectiveOngoingSafar}) briefing to clipboard`}
                 >
                   <Share2 size={15} />
-                  <span>Copy Daily Briefing</span>
+                  <span>Copy Ongoing Briefing</span>
                 </button>
 
                 <button
                   type="button"
-                  onClick={shareDailyBriefingWhatsApp}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    background: '#25D366',
-                    color: '#ffffff',
-                    fontWeight: 700,
-                    boxShadow: '0 4px 12px rgba(37, 211, 102, 0.25)',
-                    border: 'none',
-                    borderRadius: '10px',
-                    padding: '8px 12px',
-                    cursor: 'pointer'
-                  }}
-                  title="Share Daily Briefing directly to WhatsApp group / chat"
+                  className="button-secondary"
+                  onClick={() => copyDailyBriefing('ALL')}
+                  title="Copy full summary of all active Safars to clipboard"
                 >
-                  <MessageCircle size={15} />
-                  <span>WhatsApp</span>
+                  <span>Copy All Safars</span>
                 </button>
 
                 <button type="button" className="button-secondary" onClick={() => { setSelectedSafar('all'); setSelectedEditor('all'); navigateTo('archive') }}>
@@ -2031,19 +2198,45 @@ export default function App(): JSX.Element {
                   )
                 })}</ul> : <p className="safar-preview-empty">Waiting for date folders to sync.</p>}
 
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginTop: '12px', paddingTop: '10px', borderTop: '1px solid var(--border)' }}>
-                  <button type="button" className="safar-open-link" onClick={() => { setSelectedSafar(group.safarName); navigateTo('ongoing') }}>
-                    View Safar Kanban <ArrowUpRight aria-hidden="true" size={15}/>
-                  </button>
-                  <button
-                    type="button"
-                    title={`Remove ${group.safarName} from tracker`}
-                    onClick={e => { e.stopPropagation(); void handleDeleteSafar(group.safarName) }}
-                    className="button-safar-remove"
-                  >
-                    <Trash2 size={13} />
-                    <span>Remove</span>
-                  </button>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginTop: '12px', paddingTop: '10px', borderTop: '1px solid var(--border)', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <button type="button" className="safar-open-link" onClick={() => { setSelectedSafar(group.safarName); navigateTo('ongoing') }}>
+                      View Safar Kanban <ArrowUpRight aria-hidden="true" size={15}/>
+                    </button>
+                    {group.safarName === effectiveOngoingSafar ? (
+                      <span style={{ fontSize: '11px', fontWeight: 700, color: '#4338ca', backgroundColor: 'rgba(79, 70, 229, 0.1)', padding: '2px 8px', borderRadius: '6px' }} title="Designated as Ongoing Safar">
+                        ★ Active Ongoing
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleSetOngoingSafar(group.safarName)}
+                        style={{ background: 'none', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '11px', fontWeight: 600, color: '#475569', padding: '2px 6px', cursor: 'pointer' }}
+                        title="Set this as the active ongoing safar for WhatsApp updates"
+                      >
+                        Set as Ongoing
+                      </button>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <button
+                      type="button"
+                      onClick={() => shareDailyBriefingWhatsApp(group.safarName)}
+                      style={{ background: '#25D366', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '4px 8px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                      title={`Send WhatsApp status for ${group.safarName}`}
+                    >
+                      <MessageCircle size={13} /> WhatsApp
+                    </button>
+                    <button
+                      type="button"
+                      title={`Remove ${group.safarName} from tracker`}
+                      onClick={e => { e.stopPropagation(); void handleDeleteSafar(group.safarName) }}
+                      className="button-safar-remove"
+                    >
+                      <Trash2 size={13} />
+                      <span>Remove</span>
+                    </button>
+                  </div>
                 </div>
               </article>
             })}</div>}

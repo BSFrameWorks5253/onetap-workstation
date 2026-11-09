@@ -1,4 +1,4 @@
-const CACHE = 'one-tap-safar-v3'
+const CACHE = 'one-tap-safar-v4'
 
 self.addEventListener('install', event => {
   event.waitUntil(
@@ -25,7 +25,6 @@ self.addEventListener('fetch', event => {
   event.respondWith(
     fetch(event.request)
       .then(response => {
-        // Cache successful responses for offline support
         if (response.status === 200) {
           const copy = response.clone()
           caches.open(CACHE).then(cache => cache.put(event.request, copy))
@@ -34,4 +33,53 @@ self.addEventListener('fetch', event => {
       })
       .catch(() => caches.match(event.request).then(cached => cached || caches.match('/')))
   )
+})
+
+// Handle PWA notification click on mobile devices
+self.addEventListener('notificationclick', event => {
+  event.notification.close()
+  const targetUrl = event.notification.data?.url || '/'
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
+      for (const client of windowClients) {
+        if ('focus' in client) {
+          if (client.url.includes(self.location.origin)) {
+            client.navigate(targetUrl)
+            return client.focus()
+          }
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow(targetUrl)
+      }
+    })
+  )
+})
+
+// Handle Web Push event (if push service configured)
+self.addEventListener('push', event => {
+  if (!event.data) return
+  try {
+    const data = event.data.json()
+    const title = data.title || 'One Tap Production Update'
+    const options = {
+      body: data.body || 'Production stages updated.',
+      icon: '/logo.svg',
+      badge: '/logo.svg',
+      vibrate: [200, 100, 200],
+      data: { url: data.url || '/' },
+      tag: data.tag || `onetap-push-${Date.now()}`
+    }
+    event.waitUntil(self.registration.showNotification(title, options))
+  } catch {
+    const text = event.data.text()
+    event.waitUntil(
+      self.registration.showNotification('One Tap Production Update', {
+        body: text,
+        icon: '/logo.svg',
+        data: { url: '/' }
+      })
+    )
+  }
 })
