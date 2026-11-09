@@ -95,6 +95,8 @@ const COLUMNS: ColumnConfig[] = [
 export default function OngoingSafarKanban({
   tasks,
   safars,
+  selectedSafar: propSelectedSafar,
+  onSelectSafar,
   onUpdateTask,
   onRemoveTask,
   onAddTask,
@@ -105,6 +107,8 @@ export default function OngoingSafarKanban({
 }: {
   tasks: SafarTaskItem[];
   safars: Array<{ safarName: string; isArchived?: boolean; isDone?: boolean }>;
+  selectedSafar?: string;
+  onSelectSafar?: (safarName: string) => void;
   onUpdateTask: (task: SafarTaskItem, changes: Partial<SafarTaskItem>) => void;
   onRemoveTask: (task: SafarTaskItem) => void;
   onAddTask: (safarName: string, dateFolder: string) => void;
@@ -126,13 +130,24 @@ export default function OngoingSafarKanban({
     return Array.from(names);
   }, [safars, tasks]);
 
-  const [selectedSafar, setSelectedSafar] = useState<string>(() => ongoingSafars[0] || 'Active Safar');
+  const [selectedSafar, setSelectedSafar] = useState<string>(() => {
+    if (propSelectedSafar && propSelectedSafar !== 'all') return propSelectedSafar;
+    return ongoingSafars[0] || 'Active Safar';
+  });
+
+  // Keep selected Safar synchronized when parent changes it (e.g. sidebar navigation or deep link)
+  React.useEffect(() => {
+    if (propSelectedSafar && propSelectedSafar !== 'all' && propSelectedSafar !== selectedSafar) {
+      setSelectedSafar(propSelectedSafar);
+    }
+  }, [propSelectedSafar]);
 
   React.useEffect(() => {
     if (!ongoingSafars.includes(selectedSafar) && ongoingSafars.length > 0) {
-      setSelectedSafar(ongoingSafars[0]);
+      const fallback = propSelectedSafar && ongoingSafars.includes(propSelectedSafar) ? propSelectedSafar : ongoingSafars[0];
+      setSelectedSafar(fallback);
     }
-  }, [ongoingSafars, selectedSafar]);
+  }, [ongoingSafars, selectedSafar, propSelectedSafar]);
 
   const [search, setSearch] = useState('');
   const [newDateInput, setNewDateInput] = useState('');
@@ -154,15 +169,12 @@ export default function OngoingSafarKanban({
     for (const t of list) {
       const normKey = (t.dateFolder || '').toLowerCase().replace(/[\s_\-]/g, '');
       if (!normKey) continue;
-      // Deduplicate: if duplicate found, keep the one with more advanced stage or most recent
+      // Deduplicate: merge incoming item into existing item without rejecting backward stage moves
       if (!seen.has(normKey)) {
         seen.set(normKey, t);
       } else {
         const existing = seen.get(normKey)!;
-        const rank = (st: string) => st === 'jameya' ? 4 : st === 'upload' ? 3 : st === 'rendering' ? 2 : 1;
-        if (rank(t.stage) > rank(existing.stage) || (t.updatedAt && existing.updatedAt && t.updatedAt > existing.updatedAt)) {
-          seen.set(normKey, { ...existing, ...t });
-        }
+        seen.set(normKey, { ...existing, ...t });
       }
     }
 
@@ -295,7 +307,11 @@ export default function OngoingSafarKanban({
               <select
                 aria-label="Select Ongoing Safar"
                 value={selectedSafar}
-                onChange={e => setSelectedSafar(e.target.value)}
+                onChange={e => {
+                  const val = e.target.value;
+                  setSelectedSafar(val);
+                  onSelectSafar?.(val);
+                }}
                 style={{
                   fontSize: '16px',
                   fontWeight: 700,

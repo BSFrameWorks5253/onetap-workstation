@@ -123,6 +123,32 @@ const STAGES: { id: Stage; label: string }[] = [
 const localKey = 'ot_safar_tracker_snapshot'
 const deletedTasksKey = 'ot_safar_tracker_deleted_tasks'
 const deletedSafarsKey = 'ot_safar_tracker_deleted_safars'
+const stageOverridesKey = 'ot_safar_tracker_stage_overrides'
+
+export type TaskStageOverride = {
+  stage?: Stage
+  editorName?: string
+  dueDate?: string
+  updatedAt: string
+}
+
+export function getStageOverrides(): Map<string, TaskStageOverride> {
+  try {
+    const val = localStorage.getItem(stageOverridesKey)
+    if (val) {
+      const obj = JSON.parse(val)
+      return new Map(Object.entries(obj))
+    }
+  } catch {}
+  return new Map()
+}
+
+export function saveStageOverrides(map: Map<string, TaskStageOverride>) {
+  try {
+    const obj = Object.fromEntries(map.entries())
+    localStorage.setItem(stageOverridesKey, JSON.stringify(obj))
+  } catch {}
+}
 
 export function getDeletedTasks(): Set<string> {
   try {
@@ -152,33 +178,7 @@ export function saveDeletedSafars(set: Set<string>) {
   } catch {}
 }
 
-export function getTaskKey(safarName?: string, dateFolder?: string): string {
-  const s = String(safarName || '').trim().toLowerCase()
-  const d = String(dateFolder || '').trim().toLowerCase().replace(/[\s_\-]/g, '')
-  return `${s}::${d}`
-}
-const HIJRI_MONTHS = ['Muharram', 'Safar', 'Rabi al-Awwal', 'Rabi al-Thani', 'Jumada al-Awwal', 'Jumada al-Thani', 'Rajab', 'Sha’ban', 'Ramadan', 'Shawwal', 'Dhu al-Qi’dah', 'Dhu al-Hijjah']
-
-function hijriYearLabel(year?: string | number): string {
-  const clean = String(year || '').replace(/\s*(?:AH|H)$/i, '').trim()
-  return clean ? `${clean} AH` : ''
-}
-
-function dateLabel(dateFolder: string, supplied?: string, safarYear?: string | number): string {
-  if (supplied?.trim() && !/[\\/]/.test(supplied) && !/\.[a-z\d]{2,6}$/i.test(supplied.trim())) return supplied.trim()
-  const folderDay = dateFolder.match(/Day[_ -]?(\d{1,2})/i)?.[1]
-  const calendar = dateFolder.match(/(\d{4})[-_](\d{1,2})[-_](\d{1,2})/)
-  const year = String(calendar?.[1] || safarYear || '').replace(/\s*(?:AH|H)$/i, '').trim()
-  if (folderDay) return `${Number(folderDay)} Safar ${year}${year ? ' AH' : ''}`
-  if (calendar) {
-    const month = HIJRI_MONTHS[Number(calendar[2]) - 1]
-    if (month) return `${Number(calendar[3])} ${month} ${calendar[1]} AH`
-  }
-  const dayOnly = dateFolder.match(/^\s*(?:Day[_ -]?)?(\d{1,2})\s*$/i)?.[1]
-  return dayOnly ? `Day ${Number(dayOnly)}` : 'Date not provided'
-}
-
-function extractCleanWebDate(name: string): string {
+export function extractCleanWebDate(name: string): string {
   if (!name) return ''
   const clean = name.trim()
   const sessionMatch = clean.match(/(_\d{2}[A-Za-z]|\s*_\d{2}|\s*Session\s*\d+|\s*Morning|\s*Evening|\s*Night)/i)
@@ -203,6 +203,35 @@ function extractCleanWebDate(name: string): string {
   return clean.split(/[\s_]+_/)[0].replace(/[-_ ]*(?:waaz|isteqbal|majlis|misaaq|urs|ziyarat|event|morning|evening|night|session).*$/i, '').trim()
 }
 
+export function getTaskKey(safarName?: string, dateFolder?: string): string {
+  const s = String(safarName || '').trim().toLowerCase()
+  const rawParts = String(dateFolder || '').trim().split(/[\\/]+/).filter(Boolean)
+  const lastPart = rawParts[rawParts.length - 1] || ''
+  const clean = extractCleanWebDate(lastPart) || lastPart
+  const d = clean.toLowerCase().replace(/[\s_\-]/g, '')
+  return `${s}::${d}`
+}
+const HIJRI_MONTHS = ['Muharram', 'Safar', 'Rabi al-Awwal', 'Rabi al-Thani', 'Jumada al-Awwal', 'Jumada al-Thani', 'Rajab', 'Sha’ban', 'Ramadan', 'Shawwal', 'Dhu al-Qi’dah', 'Dhu al-Hijjah']
+
+function hijriYearLabel(year?: string | number): string {
+  const clean = String(year || '').replace(/\s*(?:AH|H)$/i, '').trim()
+  return clean ? `${clean} AH` : ''
+}
+
+function dateLabel(dateFolder: string, supplied?: string, safarYear?: string | number): string {
+  if (supplied?.trim() && !/[\\/]/.test(supplied) && !/\.[a-z\d]{2,6}$/i.test(supplied.trim())) return supplied.trim()
+  const folderDay = dateFolder.match(/Day[_ -]?(\d{1,2})/i)?.[1]
+  const calendar = dateFolder.match(/(\d{4})[-_](\d{1,2})[-_](\d{1,2})/)
+  const year = String(calendar?.[1] || safarYear || '').replace(/\s*(?:AH|H)$/i, '').trim()
+  if (folderDay) return `${Number(folderDay)} Safar ${year}${year ? ' AH' : ''}`
+  if (calendar) {
+    const month = HIJRI_MONTHS[Number(calendar[2]) - 1]
+    if (month) return `${Number(calendar[3])} ${month} ${calendar[1]} AH`
+  }
+  const dayOnly = dateFolder.match(/^\s*(?:Day[_ -]?)?(\d{1,2})\s*$/i)?.[1]
+  return dayOnly ? `Day ${Number(dayOnly)}` : 'Date not provided'
+}
+
 function dateFolderName(task: Partial<SafarTask>): string {
   const parts = String(task.dateFolder || '').trim().split(/[\\/]+/).filter(Boolean)
   const folder = parts[parts.length - 1] || ''
@@ -225,6 +254,8 @@ function isJunkSafarOrHardware(name: string): boolean {
 function normalizeSnapshot(value: Partial<Snapshot> | null | undefined): Snapshot {
   const deletedSafars = getDeletedSafars()
   const deletedTasks = getDeletedTasks()
+  const overrides = getStageOverrides()
+
   if (Array.isArray(value?.deletedSafars)) {
     for (const s of value.deletedSafars) if (s) deletedSafars.add(String(s).trim().toLowerCase())
     saveDeletedSafars(deletedSafars)
@@ -265,18 +296,24 @@ function normalizeSnapshot(value: Partial<Snapshot> | null | undefined): Snapsho
     .map((raw: any, index): SafarTask => {
       const dateFolder = dateFolderName({ dateFolder: String(raw.dateFolder || '') })
       const safarName = String(raw.safarName || '')
+      const taskKey = getTaskKey(safarName, dateFolder)
+      const override = overrides.get(taskKey)
       const isMissing = raw.isMissing ?? (raw.isPresent === false || raw.is_present === false)
       const isPresent = !isMissing
-      // USER RULE: non-present items must ONLY and ONLY appear in Stage 4: Submitted to Jameya!
-      const stage: Stage = isMissing ? 'jameya' : (STAGES.some(s => s.id === raw.stage) ? raw.stage : 'editing')
+      // User rule: non-present items must ONLY and ONLY appear in Stage 4: Submitted to Jameya!
+      const defaultStage: Stage = isMissing ? 'jameya' : (STAGES.some(s => s.id === raw.stage) ? raw.stage : 'editing')
+      const stage: Stage = override?.stage || defaultStage
+      const editorName = override?.editorName !== undefined ? override.editorName : (raw.editorName || '')
+      const dueDate = override?.dueDate !== undefined ? override.dueDate : String(raw.dueDate || '')
       return {
         id: String(raw.id || `${safarName}::${dateFolder}::${index}`),
         safarName,
         dateFolder,
         hijriDate: dateLabel(dateFolder, raw.hijriDate || raw.dateLabel, yearByName.get(safarName)),
         stage,
-        dueDate: String(raw.dueDate || ''),
-        updatedAt: String(raw.updatedAt || value?.updatedAt || ''),
+        editorName,
+        dueDate,
+        updatedAt: String(override?.updatedAt || raw.updatedAt || value?.updatedAt || ''),
         isPresent,
         isMissing,
         is_present: isPresent
@@ -297,14 +334,14 @@ function normalizeSnapshot(value: Partial<Snapshot> | null | undefined): Snapsho
       seenKeys.set(key, t)
     } else {
       const existing = seenKeys.get(key)!
-      const rank = (st: string) => st === 'jameya' ? 4 : st === 'upload' ? 3 : st === 'rendering' ? 2 : 1
-      const higherStage = rank(t.stage) > rank(existing.stage) ? t.stage : existing.stage
+      const override = overrides.get(key)
+      const stage = override?.stage || t.stage || existing.stage
       seenKeys.set(key, {
         ...existing,
         ...t,
-        stage: higherStage,
-        editorName: t.editorName || existing.editorName || '',
-        dueDate: t.dueDate || existing.dueDate || ''
+        stage,
+        editorName: override?.editorName ?? (t.editorName || existing.editorName || ''),
+        dueDate: override?.dueDate ?? (t.dueDate || existing.dueDate || '')
       })
     }
   }
@@ -724,6 +761,8 @@ export default function App(): JSX.Element {
   function applySnapshot(next: Snapshot) {
     const delSafars = getDeletedSafars()
     const delTasks = getDeletedTasks()
+    const overrides = getStageOverrides()
+
     if (Array.isArray((next as any)?.deletedSafars)) {
       for (const s of (next as any).deletedSafars) if (s) delSafars.add(String(s).trim().toLowerCase())
       saveDeletedSafars(delSafars)
@@ -744,10 +783,24 @@ export default function App(): JSX.Element {
         ...safar,
         isArchived: safar.isArchived ?? previousSafars.get(safar.safarName)?.isArchived ?? false
       }))
-    const mergedTasks = normalized.tasks.filter(t =>
-      !delSafars.has(t.safarName.trim().toLowerCase()) &&
-      !delTasks.has(getTaskKey(t.safarName, t.dateFolder))
-    )
+    const mergedTasks = normalized.tasks
+      .filter(t =>
+        !delSafars.has(t.safarName.trim().toLowerCase()) &&
+        !delTasks.has(getTaskKey(t.safarName, t.dateFolder))
+      )
+      .map(t => {
+        const key = getTaskKey(t.safarName, t.dateFolder)
+        const override = overrides.get(key)
+        if (override) {
+          return {
+            ...t,
+            stage: override.stage || t.stage,
+            editorName: override.editorName !== undefined ? override.editorName : t.editorName,
+            dueDate: override.dueDate !== undefined ? override.dueDate : t.dueDate
+          }
+        }
+        return t
+      })
     const merged: Snapshot = {
       ...normalized,
       tasks: mergedTasks,
@@ -755,9 +808,6 @@ export default function App(): JSX.Element {
       deletedTasks: Array.from(delTasks),
       deletedSafars: Array.from(delSafars)
     }
-    const incomingTime = merged.updatedAt ? Date.parse(merged.updatedAt) : 0
-    const currentTime = snapshotRef.current.updatedAt ? Date.parse(snapshotRef.current.updatedAt) : 0
-    if (incomingTime && currentTime && incomingTime < currentTime) return
     snapshotRef.current = merged
     setSnapshot(merged)
     try { localStorage.setItem(localKey, JSON.stringify(merged)) } catch {}
@@ -880,11 +930,30 @@ export default function App(): JSX.Element {
 
   async function updateTask(task: SafarTask, changes: Partial<SafarTask>) {
     const updatedAt = new Date().toISOString()
+    const targetKey = getTaskKey(task.safarName, task.dateFolder)
+
+    // Save changes into persistent overrides store so they survive reloads and desktop scans
+    const overrides = getStageOverrides()
+    const currentOverride = overrides.get(targetKey) || { updatedAt }
+    overrides.set(targetKey, {
+      ...currentOverride,
+      ...(changes.stage ? { stage: changes.stage } : {}),
+      ...(changes.editorName !== undefined ? { editorName: changes.editorName } : {}),
+      ...(changes.dueDate !== undefined ? { dueDate: changes.dueDate } : {}),
+      updatedAt
+    })
+    saveStageOverrides(overrides)
+
     const next: Snapshot = {
       ...snapshot,
       updatedAt,
       source: 'website',
-      tasks: snapshot.tasks.map(row => row.id === task.id ? { ...row, ...changes, updatedAt } : row)
+      tasks: snapshot.tasks.map(row => {
+        if (row.id === task.id || getTaskKey(row.safarName, row.dateFolder) === targetKey) {
+          return { ...row, ...changes, updatedAt }
+        }
+        return row
+      })
     }
     applySnapshot(next)
     saveCountRef.current += 1
@@ -919,6 +988,10 @@ export default function App(): JSX.Element {
     const delTasks = getDeletedTasks()
     delTasks.add(targetKey)
     saveDeletedTasks(delTasks)
+
+    const overrides = getStageOverrides()
+    overrides.delete(targetKey)
+    saveStageOverrides(overrides)
 
     const current = snapshotRef.current
     const tasks = current.tasks.filter(t => {
@@ -1011,6 +1084,12 @@ export default function App(): JSX.Element {
     delSafars.add(normName)
     saveDeletedSafars(delSafars)
 
+    const overrides = getStageOverrides()
+    for (const k of overrides.keys()) {
+      if (k.startsWith(`${normName}::`)) overrides.delete(k)
+    }
+    saveStageOverrides(overrides)
+
     const current = snapshotRef.current
     const tasks = current.tasks.filter(t => t.safarName.trim().toLowerCase() !== normName)
     const safars = (current.safars || []).filter(s => s.safarName.trim().toLowerCase() !== normName)
@@ -1022,6 +1101,9 @@ export default function App(): JSX.Element {
       deletedSafars: Array.from(delSafars),
       updatedAt,
       source: 'website'
+    }
+    if (selectedSafar.trim().toLowerCase() === normName) {
+      setSelectedSafar('all')
     }
     applySnapshot(next)
     await persistSnapshot(next)
@@ -1047,6 +1129,7 @@ export default function App(): JSX.Element {
       localStorage.removeItem(localKey)
       localStorage.removeItem(deletedTasksKey)
       localStorage.removeItem(deletedSafarsKey)
+      localStorage.removeItem(stageOverridesKey)
     } catch {}
     await nexusChannelRef.current?.send({
       type: 'broadcast',
@@ -1181,7 +1264,11 @@ export default function App(): JSX.Element {
               key={name}
               aria-pressed={selectedSafar === name}
               className={`safar-link ${selectedSafar === name ? 'selected' : ''}`}
-              onClick={() => navigateTo('ongoing', selectedSafar === name ? 'all' : name)}
+              onClick={() => {
+                const target = selectedSafar === name ? 'all' : name
+                setSelectedSafar(target)
+                navigateTo('ongoing', target)
+              }}
             >
               <span className="safar-dot" aria-hidden="true"/>{name}
             </button>
@@ -1283,6 +1370,8 @@ export default function App(): JSX.Element {
               <OngoingSafarKanban
                 tasks={snapshot.tasks}
                 safars={snapshot.safars}
+                selectedSafar={selectedSafar}
+                onSelectSafar={safar => navigateTo('ongoing', safar)}
                 onUpdateTask={(task, changes) => void updateTask(task as SafarTask, changes as Partial<SafarTask>)}
                 onRemoveTask={task => void handleRemoveTask(task as SafarTask)}
                 onAddTask={(safarName, folder) => void handleAddTask(safarName, folder)}
