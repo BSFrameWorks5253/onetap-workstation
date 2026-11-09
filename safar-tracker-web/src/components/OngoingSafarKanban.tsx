@@ -255,6 +255,9 @@ export default function OngoingSafarKanban({
 
   // Move stage
   const handleMoveStage = async (task: SafarTaskItem, nextStage: KanbanStage) => {
+    try {
+      if ('vibrate' in navigator) navigator.vibrate(15);
+    } catch {}
     const isMissing = task.isMissing === true || task.isPresent === false || task.is_present === false;
     if (isMissing && nextStage !== 'jameya' && nextStage !== 'completed') {
       showToast(`Cannot move "${task.dateFolder}": missing or unmounted folders stay in Submitted to Jameya archive.`);
@@ -310,6 +313,7 @@ export default function OngoingSafarKanban({
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
       {/* Top Banner / Actions Bar */}
       <div
+        className="kanban-top-banner"
         style={{
           display: 'flex',
           flexWrap: 'wrap',
@@ -607,6 +611,7 @@ export default function OngoingSafarKanban({
               aria-selected={activeMobileStage === col.id}
               className={`mobile-stage-tab ${activeMobileStage === col.id ? 'active' : ''}`}
               onClick={() => {
+                try { if ('vibrate' in navigator) navigator.vibrate(10) } catch {}
                 setActiveMobileStage(col.id);
                 const el = document.getElementById(`kanban-col-${col.id}`);
                 if (el) {

@@ -1022,11 +1022,14 @@ body {
   transform: scale(0.97);
 }
 
-/* Mobile Bottom Navigation Bar (Hidden by default on Desktop) */
+/* Mobile Bottom Navigation Bar & Mobile Hero (Hidden by default on Desktop) */
 .mobile-bottom-bar {
   display: none;
 }
 .mobile-kanban-stage-tabs {
+  display: none;
+}
+.mobile-ongoing-hero-card {
   display: none;
 }
 
@@ -1054,15 +1057,216 @@ body {
     -webkit-tap-highlight-color: transparent;
   }
 
+  /* Hide massive desktop page heading to maximize above-the-fold content */
+  .page-heading {
+    display: none !important;
+  }
+
   /* Safe Area Insets for iOS Notch / Dynamic Island */
   .topbar {
     padding-top: max(8px, env(safe-area-inset-top, 0px)) !important;
     height: calc(56px + max(8px, env(safe-area-inset-top, 0px))) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding-inline: 12px !important;
+  }
+
+  .mobile-view-title {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    font-size: 14px !important;
+    font-weight: 800 !important;
+    color: #0f172a !important;
+  }
+
+  .topbar-actions {
+    gap: 6px !important;
+  }
+
+  .mobile-sync-btn {
+    min-height: 36px !important;
+    padding: 6px 10px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    border-radius: 8px !important;
+    background: rgba(79, 70, 229, 0.08) !important;
+    border: 1px solid rgba(79, 70, 229, 0.2) !important;
+    color: #4f46e5 !important;
+    font-weight: 700 !important;
+    font-size: 11px !important;
+  }
+
+  .notification-bell-btn {
+    display: none !important;
+  }
+
+  /* Dedicated Mobile Ongoing Safar Hero Card */
+  .mobile-ongoing-hero-card {
+    display: flex !important;
+    flex-direction: column !important;
+    padding: 16px !important;
+    border-radius: 18px !important;
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(244, 246, 254, 0.92)) !important;
+    border: 1.5px solid rgba(99, 102, 241, 0.25) !important;
+    box-shadow: 0 8px 24px rgba(79, 70, 229, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+    margin-bottom: 16px !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+  }
+  .mobile-hero-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .mobile-hero-badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    color: #4f46e5;
+    background: rgba(79, 70, 229, 0.1);
+    padding: 3px 8px;
+    border-radius: 6px;
+    margin-bottom: 4px;
+  }
+  .mobile-hero-title {
+    margin: 2px 0 3px 0;
+    font-size: 18px;
+    font-weight: 800;
+    color: #0f172a;
+    font-family: var(--font-display, sans-serif);
+    line-height: 1.25;
+  }
+  .mobile-hero-meta {
+    font-size: 12px;
+    color: #64748b;
+    font-weight: 500;
+  }
+  .mobile-hero-percent-badge {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    background: #ffffff;
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    border-radius: 12px;
+    padding: 6px 10px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+    flex-shrink: 0;
+  }
+  .mobile-hero-percent-badge strong {
+    font-size: 20px;
+    font-weight: 800;
+    color: #4f46e5;
+    line-height: 1;
+    font-family: var(--font-display, sans-serif);
+  }
+  .mobile-hero-percent-badge span {
+    font-size: 10px;
+    font-weight: 700;
+    color: #059669;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .mobile-hero-stats-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    color: #475569;
+    margin-bottom: 12px;
+    font-weight: 500;
+  }
+  .mobile-hero-stats-row strong {
+    color: #0f172a;
+  }
+  .mobile-hero-whatsapp-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 48px;
+    background: #25d366;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 800;
+    border-radius: 12px;
+    border: none;
+    box-shadow: 0 4px 14px rgba(37, 211, 102, 0.3);
+    cursor: pointer;
+    margin-bottom: 8px;
+    transition: transform 0.12s ease;
+  }
+  .mobile-hero-whatsapp-btn:active {
+    transform: scale(0.97);
+  }
+  .mobile-hero-actions-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    width: 100%;
+  }
+  .mobile-hero-sub-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 42px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 700;
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    background: #ffffff;
+    color: #334155;
+    cursor: pointer;
+    transition: transform 0.12s ease;
+  }
+  .mobile-hero-sub-btn:active {
+    transform: scale(0.97);
+  }
+  .mobile-hero-sub-btn.primary {
+    background: #0f172a;
+    color: #ffffff;
+    border-color: #0f172a;
   }
 
   /* Prevent Bottom Bar Overlap & Home Indicator Safe Padding */
   .content-wrap {
     padding: 14px 14px calc(76px + env(safe-area-inset-bottom, 0px)) 14px !important;
+  }
+
+  /* Safar Production Accordion Mobile Overhaul */
+  .safar-date-list-heading {
+    display: none !important;
+  }
+  .safar-date-row {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+    padding: 12px 14px !important;
+    margin-bottom: 8px !important;
+    border-radius: 14px !important;
+    background: #ffffff !important;
+    border: 1px solid rgba(226, 232, 240, 0.9) !important;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03) !important;
+  }
+  .safar-date-value {
+    font-size: 14px !important;
+    font-weight: 800 !important;
+    color: #0f172a !important;
+  }
+  .safar-edit-cell {
+    width: 100% !important;
+    padding: 0 !important;
+  }
+  .safar-edit-cell select,
+  .safar-edit-cell input {
+    width: 100% !important;
+    min-height: 42px !important;
   }
 
   /* Fixed Native-like Bottom Navigation Bar */
@@ -1276,6 +1480,50 @@ body {
 
   .dashboard-safar-grid {
     grid-template-columns: 1fr !important;
+  }
+
+  /* Dashboard Safar Preview Micro-Cards for Mobile */
+  .safar-preview-list {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    padding: 0 !important;
+    list-style: none !important;
+  }
+  .safar-preview-list li {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 6px !important;
+    background: rgba(255, 255, 255, 0.82) !important;
+    border: 1px solid rgba(226, 232, 240, 0.85) !important;
+    border-radius: 12px !important;
+    padding: 10px 12px !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02) !important;
+  }
+  .safar-preview-list li > div:first-child {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+  }
+  .safar-preview-list li > div:last-child {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+    gap: 6px !important;
+    padding-top: 6px !important;
+    border-top: 1px dashed rgba(226, 232, 240, 0.7) !important;
+  }
+
+  /* Tactile Tap Feedback on Press */
+  button:active,
+  .mobile-nav-item:active,
+  .mobile-stage-tab:active,
+  .safar-group-toggle:active {
+    transform: scale(0.96) !important;
+    transition: transform 80ms ease !important;
   }
 
   /* Prevent iOS Safari Auto-Zoom on form input focus */

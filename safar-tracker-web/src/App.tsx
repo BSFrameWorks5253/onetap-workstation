@@ -1633,6 +1633,9 @@ export default function App(): JSX.Element {
   }, [initialRoute])
 
   function navigateTo(next: View, safar?: string) {
+    try {
+      if ('vibrate' in navigator) navigator.vibrate(10)
+    } catch {}
     setView(next)
     if (safar !== undefined) {
       setSelectedSafar(safar)
@@ -1769,14 +1772,31 @@ export default function App(): JSX.Element {
           <button ref={menuToggleRef} type="button" className="icon-button menu-toggle" aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'} aria-controls="workspace-navigation" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>
             <Menu aria-hidden="true" size={20}/>
           </button>
-          <div className="breadcrumb" aria-label="Breadcrumb">Workspace <span aria-hidden="true">/</span> <strong>{pageHeading[view]?.title || 'Safar Tracker'}</strong></div>
+          <div className="breadcrumb mobile-view-title" aria-label="Breadcrumb">
+            <span className={`status-dot ${connected ? 'online' : ''}`} title={connected ? 'Live Sync Online' : 'Local Storage Mode'} />
+            <strong>{pageHeading[view]?.title || 'Safar Tracker'}</strong>
+          </div>
           
           <div className="topbar-actions">
+            {/* Quick Sync Button */}
+            <button
+              type="button"
+              className="notification-button mobile-sync-btn"
+              onClick={() => {
+                try { if ('vibrate' in navigator) navigator.vibrate(10) } catch {}
+                void requestDesktopSync()
+              }}
+              title="Sync with One Tap Workstation"
+            >
+              <Cloud aria-hidden="true" size={16} />
+              <span className="mobile-sync-label">Sync</span>
+            </button>
+
             {/* Mobile PWA Install Button */}
             {!isStandalone && (
               <button
                 type="button"
-                className="notification-button"
+                className="notification-button install-pwa-btn"
                 onClick={handleInstallApp}
                 title="Install One Tap to your phone or desktop home screen"
                 style={{
@@ -1787,12 +1807,12 @@ export default function App(): JSX.Element {
                 }}
               >
                 <Smartphone aria-hidden="true" size={16} />
-                <span>Install App</span>
+                <span className="install-label">Install</span>
               </button>
             )}
 
-            <button type="button" className="notification-button" onClick={requestNotifications}>
-              <Bell aria-hidden="true" size={17}/><span>Notifications</span>
+            <button type="button" className="notification-button notification-bell-btn" onClick={requestNotifications}>
+              <Bell aria-hidden="true" size={17}/><span>Alerts</span>
             </button>
 
             {/* User Profile / Email Sign-In via Google Apps Script */}
@@ -1891,6 +1911,85 @@ export default function App(): JSX.Element {
 
           {/* VIEW: DASHBOARD */}
           {view === 'dashboard' && initialLoading ? <SafarLoadingSkeleton variant="dashboard"/> : view === 'dashboard' && <section className="dashboard-safars" aria-labelledby="dashboard-safars-title">
+            {/* Dedicated Mobile Ongoing Safar Hero Card (Visible on <= 768px) */}
+            {(() => {
+              const ongoingGroup = activeSafarGroups.find(g => g.safarName === effectiveOngoingSafar) || activeSafarGroups[0]
+              if (!ongoingGroup) return null
+              const total = Math.max(ongoingGroup.total, 1)
+              return (
+                <div className="mobile-ongoing-hero-card">
+                  <div className="mobile-hero-top">
+                    <div>
+                      <span className="mobile-hero-badge">📍 ACTIVE ONGOING SAFAR</span>
+                      <h2 className="mobile-hero-title">{ongoingGroup.safarName}</h2>
+                      <span className="mobile-hero-meta">
+                        {hijriYearLabel(ongoingGroup.safarYear)} · {ongoingGroup.total} Scheduled Dates
+                      </span>
+                    </div>
+                    <div className="mobile-hero-percent-badge">
+                      <strong>{ongoingGroup.deliveredPercent}%</strong>
+                      <span>Delivered</span>
+                    </div>
+                  </div>
+
+                  {/* Progress bar */}
+                  <div className="multicolor-progress-bar" style={{ height: '8px', margin: '12px 0 8px 0' }}>
+                    {ongoingGroup.editingCount > 0 && <span className="stage-segment stage-editing" style={{ width: `${(ongoingGroup.editingCount / total) * 100}%` }} />}
+                    {ongoingGroup.renderingCount > 0 && <span className="stage-segment stage-rendering" style={{ width: `${(ongoingGroup.renderingCount / total) * 100}%` }} />}
+                    {ongoingGroup.uploadCount > 0 && <span className="stage-segment stage-upload" style={{ width: `${(ongoingGroup.uploadCount / total) * 100}%` }} />}
+                    {ongoingGroup.jameyaCount > 0 && <span className="stage-segment stage-jameya" style={{ width: `${(ongoingGroup.jameyaCount / total) * 100}%` }} />}
+                    {ongoingGroup.completedCount > 0 && <span className="stage-segment stage-completed" style={{ width: `${(ongoingGroup.completedCount / total) * 100}%` }} />}
+                  </div>
+
+                  {/* Status Chips */}
+                  <div className="mobile-hero-stats-row">
+                    <span>🎬 <strong>{ongoingGroup.uploadCount + ongoingGroup.jameyaCount + ongoingGroup.completedCount}/{ongoingGroup.total}</strong> Video Done</span>
+                    <span>📷 <strong>{ongoingGroup.photoUploadedCount}/{ongoingGroup.total}</strong> Photos Done</span>
+                  </div>
+
+                  {/* 1-Tap WhatsApp Briefing Trigger */}
+                  <button
+                    type="button"
+                    className="mobile-hero-whatsapp-btn"
+                    onClick={() => {
+                      try { if ('vibrate' in navigator) navigator.vibrate(15) } catch {}
+                      shareDailyBriefingWhatsApp(ongoingGroup.safarName)
+                    }}
+                  >
+                    <MessageCircle size={18} />
+                    <span>Send Daily WhatsApp Briefing</span>
+                  </button>
+
+                  <div className="mobile-hero-actions-grid">
+                    <button
+                      type="button"
+                      className="mobile-hero-sub-btn"
+                      onClick={() => {
+                        try { if ('vibrate' in navigator) navigator.vibrate(10) } catch {}
+                        copyDailyBriefing(ongoingGroup.safarName)
+                      }}
+                    >
+                      <Share2 size={14} />
+                      <span>Copy Status</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className="mobile-hero-sub-btn primary"
+                      onClick={() => {
+                        try { if ('vibrate' in navigator) navigator.vibrate(10) } catch {}
+                        setSelectedSafar(ongoingGroup.safarName)
+                        navigateTo('ongoing', ongoingGroup.safarName)
+                      }}
+                    >
+                      <Kanban size={14} />
+                      <span>Open Kanban →</span>
+                    </button>
+                  </div>
+                </div>
+              )
+            })()}
+
             <div className="dashboard-safars-heading">
               <div className="dashboard-title-row">
                 <div>

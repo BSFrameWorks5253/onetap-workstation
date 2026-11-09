@@ -242,6 +242,9 @@ export default function PhotoTracker({
 
   // Move Photo Stage
   const handleMovePhotoStage = async (task: PhotoTaskItem, nextStage: PhotoStage) => {
+    try {
+      if ('vibrate' in navigator) navigator.vibrate(15);
+    } catch {}
     const isUploading = nextStage === 'uploaded';
     const changes: Partial<PhotoTaskItem> = {
       photoStage: nextStage,
@@ -577,6 +580,7 @@ export default function PhotoTracker({
                   aria-selected={activeMobileStage === col.id}
                   className={`mobile-stage-tab ${activeMobileStage === col.id ? 'active' : ''}`}
                   onClick={() => {
+                    try { if ('vibrate' in navigator) navigator.vibrate(10) } catch {}
                     setActiveMobileStage(col.id);
                     const el = document.getElementById(`photo-col-${col.id}`);
                     if (el) {
@@ -728,11 +732,12 @@ export default function PhotoTracker({
                             {col.id === 'edited' && (
                               <button
                                 type="button"
+                                className="photo-stage-advance-btn"
                                 onClick={() => handleMovePhotoStage(task, 'given_to_murtaza')}
-                                style={{ width: '100%', fontSize: '11px', fontWeight: 700, padding: '6px 10px', borderRadius: '8px', background: '#EEF2FF', color: '#4338CA', border: '1px solid #C7D2FE', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                                style={{ width: '100%', fontSize: '12px', fontWeight: 700, minHeight: '42px', padding: '8px 12px', borderRadius: '10px', background: '#EEF2FF', color: '#4338CA', border: '1px solid #C7D2FE', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
                               >
                                 <span>Hand to Murtaza</span>
-                                <ArrowRight size={12} />
+                                <ArrowRight size={13} />
                               </button>
                             )}
 
@@ -740,18 +745,20 @@ export default function PhotoTracker({
                               <>
                                 <button
                                   type="button"
+                                  className="photo-stage-prev-btn"
                                   onClick={() => handleMovePhotoStage(task, 'edited')}
-                                  style={{ fontSize: '11px', fontWeight: 600, padding: '6px 10px', borderRadius: '8px', background: '#F1F5F9', color: '#475569', border: '1px solid #E2E8F0', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                  style={{ fontSize: '12px', fontWeight: 600, minHeight: '42px', padding: '8px 12px', borderRadius: '10px', background: '#F1F5F9', color: '#475569', border: '1px solid #E2E8F0', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                                 >
-                                  <ArrowLeft size={12} />
+                                  <ArrowLeft size={13} />
                                   <span>Edit</span>
                                 </button>
                                 <button
                                   type="button"
+                                  className="photo-stage-advance-btn"
                                   onClick={() => handleMovePhotoStage(task, 'uploaded')}
-                                  style={{ flex: 1, fontSize: '11px', fontWeight: 700, padding: '6px 10px', borderRadius: '8px', background: '#ECFDF5', color: '#065F46', border: '1px solid #A7F3D0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                                  style={{ flex: 1, fontSize: '12px', fontWeight: 700, minHeight: '42px', padding: '8px 12px', borderRadius: '10px', background: '#ECFDF5', color: '#065F46', border: '1px solid #A7F3D0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
                                 >
-                                  <UploadCloud size={12} />
+                                  <UploadCloud size={13} />
                                   <span>Mark Uploaded</span>
                                 </button>
                               </>
@@ -760,10 +767,11 @@ export default function PhotoTracker({
                             {col.id === 'uploaded' && (
                               <button
                                 type="button"
+                                className="photo-stage-prev-btn"
                                 onClick={() => handleMovePhotoStage(task, 'given_to_murtaza')}
-                                style={{ width: '100%', fontSize: '11px', fontWeight: 600, padding: '6px 10px', borderRadius: '8px', background: '#F1F5F9', color: '#475569', border: '1px solid #E2E8F0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                                style={{ width: '100%', fontSize: '12px', fontWeight: 600, minHeight: '42px', padding: '8px 12px', borderRadius: '10px', background: '#F1F5F9', color: '#475569', border: '1px solid #E2E8F0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
                               >
-                                <ArrowLeft size={12} />
+                                <ArrowLeft size={13} />
                                 <span>Revert to Murtaza</span>
                               </button>
                             )}
