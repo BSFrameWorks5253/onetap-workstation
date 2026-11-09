@@ -937,3 +937,35 @@ body {
   font-weight: 700;
   color: #059669;
 }
+
+/* Mobile PWA & Touch Optimizations */
+@media (max-width: 768px) {
+  body {
+    overscroll-behavior-y: contain;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  .kanban-board-grid {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    gap: 16px;
+    padding-bottom: 24px;
+  }
+
+  .kanban-column {
+    min-width: 84vw;
+    scroll-snap-align: center;
+    flex-shrink: 0;
+  }
+}
+
+@keyframes spin-anim {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spinning {
+  animation: spin-anim 1s linear infinite;
+}

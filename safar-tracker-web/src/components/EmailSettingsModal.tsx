@@ -65,10 +65,10 @@ export default function EmailSettingsModal({ isOpen, onClose, onToast }: EmailSe
       .map(r => r.trim())
       .filter(r => r.length > 0 && r.includes('@'))
 
-    if (cleanRecipients.length === 0) {
+    if (cleanRecipients.length === 0 && (!settings.telegramBotToken || !settings.telegramChatId)) {
       setTestResult({
         type: 'error',
-        msg: 'Please enter at least one recipient email address.'
+        msg: 'Please enter at least one recipient email address or enter Telegram Bot credentials.'
       })
       setTesting(false)
       return
@@ -428,6 +428,68 @@ export default function EmailSettingsModal({ isOpen, onClose, onToast }: EmailSe
                   borderRadius: '8px',
                   border: '1px solid #cbd5e1',
                   fontSize: '13px',
+                  boxSizing: 'border-box',
+                  fontFamily: 'monospace'
+                }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Instant Telegram Bot Push Alerts (Optional · 100% Free) */}
+        <div
+          style={{
+            backgroundColor: '#f8fafc',
+            borderRadius: '14px',
+            border: '1px solid #e2e8f0',
+            padding: '16px'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+            <Send size={15} color="#0284c7" />
+            <strong style={{ fontSize: '13px', color: '#1e293b' }}>
+              Telegram Group & Chat Push Alerts (100% Free · No Domain Needed)
+            </strong>
+          </div>
+          <p style={{ margin: '0 0 10px 0', fontSize: '12px', color: '#64748b', lineHeight: 1.4 }}>
+            Direct instant alerts sent to your Telegram work group or coordinator whenever dates advance or compile.
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            <div>
+              <label style={{ fontSize: '11px', fontWeight: 600, color: '#475569', display: 'block', marginBottom: '4px' }}>
+                Telegram Bot Token
+              </label>
+              <input
+                type="text"
+                value={settings.telegramBotToken || ''}
+                onChange={e => setSettings({ ...settings, telegramBotToken: e.target.value })}
+                placeholder="123456:ABC-DEF..."
+                style={{
+                  width: '100%',
+                  padding: '8px 10px',
+                  borderRadius: '8px',
+                  border: '1px solid #cbd5e1',
+                  fontSize: '12px',
+                  boxSizing: 'border-box',
+                  fontFamily: 'monospace'
+                }}
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: '11px', fontWeight: 600, color: '#475569', display: 'block', marginBottom: '4px' }}>
+                Telegram Chat ID
+              </label>
+              <input
+                type="text"
+                value={settings.telegramChatId || ''}
+                onChange={e => setSettings({ ...settings, telegramChatId: e.target.value })}
+                placeholder="-100xxxxxxxxxx"
+                style={{
+                  width: '100%',
+                  padding: '8px 10px',
+                  borderRadius: '8px',
+                  border: '1px solid #cbd5e1',
+                  fontSize: '12px',
                   boxSizing: 'border-box',
                   fontFamily: 'monospace'
                 }}

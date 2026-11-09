@@ -1,10 +1,20 @@
 {
-  "name": "One Tap Safar Tracker",
-  "short_name": "Safar Tracker",
-  "description": "Track Safar production from any device.",
+  "name": "One Tap Safar Production Tracker",
+  "short_name": "One Tap",
+  "description": "Live Safar video and photo delivery tracking across all stages.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#f5f4ee",
-  "theme_color": "#f5f4ee",
-  "icons": [{ "src": "/logo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+  "orientation": "any",
+  "background_color": "#f8fafc",
+  "theme_color": "#4f46e5",
+  "categories": ["productivity", "utilities", "business"],
+  "icons": [
+    {
+      "src": "/logo.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
 }

@@ -26,7 +26,11 @@ import {
   RefreshCw,
   Trash2,
   Clock,
-  Mail
+  Mail,
+  Share2,
+  Smartphone,
+  Download,
+  MessageCircle
 } from 'lucide-react'
 import OngoingSafarKanban, { type SafarTaskItem, isJunkSafarName } from './components/OngoingSafarKanban'
 import PhotoTracker from './components/PhotoTracker'
@@ -592,6 +596,84 @@ export default function App(): JSX.Element {
     return unsub
   }, [])
 
+  const [installPrompt, setInstallPrompt] = useState<any>(null)
+  const [isStandalone, setIsStandalone] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false
+    return window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true
+  })
+  const [pullProgress, setPullProgress] = useState(0)
+
+  useEffect(() => {
+    const handleBeforeInstall = (e: any) => {
+      e.preventDefault()
+      setInstallPrompt(e)
+    }
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall)
+
+    // Touch pull-to-refresh for mobile PWA
+    let startY = 0
+    let pulling = false
+
+    const handleTouchStart = (e: TouchEvent) => {
+      if (window.scrollY === 0) {
+        startY = e.touches[0].clientY
+        pulling = true
+      }
+    }
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!pulling) return
+      const currentY = e.touches[0].clientY
+      const diff = currentY - startY
+      if (diff > 0 && window.scrollY === 0) {
+        const clamped = Math.min(diff * 0.4, 80)
+        setPullProgress(clamped)
+      } else {
+        pulling = false
+        setPullProgress(0)
+      }
+    }
+
+    const handleTouchEnd = () => {
+      if (pulling && pullProgress >= 50) {
+        setNotice('Refreshing Safar production data...')
+        void requestDesktopSync()
+      }
+      pulling = false
+      setPullProgress(0)
+    }
+
+    window.addEventListener('touchstart', handleTouchStart, { passive: true })
+    window.addEventListener('touchmove', handleTouchMove, { passive: true })
+    window.addEventListener('touchend', handleTouchEnd, { passive: true })
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstall)
+      window.removeEventListener('touchstart', handleTouchStart)
+      window.removeEventListener('touchmove', handleTouchMove)
+      window.removeEventListener('touchend', handleTouchEnd)
+    }
+  }, [pullProgress])
+
+  const handleInstallApp = async () => {
+    if (installPrompt) {
+      await installPrompt.prompt()
+      const choice = await installPrompt.userChoice
+      if (choice?.outcome === 'accepted') {
+        setIsStandalone(true)
+        setNotice('✓ One Tap Tracker installed to your device home screen!')
+      }
+      setInstallPrompt(null)
+    } else {
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream
+      if (isIOS) {
+        alert('To install on your iPhone / iPad:\n1. Tap the Share button at the bottom of Safari (square with arrow up ⎋)\n2. Scroll down and tap "Add to Home Screen" ⊕')
+      } else {
+        setNotice('To install: click the Install icon in your browser URL bar or browser menu.')
+      }
+    }
+  }
+
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => getStoredAuthUser())
 
   const initialRoute = useMemo(() => parseUrlRoute(), [])
@@ -1058,6 +1140,82 @@ export default function App(): JSX.Element {
     window.setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
 
+  function generateDailyBriefingText(): string {
+    const lines: string[] = []
+    lines.push('📢 Safar Media Production Update (1448 H)')
+    lines.push('')
+
+    activeSafarGroups.forEach(g => {
+      const total = g.total || g.tasks.length
+      const delivered = g.tasks.filter(t => t.stage === 'upload' || t.stage === 'jameya' || t.stage === 'completed').length
+      const pct = total > 0 ? Math.round((delivered / total) * 100) : 0
+
+      lines.push(`📍 ${g.safarName}: ${pct}% Delivered (${delivered}/${total} dates)`)
+
+      // Video stage counts
+      const videoCompleted = g.tasks.filter(t => t.stage === 'completed').length
+      const videoJameya = g.tasks.filter(t => t.stage === 'jameya').length
+      const videoUpload = g.tasks.filter(t => t.stage === 'upload').length
+      const videoRendered = g.tasks.filter(t => t.stage === 'rendering').length
+      const videoEditing = g.tasks.filter(t => t.stage === 'editing').length
+
+      const videoParts: string[] = []
+      if (videoCompleted > 0) videoParts.push(`${videoCompleted} Completed`)
+      if (videoJameya > 0) videoParts.push(`${videoJameya} Al Jamea`)
+      if (videoUpload > 0) videoParts.push(`${videoUpload} Uploaded`)
+      if (videoRendered > 0) videoParts.push(`${videoRendered} Rendered`)
+      if (videoEditing > 0) videoParts.push(`${videoEditing} In Editing`)
+
+      if (videoParts.length > 0) {
+        lines.push(`• 🎬 Video: ${videoParts.join(' · ')}`)
+      }
+
+      // Photo stage counts
+      const photoUploaded = g.tasks.filter(t => t.photoStage === 'uploaded' || t.photoUploaded || t.stage === 'upload' || t.stage === 'jameya' || t.stage === 'completed').length
+      const photoGiven = g.tasks.filter(t => t.photoStage === 'given_to_murtaza').length
+      const photoEdited = g.tasks.filter(t => t.photoStage === 'edited' && !t.photoUploaded).length
+
+      const photoParts: string[] = []
+      if (photoUploaded > 0) photoParts.push(`${photoUploaded} Uploaded`)
+      if (photoGiven > 0) photoParts.push(`${photoGiven} Given to Murtaza`)
+      if (photoEdited > 0) photoParts.push(`${photoEdited} In Editing`)
+
+      if (photoParts.length > 0) {
+        lines.push(`• 📷 Photos: ${photoParts.join(' · ')}`)
+      }
+
+      lines.push('')
+    })
+
+    const allDelivered = studioStats.deliveredDates
+    const allTotal = studioStats.totalDates
+    const allPct = studioStats.percent
+
+    lines.push(`📊 Overall Total: ${allDelivered} of ${allTotal} dates delivered (${allPct}%)`)
+    lines.push(`Generated via One Tap Workstation: ${window.location.origin}`)
+
+    return lines.join('\n')
+  }
+
+  function copyDailyBriefing() {
+    const text = generateDailyBriefingText()
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(() => {
+        setNotice('✓ Daily briefing copied to clipboard! Ready to paste into WhatsApp / Telegram.')
+      }).catch(() => {
+        setNotice('Briefing copied to clipboard.')
+      })
+    } else {
+      setNotice('Clipboard unavailable.')
+    }
+  }
+
+  function shareDailyBriefingWhatsApp() {
+    const text = generateDailyBriefingText()
+    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`
+    window.open(url, '_blank')
+  }
+
   async function updateTask(task: SafarTask, changes: Partial<SafarTask>) {
     const updatedAt = new Date().toISOString()
     const targetKey = getTaskKey(task.safarName, task.dateFolder)
@@ -1493,6 +1651,34 @@ export default function App(): JSX.Element {
       </aside>
 
       <main id="main-content" className="main-content" tabIndex={-1}>
+        {/* Mobile Pull-to-Refresh Visual Indicator */}
+        {pullProgress > 0 && (
+          <div
+            style={{
+              position: 'fixed',
+              top: `${Math.min(pullProgress, 75)}px`,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              backgroundColor: '#4f46e5',
+              color: '#ffffff',
+              padding: '6px 16px',
+              borderRadius: '9999px',
+              boxShadow: '0 4px 14px rgba(79, 70, 229, 0.35)',
+              fontSize: '12px',
+              fontWeight: 700,
+              zIndex: 99999,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'top 0.1s ease',
+              pointerEvents: 'none'
+            }}
+          >
+            <RefreshCw size={14} className={pullProgress >= 50 ? 'spinning' : ''} />
+            <span>{pullProgress >= 50 ? 'Release to refresh data' : 'Pull down to refresh'}</span>
+          </div>
+        )}
+
         <header className="topbar">
           <button ref={menuToggleRef} type="button" className="icon-button menu-toggle" aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'} aria-controls="workspace-navigation" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>
             <Menu aria-hidden="true" size={20}/>
@@ -1551,6 +1737,25 @@ export default function App(): JSX.Element {
               <Mail aria-hidden="true" size={17} />
               <span>Email Alerts</span>
             </button>
+
+            {/* Mobile PWA Install Button */}
+            {!isStandalone && (
+              <button
+                type="button"
+                className="notification-button"
+                onClick={handleInstallApp}
+                title="Install One Tap to your phone or desktop home screen"
+                style={{
+                  backgroundColor: 'rgba(79, 70, 229, 0.08)',
+                  borderColor: 'rgba(79, 70, 229, 0.25)',
+                  color: '#4f46e5',
+                  fontWeight: 600
+                }}
+              >
+                <Smartphone aria-hidden="true" size={16} />
+                <span>Install App</span>
+              </button>
+            )}
 
             <button type="button" className="notification-button" onClick={requestNotifications}>
               <Bell aria-hidden="true" size={17}/><span>Notifications</span>
@@ -1654,7 +1859,56 @@ export default function App(): JSX.Element {
           {view === 'dashboard' && initialLoading ? <SafarLoadingSkeleton variant="dashboard"/> : view === 'dashboard' && <section className="dashboard-safars" aria-labelledby="dashboard-safars-title">
             <div className="dashboard-safars-heading">
               <div><h2 id="dashboard-safars-title">Safars in production</h2><p>Multi-stage pipeline and completion across all campaigns.</p></div>
-              <button type="button" className="button-secondary" onClick={() => { setSelectedSafar('all'); setSelectedEditor('all'); navigateTo('archive') }}><Archive aria-hidden="true" size={16}/> Archive <span className="nav-count">{archiveSafarGroups.length}</span></button>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                <button
+                  type="button"
+                  className="button-primary"
+                  onClick={copyDailyBriefing}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
+                    color: '#ffffff',
+                    fontWeight: 700,
+                    boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)',
+                    border: 'none',
+                    borderRadius: '10px',
+                    padding: '8px 14px',
+                    cursor: 'pointer'
+                  }}
+                  title="Copy formatted WhatsApp / Telegram daily briefing to clipboard"
+                >
+                  <Share2 size={15} />
+                  <span>Copy Daily Briefing</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={shareDailyBriefingWhatsApp}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: '#25D366',
+                    color: '#ffffff',
+                    fontWeight: 700,
+                    boxShadow: '0 4px 12px rgba(37, 211, 102, 0.25)',
+                    border: 'none',
+                    borderRadius: '10px',
+                    padding: '8px 12px',
+                    cursor: 'pointer'
+                  }}
+                  title="Share Daily Briefing directly to WhatsApp group / chat"
+                >
+                  <MessageCircle size={15} />
+                  <span>WhatsApp</span>
+                </button>
+
+                <button type="button" className="button-secondary" onClick={() => { setSelectedSafar('all'); setSelectedEditor('all'); navigateTo('archive') }}>
+                  <Archive aria-hidden="true" size={16}/> Archive <span className="nav-count">{archiveSafarGroups.length}</span>
+                </button>
+              </div>
             </div>
 
             {/* Overall Studio Multi-Color Stage Pipeline Bar */}

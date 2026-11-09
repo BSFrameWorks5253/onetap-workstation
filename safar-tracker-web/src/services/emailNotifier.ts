@@ -8,6 +8,10 @@ export interface EmailNotificationSettings {
   gmailUser: string
   gmailAppPass: string
   apiKey?: string
+  telegramBotToken?: string
+  telegramChatId?: string
+  whatsappPhone?: string
+  whatsappApiKey?: string
   debounceMinutes: number // default: 5 minutes
   safarWebsiteUrl?: string
 }
@@ -270,6 +274,14 @@ class EmailNotifierService {
           pass: this.settings.gmailAppPass
         },
         apiKey: this.settings.apiKey,
+        telegramConfig: {
+          botToken: this.settings.telegramBotToken,
+          chatId: this.settings.telegramChatId
+        },
+        whatsappConfig: {
+          phone: this.settings.whatsappPhone,
+          apiKey: this.settings.whatsappApiKey
+        },
         safarName: primarySafar,
         totalDates: ctx.totalDates || eventsToSend.length,
         deliveredDates: ctx.deliveredDates || 0,
@@ -329,6 +341,14 @@ class EmailNotifierService {
         pass: s.gmailAppPass
       },
       apiKey: s.apiKey,
+      telegramConfig: {
+        botToken: s.telegramBotToken,
+        chatId: s.telegramChatId
+      },
+      whatsappConfig: {
+        phone: s.whatsappPhone,
+        apiKey: s.whatsappApiKey
+      },
       safarName: 'System Verification Test',
       totalDates: 1,
       deliveredDates: 1,
