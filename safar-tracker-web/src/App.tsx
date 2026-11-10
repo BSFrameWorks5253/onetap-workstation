@@ -633,6 +633,10 @@ export default function App(): JSX.Element {
     return window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true
   })
   const [pullProgress, setPullProgress] = useState(0)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const pullProgressRef = useRef(0)
+  const pullingRef = useRef(false)
+  const startYRef = useRef(0)
 
   useEffect(() => {
     const handleBeforeInstall = (e: any) => {
@@ -641,37 +645,58 @@ export default function App(): JSX.Element {
     }
     window.addEventListener('beforeinstallprompt', handleBeforeInstall)
 
-    // Touch pull-to-refresh for mobile PWA
-    let startY = 0
-    let pulling = false
-
+    // Touch pull-to-refresh for mobile PWA (Ref-based, zero re-render listener churn)
     const handleTouchStart = (e: TouchEvent) => {
-      if (window.scrollY === 0) {
-        startY = e.touches[0].clientY
-        pulling = true
+      const scrollY = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0
+      if (scrollY <= 1 && e.touches.length === 1) {
+        startYRef.current = e.touches[0].clientY
+        pullingRef.current = true
+      } else {
+        pullingRef.current = false
       }
     }
 
     const handleTouchMove = (e: TouchEvent) => {
-      if (!pulling) return
+      if (!pullingRef.current) return
+      const scrollY = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0
+      if (scrollY > 1) {
+        pullingRef.current = false
+        pullProgressRef.current = 0
+        setPullProgress(0)
+        return
+      }
       const currentY = e.touches[0].clientY
-      const diff = currentY - startY
-      if (diff > 0 && window.scrollY === 0) {
-        const clamped = Math.min(diff * 0.4, 80)
+      const diff = currentY - startYRef.current
+      if (diff > 0) {
+        // Elastic dampened tension feel
+        const clamped = Math.min(diff * 0.42, 82)
+        pullProgressRef.current = clamped
         setPullProgress(clamped)
       } else {
-        pulling = false
+        pullingRef.current = false
+        pullProgressRef.current = 0
         setPullProgress(0)
       }
     }
 
     const handleTouchEnd = () => {
-      if (pulling && pullProgress >= 50) {
-        setNotice('Refreshing Safar production data...')
-        void requestDesktopSync()
+      if (pullingRef.current && pullProgressRef.current >= 48) {
+        setIsRefreshing(true)
+        setPullProgress(60)
+        try { if ('vibrate' in navigator) navigator.vibrate(15) } catch {}
+        setNotice('⚡ Pull to refresh: Syncing latest Safar production data...')
+        void requestDesktopSync().finally(() => {
+          setTimeout(() => {
+            setIsRefreshing(false)
+            setPullProgress(0)
+            pullProgressRef.current = 0
+          }, 650)
+        })
+      } else {
+        setPullProgress(0)
+        pullProgressRef.current = 0
       }
-      pulling = false
-      setPullProgress(0)
+      pullingRef.current = false
     }
 
     window.addEventListener('touchstart', handleTouchStart, { passive: true })
@@ -684,7 +709,7 @@ export default function App(): JSX.Element {
       window.removeEventListener('touchmove', handleTouchMove)
       window.removeEventListener('touchend', handleTouchEnd)
     }
-  }, [pullProgress])
+  }, [])
 
   const handleInstallApp = async () => {
     if (installPrompt) {
@@ -1059,6 +1084,9 @@ export default function App(): JSX.Element {
         ...safar,
         isArchived: safar.isArchived ?? previousSafars.get(safar.safarName)?.isArchived ?? false
       }))
+    const isFromDesktop = (next as any)?.source === 'onetap-desktop'
+    const prevTaskMap = new Map((current.tasks || []).map(t => [getTaskKey(t.safarName, t.dateFolder), t]))
+
     const mergedTasks = normalized.tasks
       .filter(t =>
         !delSafars.has(t.safarName.trim().toLowerCase()) &&
@@ -1067,19 +1095,49 @@ export default function App(): JSX.Element {
       .map(t => {
         const key = getTaskKey(t.safarName, t.dateFolder)
         const override = overrides.get(key)
-        if (override) {
-          return {
-            ...t,
-            stage: override.stage || t.stage,
-            editorName: override.editorName !== undefined ? override.editorName : t.editorName,
-            dueDate: override.dueDate !== undefined ? override.dueDate : t.dueDate,
-            photoStage: override.photoStage || t.photoStage,
-            photoEditorName: override.photoEditorName !== undefined ? override.photoEditorName : t.photoEditorName,
-            photoUploaded: override.photoUploaded !== undefined ? override.photoUploaded : t.photoUploaded
-          }
+        const existing = prevTaskMap.get(key)
+
+        // When receiving desktop scans/syncs, the desktop app reports Safar names and folder presence.
+        // It must NEVER revert or overwrite stages, photo stages, or editor assignments set in web app!
+        const finalStage = override?.stage || (isFromDesktop && existing?.stage ? existing.stage : (override?.stage || t.stage || existing?.stage || 'editing'))
+        const finalPhotoStage = override?.photoStage || (isFromDesktop && existing?.photoStage ? existing.photoStage : (override?.photoStage || t.photoStage || existing?.photoStage || 'edited'))
+        const finalPhotoUploaded = override?.photoUploaded !== undefined
+          ? override.photoUploaded
+          : (isFromDesktop && existing?.photoUploaded !== undefined
+            ? existing.photoUploaded
+            : (t.photoUploaded ?? existing?.photoUploaded ?? false))
+        const finalEditor = override?.editorName || (isFromDesktop && existing?.editorName ? existing.editorName : (override?.editorName || t.editorName || existing?.editorName || 'Murtaza'))
+        const finalDueDate = override?.dueDate || (isFromDesktop && existing?.dueDate ? existing.dueDate : (override?.dueDate || t.dueDate || existing?.dueDate || ''))
+        const finalPhotoEditor = override?.photoEditorName || (isFromDesktop && existing?.photoEditorName ? existing.photoEditorName : (override?.photoEditorName || t.photoEditorName || existing?.photoEditorName || 'Muffadal Peti'))
+
+        return {
+          ...t,
+          stage: finalStage,
+          editorName: finalEditor,
+          dueDate: finalDueDate,
+          photoStage: finalPhotoStage,
+          photoEditorName: finalPhotoEditor,
+          photoUploaded: finalPhotoUploaded
         }
-        return t
       })
+
+    // Retain existing tasks from other safars not present in a partial desktop scan
+    if (isFromDesktop && current.tasks && current.tasks.length > 0) {
+      const scannedKeys = new Set(mergedTasks.map(t => getTaskKey(t.safarName, t.dateFolder)))
+      for (const t of current.tasks) {
+        const k = getTaskKey(t.safarName, t.dateFolder)
+        if (!scannedKeys.has(k) && !delSafars.has(t.safarName.trim().toLowerCase()) && !delTasks.has(k)) {
+          mergedTasks.push({
+            ...t,
+            editorName: t.editorName || 'Murtaza',
+            dueDate: t.dueDate || '',
+            photoStage: t.photoStage || 'edited',
+            photoEditorName: t.photoEditorName || 'Muffadal Peti',
+            photoUploaded: Boolean(t.photoUploaded)
+          })
+        }
+      }
+    }
     const merged: Snapshot = {
       ...normalized,
       tasks: mergedTasks,
@@ -1839,30 +1897,36 @@ export default function App(): JSX.Element {
 
       <main id="main-content" className={`main-content view-${view}`} tabIndex={-1}>
         {/* Mobile Pull-to-Refresh Visual Indicator */}
-        {pullProgress > 0 && (
+        {(pullProgress > 0 || isRefreshing) && (
           <div
             style={{
               position: 'fixed',
-              top: `${Math.min(pullProgress, 75)}px`,
+              top: `${Math.min(pullProgress, 72)}px`,
               left: '50%',
               transform: 'translateX(-50%)',
               backgroundColor: '#4f46e5',
               color: '#ffffff',
-              padding: '6px 16px',
+              padding: '7px 18px',
               borderRadius: '9999px',
-              boxShadow: '0 4px 14px rgba(79, 70, 229, 0.35)',
+              boxShadow: '0 6px 20px rgba(79, 70, 229, 0.4)',
               fontSize: '12px',
               fontWeight: 700,
               zIndex: 99999,
               display: 'flex',
               alignItems: 'center',
-              gap: '6px',
-              transition: 'top 0.1s ease',
+              gap: '7px',
+              transition: isRefreshing ? 'top 0.25s ease' : 'top 0.08s ease',
               pointerEvents: 'none'
             }}
           >
-            <RefreshCw size={14} className={pullProgress >= 50 ? 'spinning' : ''} />
-            <span>{pullProgress >= 50 ? 'Release to refresh data' : 'Pull down to refresh'}</span>
+            <RefreshCw size={14} className={isRefreshing || pullProgress >= 48 ? 'spinning' : ''} />
+            <span>
+              {isRefreshing
+                ? 'Syncing latest data…'
+                : pullProgress >= 48
+                  ? 'Release to refresh'
+                  : 'Pull down to refresh'}
+            </span>
           </div>
         )}
 

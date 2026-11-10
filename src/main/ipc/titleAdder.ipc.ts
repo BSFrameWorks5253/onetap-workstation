@@ -1455,6 +1455,22 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
         outputFolder: targetOut
       })
 
+      // Per-video thumbnail placement mode override (computed upfront so Pure Video mode can skip title image requirement)
+      const perVideoThumbMode =
+        params.thumbnailModeSelections?.[videoPath] ||
+        params.thumbnailModeSelections?.[rawVideoPath] ||
+        params.thumbnailModeSelections?.[path.basename(videoPath)] ||
+        params.thumbnailModeSelections?.[path.basename(rawVideoPath)] ||
+        params.thumbnailModeSelections?.[stem] ||
+        params.thumbnailModeSelections?.[canonicalStem] ||
+        params.thumbnailModeSelections?.[videoPath.replace(/\\/g, '/')] ||
+        params.thumbnailMode ||
+        'default'
+
+      const skipFront = perVideoThumbMode === 'front_only' || perVideoThumbMode === 'both'
+      const skipBack = perVideoThumbMode === 'back_only' || perVideoThumbMode === 'both'
+
+
       // Check user-selected title image assignment first (direct, stem, or canonical match)
       let explicitImgPath =
         params.titleImageAssignments?.[videoPath] ||
@@ -1469,7 +1485,14 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
 
       if (!explicitImgPath && params.titleImageAssignments) {
         for (const [k, v] of Object.entries(params.titleImageAssignments)) {
-          if (getCanonicalStem(k) === canonicalStem) {
+          const kStem = path.basename(k, path.extname(k)).toLowerCase()
+          const kBase = path.basename(k).toLowerCase()
+          if (
+            getCanonicalStem(k) === canonicalStem ||
+            kBase === path.basename(videoPath).toLowerCase() ||
+            kStem === stem.toLowerCase() ||
+            k.toLowerCase() === videoPath.toLowerCase()
+          ) {
             explicitImgPath = v
             break
           }
@@ -1482,6 +1505,9 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
         send('titleAdder:log', { jobId: params.jobId, message: `  🖼 [User Selected] Title image: ${path.basename(titleImg)}`, level: 'info' })
       } else {
         titleImg = findTitleImageForVideo(titlesFolder, prefix, videoPath, availableTitleImages)
+        if (!titleImg && skipFront && skipBack) {
+          send('titleAdder:log', { jobId: params.jobId, message: `  ℹ [Pure Video] No title image found for "${prefix}", but front & back thumbnails are skipped — proceeding without title image.`, level: 'info' })
+        } else
         if (!titleImg) {
           send('titleAdder:log', { jobId: params.jobId, message: `  ✖ SKIP — No title image found for prefix "${prefix}" in: ${titlesFolder}`, level: 'warn' })
           send('titleAdder:log', { jobId: params.jobId, message: `       Expected "${prefix}.jpg", "ID.jpg", or "Title.jpg" in: ${titlesFolder}`, level: 'warn' })
@@ -1538,7 +1564,14 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
 
       if (explicitMute === undefined && params.videoMuteSelections) {
         for (const [k, v] of Object.entries(params.videoMuteSelections)) {
-          if (getCanonicalStem(k) === canonicalStem) {
+          const kStem = path.basename(k, path.extname(k)).toLowerCase()
+          const kBase = path.basename(k).toLowerCase()
+          if (
+            getCanonicalStem(k) === canonicalStem ||
+            kBase === path.basename(videoPath).toLowerCase() ||
+            kStem === stem.toLowerCase() ||
+            k.toLowerCase() === videoPath.toLowerCase()
+          ) {
             explicitMute = v
             break
           }
@@ -1579,7 +1612,14 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
 
       if (!explicitAudioPath && params.audioAssignments) {
         for (const [k, v] of Object.entries(params.audioAssignments)) {
-          if (getCanonicalStem(k) === canonicalStem) {
+          const kStem = path.basename(k, path.extname(k)).toLowerCase()
+          const kBase = path.basename(k).toLowerCase()
+          if (
+            getCanonicalStem(k) === canonicalStem ||
+            kBase === path.basename(videoPath).toLowerCase() ||
+            kStem === stem.toLowerCase() ||
+            k.toLowerCase() === videoPath.toLowerCase()
+          ) {
             explicitAudioPath = v
             break
           }
@@ -1624,20 +1664,21 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
         continue
       }
 
-      // Per-video thumbnail placement mode override
-      const perVideoThumbMode =
-        params.thumbnailModeSelections?.[videoPath] ||
-        params.thumbnailModeSelections?.[rawVideoPath] ||
-        params.thumbnailModeSelections?.[path.basename(videoPath)] ||
-        params.thumbnailModeSelections?.[path.basename(rawVideoPath)] ||
-        params.thumbnailModeSelections?.[stem] ||
-        params.thumbnailModeSelections?.[canonicalStem] ||
-        params.thumbnailModeSelections?.[videoPath.replace(/\\/g, '/')] ||
-        params.thumbnailMode ||
-        'default'
 
-      const skipFront = perVideoThumbMode === 'front_only' || perVideoThumbMode === 'both'
-      const skipBack = perVideoThumbMode === 'back_only' || perVideoThumbMode === 'both'
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
       if (skipFront || skipBack) {
         const modeDesc = (skipFront && skipBack)

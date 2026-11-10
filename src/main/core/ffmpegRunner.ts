@@ -110,6 +110,19 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
     dynamicInputs.push('-loop', '1', '-framerate', fps, '-t', String(introLen), '-i', startImg)
   }
 
+  // Custom transition clip (only if an explicit transition file exists on disk and front intro is present)
+  let transIdx = -1
+  if (transLen > 0 && params.transitionFile && fs.existsSync(params.transitionFile)) {
+    transIdx = nextInputIdx++
+    const transExt = path.extname(params.transitionFile).toLowerCase()
+    const isTransImg = ['.jpg', '.jpeg', '.png', '.webp', '.bmp', '.tiff'].includes(transExt)
+    if (isTransImg) {
+      dynamicInputs.push('-loop', '1', '-framerate', fps, '-t', String(transLen), '-i', params.transitionFile)
+    } else {
+      dynamicInputs.push('-hwaccel', 'auto', '-t', String(transLen), '-i', params.transitionFile)
+    }
+  }
+
   const vidIdx = nextInputIdx++
   dynamicInputs.push('-hwaccel', 'auto', '-i', videoPath)
 
@@ -134,7 +147,7 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
   let audioInputs: string[] = []
   let audioFilter = ''
 
-  // Input index for primary audio if attached
+  // Input index for primary audio if attached is ALWAYS nextInputIdx
   const audioIdx = String(nextInputIdx)
 
   // ────────────────────────────────────────────────────────────
@@ -272,7 +285,7 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
     if (hasPrimaryAudio) {
       audioInputs = ['-stream_loop', '-1', '-i', audioPrimary!]
       if (!muteOriginal) {
-        const delayPart = leadMs > 0 ? `adelay=${leadMs}|${leadMs}[vid_delayed];` : `copy[vid_delayed];`
+        const delayPart = leadMs > 0 ? `adelay=${leadMs}|${leadMs}[vid_delayed];` : `anull[vid_delayed];`
         audioFilter =
           `[${audioIdx}:a]aresample=48000,atrim=0:${totalLength},asetpts=PTS-STARTPTS,` +
           `afade=t=in:st=0:d=2,afade=t=out:st=${fadeStart}:d=2[bg_full];` +
@@ -309,16 +322,8 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
       `pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1,format=yuv420p,trim=0:${introLen.toFixed(3)},settb=AVTB,setpts=PTS-STARTPTS[img_start];`
     concatSegments.push('[img_start]')
 
-    // Custom transition clip (only if an explicit transition file exists on disk)
-    if (transLen > 0 && params.transitionFile && fs.existsSync(params.transitionFile)) {
-      const transIdx = nextInputIdx++
-      const transExt = path.extname(params.transitionFile).toLowerCase()
-      const isTransImg = ['.jpg', '.jpeg', '.png', '.webp', '.bmp', '.tiff'].includes(transExt)
-      if (isTransImg) {
-        dynamicInputs.push('-loop', '1', '-framerate', fps, '-t', String(transLen), '-i', params.transitionFile)
-      } else {
-        dynamicInputs.push('-hwaccel', 'auto', '-t', String(transLen), '-i', params.transitionFile)
-      }
+    // Custom transition clip (rendered if explicit transition input was registered)
+    if (transLen > 0 && transIdx >= 0) {
       videoFilter +=
         `[${transIdx}:v]scale=${width}:${height}:force_original_aspect_ratio=decrease:flags=fast_bilinear,` +
         `pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1,format=yuv420p,settb=AVTB,setpts=PTS-STARTPTS,` +
@@ -341,7 +346,7 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
   if (concatSegments.length > 1) {
     videoFilter += `${concatSegments.join('')}concat=n=${concatSegments.length}:v=1:a=0[base_v];`
   } else {
-    videoFilter += `[vid_faded]copy[base_v];`
+    videoFilter += `[vid_faded]null[base_v];`
   }
 
   if (addWatermark && watermarkIdx >= 0) {
@@ -349,7 +354,7 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
       `[${watermarkIdx}:v]scale=${width}:${height}:flags=fast_bilinear[wm_scaled];` +
       `[base_v][wm_scaled]overlay=0:0:shortest=1[final_video]`
   } else {
-    videoFilter += `[base_v]copy[final_video]`
+    videoFilter += `[base_v]null[final_video]`
   }
 
   const videoFileName = path.basename(videoPath)

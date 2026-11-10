@@ -1270,11 +1270,35 @@ body {
 /* Mobile & PWA Responsive System */
 @media (max-width: 768px) {
   html, body {
-    overscroll-behavior-y: contain;
     -webkit-tap-highlight-color: transparent;
-    overflow-x: hidden;
-    width: 100%;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    touch-action: pan-y !important;
+    width: 100% !important;
     min-width: 0 !important;
+    height: auto !important;
+    min-height: 100% !important;
+    overscroll-behavior-y: auto !important;
+  }
+
+  .main-content {
+    min-width: 0 !important;
+    width: 100% !important;
+    overflow-y: visible !important;
+    overflow-x: hidden !important;
+  }
+
+  .content-wrap {
+    padding: 14px 12px calc(86px + env(safe-area-inset-bottom, 16px)) !important;
+    overflow-x: hidden !important;
+  }
+
+  .kanban-board-grid,
+  .photo-kanban-board-grid,
+  .table-wrap {
+    touch-action: pan-x pan-y !important;
+    -webkit-overflow-scrolling: touch !important;
   }
 
   /* Unify Mobile Navigation into Single Menu: Hide redundant desktop sidebar and drawer */
@@ -2487,5 +2511,71 @@ button:active,
 .widget-tip-box svg {
   flex: none;
   margin-top: 2px;
+}
+
+/* ── Fluid Micro-Animations & Responsive Polish ── */
+@keyframes numberPop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.08); color: #4f46e5; }
+  100% { transform: scale(1); }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.2); }
+  50% { box-shadow: 0 0 0 6px rgba(79, 70, 229, 0); }
+}
+
+@keyframes smoothFadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.kanban-task-card,
+.summary-card,
+.safar-group-card,
+.editor-card {
+  animation: smoothFadeInUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.kanban-task-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
+.kanban-task-card:active {
+  transform: scale(0.985);
+}
+
+.stat-number-animated {
+  display: inline-block;
+  font-variant-numeric: tabular-nums;
+  transition: transform 0.2s ease;
+}
+
+/* Smooth Touch Momentum Across All Platforms */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.35);
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.55);
 }
 

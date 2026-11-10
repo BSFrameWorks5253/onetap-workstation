@@ -140,16 +140,15 @@ class AnyShareRealtimeService {
       }
       const taskKey = `${safarName.toLowerCase()}::${dateFolder.toLowerCase().replace(/[\s_\-]/g, '')}`;
       const override = priorOverrides[taskKey];
-      let resolvedStage = override?.stage || stage;
-      if (isMissing) {
-        resolvedStage = 'jameya';
-      } else if (override?.stage) {
+      // Preserve status ALWAYS: The desktop workstation reports Safar and folder existence,
+      // and must NEVER revert existing stage progress or cloud user stage updates.
+      let resolvedStage = override?.stage || priorTask?.stage || stage;
+      if (override?.stage) {
         resolvedStage = override.stage;
-      } else if (priorTask?.stage && (priorTask.stage === 'upload' || priorTask.stage === 'jameya' || priorTask.stage === 'completed')) {
+      } else if (priorTask?.stage) {
         resolvedStage = priorTask.stage;
-        resolvedStage = priorTask.stage;
-      } else if (priorTask?.stage && stage === 'editing' && !task.isManual && !scanComplete) {
-        resolvedStage = priorTask.stage;
+      } else if (isMissing) {
+        resolvedStage = 'jameya';
       }
       const safar = safarByName.get(safarName);
       const hijriYear = safar?.safarYear || '';
