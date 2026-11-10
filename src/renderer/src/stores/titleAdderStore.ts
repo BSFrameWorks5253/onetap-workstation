@@ -190,11 +190,16 @@ class TitleAdderStoreManager {
       }
 
       if (path) {
+        const isNewSource = Boolean(this.state.batchSource && this.state.batchSource.toLowerCase() !== path.toLowerCase())
+        const nextExpected = expectedVideos.length > 0 
+          ? expectedVideos 
+          : (isNewSource ? [] : (this.state.expectedVideos || []))
+
         this.setState({
           mode: 'batch',
           batchSource: path,
           muteOriginal: muteOriginalVal,
-          expectedVideos: expectedVideos.length > 0 ? expectedVideos : this.state.expectedVideos,
+          expectedVideos: nextExpected,
           lastReceivedPayload: payload || { path },
           hasReceivedExtensionPath: true
         })

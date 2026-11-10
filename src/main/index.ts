@@ -368,12 +368,14 @@ function startDvdBatchWatcher(
           if (win && !win.isDestroyed()) {
             win.webContents.send('ame:render-complete', {
               dvdPath: targetDir,
+              expectedVideos: checkList,
               autoStart: false,
               requireConfirmation: true,
               source: 'folder-watcher'
             })
             win.webContents.send('titleAutomode:triggered', {
               dvdPath: targetDir,
+              expectedVideos: checkList,
               autoStart: false,
               requireConfirmation: true,
               source: 'folder-watcher'
@@ -418,8 +420,20 @@ function startDvdBatchWatcher(
             stopDvdBatchWatcher()
             cleanTempFiles(targetDir)
             if (win && !win.isDestroyed()) {
-              win.webContents.send('ame:render-complete', { dvdPath: targetDir, autoStart: false, requireConfirmation: true, source: 'folder-watcher-fallback' })
-              win.webContents.send('titleAutomode:triggered', { dvdPath: targetDir, autoStart: false, requireConfirmation: true, source: 'folder-watcher-fallback' })
+              win.webContents.send('ame:render-complete', {
+                dvdPath: targetDir,
+                expectedVideos: mp4Files,
+                autoStart: false,
+                requireConfirmation: true,
+                source: 'folder-watcher-fallback'
+              })
+              win.webContents.send('titleAutomode:triggered', {
+                dvdPath: targetDir,
+                expectedVideos: mp4Files,
+                autoStart: false,
+                requireConfirmation: true,
+                source: 'folder-watcher-fallback'
+              })
             }
             notifyBatchReady(win, targetDir)
           }
@@ -510,15 +524,19 @@ function scanAndWatchAmeLogs(win: BrowserWindow | null): void {
                   chunk.includes('Encoding Time:')
                 ) {
                   let detectedDvdPath = ''
-                  const outMatch = chunk.match(/(?:-\s*Output File:\s*|File successfully created:\s*)([^\r\n]+)/i)
                   const detectedFileNames: string[] = []
-                  if (outMatch && outMatch[1]) {
-                    const outFilePath = outMatch[1].trim().replace(/^["']|["']$/g, '')
-                    try {
-                      detectedDvdPath = path.dirname(outFilePath)
-                      const baseName = path.basename(outFilePath)
-                      if (baseName) detectedFileNames.push(baseName)
-                    } catch {}
+                  const fileMatches = chunk.matchAll(/(?:-\s*Output File:\s*|File successfully created:\s*)([^\r\n]+)/gi)
+                  for (const match of fileMatches) {
+                    if (match && match[1]) {
+                      const outFilePath = match[1].trim().replace(/^["']|["']$/g, '')
+                      try {
+                        if (!detectedDvdPath) detectedDvdPath = path.dirname(outFilePath)
+                        const baseName = path.basename(outFilePath)
+                        if (baseName && !detectedFileNames.includes(baseName)) {
+                          detectedFileNames.push(baseName)
+                        }
+                      } catch {}
+                    }
                   }
 
                   if (detectedDvdPath) {

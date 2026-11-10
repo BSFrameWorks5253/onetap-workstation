@@ -1415,7 +1415,7 @@ export default function TitleAdder(): JSX.Element {
   const [isDragging, setIsDragging] = useState(false)
   const [isDragActive, setIsDragActive] = useState(false)
   const dragCounter = useRef(0)
-  const handleMediaEncoderSignalRef = useRef<((dvdPath: string, autoStart?: boolean) => Promise<void>) | null>(null)
+  const handleMediaEncoderSignalRef = useRef<((dvdPath: string, autoStart?: boolean, incomingExpected?: string[]) => Promise<void>) | null>(null)
   const startJobRef = useRef<((overrides?: any) => Promise<void>) | null>(null)
 
   useEffect(() => {
@@ -1596,7 +1596,7 @@ export default function TitleAdder(): JSX.Element {
 
     if (api?.titleAutomode?.onTriggered) {
       unsubs.push(api.titleAutomode.onTriggered((data: any) => {
-        handleMediaEncoderSignalRef.current?.(data?.dvdPath, data?.autoStart !== false)
+        handleMediaEncoderSignalRef.current?.(data?.dvdPath, data?.autoStart !== false, data?.expectedVideos)
       }))
     }
 
@@ -1608,7 +1608,7 @@ export default function TitleAdder(): JSX.Element {
             'All videos in the Media Encoder batch are ready for title adding.',
             'batch_render_complete'
           )
-          handleMediaEncoderSignalRef.current?.(data.dvdPath, data?.autoStart !== false)
+          handleMediaEncoderSignalRef.current?.(data.dvdPath, data?.autoStart !== false, data?.expectedVideos)
         }
       }))
     }
@@ -1694,7 +1694,7 @@ export default function TitleAdder(): JSX.Element {
   const autoRenderLockRef = useRef<boolean>(false)
 
   // Triggered when signal arrives from Adobe Media Encoder or HTTP webhook
-  const handleMediaEncoderSignal = async (dvdPath: string, autoStart: boolean = true) => {
+  const handleMediaEncoderSignal = async (dvdPath: string, autoStart: boolean = true, incomingExpected?: string[]) => {
     if (!dvdPath) return
     const cleanPath = stripDvdFolderFromPath(dvdPath)
     if (!cleanPath) return
@@ -1728,8 +1728,41 @@ export default function TitleAdder(): JSX.Element {
     const maxWaitMs = 120000 // up to 2 minutes
     const startTime = Date.now()
 
-    const expVideos = titleAdderStore.getState().expectedVideos || []
-    const expSet = expVideos.length > 0 ? new Set(expVideos.map((e: string) => getCanonicalStem(e))) : null
+
+    // Check incoming vs persisted expected videos
+    const initialStore = titleAdderStore.getState()
+    const isDifferentBatch = Boolean(
+      initialStore.batchSource &&
+      stripDvdFolderFromPath(initialStore.batchSource).toLowerCase() !== cleanPath.toLowerCase()
+    )
+
+    let expVideos: string[] = []
+    if (incomingExpected && incomingExpected.length > 0) {
+      expVideos = incomingExpected.filter(v => !isGroupPhotoVideo(v))
+      titleAdderStore.setState({ expectedVideos: expVideos })
+    } else if (!isDifferentBatch && initialStore.expectedVideos && initialStore.expectedVideos.length > 0) {
+      expVideos = initialStore.expectedVideos
+    } else {
+      titleAdderStore.setState({ expectedVideos: [] })
+      try { localStorage.removeItem('ot_ta_expected_videos') } catch {}
+    }
+
+    let expSet = expVideos.length > 0 ? new Set(expVideos.map((e: string) => getCanonicalStem(e))) : null
+
+    // Stale check against actual disk files: if expSet has elements but none match files in cleanPath, discard expSet
+    try {
+      const diskFiles = await api.titleAdder.listVideos(cleanPath)
+      if (diskFiles && diskFiles.length > 0 && expSet) {
+        const hasMatch = diskFiles.some((f: string) => expSet!.has(getCanonicalStem(f)))
+        if (!hasMatch) {
+          console.log('[TitleAdder] Discarding stale expectedVideos from previous batch since none match disk files in:', cleanPath)
+          expVideos = []
+          expSet = null
+          titleAdderStore.setState({ expectedVideos: [] })
+          try { localStorage.removeItem('ot_ta_expected_videos') } catch {}
+        }
+      }
+    } catch {}
 
     while (Date.now() - startTime < maxWaitMs) {
       try {
@@ -1779,6 +1812,22 @@ export default function TitleAdder(): JSX.Element {
       if (expSet && !expSet.has(getCanonicalStem(v))) return false
       return true
     })
+
+    if (!videos || videos.length === 0) {
+      if (expSet) {
+        try {
+          const fallbackVideos = await api.titleAdder.listVideos(cleanPath)
+          const validFallbacks = (fallbackVideos || []).filter((v: string) => !v.toLowerCase().endsWith('.tmp') && !v.toLowerCase().endsWith('.temp') && !isGroupPhotoVideo(v))
+          if (validFallbacks.length > 0) {
+            console.log('[TitleAdder] expSet filtered all videos to 0, falling back to all valid videos found in cleanPath:', validFallbacks)
+            videos = validFallbacks
+            expSet = null
+            titleAdderStore.setState({ expectedVideos: [] })
+            try { localStorage.removeItem('ot_ta_expected_videos') } catch {}
+          }
+        } catch {}
+      }
+    }
 
     if (!videos || videos.length === 0) {
       showToast({
@@ -1940,11 +1989,11 @@ export default function TitleAdder(): JSX.Element {
 
     // Open Pre-Render Setup & Confirmation dialog for pre-flight review
     try {
-      const expVideos = titleAdderStore.getState().expectedVideos || []
+  
       const res = await api.titleAdder.previewAudioAssignments({
         mode: 'batch',
         batchSource: cleanPath,
-        videoFiles: expVideos.length > 0 ? expVideos : []
+        videoFiles: videos
       })
 
       if (res && res.assignments && res.assignments.length > 0) {
@@ -2437,7 +2486,8 @@ export default function TitleAdder(): JSX.Element {
         setBatchSource(targetPath)
         setMuteOriginal(muteOriginalVal)
         if (expectedVideos.length > 0) {
-          setStoreState({ expectedVideos })
+          const isDiffSource = Boolean(batchSource && batchSource.toLowerCase() !== targetPath.toLowerCase())
+          setStoreState({ expectedVideos: expectedVideos.length > 0 ? expectedVideos : (isDiffSource ? [] : (storeState.expectedVideos || [])) })
         }
 
         if (muteExceptions.length > 0) {
@@ -2459,6 +2509,24 @@ export default function TitleAdder(): JSX.Element {
     unsubs.push(api.titleAdder.onDone((d: any) => {
       setRunning(false)
       setProgress(100)
+      jobIdRef.current = ''
+      autoRenderLockRef.current = false
+      setStoreState({
+        expectedVideos: [],
+        userAudioSelections: {},
+        userTitleImageSelections: {},
+        userMuteSelections: {}
+      })
+      try {
+        localStorage.removeItem('ot_ta_expected_videos')
+        localStorage.removeItem('ot_ta_user_audio_selections')
+        localStorage.removeItem('ot_ta_user_image_selections')
+        localStorage.removeItem('ot_ta_user_mute_selections')
+      } catch {}
+      setAudioPreviewAssignments([])
+      setUserAudioSelections({})
+      setUserTitleImageSelections({})
+      setUserMuteSelections({})
 
 
       setStatus(d.done > 0 ? 'Completed' : 'Failed')
