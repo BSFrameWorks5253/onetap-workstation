@@ -118,6 +118,7 @@ export default function OngoingSafarKanban({
   selectedSafar: propSelectedSafar,
   onSelectSafar,
   onUpdateTask,
+  onBatchUpdateTasks,
   onRemoveTask,
   onAddTask,
   onResetAndRescan,
@@ -130,6 +131,7 @@ export default function OngoingSafarKanban({
   selectedSafar?: string;
   onSelectSafar?: (safarName: string) => void;
   onUpdateTask: (task: SafarTaskItem, changes: Partial<SafarTaskItem>) => void;
+  onBatchUpdateTasks?: (items: Array<{ task: SafarTaskItem; changes: Partial<SafarTaskItem> }>) => void;
   onRemoveTask: (task: SafarTaskItem) => void;
   onAddTask: (safarName: string, dateFolder: string) => void;
   onResetAndRescan: () => void;
@@ -175,6 +177,9 @@ export default function OngoingSafarKanban({
   const [rescanTriggered, setRescanTriggered] = useState(false);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
   const [activeMobileStage, setActiveMobileStage] = useState<KanbanStage>('editing');
+  const [filterChip, setFilterChip] = useState<'all' | 'my_pending' | 'ready_deliver' | 'needs_photo_review'>('all');
+  const [isBatchMode, setIsBatchMode] = useState<boolean>(false);
+  const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
 
   const showToast = (msg: string) => {
     setActionNotice(msg);
@@ -202,16 +207,106 @@ export default function OngoingSafarKanban({
     return Array.from(seen.values());
   }, [tasks, selectedSafar]);
 
-  // 3. Search filter
+  // Quick chip counts
+  const chipCounts = useMemo(() => {
+    const myPending = safarTasks.filter(t => t.stage === 'editing' || (t.photoStage === 'edited' && !t.photoUploaded)).length;
+    const readyDeliver = safarTasks.filter(t => t.stage === 'rendering' || t.stage === 'upload' || t.photoStage === 'given_to_murtaza').length;
+    const needsPhotoReview = safarTasks.filter(t => t.photoStage === 'given_to_murtaza' || (t.photoStage !== 'uploaded' && !t.photoUploaded)).length;
+    return { myPending, readyDeliver, needsPhotoReview, all: safarTasks.length };
+  }, [safarTasks]);
+
+  // 3. Search and quick filter
   const filteredTasks = useMemo(() => {
-    if (!search.trim()) return safarTasks;
+    let list = safarTasks;
+
+    if (filterChip === 'my_pending') {
+      list = list.filter(t => t.stage === 'editing' || (t.photoStage === 'edited' && !t.photoUploaded));
+    } else if (filterChip === 'ready_deliver') {
+      list = list.filter(t => t.stage === 'rendering' || t.stage === 'upload' || t.photoStage === 'given_to_murtaza');
+    } else if (filterChip === 'needs_photo_review') {
+      list = list.filter(t => t.photoStage === 'given_to_murtaza' || (t.photoStage !== 'uploaded' && !t.photoUploaded));
+    }
+
+    if (!search.trim()) return list;
     const q = search.toLowerCase();
-    return safarTasks.filter(t =>
+    return list.filter(t =>
       (t.dateFolder && t.dateFolder.toLowerCase().includes(q)) ||
       (t.editorName && t.editorName.toLowerCase().includes(q)) ||
       (t.hijriDate && t.hijriDate.toLowerCase().includes(q))
     );
-  }, [safarTasks, search]);
+  }, [safarTasks, filterChip, search]);
+
+  const toggleSelectTask = (taskId: string) => {
+    try { if ('vibrate' in navigator) navigator.vibrate(10); } catch {}
+    setSelectedTaskIds(prev => {
+      const next = new Set(prev);
+      if (next.has(taskId)) next.delete(taskId);
+      else next.add(taskId);
+      return next;
+    });
+  };
+
+  const selectAllInColumn = (stage: KanbanStage) => {
+    try { if ('vibrate' in navigator) navigator.vibrate(12); } catch {}
+    const colTasks = columnTasks[stage] || [];
+    setSelectedTaskIds(prev => {
+      const next = new Set(prev);
+      colTasks.forEach(t => next.add(t.id));
+      return next;
+    });
+  };
+
+  const handleApplyBatchStage = (targetStage: KanbanStage) => {
+    try { if ('vibrate' in navigator) navigator.vibrate(20); } catch {}
+    const targets = safarTasks.filter(t => selectedTaskIds.has(t.id));
+    if (targets.length === 0) return;
+
+    const photoUpdates = (targetStage === 'upload' || targetStage === 'jameya' || targetStage === 'completed')
+      ? { photoStage: 'uploaded' as PhotoStage, photoUploaded: true }
+      : {};
+
+    if (onBatchUpdateTasks) {
+      onBatchUpdateTasks(targets.map(t => ({ task: t, changes: { stage: targetStage, ...photoUpdates } })));
+    } else {
+      targets.forEach(t => onUpdateTask(t, { stage: targetStage, ...photoUpdates }));
+    }
+
+    showToast(`✓ Moved ${targets.length} dates to ${targetStage === 'completed' ? 'Completed' : targetStage}!`);
+    setSelectedTaskIds(new Set());
+  };
+
+  const handleMarkDayAllCompleted = (dayLabelOrFolderName: string) => {
+    try { if ('vibrate' in navigator) navigator.vibrate(25); } catch {}
+    const dayMatch = dayLabelOrFolderName.match(/Day[\s._-]?(\d{1,2})|^\s*(\d{1,2})[\s._-]/i);
+    const dayNum = dayMatch ? parseInt(dayMatch[1] || dayMatch[2], 10) : null;
+
+    const targets = safarTasks.filter(t => {
+      if (dayNum !== null) {
+        const m = t.dateFolder.match(/Day[\s._-]?(\d{1,2})|^\s*(\d{1,2})[\s._-]/i);
+        if (m && parseInt(m[1] || m[2], 10) === dayNum) return true;
+      }
+      return t.dateFolder.toLowerCase().includes(dayLabelOrFolderName.toLowerCase());
+    });
+
+    if (targets.length === 0) {
+      showToast(`No matching tasks found for ${dayLabelOrFolderName}.`);
+      return;
+    }
+
+    const updates = targets.map(t => ({
+      task: t,
+      changes: { stage: 'completed' as KanbanStage, photoStage: 'uploaded' as PhotoStage, photoUploaded: true }
+    }));
+
+    if (onBatchUpdateTasks) {
+      onBatchUpdateTasks(updates);
+    } else {
+      targets.forEach(t => onUpdateTask(t, { stage: 'completed', photoStage: 'uploaded', photoUploaded: true }));
+    }
+
+    const dayName = dayNum !== null ? `Day ${String(dayNum).padStart(2, '0')}` : dayLabelOrFolderName;
+    showToast(`✓ Marked all ${dayName} items (${targets.length}) as Completed!`);
+  };
 
   // 4. Strict Grouping into 5 Columns with Non-Present constraint
   // "also which arent prsent that should only and only be seen in submitted to jameya"
@@ -514,6 +609,58 @@ export default function OngoingSafarKanban({
         </div>
       )}
 
+      {/* Mobile Quick Filter Chips */}
+      <div className="quick-chips-scroll" role="group" aria-label="Quick Filter Presets">
+        <button
+          type="button"
+          className={`quick-chip ${filterChip === 'all' ? 'active' : ''}`}
+          onClick={() => setFilterChip('all')}
+        >
+          <span>✨ All Dates</span>
+          <span className="chip-badge">{chipCounts.all}</span>
+        </button>
+
+        <button
+          type="button"
+          className={`quick-chip ${filterChip === 'my_pending' ? 'active' : ''}`}
+          onClick={() => setFilterChip('my_pending')}
+        >
+          <span>⚡ My Pending Edits</span>
+          <span className="chip-badge">{chipCounts.myPending}</span>
+        </button>
+
+        <button
+          type="button"
+          className={`quick-chip ${filterChip === 'ready_deliver' ? 'active' : ''}`}
+          onClick={() => setFilterChip('ready_deliver')}
+        >
+          <span>📦 Ready to Deliver</span>
+          <span className="chip-badge">{chipCounts.readyDeliver}</span>
+        </button>
+
+        <button
+          type="button"
+          className={`quick-chip ${filterChip === 'needs_photo_review' ? 'active' : ''}`}
+          onClick={() => setFilterChip('needs_photo_review')}
+        >
+          <span>📷 Needs Photo Review</span>
+          <span className="chip-badge">{chipCounts.needsPhotoReview}</span>
+        </button>
+
+        <button
+          type="button"
+          className={`quick-chip batch-chip ${isBatchMode ? 'active' : ''}`}
+          onClick={() => {
+            const nextMode = !isBatchMode;
+            setIsBatchMode(nextMode);
+            if (!nextMode) setSelectedTaskIds(new Set());
+          }}
+          title="Toggle Multi-Select Mode to apply batch actions across dates"
+        >
+          <span>☑️ Batch Actions {selectedTaskIds.size > 0 ? `(${selectedTaskIds.size})` : ''}</span>
+        </button>
+      </div>
+
       {/* Mobile Stage Switcher Tabs (Thumb-Friendly Native Navigation) */}
       <div className="mobile-kanban-stage-tabs" role="tablist" aria-label="Kanban stage selector">
         {COLUMNS.map(col => {
@@ -599,18 +746,38 @@ export default function OngoingSafarKanban({
                     </p>
                   </div>
                 </div>
-                <span
-                  style={{
-                    fontSize: '12px',
-                    fontWeight: 700,
-                    padding: '2px 8px',
-                    borderRadius: '12px',
-                    background: col.badgeColor,
-                    color: '#ffffff'
-                  }}
-                >
-                  <AnimatedNumber value={list.length} />
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  {isBatchMode && list.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => selectAllInColumn(col.id)}
+                      style={{
+                        fontSize: '10px',
+                        fontWeight: 700,
+                        padding: '2px 7px',
+                        borderRadius: '6px',
+                        background: 'transparent',
+                        border: `1px solid ${col.badgeColor}`,
+                        color: col.badgeColor,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Select All
+                    </button>
+                  )}
+                  <span
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      padding: '2px 8px',
+                      borderRadius: '12px',
+                      background: col.badgeColor,
+                      color: '#ffffff'
+                    }}
+                  >
+                    <AnimatedNumber value={list.length} />
+                  </span>
+                </div>
               </div>
 
               {/* Task Cards List */}
@@ -658,26 +825,48 @@ export default function OngoingSafarKanban({
                           transition: 'transform 0.1s ease, box-shadow 0.1s ease'
                         }}
                       >
-                        {/* Card Header: Folder Title & Remove */}
+                        {/* Card Header: Folder Title, Checkbox, 1-Tap Done & Remove */}
                         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
-                          <div>
-                            <span
-                              style={{
-                                fontSize: '13px',
-                                fontWeight: 700,
-                                color: 'var(--text-primary, #0f172a)',
-                                display: 'block',
-                                wordBreak: 'break-all'
-                              }}
-                            >
-                              {task.dateFolder}
-                            </span>
-                            {task.hijriDate && (
-                              <span style={{ fontSize: '11px', color: '#64748b' }}>
-                                {task.hijriDate}
-                              </span>
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', flex: 1, minWidth: 0 }}>
+                            {isBatchMode && (
+                              <input
+                                type="checkbox"
+                                aria-label={`Select ${task.dateFolder}`}
+                                className="card-select-checkbox"
+                                checked={selectedTaskIds.has(task.id)}
+                                onChange={() => toggleSelectTask(task.id)}
+                                style={{ marginTop: '2px' }}
+                              />
                             )}
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <span
+                                style={{
+                                  fontSize: '13px',
+                                  fontWeight: 700,
+                                  color: 'var(--text-primary, #0f172a)',
+                                  display: 'block',
+                                  wordBreak: 'break-all'
+                                }}
+                              >
+                                {task.dateFolder}
+                              </span>
+                              {task.hijriDate && (
+                                <span style={{ fontSize: '11px', color: '#64748b' }}>
+                                  {task.hijriDate}
+                                </span>
+                              )}
+                            </div>
                           </div>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <button
+                              type="button"
+                              className="day-batch-pill"
+                              title={`Mark all items for this day as Completed in 1 tap`}
+                              onClick={() => handleMarkDayAllCompleted(task.dateFolder)}
+                            >
+                              ⚡ 1-Tap Done
+                            </button>
 
                           {/* Exclude / Remove Button */}
                           <button
@@ -702,6 +891,7 @@ export default function OngoingSafarKanban({
                             <Trash2 size={13} />
                           </button>
                         </div>
+                      </div>
 
                         {/* Deliverable Cross-Status Badge & Quick Upload Checkbox */}
                         {(() => {
@@ -862,6 +1052,35 @@ export default function OngoingSafarKanban({
           );
         })}
       </div>
+      {/* Floating Batch Action Bar */}
+      {selectedTaskIds.size > 0 && (
+        <aside className="batch-floating-bar" aria-label="Batch actions toolbar">
+          <div className="batch-bar-info">
+            <span className="batch-bar-count">{selectedTaskIds.size} selected</span>
+            <span>Batch apply stage:</span>
+          </div>
+          <div className="batch-actions-row">
+            <button type="button" className="batch-btn" onClick={() => handleApplyBatchStage('editing')}>
+              🎬 In Editing
+            </button>
+            <button type="button" className="batch-btn" onClick={() => handleApplyBatchStage('rendering')}>
+              ⚡ Rendered
+            </button>
+            <button type="button" className="batch-btn" onClick={() => handleApplyBatchStage('upload')}>
+              ☁️ Uploaded
+            </button>
+            <button type="button" className="batch-btn" onClick={() => handleApplyBatchStage('jameya')}>
+              🏛️ Al Jamea
+            </button>
+            <button type="button" className="batch-btn primary" onClick={() => handleApplyBatchStage('completed')}>
+              ✅ Complete All
+            </button>
+            <button type="button" className="batch-btn cancel" onClick={() => setSelectedTaskIds(new Set())}>
+              ✕ Clear
+            </button>
+          </div>
+        </aside>
+      )}
     </div>
   );
 }

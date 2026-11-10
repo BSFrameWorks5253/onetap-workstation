@@ -1019,7 +1019,20 @@ export default function App(): JSX.Element {
         if (notifiedIdsRef.current.has(id)) return
         notifiedIdsRef.current.add(id)
         if (notifiedIdsRef.current.size > 200) notifiedIdsRef.current = new Set([...notifiedIdsRef.current].slice(-100))
-        void notify(payload?.title || 'One Tap update', payload?.message || 'Production status updated.')
+
+        const type = String(payload?.type || '')
+        let title = String(payload?.title || 'One Tap update')
+        let message = String(payload?.message || 'Production status updated.')
+        let url = '/'
+
+        if (type === 'batch_render_complete' || type === 'title_adder_complete') {
+          title = `🎬 ${title || 'Batch Render Complete!'}`
+          message = message || 'Media Encoder finished rendering batch. Videos are ready for Title Adder review.'
+          url = '/ongoing'
+          try { if ('vibrate' in navigator) navigator.vibrate([200, 100, 200, 100, 300]) } catch {}
+        }
+
+        void notify(title, message, url)
       })
       .on('broadcast', { event: 'safar_status_changed' }, ({ payload }) => {
         if (payload?.safarName) applySafarStatus(String(payload.safarName), Boolean(payload.isArchived), Boolean(payload.isDone), false)
@@ -1147,7 +1160,7 @@ export default function App(): JSX.Element {
       deletedSafars: Array.from(delSafars)
     }
 
-    // PWA Mobile Notification on remote stage changes from cloud sync
+    // PWA Mobile Push Notifications on remote stage changes, new footage, and photos
     if (current.tasks && current.tasks.length > 0) {
       const prevMap = new Map(current.tasks.map(t => [getTaskKey(t.safarName, t.dateFolder), t]))
       const moved: { task: SafarTask; newStage: string; isPhoto: boolean }[] = []
@@ -1163,21 +1176,72 @@ export default function App(): JSX.Element {
         }
       }
 
-      if (moved.length === 1) {
-        const item = moved[0]
+      // 1. Detect New Footage uploaded for a Safar day
+      const newlyAdded = mergedTasks.filter(t => !prevMap.has(getTaskKey(t.safarName, t.dateFolder)) && !delTasks.has(getTaskKey(t.safarName, t.dateFolder)))
+      if (newlyAdded.length > 0) {
+        if (newlyAdded.length === 1) {
+          void notify(
+            `📸 New Footage: ${newlyAdded[0].dateFolder}`,
+            `New footage uploaded for ${newlyAdded[0].safarName}`,
+            `/ongoing?safar=${encodeURIComponent(newlyAdded[0].safarName)}`
+          )
+        } else {
+          void notify(
+            `📸 New Footage Uploaded (${newlyAdded.length} dates)`,
+            `${newlyAdded[0].safarName}: ${newlyAdded.map(t => t.dateFolder).slice(0, 3).join(', ')}${newlyAdded.length > 3 ? '...' : ''}`,
+            `/ongoing?safar=${encodeURIComponent(newlyAdded[0].safarName)}`
+          )
+        }
+      }
+
+      // 2. Detect Photos uploaded to Google Drive
+      const photosUploaded = mergedTasks.filter(t => {
+        const prev = prevMap.get(getTaskKey(t.safarName, t.dateFolder))
+        return t.photoUploaded && (!prev || !prev.photoUploaded)
+      })
+      if (photosUploaded.length > 0) {
+        const p = photosUploaded[0]
+        void notify(
+          `📷 Photos Uploaded to Cloud`,
+          `${photosUploaded.length > 1 ? `${photosUploaded.length} dates uploaded` : p.dateFolder} (${p.safarName}) photos ready on Google Drive.`,
+          `/photos?safar=${encodeURIComponent(p.safarName)}`
+        )
+      }
+
+      // 3. Detect Stage moved to "Review" or "Pending Upload"
+      const reviewPendingItems = moved.filter(m => ['upload', 'rendering', 'jameya', 'given_to_murtaza'].includes(m.newStage))
+      for (const item of reviewPendingItems) {
+        const badge = item.newStage === 'given_to_murtaza'
+          ? '📷 Photo Review Needed'
+          : item.newStage === 'upload'
+            ? '☁️ Pending Upload'
+            : item.newStage === 'jameya'
+              ? '🏛️ Ready for Al Jamea'
+              : '⚡ Render Review'
+        void notify(
+          `${badge}: ${item.task.dateFolder}`,
+          `${item.task.safarName} is now ${item.newStage.replace(/_/g, ' ')}. Action required by Lead Editor.`,
+          item.isPhoto ? `/photos?safar=${encodeURIComponent(item.task.safarName)}` : `/ongoing?safar=${encodeURIComponent(item.task.safarName)}`
+        )
+      }
+
+      // 4. Other general stage progressions
+      const otherMoved = moved.filter(m => !['upload', 'rendering', 'jameya', 'given_to_murtaza'].includes(m.newStage))
+      if (otherMoved.length === 1) {
+        const item = otherMoved[0]
         const stLabel = item.isPhoto
           ? (item.newStage === 'uploaded' ? 'Photos Uploaded' : item.newStage === 'given_to_murtaza' ? 'Photos Given to Murtaza' : 'Photos Edited')
           : (STAGES.find(s => s.id === item.newStage)?.label || item.newStage)
         void notify(
           `${item.isPhoto ? '📷' : '🎬'} ${item.task.dateFolder} advanced`,
           `Moved to ${stLabel} (${item.task.safarName})`,
-          `/kanban?safar=${encodeURIComponent(item.task.safarName)}`
+          `/ongoing?safar=${encodeURIComponent(item.task.safarName)}`
         )
-      } else if (moved.length > 1) {
+      } else if (otherMoved.length > 1) {
         void notify(
-          `⚡ ${moved.length} Dates Advanced Stages`,
-          `${moved[0].task.safarName}: ${moved.map(m => m.task.dateFolder).slice(0, 3).join(', ')}${moved.length > 3 ? '...' : ''}`,
-          `/kanban?safar=${encodeURIComponent(moved[0].task.safarName)}`
+          `⚡ ${otherMoved.length} Dates Advanced Stages`,
+          `${otherMoved[0].task.safarName}: ${otherMoved.map(m => m.task.dateFolder).slice(0, 3).join(', ')}${otherMoved.length > 3 ? '...' : ''}`,
+          `/ongoing?safar=${encodeURIComponent(otherMoved[0].task.safarName)}`
         )
       }
     }
@@ -1307,8 +1371,15 @@ export default function App(): JSX.Element {
   async function requestNotifications() {
     if (!('Notification' in window)) return setNotice('This browser does not support notifications.')
     try {
+      if (Notification.permission === 'granted') {
+        try { if ('vibrate' in navigator) navigator.vibrate([100, 50, 100]) } catch {}
+        setNotice('✓ Push alerts already active for Editors & Team Leads! Testing alert...')
+        void notify('🔔 One Tap Push Active', 'You will receive instant alerts when batches finish rendering, stages enter review, or new footage is uploaded.')
+        return
+      }
       const permission = await Notification.requestPermission()
       if (permission === 'granted') {
+        try { if ('vibrate' in navigator) navigator.vibrate([150, 80, 150]) } catch {}
         setNotice('✓ PWA notifications enabled! You will receive live alerts on stage changes.')
         void notify('One Tap Alerts Activated', 'You will receive real-time stage updates on this device.')
       } else {
@@ -1544,6 +1615,89 @@ export default function App(): JSX.Element {
           `/kanban?safar=${encodeURIComponent(task.safarName)}`
         )
       }
+    } catch {
+      setNotice('Saved on this device. Cloud sync is temporarily unavailable.')
+    } finally {
+      saveCountRef.current = Math.max(0, saveCountRef.current - 1)
+      setSaving(saveCountRef.current > 0)
+    }
+  }
+
+  async function updateTasksBatch(updates: Array<{ task: SafarTask; changes: Partial<SafarTask> }>) {
+    if (!updates || updates.length === 0) return
+    const updatedAt = new Date().toISOString()
+    const overrides = getStageOverrides()
+    const updatesMap = new Map<string, Partial<SafarTask>>()
+
+    updates.forEach(({ task, changes }) => {
+      const targetKey = getTaskKey(task.safarName, task.dateFolder)
+      const effectiveChanges: Partial<SafarTask> = { ...changes }
+      if (changes.photoStage === 'uploaded' || changes.photoUploaded === true) {
+        effectiveChanges.photoStage = 'uploaded'
+        effectiveChanges.photoUploaded = true
+        if (task.stage === 'editing' || task.stage === 'rendering') {
+          effectiveChanges.stage = 'upload'
+        }
+      } else if (changes.stage === 'upload' || changes.stage === 'jameya' || changes.stage === 'completed') {
+        effectiveChanges.photoStage = 'uploaded'
+        effectiveChanges.photoUploaded = true
+      }
+
+      updatesMap.set(targetKey, effectiveChanges)
+
+      const currentOverride = overrides.get(targetKey) || { updatedAt }
+      overrides.set(targetKey, {
+        ...currentOverride,
+        ...(effectiveChanges.stage ? { stage: effectiveChanges.stage } : {}),
+        ...(effectiveChanges.editorName !== undefined ? { editorName: effectiveChanges.editorName } : {}),
+        ...(effectiveChanges.dueDate !== undefined ? { dueDate: effectiveChanges.dueDate } : {}),
+        ...(effectiveChanges.photoStage ? { photoStage: effectiveChanges.photoStage } : {}),
+        ...(effectiveChanges.photoEditorName !== undefined ? { photoEditorName: effectiveChanges.photoEditorName } : {}),
+        ...(effectiveChanges.photoUploaded !== undefined ? { photoUploaded: effectiveChanges.photoUploaded } : {}),
+        updatedAt
+      })
+    })
+
+    saveStageOverrides(overrides)
+
+    const next: Snapshot = {
+      ...snapshot,
+      updatedAt,
+      source: 'website',
+      stageOverrides: Object.fromEntries(overrides.entries()),
+      deletedSafars: Array.from(getDeletedSafars()),
+      deletedTasks: Array.from(getDeletedTasks()),
+      tasks: snapshot.tasks.map(row => {
+        const key = getTaskKey(row.safarName, row.dateFolder)
+        const ch = updatesMap.get(key)
+        if (ch) {
+          return { ...row, ...ch, updatedAt }
+        }
+        return row
+      })
+    }
+
+    applySnapshot(next)
+    saveCountRef.current += 1
+    setSaving(true)
+
+    try {
+      const { error } = await supabase.from('safar_tracker_snapshots').upsert({ id: 'primary', snapshot: next, updated_at: updatedAt })
+      if (error) setNotice('Saved on this device. Cloud history needs the Safar Tracker database setup.')
+      await trackerChannelRef.current?.send({ type: 'broadcast', event: 'snapshot', payload: { snapshot: next } })
+
+      // Dispatch nexus signals for tasks that updated their stage
+      for (const { task, changes } of updates) {
+        const targetKey = getTaskKey(task.safarName, task.dateFolder)
+        const effectiveChanges = updatesMap.get(targetKey) || changes
+        if (effectiveChanges.stage) {
+          const status = (effectiveChanges.stage === 'jameya' || effectiveChanges.stage === 'completed') ? 'submitted' : effectiveChanges.stage === 'upload' ? 'uploaded' : 'auto'
+          await nexusChannelRef.current?.send({ type: 'broadcast', event: 'task_mark_done', payload: { safarName: task.safarName, dateFolder: task.dateFolder, status } })
+        }
+      }
+
+      setNotice(`✓ Batch updated ${updates.length} items successfully!`)
+      setTimeout(() => setNotice(''), 4000)
     } catch {
       setNotice('Saved on this device. Cloud sync is temporarily unavailable.')
     } finally {
@@ -2044,6 +2198,7 @@ export default function App(): JSX.Element {
                 selectedSafar={selectedSafar === 'all' && effectiveOngoingSafar ? effectiveOngoingSafar : selectedSafar}
                 onSelectSafar={safar => navigateTo('ongoing', safar)}
                 onUpdateTask={(task, changes) => void updateTask(task as SafarTask, changes as Partial<SafarTask>)}
+                onBatchUpdateTasks={items => void updateTasksBatch(items as any)}
                 onRemoveTask={task => void handleRemoveTask(task as SafarTask)}
                 onAddTask={(safarName, folder) => void handleAddTask(safarName, folder)}
                 onResetAndRescan={handleResetAndRescan}
@@ -2062,6 +2217,7 @@ export default function App(): JSX.Element {
               selectedSafar={selectedSafar}
               onSelectSafar={safar => setSelectedSafar(safar)}
               onUpdateTask={(task, changes) => void updateTask(task as SafarTask, changes as Partial<SafarTask>)}
+              onBatchUpdateTasks={items => void updateTasksBatch(items as any)}
               onRemoveTask={task => void handleRemoveTask(task as SafarTask)}
             />
           )}

@@ -96,6 +96,7 @@ export default function PhotoTracker({
   selectedSafar: propSelectedSafar,
   onSelectSafar,
   onUpdateTask,
+  onBatchUpdateTasks,
   onUpdateTaskStage,
   onRemoveTask
 }: {
@@ -104,6 +105,7 @@ export default function PhotoTracker({
   selectedSafar?: string;
   onSelectSafar?: (safar: string) => void;
   onUpdateTask?: (task: PhotoTaskItem, changes: Partial<PhotoTaskItem>) => void;
+  onBatchUpdateTasks?: (items: Array<{ task: PhotoTaskItem; changes: Partial<PhotoTaskItem> }>) => void;
   onUpdateTaskStage?: (dateFolder: string, safarName: string, stage: string) => void;
   onRemoveTask?: (task: PhotoTaskItem) => void;
 }) {
@@ -159,6 +161,9 @@ export default function PhotoTracker({
   const [sendingAlert, setSendingAlert] = useState(false);
   const [viewMode, setViewMode] = useState<'kanban' | 'grid'>('kanban');
   const [activeMobileStage, setActiveMobileStage] = useState<PhotoStage>('edited');
+  const [quickChip, setQuickChip] = useState<'all' | 'needs_review' | 'ready_deliver' | 'my_edits'>('all');
+  const [isBatchMode, setIsBatchMode] = useState<boolean>(false);
+  const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
 
   // Sync photo folders with Google Drive & Sheet
   const loadPhotoStatus = async () => {
@@ -300,12 +305,103 @@ export default function PhotoTracker({
     }
   };
 
+  const chipCounts = useMemo(() => {
+    const needsReview = safarTasks.filter(t => getPhotoStage(t) === 'given_to_murtaza' || !t.photoUploaded).length;
+    const readyDeliver = safarTasks.filter(t => getPhotoStage(t) === 'given_to_murtaza' || getPhotoStage(t) === 'uploaded').length;
+    const myEdits = safarTasks.filter(t => getPhotoStage(t) === 'edited' && !t.photoUploaded).length;
+    return { needsReview, readyDeliver, myEdits, all: safarTasks.length };
+  }, [safarTasks]);
+
+  const toggleSelectTask = (taskId: string) => {
+    try { if ('vibrate' in navigator) navigator.vibrate(10); } catch {}
+    setSelectedTaskIds(prev => {
+      const next = new Set(prev);
+      if (next.has(taskId)) next.delete(taskId);
+      else next.add(taskId);
+      return next;
+    });
+  };
+
+  const selectAllInColumn = (stage: PhotoStage) => {
+    try { if ('vibrate' in navigator) navigator.vibrate(12); } catch {}
+    const colTasks = filteredColumnTasks[stage] || [];
+    setSelectedTaskIds(prev => {
+      const next = new Set(prev);
+      colTasks.forEach(t => next.add(t.id));
+      return next;
+    });
+  };
+
+  const handleApplyBatchPhotoStage = (targetStage: PhotoStage) => {
+    try { if ('vibrate' in navigator) navigator.vibrate(20); } catch {}
+    const targets = safarTasks.filter(t => selectedTaskIds.has(t.id));
+    if (targets.length === 0) return;
+
+    const isUploading = targetStage === 'uploaded';
+    const changes: Partial<PhotoTaskItem> = {
+      photoStage: targetStage,
+      photoUploaded: isUploading
+    };
+    if (isUploading) {
+      changes.stage = 'upload';
+    }
+
+    if (onBatchUpdateTasks) {
+      onBatchUpdateTasks(targets.map(t => ({ task: t, changes })));
+    } else {
+      targets.forEach(t => executeUpdate(t, changes));
+    }
+
+    setNotice(`✓ Updated ${targets.length} photo folders to ${targetStage === 'given_to_murtaza' ? 'Given to Murtaza' : targetStage === 'uploaded' ? 'Uploaded' : 'Edited'}!`);
+    setTimeout(() => setNotice(''), 4000);
+    setSelectedTaskIds(new Set());
+  };
+
+  const handleMarkDayAllPhotosCompleted = (dayLabelOrFolderName: string) => {
+    try { if ('vibrate' in navigator) navigator.vibrate(25); } catch {}
+    const dayMatch = dayLabelOrFolderName.match(/Day[\s._-]?(\d{1,2})|^\s*(\d{1,2})[\s._-]/i);
+    const dayNum = dayMatch ? parseInt(dayMatch[1] || dayMatch[2], 10) : null;
+
+    const targets = safarTasks.filter(t => {
+      if (dayNum !== null) {
+        const m = t.dateFolder.match(/Day[\s._-]?(\d{1,2})|^\s*(\d{1,2})[\s._-]/i);
+        if (m && parseInt(m[1] || m[2], 10) === dayNum) return true;
+      }
+      return t.dateFolder.toLowerCase().includes(dayLabelOrFolderName.toLowerCase());
+    });
+
+    if (targets.length === 0) {
+      setNotice(`No matching photo folders found for ${dayLabelOrFolderName}.`);
+      return;
+    }
+
+    const updates = targets.map(t => ({
+      task: t,
+      changes: { photoStage: 'uploaded' as PhotoStage, photoUploaded: true, stage: 'upload' }
+    }));
+
+    if (onBatchUpdateTasks) {
+      onBatchUpdateTasks(updates);
+    } else {
+      targets.forEach(t => executeUpdate(t, { photoStage: 'uploaded', photoUploaded: true, stage: 'upload' }));
+    }
+
+    const dayName = dayNum !== null ? `Day ${String(dayNum).padStart(2, '0')}` : dayLabelOrFolderName;
+    setNotice(`✓ Marked all ${dayName} photos (${targets.length}) as Uploaded & Completed!`);
+    setTimeout(() => setNotice(''), 4500);
+  };
+
   // Filter tasks
   const filteredTasks = useMemo(() => {
     return safarTasks.filter(t => {
       const pStage = getPhotoStage(t);
       const isPUp = pStage === 'uploaded';
       const isVUp = t.stage === 'upload' || t.stage === 'jameya' || t.stage === 'completed';
+
+      // Quick chip filter
+      if (quickChip === 'needs_review' && !(pStage === 'given_to_murtaza' || !isPUp)) return false;
+      if (quickChip === 'ready_deliver' && !(pStage === 'given_to_murtaza' || isPUp)) return false;
+      if (quickChip === 'my_edits' && !(pStage === 'edited' && !isPUp)) return false;
 
       // 1. Core Photo Stage Filter
       if (filter === 'edited' && pStage !== 'edited') return false;
@@ -325,7 +421,7 @@ export default function PhotoTracker({
       }
       return true;
     });
-  }, [safarTasks, filter, syncFilter, search]);
+  }, [safarTasks, quickChip, filter, syncFilter, search]);
 
   // Group filtered tasks for kanban columns
   const filteredColumnTasks = useMemo(() => {
@@ -518,6 +614,58 @@ export default function PhotoTracker({
         </div>
       </div>
 
+      {/* Mobile Quick Filter Chips */}
+      <div className="quick-chips-scroll" role="group" aria-label="Photo Quick Filter Presets">
+        <button
+          type="button"
+          className={`quick-chip ${quickChip === 'all' ? 'active' : ''}`}
+          onClick={() => setQuickChip('all')}
+        >
+          <span>✨ All Photos</span>
+          <span className="chip-badge">{chipCounts.all}</span>
+        </button>
+
+        <button
+          type="button"
+          className={`quick-chip ${quickChip === 'needs_review' ? 'active' : ''}`}
+          onClick={() => setQuickChip('needs_review')}
+        >
+          <span>📷 Needs Photo Review</span>
+          <span className="chip-badge">{chipCounts.needsReview}</span>
+        </button>
+
+        <button
+          type="button"
+          className={`quick-chip ${quickChip === 'ready_deliver' ? 'active' : ''}`}
+          onClick={() => setQuickChip('ready_deliver')}
+        >
+          <span>📦 Ready to Deliver</span>
+          <span className="chip-badge">{chipCounts.readyDeliver}</span>
+        </button>
+
+        <button
+          type="button"
+          className={`quick-chip ${quickChip === 'my_edits' ? 'active' : ''}`}
+          onClick={() => setQuickChip('my_edits')}
+        >
+          <span>⚡ My Edits</span>
+          <span className="chip-badge">{chipCounts.myEdits}</span>
+        </button>
+
+        <button
+          type="button"
+          className={`quick-chip batch-chip ${isBatchMode ? 'active' : ''}`}
+          onClick={() => {
+            const next = !isBatchMode;
+            setIsBatchMode(next);
+            if (!next) setSelectedTaskIds(new Set());
+          }}
+          title="Toggle Multi-Select Mode to apply batch photo actions"
+        >
+          <span>☑️ Batch Actions {selectedTaskIds.size > 0 ? `(${selectedTaskIds.size})` : ''}</span>
+        </button>
+      </div>
+
       {/* Category Pills, Sync Filter, and Search */}
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
         {/* Core 4 Categories: All, Edited, Given to Murtaza, Uploaded */}
@@ -665,9 +813,21 @@ export default function PhotoTracker({
                       {col.subtitle}
                     </p>
                   </div>
-                  <span style={{ fontSize: '11px', fontWeight: 800, background: col.badgeBg, color: col.color, padding: '2px 8px', borderRadius: '999px' }}>
-                    {list.length}
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    {isBatchMode && (
+                      <button
+                        type="button"
+                        onClick={() => selectAllInColumn(col.id)}
+                        className="kanban-col-select-all-btn"
+                        title={`Select all folders in ${col.title}`}
+                      >
+                        Select All
+                      </button>
+                    )}
+                    <span style={{ fontSize: '11px', fontWeight: 800, background: col.badgeBg, color: col.color, padding: '2px 8px', borderRadius: '999px' }}>
+                      {list.length}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Column Cards */}
@@ -697,32 +857,56 @@ export default function PhotoTracker({
                         >
                           {/* Folder Name & Cross Status Badge */}
                           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
-                            <div>
-                              <span style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A', display: 'block' }}>
-                                {task.dateFolder}
-                              </span>
-                              {task.hijriDate && (
-                                <span style={{ fontSize: '11px', color: '#64748B' }}>
-                                  {task.hijriDate}
-                                </span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              {isBatchMode && (
+                                <input
+                                  type="checkbox"
+                                  className="card-select-checkbox"
+                                  checked={selectedTaskIds.has(task.id)}
+                                  onChange={() => toggleSelectTask(task.id)}
+                                  aria-label={`Select ${task.dateFolder}`}
+                                />
                               )}
+                              <div>
+                                <span style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A', display: 'block' }}>
+                                  {task.dateFolder}
+                                </span>
+                                {task.hijriDate && (
+                                  <span style={{ fontSize: '11px', color: '#64748B' }}>
+                                    {task.hijriDate}
+                                  </span>
+                                )}
+                              </div>
                             </div>
 
-                            {/* Remove button */}
-                            {onRemoveTask && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                               <button
                                 type="button"
-                                title="Exclude date"
-                                onClick={() => {
-                                  if (window.confirm(`Exclude "${task.dateFolder}" from tracking?`)) {
-                                    onRemoveTask(task);
-                                  }
+                                className="day-batch-pill"
+                                title="Mark all photos for this day as Uploaded"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleMarkDayAllPhotosCompleted(task.dateFolder);
                                 }}
-                                style={{ background: 'transparent', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: '2px 4px' }}
                               >
-                                <Trash2 size={13} />
+                                ⚡ 1-Tap Done
                               </button>
-                            )}
+                              {/* Remove button */}
+                              {onRemoveTask && (
+                                <button
+                                  type="button"
+                                  title="Exclude date"
+                                  onClick={() => {
+                                    if (window.confirm(`Exclude "${task.dateFolder}" from tracking?`)) {
+                                      onRemoveTask(task);
+                                    }
+                                  }}
+                                  style={{ background: 'transparent', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: '2px 4px' }}
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              )}
+                            </div>
                           </div>
 
                           {/* Cross-Status Visual Chip */}
@@ -848,19 +1032,43 @@ export default function PhotoTracker({
               >
                 {/* Header */}
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
-                  <div>
-                    <span style={{ fontSize: '14px', fontWeight: 800, color: '#0F172A' }}>
-                      {task.dateFolder}
-                    </span>
-                    {task.hijriDate && (
-                      <span style={{ fontSize: '11px', color: '#64748B', display: 'block' }}>
-                        {task.hijriDate}
-                      </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {isBatchMode && (
+                      <input
+                        type="checkbox"
+                        className="card-select-checkbox"
+                        checked={selectedTaskIds.has(task.id)}
+                        onChange={() => toggleSelectTask(task.id)}
+                        aria-label={`Select ${task.dateFolder}`}
+                      />
                     )}
+                    <div>
+                      <span style={{ fontSize: '14px', fontWeight: 800, color: '#0F172A' }}>
+                        {task.dateFolder}
+                      </span>
+                      {task.hijriDate && (
+                        <span style={{ fontSize: '11px', color: '#64748B', display: 'block' }}>
+                          {task.hijriDate}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '999px', background: photoStage === 'uploaded' ? '#ECFDF5' : photoStage === 'given_to_murtaza' ? '#EEF2FF' : '#F5F3FF', color: photoStage === 'uploaded' ? '#047857' : photoStage === 'given_to_murtaza' ? '#1D4ED8' : '#7C3AED' }}>
-                    {photoStage === 'uploaded' ? 'Uploaded' : photoStage === 'given_to_murtaza' ? 'Given To Murtaza' : 'Edited'}
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <button
+                      type="button"
+                      className="day-batch-pill"
+                      title="Mark all photos for this day as Uploaded"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleMarkDayAllPhotosCompleted(task.dateFolder);
+                      }}
+                    >
+                      ⚡ 1-Tap Done
+                    </button>
+                    <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '999px', background: photoStage === 'uploaded' ? '#ECFDF5' : photoStage === 'given_to_murtaza' ? '#EEF2FF' : '#F5F3FF', color: photoStage === 'uploaded' ? '#047857' : photoStage === 'given_to_murtaza' ? '#1D4ED8' : '#7C3AED' }}>
+                      {photoStage === 'uploaded' ? 'Uploaded' : photoStage === 'given_to_murtaza' ? 'Given To Murtaza' : 'Edited'}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Cross-Status Visual Chip */}
@@ -978,6 +1186,44 @@ export default function PhotoTracker({
                 Save
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* Floating Batch Action Bar */}
+      {selectedTaskIds.size > 0 && (
+        <div className="batch-floating-bar" role="toolbar" aria-label="Photo batch actions">
+          <span className="batch-floating-count">
+            <strong>{selectedTaskIds.size}</strong> selected
+          </span>
+          <div className="batch-floating-actions">
+            <button
+              type="button"
+              className="batch-btn batch-btn-primary"
+              onClick={() => handleApplyBatchPhotoStage('given_to_murtaza')}
+            >
+              📷 Given to Murtaza
+            </button>
+            <button
+              type="button"
+              className="batch-btn batch-btn-primary"
+              onClick={() => handleApplyBatchPhotoStage('uploaded')}
+            >
+              ☁️ Mark Uploaded
+            </button>
+            <button
+              type="button"
+              className="batch-btn batch-btn-neutral"
+              onClick={() => handleApplyBatchPhotoStage('edited')}
+            >
+              ⚡ In Editing
+            </button>
+            <button
+              type="button"
+              className="batch-btn batch-btn-neutral"
+              onClick={() => setSelectedTaskIds(new Set())}
+            >
+              ✕ Clear
+            </button>
           </div>
         </div>
       )}
