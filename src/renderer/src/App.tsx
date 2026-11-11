@@ -259,7 +259,9 @@ function AppInner(): JSX.Element {
           .filter((s: any) => !removedNames.includes(s.safarName))
           .map((s: any) => ({ ...s, isArchived: archivedNames.includes(s.safarName) }))
         const websiteTasks = rawTasks.filter((task: any) => !removedNames.includes(task.safarName))
-        anyShareRealtimeService.syncSafarTrackerSnapshot(websiteSafars, websiteTasks, Boolean(result?.websiteScanComplete))
+        if (websiteSafars.length > 0 || websiteTasks.length > 0) {
+          anyShareRealtimeService.syncSafarTrackerSnapshot(websiteSafars, websiteTasks, Boolean(result?.websiteScanComplete))
+        }
       } catch (error) {
         console.warn('[App] Background Safar sync failed:', error)
       }

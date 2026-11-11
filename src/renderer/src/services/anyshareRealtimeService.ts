@@ -178,11 +178,19 @@ class AnyShareRealtimeService {
       if (priorDeletedTasks.has(taskKey)) return false;
       return true;
     });
-    const archivedSafarNames = new Set([...priorSafars.values()].filter((safar: any) => safar.isArchived).map((safar: any) => safar.safarName));
-    const retainedArchivedRows = scanComplete
-      ? []
-      : [...priorRows.values()].filter((row: any) => archivedSafarNames.has(row.safarName) && !scannedSafarNames.has(row.safarName));
-    rows.push(...retainedArchivedRows);
+    // Retain all prior tasks from other safars not present in this local scan
+    for (const [id, priorTask] of priorRows.entries()) {
+      if (!scannedSafarNames.has(priorTask.safarName)) {
+        if (!priorDeletedSafars.has(String(priorTask.safarName).trim().toLowerCase())) {
+          rows.push(priorTask);
+        }
+      }
+    }
+
+
+
+
+    // rows already contain preserved safars
     const uniqueRowsMap = new Map<string, any>();
     for (const r of rows) {
       if (!uniqueRowsMap.has(r.id)) {
@@ -200,7 +208,7 @@ class AnyShareRealtimeService {
       group.push(row);
       rowsBySafar.set(row.safarName, group);
     }
-    if (rows.length === 0 && priorRows.size > 0 && !scanComplete) {
+    if (cleanRows.length === 0 && priorRows.size > 0) {
       console.warn('[AnyShare Nexus] Empty Safar scan skipped; retaining the last cloud snapshot.');
       return;
     }
@@ -226,7 +234,7 @@ class AnyShareRealtimeService {
           archivePriorStages: previousSafar?.archivePriorStages,
           updatedAt: now
         };
-      }).filter((s: any) => s.safarName), ...(scanComplete ? [] : [...priorSafars.values()].filter((safar: any) => safar.isArchived && !scannedSafarNames.has(safar.safarName) && !priorDeletedSafars.has(String(safar.safarName || '').trim().toLowerCase())))],
+      }).filter((s: any) => s.safarName), ...[...priorSafars.values()].filter((safar: any) => !scannedSafarNames.has(safar.safarName) && !priorDeletedSafars.has(String(safar.safarName || '').trim().toLowerCase()))],
       updatedAt: now,
       stageOverrides: priorOverrides,
       deletedSafars: Array.from(priorDeletedSafars),

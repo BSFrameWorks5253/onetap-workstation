@@ -30,12 +30,14 @@ import {
   Share2,
   Smartphone,
   Download,
-  MessageCircle
+  MessageCircle,
+  ShieldCheck
 } from 'lucide-react'
 import OngoingSafarKanban, { type SafarTaskItem, isJunkSafarName } from './components/OngoingSafarKanban'
 import PhotoTracker from './components/PhotoTracker'
 import EmailLoginModal from './components/EmailLoginModal'
 import StandaloneWidgetView from './components/StandaloneWidgetView'
+import SafarBriefingView from './components/SafarBriefingView'
 import AppLoader from './components/AppLoader'
 import {
   sendWhatsAppAlert,
@@ -49,7 +51,7 @@ type Stage = 'editing' | 'rendering' | 'upload' | 'jameya' | 'completed'
 export type PhotoStage = 'edited' | 'given_to_murtaza' | 'uploaded'
 export const DEFAULT_EDITOR = 'Murtaza'
 export const DEFAULT_PHOTO_EDITOR = 'Muffadal Peti'
-type View = 'dashboard' | 'ongoing' | 'photos' | 'tracker' | 'archive' | 'editors' | 'pipeline' | 'settings' | 'widget'
+type View = 'dashboard' | 'ongoing' | 'photos' | 'tracker' | 'archive' | 'editors' | 'pipeline' | 'settings' | 'widget' | 'briefing'
 
 const VIEW_PATHS: Record<View, string> = {
   dashboard: '/',
@@ -60,7 +62,8 @@ const VIEW_PATHS: Record<View, string> = {
   editors: '/editors',
   pipeline: '/pipeline',
   settings: '/settings',
-  widget: '/widget'
+  widget: '/widget',
+  briefing: '/briefing'
 }
 
 function parseUrlRoute(): { view: View; safar?: string } {
@@ -72,6 +75,7 @@ function parseUrlRoute(): { view: View; safar?: string } {
 
     const candidate = hash || rawPath.replace(/^\//, '')
 
+    if (candidate === 'briefing' || candidate === 'safar-briefing' || candidate === 'report') return { view: 'briefing', safar: safarParam }
     if (!candidate || candidate === 'dashboard' || candidate === 'home') return { view: 'dashboard', safar: safarParam }
     if (candidate === 'ongoing' || candidate === 'kanban' || candidate === 'pipeline-board') return { view: 'ongoing', safar: safarParam }
     if (candidate === 'photos' || candidate === 'photo-tracker' || candidate === 'drive') return { view: 'photos', safar: safarParam }
@@ -924,7 +928,8 @@ export default function App(): JSX.Element {
     editors: { title: 'Editors & assignments', eyebrow: 'TEAM WORKLOAD', description: 'See who is working on each date and where it is in the pipeline.' },
     pipeline: { title: 'Media pipeline', eyebrow: 'PRODUCTION STAGES', description: 'Follow each date from rendering through AlJamea submission.' },
     settings: { title: 'Workspace settings', eyebrow: 'YOUR WORKSPACE', description: 'Manage alerts, login credentials, and check your One Tap sync connection.' },
-    widget: { title: 'Live Safar Widget', eyebrow: 'MOBILE HOME SCREEN WIDGET', description: 'High-density live status card for home screens and lock screens.' }
+    widget: { title: 'Live Safar Widget', eyebrow: 'MOBILE HOME SCREEN WIDGET', description: 'High-density live status card for home screens and lock screens.' },
+    briefing: { title: 'Safar Status Briefing', eyebrow: 'OFFICIAL PRODUCTION UPDATE', description: 'Verified delivery milestones, stage counts, and date breakdown for this Safar.' }
   }
 
   const shortViewTitles: Record<typeof view, string> = {
@@ -936,7 +941,8 @@ export default function App(): JSX.Element {
     editors: 'Editors',
     pipeline: 'Pipeline',
     settings: 'Settings',
-    widget: 'Widget'
+    widget: 'Widget',
+    briefing: 'Briefing'
   }
 
   const pageSize = 40
@@ -993,8 +999,20 @@ export default function App(): JSX.Element {
     const load = async () => {
       try {
         const { data, error } = await supabase!.from('safar_tracker_snapshots').select('snapshot, updated_at').eq('id', 'primary').maybeSingle()
-        if (alive && !error && data?.snapshot) applySnapshot(data.snapshot as Snapshot)
-        else if (alive && error) setNotice('Cloud sync needs the Safar Tracker database set up.')
+        if (alive && !error && data?.snapshot) {
+          const cloudSnap = data.snapshot as Snapshot
+          if (cloudSnap.tasks && cloudSnap.tasks.length > 0) {
+            applySnapshot(cloudSnap)
+          } else {
+            // If cloud snapshot has 0 tasks, check local storage on this device:
+            const local = readLocal()
+            if (local.tasks && local.tasks.length > 0) {
+              void persistSnapshot(local)
+            }
+          }
+        } else if (alive && error) {
+          setNotice('Cloud sync needs the Safar Tracker database set up.')
+        }
       } catch {
         if (alive) setNotice('Cloud sync is unavailable right now. Showing saved data from this device.')
       } finally {
@@ -1004,6 +1022,17 @@ export default function App(): JSX.Element {
     }
     load()
 
+    // Multi-device realtime listener: Instant database row updates
+    const dbChangesChannel = supabase.channel('safar_tracker_db_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'safar_tracker_snapshots' }, (payload: any) => {
+        if (!alive) return
+        if (payload?.new && (payload.new as any).snapshot) {
+          applySnapshot((payload.new as any).snapshot as Snapshot)
+        }
+      })
+      .subscribe()
+
+    // Broadcast channel for instantaneous ephemeral updates
     const trackerChannel = supabase.channel('one_tap_safar_tracker', { config: { broadcast: { self: false } } })
       .on('broadcast', { event: 'snapshot' }, ({ payload }) => { if (payload?.snapshot) applySnapshot(payload.snapshot as Snapshot) })
       .subscribe(status => {
@@ -1012,6 +1041,14 @@ export default function App(): JSX.Element {
         setConnected(isConnected)
         if (isConnected) trackerChannel.send({ type: 'broadcast', event: 'request_snapshot', payload: { requestedAt: new Date().toISOString() } })
       })
+
+    // Listen to focus and tab visibility changes to guarantee fresh data across devices
+    const onVisibilityOrFocus = () => {
+      if (document.visibilityState === 'visible') void load()
+    }
+    window.addEventListener('focus', onVisibilityOrFocus)
+    document.addEventListener('visibilitychange', onVisibilityOrFocus)
+    const syncInterval = window.setInterval(load, 15000)
 
     const nexusChannel = supabase.channel('anyshare_realtime_nexus', { config: { broadcast: { self: false } } })
       .on('broadcast', { event: 'website_user_notification' }, ({ payload }) => {
@@ -1045,8 +1082,12 @@ export default function App(): JSX.Element {
     return () => {
       alive = false
       if (loadingTimeout !== undefined) window.clearTimeout(loadingTimeout)
+      window.removeEventListener('focus', onVisibilityOrFocus)
+      document.removeEventListener('visibilitychange', onVisibilityOrFocus)
+      window.clearInterval(syncInterval)
       trackerChannelRef.current = null
       nexusChannelRef.current = null
+      supabase!.removeChannel(dbChangesChannel)
       supabase!.removeChannel(trackerChannel)
       supabase!.removeChannel(nexusChannel)
     }
@@ -1067,21 +1108,36 @@ export default function App(): JSX.Element {
   }, [menuOpen, isMobile])
 
   function applySnapshot(next: Snapshot) {
+    const isFromDesktop = (next as any)?.source === 'onetap-desktop'
     const delSafars = getDeletedSafars()
     const delTasks = getDeletedTasks()
     const overrides = getStageOverrides()
 
-    if ((next as any)?.stageOverrides && typeof (next as any).stageOverrides === 'object') {
+    if (!isFromDesktop && (next as any)?.stageOverrides && typeof (next as any).stageOverrides === 'object') {
+      overrides.clear()
+      for (const [k, v] of Object.entries((next as any).stageOverrides)) {
+        if (v && typeof v === 'object') overrides.set(k, v as TaskStageOverride)
+      }
+      saveStageOverrides(overrides)
+    } else if ((next as any)?.stageOverrides && typeof (next as any).stageOverrides === 'object') {
       for (const [k, v] of Object.entries((next as any).stageOverrides)) {
         if (v && typeof v === 'object') overrides.set(k, v as TaskStageOverride)
       }
       saveStageOverrides(overrides)
     }
-    if (Array.isArray((next as any)?.deletedSafars)) {
+    if (!isFromDesktop && Array.isArray((next as any)?.deletedSafars)) {
+      delSafars.clear()
+      for (const s of (next as any).deletedSafars) if (s) delSafars.add(String(s).trim().toLowerCase())
+      saveDeletedSafars(delSafars)
+    } else if (Array.isArray((next as any)?.deletedSafars)) {
       for (const s of (next as any).deletedSafars) if (s) delSafars.add(String(s).trim().toLowerCase())
       saveDeletedSafars(delSafars)
     }
-    if (Array.isArray((next as any)?.deletedTasks)) {
+    if (!isFromDesktop && Array.isArray((next as any)?.deletedTasks)) {
+      delTasks.clear()
+      for (const t of (next as any).deletedTasks) if (t) delTasks.add(String(t).trim().toLowerCase())
+      saveDeletedTasks(delTasks)
+    } else if (Array.isArray((next as any)?.deletedTasks)) {
       for (const t of (next as any).deletedTasks) if (t) delTasks.add(String(t).trim().toLowerCase())
       saveDeletedTasks(delTasks)
     }
@@ -1097,7 +1153,6 @@ export default function App(): JSX.Element {
         ...safar,
         isArchived: safar.isArchived ?? previousSafars.get(safar.safarName)?.isArchived ?? false
       }))
-    const isFromDesktop = (next as any)?.source === 'onetap-desktop'
     const prevTaskMap = new Map((current.tasks || []).map(t => [getTaskKey(t.safarName, t.dateFolder), t]))
 
     const mergedTasks = normalized.tasks
@@ -1112,16 +1167,29 @@ export default function App(): JSX.Element {
 
         // When receiving desktop scans/syncs, the desktop app reports Safar names and folder presence.
         // It must NEVER revert or overwrite stages, photo stages, or editor assignments set in web app!
-        const finalStage = override?.stage || (isFromDesktop && existing?.stage ? existing.stage : (override?.stage || t.stage || existing?.stage || 'editing'))
-        const finalPhotoStage = override?.photoStage || (isFromDesktop && existing?.photoStage ? existing.photoStage : (override?.photoStage || t.photoStage || existing?.photoStage || 'edited'))
-        const finalPhotoUploaded = override?.photoUploaded !== undefined
-          ? override.photoUploaded
-          : (isFromDesktop && existing?.photoUploaded !== undefined
-            ? existing.photoUploaded
-            : (t.photoUploaded ?? existing?.photoUploaded ?? false))
-        const finalEditor = override?.editorName || (isFromDesktop && existing?.editorName ? existing.editorName : (override?.editorName || t.editorName || existing?.editorName || 'Murtaza'))
-        const finalDueDate = override?.dueDate || (isFromDesktop && existing?.dueDate ? existing.dueDate : (override?.dueDate || t.dueDate || existing?.dueDate || ''))
-        const finalPhotoEditor = override?.photoEditorName || (isFromDesktop && existing?.photoEditorName ? existing.photoEditorName : (override?.photoEditorName || t.photoEditorName || existing?.photoEditorName || 'Muffadal Peti'))
+        const finalStage = isFromDesktop
+          ? (override?.stage || existing?.stage || t.stage || 'editing')
+          : (t.stage || override?.stage || existing?.stage || 'editing')
+
+        const finalPhotoStage = isFromDesktop
+          ? (override?.photoStage || existing?.photoStage || t.photoStage || 'edited')
+          : (t.photoStage || override?.photoStage || existing?.photoStage || 'edited')
+
+        const finalPhotoUploaded = isFromDesktop
+          ? (override?.photoUploaded !== undefined ? override.photoUploaded : (existing?.photoUploaded ?? t.photoUploaded ?? false))
+          : (t.photoUploaded ?? override?.photoUploaded ?? existing?.photoUploaded ?? false)
+
+        const finalEditor = isFromDesktop
+          ? (override?.editorName || existing?.editorName || t.editorName || DEFAULT_EDITOR)
+          : (t.editorName || override?.editorName || existing?.editorName || DEFAULT_EDITOR)
+
+        const finalDueDate = isFromDesktop
+          ? (override?.dueDate || existing?.dueDate || t.dueDate || '')
+          : (t.dueDate || override?.dueDate || existing?.dueDate || '')
+
+        const finalPhotoEditor = isFromDesktop
+          ? (override?.photoEditorName || existing?.photoEditorName || t.photoEditorName || 'Muffadal Peti')
+          : (t.photoEditorName || override?.photoEditorName || existing?.photoEditorName || 'Muffadal Peti')
 
         return {
           ...t,
@@ -1463,7 +1531,8 @@ export default function App(): JSX.Element {
       }
 
       lines.push('')
-      lines.push(`🔗 *Live Safar Kanban:* ${window.location.origin}/kanban?safar=${encodeURIComponent(g.safarName)}`)
+      lines.push(`📱 *Interactive Briefing & Status Card:* ${window.location.origin}/briefing?safar=${encodeURIComponent(g.safarName)}`)
+      lines.push(`🔗 *Live Workstation Tracker:* ${window.location.origin}/kanban?safar=${encodeURIComponent(g.safarName)}`)
       lines.push(`_Generated via One Tap Workstation_`)
       return lines.join('\n')
     }
@@ -1934,6 +2003,46 @@ export default function App(): JSX.Element {
     } catch {}
   }
 
+  if (view === 'briefing') {
+    const targetSafarName = selectedSafar !== 'all' ? selectedSafar : effectiveOngoingSafar
+    const ongoingGroup = activeSafarGroups.find(g => g.safarName === targetSafarName) || activeSafarGroups[0]
+    const deliveredDatesList = ongoingGroup ? ongoingGroup.tasks.filter(t => t.stage === 'upload' || t.stage === 'jameya' || t.stage === 'completed').map(dateFolderName) : []
+    const pendingDatesList = ongoingGroup ? ongoingGroup.tasks.filter(t => t.stage === 'editing' || t.stage === 'rendering').map(dateFolderName) : []
+
+    return (
+      <div className="app-shell" style={{ display: 'block', minHeight: '100vh', background: 'radial-gradient(ellipse at 83% 8%, rgba(222, 212, 183, 0.18), transparent 36%), #f5f4ee' }}>
+        <SafarBriefingView
+          safarName={ongoingGroup?.safarName || targetSafarName || 'Active Safar'}
+          safarYear={ongoingGroup?.safarYear || '1448'}
+          totalDates={ongoingGroup?.total || ongoingGroup?.tasks.length || 0}
+          deliveredDates={ongoingGroup?.deliveredCount || 0}
+          deliveredPercent={ongoingGroup?.deliveredPercent || 0}
+          videoStats={{
+            completed: ongoingGroup?.completedCount || 0,
+            jameya: ongoingGroup?.jameyaCount || 0,
+            upload: ongoingGroup?.uploadCount || 0,
+            rendering: ongoingGroup?.renderingCount || 0,
+            editing: ongoingGroup?.editingCount || 0
+          }}
+          photoStats={{
+            uploaded: ongoingGroup?.tasks.filter(t => t.photoStage === 'uploaded' || t.photoUploaded).length || 0,
+            givenToMurtaza: ongoingGroup?.tasks.filter(t => t.photoStage === 'given_to_murtaza').length || 0,
+            editing: ongoingGroup?.tasks.filter(t => t.photoStage === 'edited' && !t.photoUploaded).length || 0
+          }}
+          deliveredDatesList={deliveredDatesList}
+          pendingDatesList={pendingDatesList}
+          connected={connected}
+          lastUpdated={snapshot.updatedAt}
+          onRefresh={requestDesktopSync}
+          onCopyBriefing={() => copyDailyBriefing(ongoingGroup?.safarName)}
+          onShareWhatsApp={() => shareDailyBriefingWhatsApp(ongoingGroup?.safarName)}
+          onOpenTracker={() => navigateTo('ongoing')}
+        />
+        {notice && <div className="toast-note" role="status" aria-live="polite"><span>{notice}</span><button type="button" onClick={() => setNotice('')}>Dismiss</button></div>}
+      </div>
+    )
+  }
+
   if (view === 'widget') {
     const ongoingGroup = activeSafarGroups.find(g => g.safarName === effectiveOngoingSafar) || activeSafarGroups[0]
     return (
@@ -2014,6 +2123,9 @@ export default function App(): JSX.Element {
           </button>
           <button type="button" aria-current={view === 'pipeline' ? 'page' : undefined} className={`nav-link ${view === 'pipeline' ? 'active' : ''}`} onClick={() => navigateTo('pipeline')}>
             <Film aria-hidden="true" size={17}/> Media pipeline
+          </button>
+          <button type="button" aria-current={(view as string) === 'briefing' ? 'page' : undefined} className={`nav-link ${(view as string) === 'briefing' ? 'active' : ''}`} onClick={() => navigateTo('briefing')}>
+            <ShieldCheck aria-hidden="true" size={17}/> Status Briefing
           </button>
 
           <div className="side-divider" />
