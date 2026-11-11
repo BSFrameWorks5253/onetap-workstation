@@ -64,6 +64,7 @@ export const KNOWN_PREFIX_NAMES: Record<string, string> = {
   'TJR': 'Tijarat',
   'TQ': 'Talaqqi',
   'TQN': 'Tahneeq',
+  'TNQ': 'Tahneeq',
   'WAAZ': 'Waaz',
   'WD': 'Wada',
   'Z': 'Ziyafat',

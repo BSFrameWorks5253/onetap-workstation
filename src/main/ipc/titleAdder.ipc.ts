@@ -24,7 +24,7 @@ import { get, setAndSave } from '../core/settingsManager'
 import { buildAudioPool, getNikahAudio, getAudioForVideo, getSpecialAudioPath, buildInstrumentalAudioPool, getInstrumentalAudioPath, getAllAvailableAudioFiles } from '../core/audioEngine'
 import { runFFmpegJob, cancelJob, extractYearFromFileName } from '../core/ffmpegRunner'
 import { getFfmpegExePath, getFfprobeExePath } from '../core/gpuDetector'
-import { parseSafarFromPath, extractEventCodeFromPath, SafarParsedInfo } from '../core/safarHierarchy'
+import { parseSafarFromPath, extractEventCodeFromPath, SafarParsedInfo, getEventSharafContent, getEventGenre } from '../core/safarHierarchy'
 import { recordRenderFinished } from './taskTracker.ipc'
 import { updateIslandState, onTitleAdderProgressBridge } from '../core/dynamicIsland'
 
@@ -1900,7 +1900,9 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
       }
       const videoTitle = path.basename(videoPath, path.extname(videoPath))
       const detectedYear = extractYearFromFileName(videoPath)
-      send('titleAdder:log', { jobId: params.jobId, message: `  🏷 Title: "${videoTitle}" · 📅 Year: ${detectedYear || '—'} · © Copyright: "Aljamea-tus-Saifiyah" · Publisher: "AIN" · Author URL: "https://ain53.org/"`, level: 'info' })
+      const sharafName = getEventSharafContent(prefix)
+      const genreName = getEventGenre(prefix)
+      send('titleAdder:log', { jobId: params.jobId, message: `  🏷 Title: "${videoTitle}" · 📜 Content: "${sharafName}" · 🎭 Genre: "${genreName}" · 📅 Year: ${detectedYear || '—'} · 👥 Artists & Publishers: "AIN53 and Aljamea-Tus-Saifiyah"`, level: 'info' })
       const totalLength = (skipFront ? 0 : introDuration) + (transDuration > 0 ? transDuration : 0) + info.duration + (skipBack ? 0 : outroDuration)
       send('titleAdder:log', { jobId: params.jobId, message: `  ⏱ Total output length: ${totalLength.toFixed(2)}s (${skipFront ? 'no front thumbnail' : introDuration + 's intro'} + ${transDuration > 0 ? transDuration.toFixed(1) + 's buffer + ' : ''}${info.duration.toFixed(2)}s video + ${skipBack ? 'no back thumbnail' : outroDuration + 's outro'})`, level: 'info' })
 
@@ -1928,7 +1930,8 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
           skipFront,
           skipBack,
           transitionFile: customTransition ?? undefined,
-          transitionDuration: transDuration
+          transitionDuration: transDuration,
+          prefix
         }, (evt) => {
           if (evt.type === 'progress') {
             send('titleAdder:progress', evt)

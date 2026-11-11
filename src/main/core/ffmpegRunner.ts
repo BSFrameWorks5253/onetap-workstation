@@ -16,6 +16,7 @@ import { spawn, spawnSync, ChildProcess } from 'child_process'
 import path from 'path'
 import fs from 'fs'
 import { getVideoEncoder, getFfmpegExePath } from './gpuDetector'
+import { extractEventCodeFromPath, getEventGenre, getEventSharafContent } from './safarHierarchy'
 
 export interface FFmpegJobParams {
   jobId: string
@@ -47,6 +48,9 @@ export interface FFmpegJobParams {
   transitionFile?: string
   /** Duration in seconds for the post-thumbnail transition buffer (defaults to 1.0s) */
   transitionDuration?: number
+  /** Optional event prefix code (e.g. 'M', 'AQ', 'N', 'TNQ', 'QMZ') for metadata tags */
+  prefix?: string
+  eventCode?: string
 }
 
 export interface FFmpegEvent {
@@ -361,24 +365,29 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
   const videoFileName = path.basename(videoPath)
   const videoTitle = path.basename(videoPath, path.extname(videoPath))
   const detectedYear = extractYearFromFileName(videoFileName)
+  const code = (params.prefix || params.eventCode || extractEventCodeFromPath(videoPath, videoTitle) || '').toUpperCase().trim()
+  const sharafContent = getEventSharafContent(code)
+  const eventGenre = getEventGenre(code)
+  const socialDisclaimer = 'Al-Dai al-Ajal al-Fatimi Syedna Mufaddal Saifuddin TUS has bestowed a sharaf upon you. Media from this precious occasion should not be shared on social media under any circumstances.'
 
   const metadataArgs: string[] = [
     '-metadata', `title=${videoTitle}`,
-    '-metadata', 'artist=Aljamea-tus-Saifiyah',
-    '-metadata', 'author=Aljamea-tus-Saifiyah',
-    '-metadata', 'album_artist=Aljamea-tus-Saifiyah',
-    '-metadata', 'composer=Aljamea-tus-Saifiyah',
-    '-metadata', 'copyright=Aljamea-tus-Saifiyah',
-    '-metadata', 'publisher=AIN',
-    '-metadata', 'organization=AIN',
-    '-metadata', 'network=AIN',
-    '-metadata', 'genre=AIN',
-    '-metadata', 'comment=https://ain53.org/',
+    '-metadata', `subtitle=${sharafContent}`,
+    '-metadata', `description=${sharafContent}`,
+    '-metadata', `synopsis=${sharafContent}`,
+    '-metadata', `comment=${socialDisclaimer}`,
+    '-metadata', 'artist=AIN53 and Aljamea-Tus-Saifiyah',
+    '-metadata', 'author=Aljamea-Tus-Saifiyah',
+    '-metadata', 'album_artist=AIN53 and Aljamea-Tus-Saifiyah',
+    '-metadata', 'composer=Aljamea-Tus-Saifiyah',
+    '-metadata', 'publisher=AIN53 and Aljamea-Tus-Saifiyah',
+    '-metadata', 'organization=AIN53',
+    '-metadata', 'content_provider=AIN53',
+    '-metadata', 'encoded_by=AIN53',
+    '-metadata', 'copyright=Aljamea-Tus-Saifiyah',
+    '-metadata', `genre=${eventGenre}`,
     '-metadata', 'author_url=https://ain53.org/',
-    '-metadata', 'url=https://ain53.org/',
-    '-metadata', `description=${videoTitle}`,
-    '-metadata', `synopsis=${videoTitle}`,
-    '-metadata', 'encoded_by=AIN'
+    '-metadata', 'url=https://ain53.org/'
   ]
   if (detectedYear) {
     metadataArgs.push('-metadata', `date=${detectedYear}`, '-metadata', `year=${detectedYear}`)

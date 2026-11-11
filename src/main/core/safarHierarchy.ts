@@ -45,6 +45,102 @@ const IGNORED_PATH_SEGMENTS = new Set([
   'DOCUMENT', 'CAM 01', 'CAM 02', 'CAM 03', 'CAM 04', 'CAM 05'
 ])
 
+export const EVENT_FULL_NAMES: Record<string, string> = {
+  'AQ': 'Aqiqa',
+  'BM': 'Bethak Majlis',
+  'BQ': 'Bethak Qadam',
+  'BZ': 'Bethak Ziyafat',
+  'FMB': 'FMB',
+  'H': 'Haddiyat',
+  'ID': 'Idaraat',
+  'IF': 'Iftettah',
+  'IFS': 'Iftettah Sharaf',
+  'IST': 'Isteqbal',
+  'KGS': 'Kg Sharaf',
+  'M': 'Majlis',
+  'MF': 'Mafsuhiyat',
+  'MISBAH': 'Misbah',
+  'MKB': 'Mokib',
+  'MO': 'Madrasa',
+  'MQ': 'Misaq',
+  'MUL': 'Mulaqaat',
+  'MYN': 'Miyana',
+  'MZ': 'Majmui Ziyafat',
+  'N': 'Nikah',
+  'NAMAZ': 'Namaz',
+  'ONLINE': 'Online',
+  'Q': 'Qadam',
+  'QMZ': 'Qadam Majlis Ziyafat',
+  'SH': 'Sharaf',
+  'SQ': 'Shifa Qadam',
+  'TJR': 'Tijarat',
+  'TQ': 'Talaqqi',
+  'TNQ': 'Tahneeq',
+  'TQN': 'Tahneeq',
+  'WAAZ': 'Waaz',
+  'WD': 'Wada',
+  'Z': 'Ziyafat',
+  'ZO': 'Zafaf Olda',
+  'OZ': 'Olda Zafaf'
+}
+
+export const EVENT_GENRE_NAMES: Record<string, string> = {
+  'AQ': 'AQIQA',
+  'BM': 'BETHAK MAJLIS',
+  'BQ': 'BETHAK QADAM',
+  'BZ': 'BETHAK ZIYAFAT',
+  'FMB': 'FMB',
+  'H': 'HADDIYAT',
+  'ID': 'IDARAAT',
+  'IF': 'IFTETTAH',
+  'IFS': 'IFTETTAH SHARAF',
+  'IST': 'ISTEQBAL',
+  'KGS': 'KG SHARAF',
+  'M': 'MAJLIS',
+  'MF': 'MAFSUHIYAT',
+  'MISBAH': 'MISBAH',
+  'MKB': 'MOKIB',
+  'MO': 'MADRASA',
+  'MQ': 'MISAQ',
+  'MUL': 'MULAQAAT',
+  'MYN': 'MIYANA',
+  'MZ': 'MAJMUI ZIYAFAT',
+  'N': 'NIKAH',
+  'NAMAZ': 'NAMAZ',
+  'ONLINE': 'ONLINE',
+  'Q': 'QADAM',
+  'QMZ': 'QADAM MAJLIS ZIYAFAT',
+  'SH': 'SHARAF',
+  'SQ': 'SHIFA QADAM',
+  'TJR': 'TIJARAT',
+  'TQ': 'TALAQQI',
+  'TNQ': 'TAHNEEQ',
+  'TQN': 'TAHNEEQ',
+  'WAAZ': 'WAAZ',
+  'WD': 'WADA',
+  'Z': 'ZIYAFAT',
+  'ZO': 'ZAFAF OLDA',
+  'OZ': 'OLDA ZAFAF'
+}
+
+export function getEventFullName(code: string): string {
+  const c = (code || '').toUpperCase().trim()
+  return EVENT_FULL_NAMES[c] || c || 'Occasion'
+}
+
+export function getEventGenre(code: string): string {
+  const c = (code || '').toUpperCase().trim()
+  return EVENT_GENRE_NAMES[c] || c || 'AIN'
+}
+
+export function getEventSharafContent(code: string): string {
+  const fullName = getEventFullName(code)
+  if (!fullName || fullName === 'Occasion') return 'Sharaf'
+  if (/^sharaf/i.test(fullName)) return fullName
+  if (/sharaf$/i.test(fullName)) return fullName
+  return `Sharaf of ${fullName}`
+}
+
 export function extractEventCodeFromPath(fullPath: string, stem?: string): string {
   if (!fullPath && !stem) return ''
 
