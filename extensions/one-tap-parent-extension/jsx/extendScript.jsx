@@ -103,8 +103,9 @@ function getLastUsedEncoderPreset(extPath) {
         // 1. Direct explicit preset file check
         if (extPath && typeof extPath === "string") {
             try {
-                var cleanDirect = extPath.replace(/\\/g, "/").replace(/\/+$/, "");
-                try { cleanDirect = File.decode(cleanDirect); } catch(eD0) {}
+                var cleanDirect = extPath.replace(/^file:\/\/\/?/i, "").replace(/\\/g, "/").replace(/\/+$/, "");
+                try { cleanDirect = decodeURI(cleanDirect); } catch(eD0) {}
+                try { cleanDirect = File.decode(cleanDirect); } catch(eD1) {}
                 var directFile = new File(cleanDirect);
                 if (directFile.exists && directFile.name.match(/\.epr$/i)) return directFile.fsName;
             } catch (eDir) {}
@@ -115,12 +116,11 @@ function getLastUsedEncoderPreset(extPath) {
         // 2. Extension folder presets (raw and decoded URI)
         if (extPath && typeof extPath === "string") {
             try {
-                var rawClean = extPath.replace(/\\/g, "/").replace(/\/+$/, "");
+                var rawClean = extPath.replace(/^file:\/\/\/?/i, "").replace(/\\/g, "/").replace(/\/+$/, "");
+                try { rawClean = decodeURI(rawClean); } catch(eD2) {}
+                try { rawClean = File.decode(rawClean); } catch(eD3) {}
                 candidates.push(rawClean + "/presets/My One.epr");
-                try {
-                    var decClean = File.decode(rawClean);
-                    candidates.push(decClean + "/presets/My One.epr");
-                } catch (eDec) {}
+                candidates.push(rawClean + "/My One.epr");
             } catch (eExt) {}
         }
 
@@ -881,20 +881,25 @@ $.runScript.autoMEIO = function (selectedMarkersStr, explicitExtOrPresetPath) {
                     }
 
                     // Move playhead to inSec so timeline visual updates
+                    var tIn = new Time();
+                    tIn.seconds = inSec;
+                    var tOut = new Time();
+                    tOut.seconds = outSec;
+
                     try {
-                        var tPos = new Time();
-                        tPos.seconds = inSec;
-                        if (seq.setPlayerPosition) seq.setPlayerPosition(tPos.ticks);
+                        if (seq.setPlayerPosition) seq.setPlayerPosition(tIn.ticks);
                     } catch (ePos) {}
 
-                    // Apply In and Out points cleanly
-                    try { seq.setInPoint(inSec); } catch (eIn) {
-                        try { var tI = new Time(); tI.seconds = inSec; seq.setInPoint(tI); } catch (eI2) { seq.setInPoint(String(inSec)); }
+                    // Apply In and Out points cleanly across seconds, Time object, and Work Area
+                    try { seq.setInPoint(tIn.seconds); } catch (eIn) {
+                        try { seq.setInPoint(tIn); } catch (eI2) { seq.setInPoint(String(inSec)); }
                     }
-                    try { seq.setOutPoint(outSec); } catch (eOut) {
-                        try { var tO = new Time(); tO.seconds = outSec; seq.setOutPoint(tO); } catch (eO2) { seq.setOutPoint(String(outSec)); }
+                    try { seq.setOutPoint(tOut.seconds); } catch (eOut) {
+                        try { seq.setOutPoint(tOut); } catch (eO2) { seq.setOutPoint(String(outSec)); }
                     }
-                    $.sleep(150);
+                    try { if (seq.setWorkAreaInPoint) seq.setWorkAreaInPoint(tIn.seconds); } catch (eW1) {}
+                    try { if (seq.setWorkAreaOutPoint) seq.setWorkAreaOutPoint(tOut.seconds); } catch (eW2) {}
+                    $.sleep(200);
 
                     var outFile = outPath + sep + name + ".mp4";
 
@@ -908,8 +913,8 @@ $.runScript.autoMEIO = function (selectedMarkersStr, explicitExtOrPresetPath) {
                         }
                     } catch (eTmp) {}
 
-                    // Range 2 = ENCODE_IN_TO_OUT in Premiere Pro API
-                    var encodeRange = 2;
+                    // Range 1 = ENCODE_IN_TO_OUT in Premiere Pro API
+                    var encodeRange = 1;
                     if (typeof app.encoder.ENCODE_IN_TO_OUT !== "undefined" && app.encoder.ENCODE_IN_TO_OUT !== null) {
                         encodeRange = app.encoder.ENCODE_IN_TO_OUT;
                     }
@@ -921,7 +926,7 @@ $.runScript.autoMEIO = function (selectedMarkersStr, explicitExtOrPresetPath) {
                         encodeRange,
                         1
                     );
-                    $.sleep(150);
+                    $.sleep(200);
                     queuedFiles.push(filename);
                     count++;
                 }

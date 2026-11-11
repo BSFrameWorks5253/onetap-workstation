@@ -95,6 +95,22 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
         setIsDismissed(false)
         setIsDissolving(false)
       } else if (data.done) {
+        // Play subtle celebratory audio chime
+        try {
+          const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+          const osc = ctx.createOscillator()
+          const gain = ctx.createGain()
+          osc.type = 'sine'
+          osc.frequency.setValueAtTime(587.33, ctx.currentTime) // D5
+          osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.12) // A5
+          gain.gain.setValueAtTime(0.06, ctx.currentTime)
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35)
+          osc.connect(gain)
+          gain.connect(ctx.destination)
+          osc.start()
+          osc.stop(ctx.currentTime + 0.35)
+        } catch {}
+
         // When batch completes or ends, display celebratory capsule briefly, then smoothly dissolve
         const displayDuration = data.success ? 12000 : 3500
         if (dissolveTimerRef.current) clearTimeout(dissolveTimerRef.current)
@@ -421,13 +437,6 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
         ) : (
           /* ── Expanded Island Panel ───────────────────────────────── */
           <div className="dynamic-island-card">
-            {/* macOS Window Traffic Lights Decoration */}
-            <div className="card-traffic-lights" aria-hidden="true">
-              <span className="traffic-dot dot-close" onClick={handleClose} title="Dismiss Island" />
-              <span className="traffic-dot dot-min" onClick={(e) => { e.stopPropagation(); setIsExpanded(false) }} title="Minimize to Pill" />
-              <span className="traffic-dot dot-max" title="Title Adder Studio" />
-            </div>
-
             {/* Card Header */}
             <div className="card-header">
               <div className="card-header-left">

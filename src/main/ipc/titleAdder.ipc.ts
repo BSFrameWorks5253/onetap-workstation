@@ -30,7 +30,7 @@ import { updateIslandState, onTitleAdderProgressBridge } from '../core/dynamicIs
 
 type WinGetter = () => BrowserWindow | null
 
-const IMG_EXTS = ['.jpg', '.jpeg', '.png', '.PNG', '.JPG', '.JPEG']
+const IMG_EXTS = ['.jpg', '.jpeg', '.png', '.PNG', '.JPG', '.JPEG', '.webp', '.WEBP', '.bmp', '.BMP', '.tiff', '.tif', '.svg']
 const AUDIO_EXTS = ['.mp3', '.wav', '.m4a', '.aac']
 const VIDEO_EXTS = [
   '.mp4', '.mov', '.avi', '.mkv', '.mts', '.m2ts', '.mxf', '.wmv',
@@ -363,34 +363,47 @@ function findTitleImageForVideo(
         })
         if (exact) return exact.path
 
-        // Word / boundary match (e.g. "11 TNQ.jpg", "TNQ-Title.png", "TNQ_01.jpg", "Tahani.png")
+        // Word / boundary match (e.g. "11 TNQ.jpg", "TNQ-Title.png", "TNQ_01.jpg", "Tahani.png", "TNQ.png")
         const boundaryMatch = availableImages.find(img => {
           const stem = path.basename(img.name, path.extname(img.name)).toLowerCase().trim()
           if (stem === norm) return true
-          const regex = new RegExp(`(^|[\\s-_])${norm}([\\s-_]|$)`, 'i')
+          const regex = new RegExp(`(^|[\\s-_\\d])${norm}([\\s-_\\d]|$)`, 'i')
           return regex.test(stem)
         })
         if (boundaryMatch) return boundaryMatch.path
       }
     }
 
-    // 2c. Check every image in availableImages: extract its abbreviation tokens and match against video stem!
-    // Example: image "TNQ.jpg" or "11 TNQ.jpg" has token "TNQ". If video filename contains "TNQ" -> matches!
+    // 2b. Zero-config dynamic acronym / token matching:
+    // Extract tokens from video stem (e.g. "TNQ", "AQ", "MZ", or any newly invented prefix)
+    // and match against image file stems in the titles pool!
     if (vidStem) {
+      // Direct token match in video stem against available image names
       for (const img of availableImages) {
         const imgStem = path.basename(img.name, path.extname(img.name)).toLowerCase().trim()
-        const tokens = imgStem.split(/[\s-_]+/).filter(t => t.length >= 2 && !/^\d+$/.test(t))
-        for (const token of tokens) {
-          if (['default', 'title', 'thumbnail', 'cover', 'main', 'id'].includes(token)) continue
-          const reg = new RegExp(`(^|[^a-z0-9])${token}([^a-z0-9]|$)`, 'i')
-          if (reg.test(vidStem)) {
-            return img.path
-          }
+        if (['default', 'title', 'thumbnail', 'cover', 'main'].includes(imgStem)) continue
+        // Does video stem contain this entire image stem as an event token?
+        const tokenReg = new RegExp(`(^|[^a-z0-9])${imgStem}([^a-z0-9]|$)`, 'i')
+        if (tokenReg.test(vidStem)) {
+          return img.path
         }
+      }
+
+      // Check reverse: extract abbreviation tokens from video stem and find matching image
+      const vidTokens = vidStem.split(/[^a-z0-9]+/).filter(t => t.length >= 2 && !/^\d+$/.test(t))
+      for (const vt of vidTokens) {
+        if (['1448', '1447', '1449', '01m', '02m', '01e', 'mp4', 'mov'].includes(vt)) continue
+        const matchByVidToken = availableImages.find(img => {
+          const imgStem = path.basename(img.name, path.extname(img.name)).toLowerCase().trim()
+          if (imgStem === vt) return true
+          const r = new RegExp(`(^|[\\s-_\\d])${vt}([\\s-_\\d]|$)`, 'i')
+          return r.test(imgStem)
+        })
+        if (matchByVidToken) return matchByVidToken.path
       }
     }
 
-    // 2d. Containment match for single-char prefixes (e.g. M → M-waaz.jpg)
+    // 2c. Containment match for single-char prefixes (e.g. M → M-waaz.jpg, N → Nikah.jpg)
     if (prefix && prefix.trim().length === 1) {
       const norm = prefix.toLowerCase().trim()
       const contained = availableImages.find(img => {
@@ -685,8 +698,21 @@ function getPrefix(name: string, logicMode?: string): string {
   const cleanBase = name.replace(/\.(tmp|temp)$/i, '').trim()
   const rawStem = cleanBase.replace(/\.[^/.]+$/, '').trim()
 
-  // Strip volume/disc tag pattern (e.g. "_01M-", "_02E-", "_01V-") so sequence item codes take precedence
-  const stem = rawStem.replace(/_\d{1,3}[A-Za-z](?:-|_|\s|$)/gi, '_')
+  // Strip session date & volume/disc tags (e.g. "1448-05-29_01M-", "_01M-", "_02E-", "_01V-") so sequence item codes take precedence
+  const stem = rawStem
+    .replace(/^\d{4}[\s-_.]\d{1,2}[\s-_.]\d{1,2}[\s_]+_\d{1,3}[A-Za-z][-_]/i, '')
+    .replace(/_\d{1,3}[A-Za-z](?:-|_|\s|$)/gi, '_')
+
+  // Explicit check for Baad Niyaz / Sub-item Nikah codes (e.g. "11aN", "11-aN", "01aN", "11AN")
+  if (/(?:^|[\s-_])\d{1,4}[a-zA-Z]?[\s-_]*(?:an|bn|n)(?:[\s-_]|\d|$)/i.test(stem) ||
+      /(?:^|\D)\d{1,4}[a-zA-Z]?N(?:\D|$)/.test(rawStem)) {
+    return 'N'
+  }
+
+  // Explicit check for Tahani / Qadam codes (e.g. "TNQ", "02-TNQ", "TQN")
+  if (/(?:^|[\s-_])\d{0,4}[\s-_]*(?:TNQ|TQN|TAHANI|TAHNEEQ)(?:[\s-_]|\d|$)/i.test(stem)) {
+    return 'TNQ'
+  }
 
   const normalizeCode = (raw: string): string => {
     const upper = raw.toUpperCase().trim()
@@ -1221,7 +1247,7 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
     for (const videoPath of videos) {
       const cleanBase = path.basename(videoPath).replace(/\.(tmp|temp)$/i, '')
       const stem = cleanBase.replace(/\.[^/.]+$/, '')
-      const prefix = getPrefix(cleanBase)
+      const prefix = getPrefix(cleanBase) || extractEventCodeFromPath(videoPath, stem) || 'OTHER'
       const defaultImg = findTitleImageForVideo(titlesFolder, prefix, videoPath, availableTitleImages)
       const isNikah = prefix.toUpperCase() === 'N'
       const isWaazId = isSpecialWaazOrId(prefix) || isSpecialWaazOrId(defaultImg) || isSpecialWaazOrId(cleanBase)

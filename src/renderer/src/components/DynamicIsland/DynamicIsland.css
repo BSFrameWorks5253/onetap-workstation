@@ -129,46 +129,7 @@ body, html, #root {
   transition: stroke-dashoffset 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* macOS Traffic Lights Header for Expanded Island Card */
-.card-traffic-lights {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  margin-bottom: 12px;
-  padding-bottom: 4px;
-}
-
-.traffic-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  cursor: pointer;
-  display: inline-block;
-  transition: opacity 0.15s ease, transform 0.15s ease;
-}
-
-.traffic-dot:hover {
-  transform: scale(1.15);
-  opacity: 0.85;
-}
-
-.dot-close {
-  background: #FF5F56;
-  border: 0.5px solid rgba(0, 0, 0, 0.18);
-  box-shadow: 0 0 4px rgba(255, 95, 86, 0.4);
-}
-
-.dot-min {
-  background: #FFBD2E;
-  border: 0.5px solid rgba(0, 0, 0, 0.18);
-  box-shadow: 0 0 4px rgba(255, 189, 46, 0.4);
-}
-
-.dot-max {
-  background: #27C93F;
-  border: 0.5px solid rgba(0, 0, 0, 0.18);
-  box-shadow: 0 0 4px rgba(39, 201, 63, 0.4);
-}
+/* VisionOS Floating Expanded Island Card */
 
 .pill-left {
   display: flex;

@@ -52,15 +52,15 @@ export function extractEventCodeFromPath(fullPath: string, stem?: string): strin
   if (stem) {
     const upperStem = stem.toUpperCase().trim()
 
-    // Explicit check for Baad Niyaz / After Niyaz codes (e.g. "11aN", "11-aN", "AN", "BN", "11AN")
-    if (/(?:^|[\s-_])\d{0,3}[a-z]?[an|bn]+(?:[\s-_]|\d|$)/i.test(upperStem) ||
+    // Explicit check for Baad Niyaz / After Niyaz / Nikah sequence codes (e.g. "11aN", "11-aN", "11AN", "11bN", "01aN", "02aN", "AN", "BN")
+    if (/(?:^|[\s-_])\d{1,4}[a-z]?[\s-_]*(?:an|bn|n)(?:[\s-_]|\d|$)/i.test(upperStem) ||
         /\b(?:11AN|AN|BN|11A-N|11-AN)\b/i.test(upperStem) ||
-        /(?:^|\D)\d{1,2}aN(?:\D|$)/.test(stem)) {
+        /(?:^|\D)\d{1,4}[a-zA-Z]?N(?:\D|$)/.test(stem)) {
       return 'N'
     }
 
     // Explicit check for Tahani / Qadam codes (e.g. "TNQ", "TQN", "TAHANI")
-    if (/\b(?:TNQ|TQN|TAHANI)\b/i.test(upperStem) || /(?:^|[\s-_])TNQ(?:[\s-_]|\d|$)/i.test(upperStem)) {
+    if (/\b(?:TNQ|TQN|TAHANI|TAHNEEQ)\b/i.test(upperStem) || /(?:^|[\s-_])(?:TNQ|TQN)(?:[\s-_]|\d|$)/i.test(upperStem)) {
       return 'TNQ'
     }
 

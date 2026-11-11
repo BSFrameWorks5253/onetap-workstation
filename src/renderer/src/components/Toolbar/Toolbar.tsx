@@ -91,20 +91,20 @@ export default function Toolbar({ activePage, onOpenCmdPalette }: ToolbarProps):
               onClick={() => setIsAnySharePairingOpen(true)}
               title="Link AnyShare Mobile / Web via One-Time QR Code"
               style={{
-                borderColor: 'var(--border, rgba(184, 134, 11, 0.45))',
-                background: 'color-mix(in srgb, var(--theme-accent, #b8860b) 12%, var(--surface))',
-                color: 'var(--text-primary, #1c1917)',
-                fontWeight: 650,
+                borderColor: 'var(--border)',
+                background: 'var(--surface)',
+                color: 'var(--text-primary)',
+                fontWeight: 700,
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '6px'
+                gap: '7px'
               }}
             >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--theme-accent, #b8860b)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-primary)' }}>
                 <rect width="18" height="18" x="3" y="3" rx="2"/>
                 <path d="M7 7h.01M17 7h.01M7 17h.01M17 17h.01"/>
               </svg>
-              <span>Link AnyShare</span>
+              <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>Link AnyShare</span>
             </button>
 
             {/* Quick Spotlight Launcher */}
