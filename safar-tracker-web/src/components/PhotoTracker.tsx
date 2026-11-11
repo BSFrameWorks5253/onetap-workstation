@@ -66,24 +66,24 @@ interface PhotoColumnConfig {
 const PHOTO_COLUMNS: PhotoColumnConfig[] = [
   {
     id: 'edited',
-    title: 'Stage 1: Edited',
-    subtitle: 'Photos color-graded & exported',
+    title: 'Edited',
+    subtitle: 'Exported & Graded',
     color: '#8b5cf6',
     headerBg: 'rgba(139, 92, 246, 0.08)',
     badgeBg: 'rgba(139, 92, 246, 0.15)'
   },
   {
     id: 'given_to_murtaza',
-    title: 'Stage 2: Given To Murtaza',
-    subtitle: 'Handed over to video lead Murtaza',
+    title: 'With Murtaza',
+    subtitle: 'Handed to Video Lead',
     color: '#2563eb',
     headerBg: 'rgba(37, 99, 235, 0.08)',
     badgeBg: 'rgba(37, 99, 235, 0.15)'
   },
   {
     id: 'uploaded',
-    title: 'Stage 3: Uploaded',
-    subtitle: 'Uploaded to Google Drive & Cloud',
+    title: 'Uploaded',
+    subtitle: 'Cloud Synced',
     color: '#059669',
     headerBg: 'rgba(5, 150, 105, 0.08)',
     badgeBg: 'rgba(5, 150, 105, 0.15)'
@@ -868,7 +868,7 @@ export default function PhotoTracker({
                                 />
                               )}
                               <div>
-                                <span style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A', display: 'block' }}>
+                                <span style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A', display: 'block', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
                                   {task.dateFolder}
                                 </span>
                                 {task.hijriDate && (
@@ -880,17 +880,19 @@ export default function PhotoTracker({
                             </div>
 
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <button
-                                type="button"
-                                className="day-batch-pill"
-                                title="Mark all photos for this day as Uploaded"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleMarkDayAllPhotosCompleted(task.dateFolder);
-                                }}
-                              >
-                                ⚡ 1-Tap Done
-                              </button>
+                              {col.id !== 'uploaded' && (
+                                <button
+                                  type="button"
+                                  className="day-batch-pill"
+                                  title="Mark all photos for this day as Uploaded"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleMarkDayAllPhotosCompleted(task.dateFolder);
+                                  }}
+                                >
+                                  ⚡ Done
+                                </button>
+                              )}
                               {/* Remove button */}
                               {onRemoveTask && (
                                 <button
@@ -910,43 +912,34 @@ export default function PhotoTracker({
                           </div>
 
                           {/* Cross-Status Visual Chip */}
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', flexWrap: 'wrap' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                             {isPhotoUp && isVideoUp ? (
                               <span className="media-sync-badge both-uploaded" title="Both Photo & Video Uploaded">
                                 <CheckCircle2 size={11} /> ✓ Both Uploaded
                               </span>
                             ) : isPhotoUp && !isVideoUp ? (
-                              <span className="media-sync-badge photo-only" title="Photo Uploaded by Muffadal Peti · Video Pending">
-                                <Camera size={11} /> Photo Up · Video Pend
+                              <span className="media-sync-badge photo-only" title="Photo Uploaded · Video Pending">
+                                <Camera size={11} /> Photo Up · Video Pending
                               </span>
                             ) : !isPhotoUp && isVideoUp ? (
-                              <span className="media-sync-badge video-only" title="Video Uploaded by Murtaza · Photo Pending">
-                                <Film size={11} /> Video Up · Photo Pend
+                              <span className="media-sync-badge video-only" title="Video Uploaded · Photo Pending">
+                                <Film size={11} /> Video Up · Photo Pending
                               </span>
                             ) : (
                               <span className="media-sync-badge both-pending" title="Both Photo & Video Pending Upload">
-                                <Clock size={11} /> Both Pending
+                                <Clock size={11} /> Pending Upload
                               </span>
                             )}
-
-                            {/* Quick Upload Checkbox */}
-                            <label
-                              title="Click to toggle Uploaded for both Photo & Video"
-                              style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 700, color: (isPhotoUp && isVideoUp) ? '#059669' : '#64748B' }}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={isPhotoUp && isVideoUp}
-                                onChange={() => handleToggleUpload(task)}
-                              />
-                              <span>{isPhotoUp && isVideoUp ? 'Uploaded' : 'Upload'}</span>
-                            </label>
                           </div>
 
-                          {/* Editor Assignments */}
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', color: '#64748B', background: '#FFFFFF', padding: '6px 8px', borderRadius: '8px', border: '1px solid #F1F5F9' }}>
-                            <span>Photo: <strong style={{ color: '#7C3AED' }}>{task.photoEditorName || DEFAULT_PHOTO_EDITOR}</strong></span>
-                            <span>Video: <strong style={{ color: '#0F172A' }}>{task.editorName || DEFAULT_VIDEO_EDITOR}</strong></span>
+                          {/* Editor Badges */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10.5px', color: '#64748B', flexWrap: 'wrap' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', background: 'rgba(124, 58, 237, 0.08)', color: '#6d28d9', padding: '2px 6px', borderRadius: '4px' }}>
+                              📷 <strong>{task.photoEditorName?.trim() || DEFAULT_PHOTO_EDITOR}</strong>
+                            </span>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', background: 'rgba(0, 0, 0, 0.04)', color: '#334155', padding: '2px 6px', borderRadius: '4px' }}>
+                              🎬 <strong>{task.editorName?.trim() || DEFAULT_VIDEO_EDITOR}</strong>
+                            </span>
                           </div>
 
                           {/* Stage Transition Buttons */}
@@ -987,15 +980,21 @@ export default function PhotoTracker({
                             )}
 
                             {col.id === 'uploaded' && (
-                              <button
-                                type="button"
-                                className="photo-stage-prev-btn"
-                                onClick={() => handleMovePhotoStage(task, 'given_to_murtaza')}
-                                style={{ width: '100%', fontSize: '12px', fontWeight: 600, minHeight: '42px', padding: '8px 12px', borderRadius: '10px', background: '#F1F5F9', color: '#475569', border: '1px solid #E2E8F0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
-                              >
-                                <ArrowLeft size={13} />
-                                <span>Revert to Murtaza</span>
-                              </button>
+                              <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+                                <span style={{ fontSize: '11px', color: '#059669', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                  <CheckCircle2 size={13} /> Uploaded
+                                </span>
+                                <button
+                                  type="button"
+                                  className="photo-stage-prev-btn"
+                                  onClick={() => handleMovePhotoStage(task, 'given_to_murtaza')}
+                                  style={{ fontSize: '11px', fontWeight: 600, padding: '4px 8px', borderRadius: '8px', background: 'transparent', color: '#64748B', border: '1px solid #E2E8F0', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                  title="Revert back to Murtaza"
+                                >
+                                  <ArrowLeft size={11} />
+                                  <span>Undo</span>
+                                </button>
+                              </div>
                             )}
                           </div>
                         </div>

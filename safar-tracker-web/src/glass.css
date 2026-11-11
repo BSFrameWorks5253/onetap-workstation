@@ -1343,11 +1343,68 @@ body {
     -webkit-overflow-scrolling: touch !important;
   }
 
-  /* Unify Mobile Navigation into Single Menu: Hide redundant desktop sidebar and drawer */
-  .menu-toggle,
-  .sidebar-overlay,
+  /* Mobile Navigation Drawer & Hamburger */
+  .menu-toggle {
+    display: inline-grid !important;
+    place-items: center;
+    width: 36px !important;
+    height: 36px !important;
+    border-radius: 9px !important;
+    background: rgba(0, 0, 0, 0.04) !important;
+    border: 1px solid rgba(0, 0, 0, 0.08) !important;
+    color: var(--text-primary, #0f172a) !important;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 1999;
+    opacity: 0;
+    transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .sidebar-overlay.visible {
+    display: block !important;
+    opacity: 1 !important;
+  }
+
   .sidebar {
-    display: none !important;
+    display: flex !important;
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    width: min(85vw, 320px) !important;
+    z-index: 2000 !important;
+    background: #faf9f4 !important;
+    box-shadow: 10px 0 35px rgba(0, 0, 0, 0.25) !important;
+    transform: translateX(-105%) !important;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    overflow-y: auto !important;
+    padding: 16px 14px calc(24px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  .sidebar.sidebar-open {
+    transform: translateX(0) !important;
+  }
+
+  .sidebar-close {
+    display: inline-grid !important;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.05);
+    border: none;
+    color: #475569;
+    margin-left: auto;
+    cursor: pointer;
   }
 
   /* Compact, beautiful mobile topbar */
@@ -1782,7 +1839,8 @@ body {
   }
 
   /* Horizontal Scroll-Snap Kanban Columns */
-  .kanban-board-grid {
+  .kanban-board-grid,
+  .photo-kanban-board-grid {
     display: flex !important;
     flex-direction: row !important;
     overflow-x: auto !important;
@@ -1793,7 +1851,8 @@ body {
     margin: 0 -12px !important;
     padding-inline: 12px !important;
   }
-  .kanban-board-grid::-webkit-scrollbar {
+  .kanban-board-grid::-webkit-scrollbar,
+  .photo-kanban-board-grid::-webkit-scrollbar {
     display: none;
   }
 
@@ -1804,49 +1863,91 @@ body {
     flex-shrink: 0 !important;
   }
 
+  /* Compact, unified mobile top banner (Row-based, not stacked) */
   .kanban-top-banner {
-    padding: 14px !important;
-    gap: 10px !important;
-    border-radius: 16px !important;
+    padding: 12px !important;
+    gap: 8px !important;
+    border-radius: 14px !important;
+    margin-bottom: 10px !important;
   }
   .kanban-banner-hero-section {
     flex-direction: column !important;
     width: 100% !important;
+    gap: 6px !important;
   }
   .kanban-banner-selector-row {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
     width: 100% !important;
+    flex-wrap: nowrap !important;
   }
   .kanban-safar-select {
-    width: 100% !important;
-    max-width: 100% !important;
-    font-size: 15px !important;
+    flex: 1 !important;
+    min-width: 0 !important;
+    width: auto !important;
+    max-width: none !important;
+    min-height: 38px !important;
+    font-size: 14px !important;
+    padding: 6px 10px !important;
   }
   .kanban-banner-whatsapp-btn {
-    width: 100% !important;
-    min-height: 44px !important;
-    justify-content: center !important;
-    font-size: 13px !important;
+    width: auto !important;
+    min-height: 38px !important;
+    padding: 0 10px !important;
+    font-size: 12px !important;
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
+  }
+  .kanban-banner-delete-btn {
+    width: auto !important;
+    min-height: 38px !important;
+    padding: 0 8px !important;
+    flex-shrink: 0 !important;
   }
   .kanban-banner-controls-wrap {
     width: 100% !important;
     display: flex !important;
-    flex-direction: column !important;
-    align-items: stretch !important;
+    flex-direction: row !important;
+    align-items: center !important;
     gap: 8px !important;
+    padding-top: 6px !important;
+    border-top: 1px solid var(--border, #e2e8f0) !important;
+    flex-wrap: nowrap !important;
   }
   .kanban-search-box-wrap {
-    width: 100% !important;
-    min-width: 100% !important;
+    flex: 1 !important;
+    min-width: 0 !important;
+    width: auto !important;
   }
   .kanban-search-input {
     width: 100% !important;
-    min-height: 40px !important;
+    min-height: 36px !important;
+    padding: 6px 10px 6px 30px !important;
+    font-size: 12.5px !important;
   }
-  .kanban-rescan-btn,
+  .kanban-rescan-btn {
+    width: 36px !important;
+    min-width: 36px !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    padding: 0 !important;
+    display: inline-grid !important;
+    place-items: center !important;
+    flex-shrink: 0 !important;
+    border-radius: 8px !important;
+  }
+  .kanban-rescan-btn span {
+    display: none !important;
+  }
   .kanban-add-btn {
-    width: 100% !important;
-    min-height: 40px !important;
-    justify-content: center !important;
+    width: auto !important;
+    min-height: 36px !important;
+    padding: 0 10px !important;
+    font-size: 12px !important;
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
+    border-radius: 8px !important;
   }
 
   .photo-category-tabs {
@@ -1862,37 +1963,30 @@ body {
   }
 
   .kanban-stage-advance-btn {
-    min-height: 40px !important;
-    font-size: 12px !important;
-    padding: 8px 12px !important;
+    min-height: 34px !important;
+    font-size: 11px !important;
+    padding: 4px 8px !important;
   }
   .kanban-stage-prev-btn {
-    min-height: 40px !important;
-    font-size: 12px !important;
-    padding: 8px 10px !important;
+    min-height: 34px !important;
+    font-size: 11px !important;
+    padding: 4px 6px !important;
   }
 
   /* Dashboard Action Stack on Mobile */
   .dashboard-action-buttons {
-    display: grid !important;
-    grid-template-columns: 1fr 1fr !important;
-    gap: 10px !important;
+    display: flex !important;
+    gap: 8px !important;
     width: 100% !important;
   }
-  .briefing-btn-whatsapp {
-    grid-column: 1 / -1 !important;
-    width: 100% !important;
-    min-height: 48px !important;
-    font-size: 14px !important;
-  }
+  .briefing-btn-whatsapp,
   .briefing-btn-copy {
-    grid-column: 1 / -1 !important;
-    width: 100% !important;
-    min-height: 46px !important;
-    font-size: 13px !important;
+    display: none !important;
   }
   .briefing-btn-secondary {
-    min-height: 44px !important;
+    flex: 1 !important;
+    min-height: 40px !important;
+    font-size: 12px !important;
     justify-content: center !important;
   }
 

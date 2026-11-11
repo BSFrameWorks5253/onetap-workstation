@@ -2791,12 +2791,12 @@ export default function App(): JSX.Element {
 
         <button
           type="button"
-          className={`mobile-nav-item ${view === 'settings' ? 'active' : ''}`}
-          onClick={() => navigateTo('settings')}
-          aria-label="Settings"
+          className={`mobile-nav-item ${menuOpen ? 'active' : ''}`}
+          onClick={() => setMenuOpen(!menuOpen)}
+          aria-label="Open navigation menu"
         >
-          <Settings2 size={20} />
-          <span>Settings</span>
+          <Menu size={20} />
+          <span>Menu</span>
         </button>
       </nav>
     </div>

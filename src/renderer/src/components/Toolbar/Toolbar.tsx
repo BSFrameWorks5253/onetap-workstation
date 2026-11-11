@@ -33,26 +33,8 @@ export default function Toolbar({ activePage, onOpenCmdPalette }: ToolbarProps):
     return () => clearInterval(id)
   }, [])
 
-  const handleMinimize = () => {
-    try {
-      (window as any).api?.system?.minimizeWindow?.()
-    } catch {}
-  }
-
-  const handleMaximize = () => {
-    try {
-      (window as any).api?.system?.maximizeWindow?.()
-    } catch {}
-  }
-
-  const handleClose = () => {
-    try {
-      (window as any).api?.system?.closeWindow?.()
-    } catch {}
-  }
-
   return (
-    <header className="toolbar drag-region">
+    <header className="toolbar">
       <div className="toolbar-inner">
         {/* Breadcrumb */}
         <div className="toolbar-breadcrumb">
@@ -109,16 +91,16 @@ export default function Toolbar({ activePage, onOpenCmdPalette }: ToolbarProps):
               onClick={() => setIsAnySharePairingOpen(true)}
               title="Link AnyShare Mobile / Web via One-Time QR Code"
               style={{
-                borderColor: 'rgba(212, 175, 55, 0.45)',
-                background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.18), rgba(138, 102, 20, 0.12))',
-                color: '#F5E6C8',
-                fontWeight: 600,
+                borderColor: 'var(--border, rgba(184, 134, 11, 0.45))',
+                background: 'color-mix(in srgb, var(--theme-accent, #b8860b) 12%, var(--surface))',
+                color: 'var(--text-primary, #1c1917)',
+                fontWeight: 650,
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '5px'
+                gap: '6px'
               }}
             >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#D4AF37" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--theme-accent, #b8860b)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <rect width="18" height="18" x="3" y="3" rx="2"/>
                 <path d="M7 7h.01M17 7h.01M7 17h.01M17 17h.01"/>
               </svg>
@@ -143,37 +125,6 @@ export default function Toolbar({ activePage, onOpenCmdPalette }: ToolbarProps):
             <span>Live</span>
           </div>
           <span className="toolbar-clock">{clock}</span>
-
-          {/* Frameless Native Window Traffic Lights */}
-          <div className="window-traffic-lights no-drag" aria-label="Window controls">
-            <button
-              type="button"
-              className="traffic-light traffic-light-minimize"
-              onClick={handleMinimize}
-              title="Minimize window"
-              aria-label="Minimize"
-            >
-              <span className="traffic-glyph" aria-hidden="true">&minus;</span>
-            </button>
-            <button
-              type="button"
-              className="traffic-light traffic-light-maximize"
-              onClick={handleMaximize}
-              title="Maximize / Restore window"
-              aria-label="Maximize"
-            >
-              <span className="traffic-glyph" aria-hidden="true">&#x25A2;</span>
-            </button>
-            <button
-              type="button"
-              className="traffic-light traffic-light-close"
-              onClick={handleClose}
-              title="Close window to Tray"
-              aria-label="Close"
-            >
-              <span className="traffic-glyph" aria-hidden="true">&times;</span>
-            </button>
-          </div>
         </div>
       </div>
 

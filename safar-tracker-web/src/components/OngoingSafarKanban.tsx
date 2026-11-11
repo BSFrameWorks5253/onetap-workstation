@@ -72,43 +72,43 @@ interface ColumnConfig {
 const COLUMNS: ColumnConfig[] = [
   {
     id: 'editing',
-    title: 'Stage 1: In Editing',
-    subtitle: 'Rough cut & active color/audio pass',
+    title: 'In Editing',
+    subtitle: 'Color & Audio Pass',
     badgeColor: '#d97706',
     headerBg: 'rgba(217, 119, 6, 0.08)',
-    icon: <Film size={17} color="#d97706" />
+    icon: <Film size={16} color="#d97706" />
   },
   {
     id: 'rendering',
-    title: 'Stage 2: Rendered',
-    subtitle: 'Render complete · Ready for cloud upload',
+    title: 'Rendered',
+    subtitle: 'Ready for Cloud',
     badgeColor: '#2563eb',
     headerBg: 'rgba(37, 99, 235, 0.08)',
-    icon: <Kanban size={17} color="#2563eb" />
+    icon: <Kanban size={16} color="#2563eb" />
   },
   {
     id: 'upload',
-    title: 'Stage 3: Uploaded',
-    subtitle: 'Synced to Google Drive & Cloud storage',
+    title: 'Uploaded',
+    subtitle: 'Cloud Synced',
     badgeColor: '#059669',
     headerBg: 'rgba(5, 150, 105, 0.08)',
-    icon: <UploadCloud size={17} color="#059669" />
+    icon: <UploadCloud size={16} color="#059669" />
   },
   {
     id: 'jameya',
-    title: 'Stage 4: Submission to Al Jamea tus Saifiyah',
-    subtitle: 'Al Jamea tus Saifiyah delivery & verification',
+    title: 'Al Jamea',
+    subtitle: 'Submission & Review',
     badgeColor: '#7c3aed',
     headerBg: 'rgba(124, 58, 237, 0.08)',
-    icon: <FileCheck2 size={17} color="#7c3aed" />
+    icon: <FileCheck2 size={16} color="#7c3aed" />
   },
   {
     id: 'completed',
-    title: 'Stage 5: Completed Every Stage',
-    subtitle: 'All stages finished · Production finalized',
+    title: 'Completed',
+    subtitle: 'All Done',
     badgeColor: '#0d9488',
     headerBg: 'rgba(13, 148, 136, 0.08)',
-    icon: <CheckCircle size={17} color="#0d9488" />
+    icon: <CheckCircle size={16} color="#0d9488" />
   }
 ];
 
@@ -845,7 +845,8 @@ export default function OngoingSafarKanban({
                                   fontWeight: 700,
                                   color: 'var(--text-primary, #0f172a)',
                                   display: 'block',
-                                  wordBreak: 'break-all'
+                                  wordBreak: 'break-word',
+                                  overflowWrap: 'break-word'
                                 }}
                               >
                                 {task.dateFolder}
@@ -859,14 +860,16 @@ export default function OngoingSafarKanban({
                           </div>
 
                           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <button
-                              type="button"
-                              className="day-batch-pill"
-                              title={`Mark all items for this day as Completed in 1 tap`}
-                              onClick={() => handleMarkDayAllCompleted(task.dateFolder)}
-                            >
-                              ⚡ 1-Tap Done
-                            </button>
+                            {col.id !== 'completed' && (
+                              <button
+                                type="button"
+                                className="day-batch-pill"
+                                title={`Mark all items for this day as Completed in 1 tap`}
+                                onClick={() => handleMarkDayAllCompleted(task.dateFolder)}
+                              >
+                                ⚡ Done
+                              </button>
+                            )}
 
                           {/* Exclude / Remove Button */}
                           <button
@@ -893,61 +896,33 @@ export default function OngoingSafarKanban({
                         </div>
                       </div>
 
-                        {/* Deliverable Cross-Status Badge & Quick Upload Checkbox */}
+                        {/* Deliverable Cross-Status Badge */}
                         {(() => {
                           const isPhotoUp = task.photoStage === 'uploaded' || Boolean(task.photoUploaded) || (task.stage === 'upload' || task.stage === 'jameya' || task.stage === 'completed');
                           const isVideoUp = task.stage === 'upload' || task.stage === 'jameya' || task.stage === 'completed';
                           return (
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', flexWrap: 'wrap', marginTop: '2px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginTop: '2px' }}>
                               {isPhotoUp && isVideoUp ? (
                                 <span className="media-sync-badge both-uploaded" title="Both Photo & Video Uploaded">
                                   <CheckCircle2 size={12} />
                                   <span>✓ Both Uploaded</span>
                                 </span>
                               ) : isPhotoUp && !isVideoUp ? (
-                                <span className="media-sync-badge photo-only" title="Photo Uploaded by Muffadal Peti · Video Pending">
+                                <span className="media-sync-badge photo-only" title="Photo Uploaded · Video Pending">
                                   <Camera size={12} />
-                                  <span>📷 Photo Uploaded · 🎬 Video Pending</span>
+                                  <span>Photo Up · Video Pending</span>
                                 </span>
                               ) : !isPhotoUp && isVideoUp ? (
-                                <span className="media-sync-badge video-only" title="Video Uploaded by Murtaza · Photo Pending">
+                                <span className="media-sync-badge video-only" title="Video Uploaded · Photo Pending">
                                   <Film size={12} />
-                                  <span>🎬 Video Uploaded · 📷 Photo Pending</span>
+                                  <span>Video Up · Photo Pending</span>
                                 </span>
                               ) : (
                                 <span className="media-sync-badge both-pending" title="Both Photo & Video Pending Upload">
                                   <Clock size={12} />
-                                  <span>⏳ Both Pending Upload</span>
+                                  <span>Pending Upload</span>
                                 </span>
                               )}
-
-                              <label
-                                title={isVideoUp && isPhotoUp ? 'Folder Uploaded across Photo & Video' : 'Tick to mark Uploaded in both trackers'}
-                                style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '4px',
-                                  fontSize: '11px',
-                                  fontWeight: 700,
-                                  cursor: 'pointer',
-                                  color: (isVideoUp && isPhotoUp) ? '#059669' : '#64748b'
-                                }}
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={isVideoUp && isPhotoUp}
-                                  onChange={e => {
-                                    const willUpload = e.target.checked;
-                                    if (willUpload) {
-                                      handleMoveStage(task, 'upload');
-                                    } else {
-                                      onUpdateTask(task, { stage: 'editing', photoStage: 'edited', photoUploaded: false });
-                                      showToast(`Reset "${task.dateFolder}" to Editing`);
-                                    }
-                                  }}
-                                />
-                                <span>{isVideoUp && isPhotoUp ? 'Uploaded' : 'Upload'}</span>
-                              </label>
                             </div>
                           );
                         })()}
@@ -961,22 +936,26 @@ export default function OngoingSafarKanban({
                               gap: '4px',
                               background: '#fee2e2',
                               color: '#b91c1c',
-                              fontSize: '11px',
+                              fontSize: '10.5px',
                               fontWeight: 600,
                               padding: '2px 6px',
-                              borderRadius: '6px',
+                              borderRadius: '5px',
                               width: 'fit-content'
                             }}
                           >
-                            <AlertTriangle size={12} />
-                            <span>Not on local disk (Submitted Archive)</span>
+                            <AlertTriangle size={11} />
+                            <span>Not on local disk</span>
                           </div>
                         )}
 
                         {/* Editor & Metadata */}
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', color: '#64748b' }}>
-                          <span>Editor: <strong style={{ color: '#0f172a' }}>{task.editorName?.trim() || DEFAULT_EDITOR}</strong></span>
-                          <span>Photo: <strong style={{ color: '#4f46e5' }}>{task.photoEditorName?.trim() || DEFAULT_PHOTO_EDITOR}</strong></span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10.5px', color: '#64748b', flexWrap: 'wrap' }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', background: 'rgba(0,0,0,0.04)', padding: '2px 6px', borderRadius: '4px' }}>
+                            🎬 <strong style={{ color: '#0f172a' }}>{task.editorName?.trim() || DEFAULT_EDITOR}</strong>
+                          </span>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', background: 'rgba(79, 70, 229, 0.07)', color: '#4338ca', padding: '2px 6px', borderRadius: '4px' }}>
+                            📷 <strong style={{ color: '#4f46e5' }}>{task.photoEditorName?.trim() || DEFAULT_PHOTO_EDITOR}</strong>
+                          </span>
                         </div>
 
                         {/* Action buttons to change stage */}
@@ -1033,7 +1012,7 @@ export default function OngoingSafarKanban({
                                   padding: '5px 10px'
                                 }}
                               >
-                                <span>Move to {COLUMNS[colIdx + 1].title.split(':')[1]?.trim() || COLUMNS[colIdx + 1].id}</span>
+                                <span>Next: {COLUMNS[colIdx + 1].title}</span>
                                 <ArrowRight size={11} />
                               </button>
                             ) : (

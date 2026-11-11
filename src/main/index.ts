@@ -667,8 +667,6 @@ function createWindow(): void {
     minWidth: 960,
     minHeight: 620,
     show: false,
-    frame: false,
-    titleBarStyle: 'hidden',
     autoHideMenuBar: true,
     title: 'One Tap',
     icon: getAppIconPath(),
