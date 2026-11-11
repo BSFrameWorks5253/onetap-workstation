@@ -5692,7 +5692,10 @@ export default function TitleAdder(): JSX.Element {
                               style={item.prefix ? {
                                 color: (pTheme as any).text || pTheme.accent,
                                 borderColor: pTheme.accent,
-                                background: pTheme.soft
+                                background: pTheme.soft,
+                                fontWeight: 800,
+                                letterSpacing: '0.02em',
+                                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
                               } : undefined}
                             >
                               {item.prefix ? (
