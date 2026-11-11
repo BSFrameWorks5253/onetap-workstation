@@ -291,25 +291,54 @@ function findTitleImageForVideo(
   videoPath: string,
   availableImages: Array<{ name: string; path: string }>
 ): string | null {
+  const vidBase = videoPath ? path.basename(videoPath).replace(/\.(tmp|temp)$/i, '') : ''
+  const vidStem = vidBase.replace(/\.[^/.]+$/, '').toLowerCase().trim()
+
   // 1. Exact findFile match by prefix in titlesFolder
   if (prefix) {
     const f = findFile(titlesFolder, prefix)
     if (f) return f
   }
 
-  // 2. Case-insensitive exact match in availableImages
-  if (prefix && availableImages.length > 0) {
-    const norm = prefix.toLowerCase().trim()
-    const exact = availableImages.find(img => {
-      const stem = path.basename(img.name, path.extname(img.name)).toLowerCase().trim()
-      return stem === norm
-    })
-    if (exact) return exact.path
+  // 2. Dynamic abbreviation matching against availableImages:
+  if (availableImages.length > 0) {
+    if (prefix) {
+      const norm = prefix.toLowerCase().trim()
+      const exact = availableImages.find(img => {
+        const stem = path.basename(img.name, path.extname(img.name)).toLowerCase().trim()
+        return stem === norm
+      })
+      if (exact) return exact.path
 
-    // Containment match ONLY for single-char prefixes (e.g. M → M-waaz.jpg).
-    // For multi-char prefixes like MZ, ZO, OZ, BQ etc., containment would wrongly
-    // match a shorter image (e.g. M.jpg for MZ) — skip it in that case.
-    if (norm.length === 1) {
+      // Word / boundary match (e.g. "11 TNQ.jpg", "TNQ-Title.png", "TNQ_01.jpg")
+      const boundaryMatch = availableImages.find(img => {
+        const stem = path.basename(img.name, path.extname(img.name)).toLowerCase().trim()
+        if (stem === norm) return true
+        const regex = new RegExp(`(^|[\\s-_])${norm}([\\s-_]|$)`, 'i')
+        return regex.test(stem)
+      })
+      if (boundaryMatch) return boundaryMatch.path
+    }
+
+    // 2c. Check every image in availableImages: extract its abbreviation tokens and match against video stem!
+    // Example: image "TNQ.jpg" or "11 TNQ.jpg" has token "TNQ". If video filename contains "TNQ" -> matches!
+    if (vidStem) {
+      for (const img of availableImages) {
+        const imgStem = path.basename(img.name, path.extname(img.name)).toLowerCase().trim()
+        const tokens = imgStem.split(/[\s-_]+/).filter(t => t.length >= 2 && !/^\d+$/.test(t))
+        for (const token of tokens) {
+          if (['default', 'title', 'thumbnail', 'cover', 'main', 'id'].includes(token)) continue
+          const reg = new RegExp(`(^|[^a-z0-9])${token}([^a-z0-9]|$)`, 'i')
+          if (reg.test(vidStem)) {
+            return img.path
+          }
+        }
+      }
+    }
+
+    // 2d. Containment match for single-char prefixes (e.g. M → M-waaz.jpg)
+    if (prefix && prefix.trim().length === 1) {
+      const norm = prefix.toLowerCase().trim()
       const contained = availableImages.find(img => {
         const stem = path.basename(img.name, path.extname(img.name)).toLowerCase().trim()
         return stem.startsWith(norm) || stem.includes(`_${norm}`) || stem.includes(`-${norm}`)
@@ -320,7 +349,6 @@ function findTitleImageForVideo(
 
   // 3. Match by video stem or video filename
   if (videoPath) {
-    const vidStem = path.basename(videoPath, path.extname(videoPath)).toLowerCase().replace(/\.(tmp|temp)$/i, '')
     const vidMatch = availableImages.find(img => {
       const stem = path.basename(img.name, path.extname(img.name)).toLowerCase().trim()
       return stem === vidStem || stem === `${vidStem}_v` || vidStem.startsWith(stem)
@@ -1217,6 +1245,7 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
     audioAssignments?: Record<string, string>
     titleImageAssignments?: Record<string, string>
     videoMuteSelections?: Record<string, boolean>
+    fileOutputFolders?: Record<string, string>
     thumbnailMode?: 'default' | 'front_only' | 'back_only' | 'both'
     thumbnailModeSelections?: Record<string, 'default' | 'front_only' | 'back_only' | 'both'>
     skipFront?: boolean
@@ -1695,7 +1724,20 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
       const outroDuration = skipBack ? 0 : params.duration
       // Per-video output directory resolution for single and multi-folder batches
       let outDir = actualOutputDir || params.outputFolder
-      if (params.mode === 'batch' && params.outputFolder) {
+
+      // If user specified custom/per-file destination in Preflight, prioritize it!
+      const explicitFileOut =
+        params.fileOutputFolders?.[videoPath] ||
+        params.fileOutputFolders?.[rawVideoPath] ||
+        params.fileOutputFolders?.[path.basename(videoPath)] ||
+        params.fileOutputFolders?.[stem] ||
+        params.fileOutputFolders?.[canonicalStem] ||
+        params.fileOutputFolders?.[videoPath.replace(/\\/g, '/')]
+
+      if (explicitFileOut && explicitFileOut.trim()) {
+        outDir = explicitFileOut.trim()
+        send('titleAdder:log', { jobId: params.jobId, message: `  📁 [Custom Destination] Output targeted to: ${outDir}`, level: 'info' })
+      } else if (params.mode === 'batch' && params.outputFolder) {
         let parentSource = batchSources.find(src => videoPath.toLowerCase().includes(path.normalize(src).toLowerCase()))
         if (!parentSource) {
           const vidDir = path.dirname(videoPath)

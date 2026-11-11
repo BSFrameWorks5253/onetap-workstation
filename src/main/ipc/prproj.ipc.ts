@@ -468,6 +468,7 @@ export const EVENT_DEFINITIONS: Record<string, EventColorDef> = {
   SQ:     { code: 'SQ',     name: 'Shifa Qadam',          red: 185, green: 28,  blue: 28,  colorIndex: 1, colorName: 'Dark Red' },
   TJR:    { code: 'TJR',    name: 'Tijarat',              red: 101, green: 163, blue: 13,  colorIndex: 0, colorName: 'Olive' },
   TQ:     { code: 'TQ',     name: 'Talaqqi',              red: 13,  green: 148, blue: 136, colorIndex: 7, colorName: 'Turquoise' },
+  TNQ:    { code: 'TNQ',    name: 'Tahani Qadam',         red: 14,  green: 165, blue: 233, colorIndex: 7, colorName: 'Ice Blue' },
   TQN:    { code: 'TQN',    name: 'Tahneeq',              red: 125, green: 211, blue: 252, colorIndex: 7, colorName: 'Ice Blue' },
   WAAZ:   { code: 'WAAZ',   name: 'Waaz',                 red: 255, green: 149, blue: 0,   colorIndex: 3, colorName: 'Warm Orange' },
   WD:     { code: 'WD',     name: 'Wada',                 red: 71,  green: 85,  blue: 105, colorIndex: 5, colorName: 'Slate' },
@@ -495,7 +496,9 @@ export function getPrefixCategory(folderOrFileName: string): string {
 
   // 2. Keyword checks
   if (upper.includes('NAMAZ')) return 'NAMAZ'
+  if (upper.includes('11AN') || upper.includes('11-AN') || /(?:^|\D)11AN(?:\D|$)/i.test(upper)) return 'N'
   if (upper.includes('NIKAAH') || upper.includes('NIKAH')) return 'N'
+  if (upper.includes('TNQ') || upper.includes('TAHANI')) return 'TNQ'
   if (upper.includes('WAAZ')) return 'WAAZ'
   if (upper.includes('BETHAK MAJLIS') || upper.includes('BM')) return 'BM'
   if (upper.includes('BETHAK QADAM') || upper.includes('BQ')) return 'BQ'

@@ -617,14 +617,17 @@ export function validateFilename(filename: string): ValidationResult {
   const cleanStem = stem.replace(/\s+/g, ' ').trim()
   const parts = cleanStem.split(' ')
 
-  const STANDARD_PREFIXES = ['N', 'Q', 'MZ', 'M', 'Z', 'AQ', 'WAAZ', 'ID', 'BQ', 'BZ', 'BM', 'OD']
+  const STANDARD_PREFIXES = [
+    'N', 'Q', 'MZ', 'M', 'Z', 'AQ', 'WAAZ', 'ID', 'BQ', 'BZ', 'BM', 'OD', 'TNQ', 'TQN', 'AN', 'BN',
+    'QMZ', 'IFS', 'KGS', 'MKB', 'MUL', 'MYN', 'TJR', 'FMB', 'SH', 'SQ', 'TQ', 'WD', 'ZO', 'OZ', 'H', 'IF', 'IST', 'MF', 'MO', 'MQ'
+  ]
   const prefixSet = new Set(STANDARD_PREFIXES)
 
   let prefixIndex = -1
   let rawPrefix = ''
 
   // 1. Check embedded camera sequence pattern (e.g. V-1448-01-22 _02E-10-01Z-30355757, V-1448-01-22 _02E-10-01Z)
-  const embeddedMatch = stem.match(/\d+[\s-_]*(WAAZ|NIKAAH|NAMAZ|BETHAK|ZIYAFAT|MAJLIS|QADAM|IDAARA|MZ|AQ|ID|OD|BQ|BM|BZ|Q|M|Z|N)(?:[\s-_]*\d+)?(?:[\s-_]|$)/i)
+  const embeddedMatch = stem.match(/\d+[\s-_]*(WAAZ|NIKAAH|NAMAZ|BETHAK|ZIYAFAT|MAJLIS|QADAM|IDAARA|QMZ|IFS|KGS|MKB|MUL|MYN|TJR|TQN|TNQ|FMB|MZ|AQ|BM|BQ|BZ|ID|IF|IST|MF|MO|MQ|OD|OZ|SH|SQ|TQ|WD|ZO|Q|M|Z|N|H)(?:[\s-_]*\d+)?(?:[\s-_]|$)/i)
   if (embeddedMatch && embeddedMatch[1]) {
     rawPrefix = embeddedMatch[1]
     const pUpper = rawPrefix.toUpperCase()
@@ -1455,13 +1458,14 @@ export default function TitleAdder(): JSX.Element {
 
     const normalizeCode = (raw: string): string => {
       const upper = raw.toUpperCase().trim()
-      if (upper === 'NAMAZ' || upper === 'NIKAAH') return 'N'
-      if (upper === 'BETHAK') return 'AQ'
+      if (upper === 'NAMAZ' || upper === 'NIKAAH' || upper === 'NIKAH' || upper === 'AN' || upper === 'BN' || upper === '11AN' || upper === '11N') return 'N'
+      if (upper === 'BETHAK' || upper === 'AQIQA') return 'AQ'
       if (upper === 'ZIYAFAT' || upper === 'ZIARAT' || upper === 'ZIYARAT') return 'Z'
       if (upper === 'MAJLIS') return 'M'
       if (upper === 'QADAM') return 'Q'
       if (upper === 'IDAARA') return 'ID'
       if (upper === 'WAAZ') return 'WAAZ'
+      if (upper === 'TNQ' || upper === 'TQN' || upper === 'TAHANI') return 'TNQ'
 
       const m = upper.match(/^(?:\d+[\s-_]*)?([A-Z]+)(?:[\s-_]*\d+)?$/)
       if (m && m[1]) return m[1]
@@ -5430,17 +5434,96 @@ export default function TitleAdder(): JSX.Element {
                         <tr key={item.videoPath || idx}>
                           <td style={{ opacity: 0.6, fontSize: '12px', fontWeight: 600 }}>{idx + 1}</td>
                           <td style={{ fontWeight: 600 }}>
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                              <span>🎬</span>
-                              <span title={item.videoName}>{item.videoName}</span>
-                              {item.videoName.toLowerCase().includes('.tmp') && (
-                                <span style={{ fontSize: '10px', padding: '1px 6px', borderRadius: '4px', background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', fontWeight: 700, border: '1px solid rgba(245, 158, 11, 0.3)' }}>
-                                  ⏳ Temp (Pending Render)
-                                </span>
-                              )}
-                              {item.isNikah && <span className="ta-nikah-tag">👰 Nikah Audio</span>}
-                              {isSpecial && !item.isNikah && <span className="ta-nikah-tag" style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', borderColor: 'rgba(245, 158, 11, 0.3)' }}>⭐ Special Audio</span>}
-                            </span>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                <span>🎬</span>
+                                <span title={item.videoName}>{item.videoName}</span>
+                                {item.videoName.toLowerCase().includes('.tmp') && (
+                                  <span style={{ fontSize: '10px', padding: '1px 6px', borderRadius: '4px', background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', fontWeight: 700, border: '1px solid rgba(245, 158, 11, 0.3)' }}>
+                                    ⏳ Temp (Pending Render)
+                                  </span>
+                                )}
+                                {item.isNikah && <span className="ta-nikah-tag">👰 Nikah Audio</span>}
+                                {isSpecial && !item.isNikah && <span className="ta-nikah-tag" style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', borderColor: 'rgba(245, 158, 11, 0.3)' }}>⭐ Special Audio</span>}
+                              </span>
+
+                              {/* Target Folder Path Display with Auto / User Set status */}
+                              {(() => {
+                                const targetPath = fileOutputFolders[item.videoPath] || fileOutputFolders[item.videoName] || outputFolder || ''
+                                const isUserSet = Boolean(fileOutputFolders[item.videoPath] || fileOutputFolders[item.videoName])
+                                return (
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', marginTop: '2px', flexWrap: 'wrap' }}>
+                                    <span
+                                      style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                        padding: '1px 7px',
+                                        borderRadius: '10px',
+                                        fontSize: '10px',
+                                        fontWeight: 700,
+                                        letterSpacing: '0.02em',
+                                        background: isUserSet ? 'rgba(59, 130, 246, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+                                        color: isUserSet ? '#3b82f6' : '#10b981',
+                                        border: `1px solid ${isUserSet ? 'rgba(59, 130, 246, 0.3)' : 'rgba(16, 185, 129, 0.3)'}`
+                                      }}
+                                    >
+                                      {isUserSet ? '👤 Custom' : '🤖 Auto'}
+                                    </span>
+                                    <span
+                                      title={targetPath || 'Will use main output destination'}
+                                      style={{
+                                        maxWidth: '220px',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap',
+                                        color: 'var(--text-secondary, #94a3b8)',
+                                        fontFamily: 'monospace',
+                                        fontSize: '10.5px'
+                                      }}
+                                    >
+                                      📁 {targetPath ? (targetPath.split(/[\\/]/).slice(-2).join('\\') || targetPath) : 'Main Output'}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleSelectCustomOutputForFile(item.videoPath || item.videoName)}
+                                      title={`Change destination folder for ${item.videoName}`}
+                                      style={{
+                                        background: 'none',
+                                        border: '1px solid rgba(255, 255, 255, 0.15)',
+                                        borderRadius: '4px',
+                                        color: 'var(--text-primary)',
+                                        cursor: 'pointer',
+                                        fontSize: '10px',
+                                        padding: '1px 5px',
+                                        lineHeight: 1.2
+                                      }}
+                                    >
+                                      Change ➜
+                                    </button>
+                                    {isUserSet && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleResetCustomOutputForFile(item.videoPath || item.videoName)}
+                                        title="Reset destination folder to Auto-detected"
+                                        style={{
+                                          background: 'none',
+                                          border: '1px solid rgba(245, 158, 11, 0.3)',
+                                          borderRadius: '4px',
+                                          color: '#f59e0b',
+                                          cursor: 'pointer',
+                                          fontSize: '10px',
+                                          padding: '1px 5px',
+                                          lineHeight: 1.2
+                                        }}
+                                      >
+                                        ↺ Reset
+                                      </button>
+                                    )}
+                                  </div>
+                                )
+                              })()}
+                            </div>
                           </td>
                           <td>
                             <span

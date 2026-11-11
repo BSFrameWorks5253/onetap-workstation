@@ -355,6 +355,35 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
             )}
 
             <div className="pill-right">
+              {/* Apple Mini Circular Progress Ring */}
+              {!state.done && (
+                <div className="pill-ring-wrapper" title={`${Math.round(state.percent)}% rendered`}>
+                  <svg className="pill-ring-svg" width="22" height="22" viewBox="0 0 24 24">
+                    <circle
+                      className="pill-ring-bg"
+                      cx="12"
+                      cy="12"
+                      r="9"
+                      fill="none"
+                      stroke="rgba(255, 255, 255, 0.15)"
+                      strokeWidth="2.5"
+                    />
+                    <circle
+                      className="pill-ring-indicator"
+                      cx="12"
+                      cy="12"
+                      r="9"
+                      fill="none"
+                      stroke="#10B981"
+                      strokeWidth="2.5"
+                      strokeDasharray={56.54}
+                      strokeDashoffset={56.54 - (56.54 * Math.min(100, Math.max(0, state.percent))) / 100}
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </div>
+              )}
+
               {state.encoder && (
                 <span className={`pill-encoder-badge ${state.encoder.includes('GPU') || state.encoder.includes('NVENC') || state.encoder.includes('QSV') ? 'is-gpu' : 'is-cpu'}`} title={`Encoder: ${state.encoder}`}>
                   {state.encoder.includes('NVENC') ? '⚡ NVENC' : state.encoder.includes('QSV') ? '⚡ QSV' : state.encoder.includes('AMF') ? '⚡ AMF' : '💻 CPU'}
@@ -392,6 +421,13 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
         ) : (
           /* ── Expanded Island Panel ───────────────────────────────── */
           <div className="dynamic-island-card">
+            {/* macOS Window Traffic Lights Decoration */}
+            <div className="card-traffic-lights" aria-hidden="true">
+              <span className="traffic-dot dot-close" onClick={handleClose} title="Dismiss Island" />
+              <span className="traffic-dot dot-min" onClick={(e) => { e.stopPropagation(); setIsExpanded(false) }} title="Minimize to Pill" />
+              <span className="traffic-dot dot-max" title="Title Adder Studio" />
+            </div>
+
             {/* Card Header */}
             <div className="card-header">
               <div className="card-header-left">

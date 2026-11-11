@@ -78,18 +78,18 @@ body, html, #root {
 
 /* ── Compact Apple Pill State ───────────────────────────────────── */
 .dynamic-island-pill {
-  width: 434px;
-  height: 44px;
+  width: 440px;
+  height: 46px;
   border-radius: 9999px;
   background: #000000;
   backdrop-filter: blur(40px) saturate(200%);
   -webkit-backdrop-filter: blur(40px) saturate(200%);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.24);
   box-shadow:
-    0 12px 32px rgba(0, 0, 0, 0.5),
-    0 0 16px rgba(16, 185, 129, 0.2),
-    inset 0 1px 1px rgba(255, 255, 255, 0.35),
-    inset 0 -1px 1px rgba(0, 0, 0, 0.9);
+    0 16px 38px rgba(0, 0, 0, 0.7),
+    0 0 20px rgba(16, 185, 129, 0.22),
+    inset 0 1px 1px rgba(255, 255, 255, 0.45),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.95);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -97,16 +97,77 @@ body, html, #root {
   cursor: pointer;
   pointer-events: auto;
   -webkit-app-region: no-drag;
-  transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.25s ease, border-color 0.25s ease;
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.28s ease, border-color 0.28s ease;
 }
 
 .dynamic-island-pill:hover {
-  transform: scale(1.03);
-  border-color: rgba(255, 255, 255, 0.35);
+  transform: scale(1.025);
+  border-color: rgba(255, 255, 255, 0.38);
   box-shadow:
-    0 16px 40px rgba(0, 0, 0, 0.65),
-    0 0 20px rgba(16, 185, 129, 0.35),
-    inset 0 1px 1px rgba(255, 255, 255, 0.45);
+    0 20px 48px rgba(0, 0, 0, 0.8),
+    0 0 24px rgba(16, 185, 129, 0.35),
+    inset 0 1px 1.5px rgba(255, 255, 255, 0.55);
+}
+
+/* Apple Mini Circular Progress Ring */
+.pill-ring-wrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin-right: 6px;
+  flex-shrink: 0;
+}
+
+.pill-ring-svg {
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+}
+
+.pill-ring-indicator {
+  transition: stroke-dashoffset 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* macOS Traffic Lights Header for Expanded Island Card */
+.card-traffic-lights {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 12px;
+  padding-bottom: 4px;
+}
+
+.traffic-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: inline-block;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.traffic-dot:hover {
+  transform: scale(1.15);
+  opacity: 0.85;
+}
+
+.dot-close {
+  background: #FF5F56;
+  border: 0.5px solid rgba(0, 0, 0, 0.18);
+  box-shadow: 0 0 4px rgba(255, 95, 86, 0.4);
+}
+
+.dot-min {
+  background: #FFBD2E;
+  border: 0.5px solid rgba(0, 0, 0, 0.18);
+  box-shadow: 0 0 4px rgba(255, 189, 46, 0.4);
+}
+
+.dot-max {
+  background: #27C93F;
+  border: 0.5px solid rgba(0, 0, 0, 0.18);
+  box-shadow: 0 0 4px rgba(39, 201, 63, 0.4);
 }
 
 .pill-left {

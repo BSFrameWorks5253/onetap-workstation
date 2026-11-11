@@ -48,7 +48,32 @@ const IGNORED_PATH_SEGMENTS = new Set([
 export function extractEventCodeFromPath(fullPath: string, stem?: string): string {
   if (!fullPath && !stem) return ''
 
-  // 1. Check folder segments from closest parent upwards
+  // 1. Check stem FIRST so specific clip event codes (e.g. "11aN", "TNQ", "01-Z") are never masked by parent session folders (e.g. "_01M")
+  if (stem) {
+    const upperStem = stem.toUpperCase().trim()
+
+    // Explicit check for Baad Niyaz / After Niyaz codes (e.g. "11aN", "11-aN", "AN", "BN", "11AN")
+    if (/(?:^|[\s-_])\d{0,3}[a-z]?[an|bn]+(?:[\s-_]|\d|$)/i.test(upperStem) ||
+        /\b(?:11AN|AN|BN|11A-N|11-AN)\b/i.test(upperStem) ||
+        /(?:^|\D)\d{1,2}aN(?:\D|$)/.test(stem)) {
+      return 'N'
+    }
+
+    // Explicit check for Tahani / Qadam codes (e.g. "TNQ", "TQN", "TAHANI")
+    if (/\b(?:TNQ|TQN|TAHANI)\b/i.test(upperStem) || /(?:^|[\s-_])TNQ(?:[\s-_]|\d|$)/i.test(upperStem)) {
+      return 'TNQ'
+    }
+
+    const tokenMatch = upperStem.match(/(?:^|[\s-_])(?:\d+[\s-_]*)?([A-Z]{1,4})(?:[\s-_]*\d+)?(?:[\s-_]|$)/)
+    if (tokenMatch && tokenMatch[1]) {
+      const candidate = tokenMatch[1]
+      if (!['THE', 'FOR', 'AND', 'CAM', 'CLIP', 'RUN', 'RAW', 'ALL'].includes(candidate)) {
+        return normalizeCode(candidate)
+      }
+    }
+  }
+
+  // 2. Check folder segments from closest parent upwards
   const dir = path.dirname(fullPath)
   const segments = dir.split(/[/\\]/).filter(Boolean)
 
@@ -56,6 +81,11 @@ export function extractEventCodeFromPath(fullPath: string, stem?: string): strin
     const seg = segments[i]
     const upper = seg.toUpperCase()
     if (IGNORED_PATH_SEGMENTS.has(upper)) continue
+
+    // Skip date/session tags like "1448-02-11 _01M" or "_01M" which indicate time slot rather than clip event
+    if (/^\d{4}[\s-_.]\d{1,2}[\s-_.]\d{1,2}[\s_]+_\d{1,2}[A-Za-z]$/i.test(seg) || /^_\d{1,2}[A-Za-z]$/i.test(seg)) {
+      continue
+    }
 
     // A. Match sequence item folder pattern e.g. "-43-27N-60446783", "-43-N-", "-02-01AQ-", "-07-04ZO-", "-18-01N-"
     const m = seg.match(/[-_]\d{1,4}[a-z]?[-_](\d+)?([A-Za-z]+)(?:[-_]\d+)?$/i) ||
@@ -84,29 +114,19 @@ export function extractEventCodeFromPath(fullPath: string, stem?: string): strin
     if (/^\d{4}[\s-_.]\d{1,2}/.test(seg)) break
   }
 
-  // 2. Check stem
-  if (stem) {
-    const tokenMatch = stem.toUpperCase().match(/(?:^|[\s-_])(?:\d+[\s-_]*)?([A-Z]{1,4})(?:[\s-_]*\d+)?(?:[\s-_]|$)/)
-    if (tokenMatch && tokenMatch[1]) {
-      const candidate = tokenMatch[1]
-      if (!['THE', 'FOR', 'AND', 'CAM', 'CLIP', 'RUN', 'RAW', 'ALL'].includes(candidate)) {
-        return normalizeCode(candidate)
-      }
-    }
-  }
-
   return ''
 }
 
 function normalizeCode(code: string): string {
   const up = code.toUpperCase().trim()
-  if (up === 'NAMAZ' || up === 'NIKAAH' || up === 'NIKAH') return 'N'
+  if (up === 'NAMAZ' || up === 'NIKAAH' || up === 'NIKAH' || up === 'AN' || up === 'BN' || up === '11AN' || up === '11N') return 'N'
   if (up === 'BETHAK' || up === 'AQIQA') return 'AQ'
   if (up === 'ZIYAFAT' || up === 'ZIYARAT' || up === 'ZIARAT') return 'Z'
   if (up === 'MAJLIS') return 'M'
   if (up === 'QADAM') return 'Q'
   if (up === 'IDAARA' || up === 'IDARA') return 'ID'
   if (up === 'WAAZ') return 'WAAZ'
+  if (up === 'TNQ' || up === 'TQN' || up === 'TAHANI') return 'TNQ'
   return up
 }
 

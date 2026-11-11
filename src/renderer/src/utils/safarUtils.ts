@@ -100,6 +100,7 @@ export const PREDEFINED_PREFIX_COLORS: Record<string, { accent: string; soft: st
   'SH':      { accent: '#3b82f6', soft: 'rgba(59, 130, 246, 0.15)' },
   'SQ':      { accent: '#06b6d4', soft: 'rgba(6, 182, 212, 0.15)' },
   'TJR':     { accent: '#ea580c', soft: 'rgba(234, 88, 12, 0.15)' },
+  'TNQ':     { accent: '#0ea5e9', soft: 'rgba(14, 165, 233, 0.15)' },
   'TQ':      { accent: '#0ea5e9', soft: 'rgba(14, 165, 233, 0.15)' },
   'TQN':     { accent: '#38bdf8', soft: 'rgba(56, 189, 248, 0.15)' },
   'WAAZ':    { accent: '#06b6d4', soft: 'rgba(6, 182, 212, 0.15)' },
@@ -199,6 +200,8 @@ export function extractEventCode(text: string): string {
 
   // 3. Aliases in text
   const upper = clean.toUpperCase()
+  if (upper.includes('11AN') || upper.includes('11-AN') || /(?:^|\D)11AN(?:\D|$)/i.test(upper) || /(?:^|\D)11AN(?:\D|$)/.test(clean)) return 'N'
+  if (upper.includes('TNQ') || upper.includes('TAHANI')) return 'TNQ'
   if (/\b(?:BETHAK|AQIQA)\b/i.test(upper)) return 'AQ'
   if (/\b(?:NAMAZ|NIKAAH|NIKAH)\b/i.test(upper)) return 'N'
   if (/\b(?:ZIYAFAT|ZIYARAT|ZIARAT)\b/i.test(upper)) return 'Z'
@@ -221,7 +224,7 @@ export function extractEventCode(text: string): string {
 
 function normalizeCode(code: string): string {
   const up = code.toUpperCase().trim()
-  if (up === 'NAMAZ' || up === 'NIKAAH' || up === 'NIKAH') return 'N'
+  if (up === 'NAMAZ' || up === 'NIKAAH' || up === 'NIKAH' || up === 'AN' || up === 'BN' || up === '11AN' || up === '11N') return 'N'
   if (up === 'BETHAK' || up === 'AQIQA' || up === 'AQUEEQAH') return 'AQ'
   if (up === 'ZIYAFAT' || up === 'ZIYARAT' || up === 'ZIARAT') return 'Z'
   if (up === 'MAJLIS') return 'M'
