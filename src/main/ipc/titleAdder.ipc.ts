@@ -213,13 +213,38 @@ function resolveVideoFolderAndFiles(rootPath: string): { dir: string; files: Arr
  * @param name File basename (without extension)
  * @returns Full file path if found, or null
  */
-function findFile(folder: string, name: string): string | null {
+function findFile(folder: string, name: string, maxDepth = 3): string | null {
   if (!folder || !name) return null
-  for (const ext of [...AUDIO_EXTS, ...IMG_EXTS]) {
-    const f = path.join(folder, name + ext)
-    if (fs.existsSync(f)) return f
+  const targetLower = name.toLowerCase()
+
+  const searchRecursive = (dir: string, depth = 0): string | null => {
+    if (depth > maxDepth || !fs.existsSync(dir)) return null
+    try {
+      const entries = fs.readdirSync(dir, { withFileTypes: true })
+      // Pass 1: Direct match in current folder
+      for (const entry of entries) {
+        if (entry.isFile()) {
+          const ext = path.extname(entry.name).toLowerCase()
+          if ([...AUDIO_EXTS, ...IMG_EXTS].includes(ext)) {
+            const stem = path.basename(entry.name, ext).toLowerCase()
+            if (stem === targetLower) {
+              return path.join(dir, entry.name)
+            }
+          }
+        }
+      }
+      // Pass 2: Recurse into subdirectories
+      for (const entry of entries) {
+        if (entry.isDirectory() && !entry.name.startsWith('.') && !entry.name.startsWith('$')) {
+          const res = searchRecursive(path.join(dir, entry.name), depth + 1)
+          if (res) return res
+        }
+      }
+    } catch {}
+    return null
   }
-  return null
+
+  return searchRecursive(folder, 0)
 }
 
 /**
@@ -294,30 +319,59 @@ function findTitleImageForVideo(
   const vidBase = videoPath ? path.basename(videoPath).replace(/\.(tmp|temp)$/i, '') : ''
   const vidStem = vidBase.replace(/\.[^/.]+$/, '').toLowerCase().trim()
 
-  // 1. Exact findFile match by prefix in titlesFolder
-  if (prefix) {
-    const f = findFile(titlesFolder, prefix)
-    if (f) return f
+  const PREFIX_ALIASES: Record<string, string[]> = {
+    'TNQ': ['tnq', 'tqn', 'tahani', 'tahani qadam', 'tahani_qadam', 'tahaniqadam', 'tahneeq', 'qadam tahani'],
+    'TQN': ['tqn', 'tnq', 'tahani', 'tahani qadam', 'tahani_qadam'],
+    'AQ': ['aq', '01aq', 'aqeeqah', 'aqaeeq', 'aqiqah'],
+    'KGS': ['kgs', 'khidmat', 'khadamat'],
+    'ID': ['id', 'idaraat', 'idaara', 'idarat'],
+    'MZ': ['mz', 'majlis ziafat', 'majlis'],
+    'QMZ': ['qmz', 'qadam majlis ziafat', 'qadam_majlis_ziafat'],
+    'IFS': ['ifs', 'iftaar', 'iftar'],
+    'FMB': ['fmb', 'faiz'],
+    'MKB': ['mkb', 'maktab'],
+    'MUL': ['mul', 'mulaqat'],
+    'MYN': ['myn', 'mayyat'],
+    'TJR': ['tjr', 'tijaarat', 'tijarat'],
+    'Z': ['z', 'ziafat', 'ziyafat'],
+    'Q': ['q', 'qadam'],
+    'M': ['m', 'majlis', 'waaz'],
+    'N': ['n', 'nikah', 'nikaah'],
+    'H': ['h', 'hadya']
+  }
+
+  const prefixUpper = prefix ? prefix.toUpperCase().trim() : ''
+  const variants = prefixUpper && PREFIX_ALIASES[prefixUpper]
+    ? PREFIX_ALIASES[prefixUpper]
+    : (prefix ? [prefix.toLowerCase().trim()] : [])
+
+  // 1. Exact findFile match by prefix or alias variants in titlesFolder
+  if (variants.length > 0) {
+    for (const v of variants) {
+      const f = findFile(titlesFolder, v)
+      if (f) return f
+    }
   }
 
   // 2. Dynamic abbreviation matching against availableImages:
   if (availableImages.length > 0) {
-    if (prefix) {
-      const norm = prefix.toLowerCase().trim()
-      const exact = availableImages.find(img => {
-        const stem = path.basename(img.name, path.extname(img.name)).toLowerCase().trim()
-        return stem === norm
-      })
-      if (exact) return exact.path
+    if (variants.length > 0) {
+      for (const norm of variants) {
+        const exact = availableImages.find(img => {
+          const stem = path.basename(img.name, path.extname(img.name)).toLowerCase().trim()
+          return stem === norm
+        })
+        if (exact) return exact.path
 
-      // Word / boundary match (e.g. "11 TNQ.jpg", "TNQ-Title.png", "TNQ_01.jpg")
-      const boundaryMatch = availableImages.find(img => {
-        const stem = path.basename(img.name, path.extname(img.name)).toLowerCase().trim()
-        if (stem === norm) return true
-        const regex = new RegExp(`(^|[\\s-_])${norm}([\\s-_]|$)`, 'i')
-        return regex.test(stem)
-      })
-      if (boundaryMatch) return boundaryMatch.path
+        // Word / boundary match (e.g. "11 TNQ.jpg", "TNQ-Title.png", "TNQ_01.jpg", "Tahani.png")
+        const boundaryMatch = availableImages.find(img => {
+          const stem = path.basename(img.name, path.extname(img.name)).toLowerCase().trim()
+          if (stem === norm) return true
+          const regex = new RegExp(`(^|[\\s-_])${norm}([\\s-_]|$)`, 'i')
+          return regex.test(stem)
+        })
+        if (boundaryMatch) return boundaryMatch.path
+      }
     }
 
     // 2c. Check every image in availableImages: extract its abbreviation tokens and match against video stem!
@@ -1083,20 +1137,25 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
     const availableTitleImages: Array<{ name: string; path: string }> = []
     const seenImagePaths = new Set<string>()
 
-    const scanDirForImages = (dir: string) => {
-      if (!dir || !fs.existsSync(dir)) return
+    const scanDirForImages = (dir: string, depth = 0) => {
+      if (!dir || !fs.existsSync(dir) || depth > 4) return
       try {
-        const files = fs.readdirSync(dir)
-        for (const f of files) {
-          const ext = path.extname(f).toLowerCase()
-          if (IMG_EXTS.includes(ext)) {
-            const p = path.join(dir, f)
-            if (!seenImagePaths.has(p.toLowerCase())) {
-              seenImagePaths.add(p.toLowerCase())
-              availableTitleImages.push({
-                name: f,
-                path: p
-              })
+        const entries = fs.readdirSync(dir, { withFileTypes: true })
+        for (const entry of entries) {
+          if (entry.name.startsWith('.') || entry.name.startsWith('$') || entry.name.toLowerCase() === 'thumbs.db') continue
+          const p = path.join(dir, entry.name)
+          if (entry.isDirectory()) {
+            scanDirForImages(p, depth + 1)
+          } else if (entry.isFile()) {
+            const ext = path.extname(entry.name).toLowerCase()
+            if (IMG_EXTS.includes(ext)) {
+              if (!seenImagePaths.has(p.toLowerCase())) {
+                seenImagePaths.add(p.toLowerCase())
+                availableTitleImages.push({
+                  name: entry.name,
+                  path: p
+                })
+              }
             }
           }
         }
@@ -1273,15 +1332,21 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
 
     const availableTitleImages: Array<{ name: string; path: string }> = []
     const seenStartImg = new Set<string>()
-    const scanStartDir = (dir: string) => {
-      if (!dir || !fs.existsSync(dir)) return
+    const scanStartDir = (dir: string, depth = 0) => {
+      if (!dir || !fs.existsSync(dir) || depth > 4) return
       try {
-        for (const f of fs.readdirSync(dir)) {
-          if (IMG_EXTS.includes(path.extname(f).toLowerCase())) {
-            const p = path.join(dir, f)
-            if (!seenStartImg.has(p.toLowerCase())) {
-              seenStartImg.add(p.toLowerCase())
-              availableTitleImages.push({ name: f, path: p })
+        const entries = fs.readdirSync(dir, { withFileTypes: true })
+        for (const entry of entries) {
+          if (entry.name.startsWith('.') || entry.name.startsWith('$') || entry.name.toLowerCase() === 'thumbs.db') continue
+          const p = path.join(dir, entry.name)
+          if (entry.isDirectory()) {
+            scanStartDir(p, depth + 1)
+          } else if (entry.isFile()) {
+            if (IMG_EXTS.includes(path.extname(entry.name).toLowerCase())) {
+              if (!seenStartImg.has(p.toLowerCase())) {
+                seenStartImg.add(p.toLowerCase())
+                availableTitleImages.push({ name: entry.name, path: p })
+              }
             }
           }
         }
@@ -2336,7 +2401,6 @@ export function getFinalTitlesInfo(customFolder?: string): FinalTitlesPayload {
   }
 
   try {
-    const entries = fs.readdirSync(targetFolder, { withFileTypes: true })
     const files: FinalTitleFile[] = []
     let totalSizeBytes = 0
     let videos = 0
@@ -2345,46 +2409,56 @@ export function getFinalTitlesInfo(customFolder?: string): FinalTitlesPayload {
     let projects = 0
     let others = 0
 
-    for (const entry of entries) {
-      if (entry.name.startsWith('.') || entry.name.startsWith('$') || entry.name.toLowerCase() === 'thumbs.db') continue
-      const fullPath = path.join(targetFolder, entry.name)
-
+    const scanDirectory = (dir: string, depth = 0) => {
+      if (depth > 4) return
       try {
-        const stat = fs.statSync(fullPath)
-        if (stat.isDirectory()) continue
+        const entries = fs.readdirSync(dir, { withFileTypes: true })
+        for (const entry of entries) {
+          if (entry.name.startsWith('.') || entry.name.startsWith('$') || entry.name.toLowerCase() === 'thumbs.db') continue
+          const fullPath = path.join(dir, entry.name)
 
-        const ext = path.extname(entry.name).toLowerCase()
-        let type: FinalTitleFile['type'] = 'other'
+          if (entry.isDirectory()) {
+            scanDirectory(fullPath, depth + 1)
+          } else if (entry.isFile()) {
+            try {
+              const stat = fs.statSync(fullPath)
+              const ext = path.extname(entry.name).toLowerCase()
+              let type: FinalTitleFile['type'] = 'other'
 
-        if (VIDEO_EXTS.includes(ext)) {
-          type = 'video'
-          videos++
-        } else if (IMG_EXTS.map(x => x.toLowerCase()).includes(ext)) {
-          type = 'image'
-          images++
-        } else if (AUDIO_EXTS.includes(ext)) {
-          type = 'audio'
-          audios++
-        } else if (PROJECT_EXTS.has(ext)) {
-          type = 'project'
-          projects++
-        } else {
-          others++
+              if (VIDEO_EXTS.includes(ext)) {
+                type = 'video'
+                videos++
+              } else if (IMG_EXTS.map(x => x.toLowerCase()).includes(ext)) {
+                type = 'image'
+                images++
+              } else if (AUDIO_EXTS.includes(ext)) {
+                type = 'audio'
+                audios++
+              } else if (PROJECT_EXTS.has(ext)) {
+                type = 'project'
+                projects++
+              } else {
+                others++
+              }
+
+              totalSizeBytes += stat.size
+              files.push({
+                name: entry.name,
+                path: fullPath,
+                size: stat.size,
+                sizeFormatted: formatBytes(stat.size),
+                mtime: stat.mtimeMs,
+                mtimeFormatted: new Date(stat.mtimeMs).toLocaleString(),
+                type,
+                extension: ext
+              })
+            } catch {}
+          }
         }
-
-        totalSizeBytes += stat.size
-        files.push({
-          name: entry.name,
-          path: fullPath,
-          size: stat.size,
-          sizeFormatted: formatBytes(stat.size),
-          mtime: stat.mtimeMs,
-          mtimeFormatted: new Date(stat.mtimeMs).toLocaleString(),
-          type,
-          extension: ext
-        })
       } catch {}
     }
+
+    scanDirectory(targetFolder, 0)
 
     files.sort((a, b) => b.mtime - a.mtime)
 

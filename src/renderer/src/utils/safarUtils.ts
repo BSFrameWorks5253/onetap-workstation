@@ -71,65 +71,66 @@ export const KNOWN_PREFIX_NAMES: Record<string, string> = {
   'OZ': 'Olda Zafaf'
 }
 
-export const PREDEFINED_PREFIX_COLORS: Record<string, { accent: string; soft: string }> = {
-  'Q':       { accent: '#3b82f6', soft: 'rgba(59, 130, 246, 0.15)' },
-  'QMZ':     { accent: '#2563eb', soft: 'rgba(37, 99, 235, 0.15)' },
-  'M':       { accent: '#10b981', soft: 'rgba(16, 185, 129, 0.15)' },
-  'Z':       { accent: '#8b5cf6', soft: 'rgba(139, 92, 246, 0.15)' },
-  'MZ':      { accent: '#ec4899', soft: 'rgba(236, 72, 153, 0.15)' },
-  'N':       { accent: '#6366f1', soft: 'rgba(99, 102, 241, 0.15)' },
-  'NAMAZ':   { accent: '#4f46e5', soft: 'rgba(79, 70, 229, 0.15)' },
-  'AQ':      { accent: '#eab308', soft: 'rgba(234, 179, 8, 0.15)' },
-  'BM':      { accent: '#059669', soft: 'rgba(5, 150, 105, 0.15)' },
-  'BQ':      { accent: '#14b8a6', soft: 'rgba(20, 184, 166, 0.15)' },
-  'BZ':      { accent: '#a855f7', soft: 'rgba(168, 85, 247, 0.15)' },
-  'H':       { accent: '#f43f5e', soft: 'rgba(244, 63, 94, 0.15)' },
-  'ID':      { accent: '#f59e0b', soft: 'rgba(245, 158, 11, 0.15)' },
-  'IF':      { accent: '#0284c7', soft: 'rgba(2, 132, 199, 0.15)' },
-  'IFS':     { accent: '#0369a1', soft: 'rgba(3, 105, 161, 0.15)' },
-  'IST':     { accent: '#d97706', soft: 'rgba(217, 119, 6, 0.15)' },
-  'KGS':     { accent: '#84cc16', soft: 'rgba(132, 204, 22, 0.15)' },
-  'MF':      { accent: '#d946ef', soft: 'rgba(217, 70, 239, 0.15)' },
-  'MISBAH':  { accent: '#e11d48', soft: 'rgba(225, 29, 72, 0.15)' },
-  'MKB':     { accent: '#0891b2', soft: 'rgba(8, 145, 178, 0.15)' },
-  'MO':      { accent: '#16a34a', soft: 'rgba(22, 163, 74, 0.15)' },
-  'MQ':      { accent: '#9333ea', soft: 'rgba(147, 51, 234, 0.15)' },
-  'MUL':     { accent: '#c026d3', soft: 'rgba(192, 38, 211, 0.15)' },
-  'MYN':     { accent: '#7c3aed', soft: 'rgba(124, 58, 237, 0.15)' },
-  'ONLINE':  { accent: '#0284c7', soft: 'rgba(2, 132, 199, 0.15)' },
-  'SH':      { accent: '#3b82f6', soft: 'rgba(59, 130, 246, 0.15)' },
-  'SQ':      { accent: '#06b6d4', soft: 'rgba(6, 182, 212, 0.15)' },
-  'TJR':     { accent: '#ea580c', soft: 'rgba(234, 88, 12, 0.15)' },
-  'TNQ':     { accent: '#0ea5e9', soft: 'rgba(14, 165, 233, 0.15)' },
-  'TQ':      { accent: '#0ea5e9', soft: 'rgba(14, 165, 233, 0.15)' },
-  'TQN':     { accent: '#38bdf8', soft: 'rgba(56, 189, 248, 0.15)' },
-  'WAAZ':    { accent: '#06b6d4', soft: 'rgba(6, 182, 212, 0.15)' },
-  'WD':      { accent: '#64748b', soft: 'rgba(100, 116, 139, 0.15)' },
-  'ZO':      { accent: '#9333ea', soft: 'rgba(147, 51, 234, 0.15)' },
-  'OZ':      { accent: '#9333ea', soft: 'rgba(147, 51, 234, 0.15)' },
-  'FMB':     { accent: '#10b981', soft: 'rgba(16, 185, 129, 0.15)' },
-  'OTHER':   { accent: '#64748b', soft: 'rgba(100, 116, 139, 0.15)' }
+export const PREDEFINED_PREFIX_COLORS: Record<string, { accent: string; text?: string; soft: string }> = {
+  'Q':       { accent: '#2563eb', text: '#1d4ed8', soft: 'rgba(37, 99, 235, 0.12)' },
+  'QMZ':     { accent: '#1d4ed8', text: '#1e40af', soft: 'rgba(29, 78, 216, 0.12)' },
+  'M':       { accent: '#059669', text: '#047857', soft: 'rgba(5, 150, 105, 0.12)' },
+  'Z':       { accent: '#7c3aed', text: '#6d28d9', soft: 'rgba(124, 58, 237, 0.12)' },
+  'MZ':      { accent: '#db2777', text: '#be185d', soft: 'rgba(219, 39, 119, 0.12)' },
+  'N':       { accent: '#4f46e5', text: '#4338ca', soft: 'rgba(79, 70, 229, 0.12)' },
+  'NAMAZ':   { accent: '#4338ca', text: '#3730a3', soft: 'rgba(67, 56, 202, 0.12)' },
+  'AQ':      { accent: '#d97706', text: '#b45309', soft: 'rgba(217, 119, 6, 0.12)' },
+  'BM':      { accent: '#059669', text: '#047857', soft: 'rgba(5, 150, 105, 0.12)' },
+  'BQ':      { accent: '#0d9488', text: '#0f766e', soft: 'rgba(13, 148, 136, 0.12)' },
+  'BZ':      { accent: '#9333ea', text: '#7e22ce', soft: 'rgba(147, 51, 234, 0.12)' },
+  'H':       { accent: '#e11d48', text: '#be123c', soft: 'rgba(225, 29, 72, 0.12)' },
+  'ID':      { accent: '#d97706', text: '#b45309', soft: 'rgba(217, 119, 6, 0.12)' },
+  'IF':      { accent: '#0284c7', text: '#0369a1', soft: 'rgba(2, 132, 199, 0.12)' },
+  'IFS':     { accent: '#0369a1', text: '#075985', soft: 'rgba(3, 105, 161, 0.12)' },
+  'IST':     { accent: '#b45309', text: '#92400e', soft: 'rgba(180, 83, 9, 0.12)' },
+  'KGS':     { accent: '#65a30d', text: '#4d7c0f', soft: 'rgba(101, 163, 13, 0.12)' },
+  'MF':      { accent: '#c026d3', text: '#a21caf', soft: 'rgba(192, 38, 211, 0.12)' },
+  'MISBAH':  { accent: '#be123c', text: '#9f1239', soft: 'rgba(190, 18, 60, 0.12)' },
+  'MKB':     { accent: '#0891b2', text: '#0e7490', soft: 'rgba(8, 145, 178, 0.12)' },
+  'MO':      { accent: '#16a34a', text: '#15803d', soft: 'rgba(22, 163, 74, 0.12)' },
+  'MQ':      { accent: '#7e22ce', text: '#6b21a8', soft: 'rgba(126, 34, 206, 0.12)' },
+  'MUL':     { accent: '#a21caf', text: '#86198f', soft: 'rgba(162, 28, 175, 0.12)' },
+  'MYN':     { accent: '#6d28d9', text: '#5b21b6', soft: 'rgba(109, 40, 217, 0.12)' },
+  'ONLINE':  { accent: '#0284c7', text: '#0369a1', soft: 'rgba(2, 132, 199, 0.12)' },
+  'SH':      { accent: '#2563eb', text: '#1d4ed8', soft: 'rgba(37, 99, 235, 0.12)' },
+  'SQ':      { accent: '#0891b2', text: '#0e7490', soft: 'rgba(8, 145, 178, 0.12)' },
+  'TJR':     { accent: '#ea580c', text: '#c2410c', soft: 'rgba(234, 88, 12, 0.12)' },
+  'TNQ':     { accent: '#0284c7', text: '#0369a1', soft: 'rgba(2, 132, 199, 0.12)' },
+  'TQ':      { accent: '#0284c7', text: '#0369a1', soft: 'rgba(2, 132, 199, 0.12)' },
+  'TQN':     { accent: '#0284c7', text: '#0369a1', soft: 'rgba(2, 132, 199, 0.12)' },
+  'WAAZ':    { accent: '#0891b2', text: '#0e7490', soft: 'rgba(8, 145, 178, 0.12)' },
+  'WD':      { accent: '#475569', text: '#334155', soft: 'rgba(71, 85, 105, 0.12)' },
+  'ZO':      { accent: '#7e22ce', text: '#6b21a8', soft: 'rgba(126, 34, 206, 0.12)' },
+  'OZ':      { accent: '#7e22ce', text: '#6b21a8', soft: 'rgba(126, 34, 206, 0.12)' },
+  'FMB':     { accent: '#059669', text: '#047857', soft: 'rgba(5, 150, 105, 0.12)' },
+  'OTHER':   { accent: '#475569', text: '#334155', soft: 'rgba(71, 85, 105, 0.12)' }
 }
 
 /**
  * Returns consistent accent and soft glow colors for any prefix (built-in or dynamically discovered).
  */
-export function getPrefixColorTheme(prefix: string): { accent: string; soft: string; accentSoft: string } {
+export function getPrefixColorTheme(prefix: string): { accent: string; text: string; soft: string; accentSoft: string } {
   const upper = (prefix || 'OTHER').toUpperCase().trim()
   if (PREDEFINED_PREFIX_COLORS[upper]) {
     const p = PREDEFINED_PREFIX_COLORS[upper]
-    return { accent: p.accent, soft: p.soft, accentSoft: p.soft }
+    return { accent: p.accent, text: p.text || p.accent, soft: p.soft, accentSoft: p.soft }
   }
 
-  // Generate deterministic HSL based on prefix string hash
+  // Generate deterministic HSL with WCAG-safe accessible text contrast
   let hash = 0
   for (let i = 0; i < upper.length; i++) {
     hash = upper.charCodeAt(i) + ((hash << 5) - hash)
   }
   const hue = Math.abs(hash) % 360
-  const soft = `hsla(${hue}, 80%, 65%, 0.15)`
+  const soft = `hsla(${hue}, 80%, 45%, 0.12)`
   return {
-    accent: `hsl(${hue}, 80%, 65%)`,
+    accent: `hsl(${hue}, 85%, 40%)`,
+    text: `hsl(${hue}, 90%, 32%)`,
     soft,
     accentSoft: soft
   }
