@@ -30,8 +30,7 @@ import {
   Share2,
   Smartphone,
   Download,
-  MessageCircle,
-  ShieldCheck
+  MessageCircle
 } from 'lucide-react'
 import OngoingSafarKanban, { type SafarTaskItem, isJunkSafarName } from './components/OngoingSafarKanban'
 import PhotoTracker from './components/PhotoTracker'
@@ -2123,9 +2122,6 @@ export default function App(): JSX.Element {
           </button>
           <button type="button" aria-current={view === 'pipeline' ? 'page' : undefined} className={`nav-link ${view === 'pipeline' ? 'active' : ''}`} onClick={() => navigateTo('pipeline')}>
             <Film aria-hidden="true" size={17}/> Media pipeline
-          </button>
-          <button type="button" aria-current={(view as string) === 'briefing' ? 'page' : undefined} className={`nav-link ${(view as string) === 'briefing' ? 'active' : ''}`} onClick={() => navigateTo('briefing')}>
-            <ShieldCheck aria-hidden="true" size={17}/> Status Briefing
           </button>
 
           <div className="side-divider" />
