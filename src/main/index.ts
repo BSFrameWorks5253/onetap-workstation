@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell, protocol, session, Tray, Menu, globalShortcut, Notification, dialog } from 'electron'
+import { app, BrowserWindow, shell, protocol, session, Tray, Menu, globalShortcut, Notification, dialog, screen } from 'electron'
 import './core/preflightGuards'
 import path, { join } from 'path'
 import { is } from '@electron-toolkit/utils'
@@ -584,10 +584,72 @@ function startAmeLogMonitor(win: BrowserWindow | null): void {
 let isSplashActive = false
 let activeLoaderConfig: ChildAppLoaderConfig | null = null
 
+const WINDOW_GEOMETRY_FILE = join(app.getPath('userData'), 'window-geometry.json')
+
+interface WindowGeometry {
+  x?: number
+  y?: number
+  width: number
+  height: number
+  isMaximized?: boolean
+}
+
+function loadWindowGeometry(): WindowGeometry {
+  try {
+    if (fs.existsSync(WINDOW_GEOMETRY_FILE)) {
+      const data = JSON.parse(fs.readFileSync(WINDOW_GEOMETRY_FILE, 'utf-8'))
+      if (data && typeof data.width === 'number' && typeof data.height === 'number') {
+        if (typeof data.x === 'number' && typeof data.y === 'number') {
+          const displays = screen.getAllDisplays()
+          const isVisible = displays.some((d) => {
+            const b = d.bounds
+            return (
+              data.x >= b.x - 50 &&
+              data.x < b.x + b.width &&
+              data.y >= b.y - 50 &&
+              data.y < b.y + b.height
+            )
+          })
+          if (isVisible) return data
+        }
+        return { width: Math.max(960, data.width), height: Math.max(620, data.height), isMaximized: !!data.isMaximized }
+      }
+    }
+  } catch {}
+  return { width: 1400, height: 900, isMaximized: true }
+}
+
+let geometrySaveTimeout: NodeJS.Timeout | null = null
+function saveWindowGeometry(win: BrowserWindow | null): void {
+  if (!win || win.isDestroyed()) return
+  if (geometrySaveTimeout) clearTimeout(geometrySaveTimeout)
+  geometrySaveTimeout = setTimeout(() => {
+    try {
+      if (!win || win.isDestroyed()) return
+      const isMax = win.isMaximized()
+      let geo: WindowGeometry
+      if (isMax) {
+        let existing: any = {}
+        try {
+          if (fs.existsSync(WINDOW_GEOMETRY_FILE)) {
+            existing = JSON.parse(fs.readFileSync(WINDOW_GEOMETRY_FILE, 'utf-8'))
+          }
+        } catch {}
+        geo = { ...existing, isMaximized: true }
+      } else {
+        const bounds = win.getBounds()
+        geo = { ...bounds, isMaximized: false }
+      }
+      fs.writeFileSync(WINDOW_GEOMETRY_FILE, JSON.stringify(geo), 'utf-8')
+    } catch {}
+  }, 250)
+}
+
 function revealMainWindow(): void {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.show()
-    if (!mainWindow.isMaximized()) {
+    const geo = loadWindowGeometry()
+    if (geo.isMaximized && !mainWindow.isMaximized()) {
       mainWindow.maximize()
     }
     mainWindow.focus()
@@ -596,12 +658,17 @@ function revealMainWindow(): void {
 }
 
 function createWindow(): void {
+  const geo = loadWindowGeometry()
   mainWindow = new BrowserWindow({
-    width: 1400,
-    height: 900,
+    x: geo.x,
+    y: geo.y,
+    width: geo.width,
+    height: geo.height,
     minWidth: 960,
     minHeight: 620,
     show: false,
+    frame: false,
+    titleBarStyle: 'hidden',
     autoHideMenuBar: true,
     title: 'One Tap',
     icon: getAppIconPath(),
@@ -613,6 +680,10 @@ function createWindow(): void {
       webviewTag: true
     }
   })
+
+  mainWindow.on('resize', () => saveWindowGeometry(mainWindow))
+  mainWindow.on('move', () => saveWindowGeometry(mainWindow))
+  mainWindow.on('close', () => saveWindowGeometry(mainWindow))
 
   // Explicitly assign AppUserModelID directly to the native window handle for seamless taskbar grouping
   if (process.platform === 'win32') {

@@ -1,7 +1,20 @@
 :root {
-  --glass-surface: color-mix(in srgb, var(--surface) 72%, transparent);
-  --glass-border: color-mix(in srgb, var(--border) 76%, rgba(255, 255, 255, .72));
+  /* ── Physical Glassmorphism Master Specification Tokens ── */
+  --glass-base: rgba(16, 16, 16, 0.45);
+  --glass-blur-parent: blur(20px) saturate(180%);
+  --glass-border: 0.5px solid rgba(255, 255, 255, 0.08);
+  --glass-sheen: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0) 50%, rgba(255, 255, 255, 0.02) 100%);
+  --glass-surface: rgba(255, 255, 255, 0.78);
+  --glass-surface-flat: rgba(255, 255, 255, 0.85);
   --glass-shadow: 0 16px 44px rgba(91, 77, 51, .075), 0 2px 7px rgba(91, 77, 51, .035), inset 0 1px 0 rgba(255, 255, 255, .76);
+
+  /* ── Motion & Physics Engine Tokens ── */
+  --ease-panel: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-snap:  cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-hover: cubic-bezier(0.25, 1, 0.5, 1);
+
+  /* ── Strict Spacing Bounds ── */
+  --workspace-margin-pwa: 24px;
 }
 
 body {
@@ -61,14 +74,41 @@ body {
 .page-heading h1 { font-size: clamp(27px, 3vw, 34px); letter-spacing: -1.35px; }
 .eyebrow { letter-spacing: 1.5px; }
 
+.app-shell {
+  backdrop-filter: var(--glass-blur-parent);
+  -webkit-backdrop-filter: var(--glass-blur-parent);
+}
+
+.sidebar,
+.sidebar-overlay,
+.mobile-drawer,
+.modal-overlay {
+  will-change: transform, backdrop-filter;
+}
+
 .summary-card,
 .panel,
 .editor-card {
-  background: var(--glass-surface);
-  border: 1px solid var(--glass-border);
+  background: var(--glass-surface-flat);
+  border: var(--glass-border);
   box-shadow: var(--glass-shadow);
-  backdrop-filter: blur(24px) saturate(155%);
-  -webkit-backdrop-filter: blur(24px) saturate(155%);
+  /* Web Safety: Defend 60 FPS by eliminating stacked nested backdrop-filters */
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  padding: 14px 18px;
+  position: relative;
+}
+
+.summary-card::before,
+.panel::before,
+.editor-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-image: var(--glass-sheen);
+  pointer-events: none;
+  z-index: 0;
 }
 
 .summary-card {
@@ -2802,5 +2842,185 @@ button:active,
   color: #d97706;
   border-color: rgba(217, 119, 6, 0.3);
 }
+
+/* ════════════════════════════════════════════════════════════════
+   PHYSICAL GLASSMORPHISM PWA COMPANION TRACKER MASTER SYSTEM
+   - Web Safety: Single parental blur, flat RGBA tints on nested cards
+   - Performance Directives: will-change on transitioning nodes
+   - Spacing: Strict 24px outer boundary, 12-20px inner density
+   - 1.25px monoline stroke geometry & radial micro-reflections
+   - 600ms diagonal glint sheen on tracking status updates
+════════════════════════════════════════════════════════════════ */
+
+/* Strict Outer Workspace Boundary: 24px on PWA */
+.content-wrap {
+  padding: 24px !important;
+  max-width: 1400px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* Hyper-dense component inner layouts: 12px to 20px */
+.summary-card,
+.panel,
+.editor-card,
+.kanban-card,
+.activity-row {
+  padding: 13px 18px;
+}
+
+/* Flat RGBA Tint Fallback on Nested Nodes (Defending 60 FPS) */
+.kanban-card,
+.date-cell,
+.activity-row {
+  background: rgba(255, 255, 255, 0.72);
+  border: 0.5px solid rgba(255, 255, 255, 0.22);
+}
+
+/* Dark Mode Tint Support */
+@media (prefers-color-scheme: dark) {
+  body.dark-mode,
+  .dark {
+    --glass-base: rgba(16, 16, 16, 0.45);
+    --glass-surface-flat: rgba(22, 22, 22, 0.65);
+    background: #0d0f14;
+    color: #f1f5f9;
+  }
+}
+
+/* UI Interface Icons: 1px or 1.25px monoline stroke geometry */
+.nav-link svg,
+.icon-button svg,
+.button-primary svg,
+.button-secondary svg,
+.topbar svg,
+.table-wrap svg,
+.action-btn svg,
+svg.lucide {
+  stroke-width: 1.25px !important;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 0.22s var(--ease-hover), filter 0.22s var(--ease-hover);
+}
+
+/* Micro-Reflections: Hovering an icon animates a localized radial reflection mask beneath the asset */
+.icon-button,
+.nav-link,
+.notification-button,
+.safar-link,
+.day-batch-pill {
+  position: relative;
+}
+
+.icon-button::after,
+.nav-link::after,
+.notification-button::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 65%);
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 0.22s var(--ease-hover), transform 0.22s var(--ease-hover);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.icon-button:hover::after,
+.nav-link:hover::after,
+.notification-button:hover::after {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Main App PWA Icon: Physical frosted glass simulation structure */
+.brand-mark {
+  border-radius: 12px;
+  background: rgba(16, 16, 16, 0.45) !important;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 0.5px solid rgba(255, 255, 255, 0.15) !important;
+  box-shadow:
+    inset 0 1.5px 0 0 rgba(255, 255, 255, 0.85),
+    0 8px 16px -4px rgba(0, 0, 0, 0.35) !important;
+  filter: drop-shadow(0 8px 12px rgba(184, 134, 11, 0.25)) !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.brand-mark::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0) 50%, rgba(255, 255, 255, 0.04) 100%);
+  pointer-events: none;
+}
+
+/* Tracking Updates: Diagonal 600ms Glint Sheen Animation */
+@keyframes glintSheenSweep {
+  0% {
+    clip-path: polygon(-50% -50%, -20% -50%, -50% -20%, -80% -20%);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 0.9;
+  }
+  100% {
+    clip-path: polygon(150% 150%, 180% 150%, 150% 180%, 120% 180%);
+    opacity: 0;
+  }
+}
+
+.glint-sheen-active,
+.task-updated-glint {
+  position: relative;
+  overflow: hidden !important;
+}
+
+.glint-sheen-active::after,
+.task-updated-glint::after {
+  content: '';
+  position: absolute;
+  inset: -15%;
+  background: linear-gradient(
+    135deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.08) 30%,
+    rgba(255, 255, 255, 0.45) 50%,
+    rgba(255, 255, 255, 0.1) 70%,
+    transparent 100%
+  );
+  pointer-events: none;
+  z-index: 10;
+  animation: glintSheenSweep 600ms var(--ease-hover) forwards;
+}
+
+/* Simultaneous Physical Position + Blur(0px -> 20px) Arrival */
+@keyframes pwaPanelArrival {
+  0% {
+    opacity: 0;
+    transform: translateY(14px);
+    backdrop-filter: blur(0px);
+    -webkit-backdrop-filter: blur(0px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+}
+
+.panel-arrival-enter {
+  animation: pwaPanelArrival 0.38s var(--ease-panel) both;
+  will-change: transform, opacity, backdrop-filter;
+}
+
 
 

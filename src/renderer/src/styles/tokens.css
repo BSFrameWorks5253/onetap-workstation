@@ -41,8 +41,24 @@
   --btn-h-lg: 38px;
   --btn-h-xl: 42px;
 
-  /* -- Sidebar ---------------------------------------------- */
-  --sidebar-width: 232px;
+  /* -- Sidebar & 3-Column Layout ----------------------------- */
+  --sidebar-width:   240px;
+  --inspector-width: 280px;
+  --workspace-margin-desktop: 32px;
+  --workspace-margin-pwa:     24px;
+
+  /* -- Physical Glassmorphism Core Visual Tokens -------------- */
+  --glass-base:         rgba(16, 16, 16, 0.45);
+  --glass-blur:         blur(20px) saturate(180%);
+  --glass-blur-stage:   blur(12px) saturate(160%);
+  --glass-blur-sidebar: blur(24px) saturate(180%);
+  --glass-border-specular: 0.5px solid rgba(255, 255, 255, 0.08);
+  --glass-sheen:        linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0) 50%, rgba(255, 255, 255, 0.02) 100%);
+
+  /* -- Motion & Physics Engine Tokens ------------------------- */
+  --ease-panel: cubic-bezier(0.16, 1, 0.3, 1);  /* Entry Panels & Slides: Cinematic easing, slow decay */
+  --ease-snap:  cubic-bezier(0.34, 1.56, 0.64, 1);/* Data Updates & Tracker Nodes: Fluid, organic snap */
+  --ease-hover: cubic-bezier(0.25, 1, 0.5, 1);  /* Hover Transitions & Glints: Soft, responsive glide */
 
   /* -- Z-index layers --------------------------------------  */
   --z-splash:     1000;

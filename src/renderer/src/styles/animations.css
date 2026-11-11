@@ -323,3 +323,76 @@ button,
   transform: translateZ(0);
 }
 
+/* ── Physical Glassmorphism Entrance: Position + Blur(0px -> 20px) ── */
+@keyframes glassPanelArrival {
+  0% {
+    opacity: 0;
+    transform: translateY(16px) scale(0.985);
+    backdrop-filter: blur(0px) saturate(100%);
+    -webkit-backdrop-filter: blur(0px) saturate(100%);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+  }
+}
+
+.anim-glass-panel,
+.glass-panel-enter {
+  animation: glassPanelArrival 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: transform, opacity, backdrop-filter;
+}
+
+/* ── Tracking Updates Diagonal 600ms Glint Sheen ── */
+@keyframes glintSheenSweep {
+  0% {
+    clip-path: polygon(-50% -50%, -20% -50%, -50% -20%, -80% -20%);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 0.9;
+  }
+  100% {
+    clip-path: polygon(150% 150%, 180% 150%, 150% 180%, 120% 180%);
+    opacity: 0;
+  }
+}
+
+.glint-sheen-active {
+  position: relative;
+  overflow: hidden !important;
+}
+
+.glint-sheen-active::after {
+  content: '';
+  position: absolute;
+  inset: -10%;
+  background: linear-gradient(
+    135deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.05) 30%,
+    rgba(255, 255, 255, 0.42) 50%,
+    rgba(255, 255, 255, 0.08) 70%,
+    transparent 100%
+  );
+  pointer-events: none;
+  z-index: 10;
+  animation: glintSheenSweep 600ms cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+/* ── Organic Physics Transition Classes ── */
+.ease-panel {
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+.ease-snap {
+  transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+.ease-hover {
+  transition-timing-function: cubic-bezier(0.25, 1, 0.5, 1) !important;
+}
+

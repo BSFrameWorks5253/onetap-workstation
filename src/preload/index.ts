@@ -216,6 +216,10 @@ contextBridge.exposeInMainWorld('api', {
 
   // System
   system: {
+    minimizeWindow:    () => ipcRenderer.invoke('system:minimizeWindow'),
+    maximizeWindow:    () => ipcRenderer.invoke('system:maximizeWindow'),
+    closeWindow:       () => ipcRenderer.invoke('system:closeWindow'),
+    isWindowMaximized: () => ipcRenderer.invoke('system:isWindowMaximized'),
     notify:        (opts: { title: string; body: string }) => ipcRenderer.invoke('system:notify', opts),
     getStats:      () => ipcRenderer.invoke('system:getStats'),
     getEncoder:    () => ipcRenderer.invoke('system:getEncoder'),

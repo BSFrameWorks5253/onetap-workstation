@@ -6,30 +6,31 @@
 
 /* -- Base Sidebar Shell -------------------------------- */
 .sidebar {
-  width: var(--sidebar-width, 232px);
-  min-width: var(--sidebar-width, 232px);
+  width: var(--sidebar-width, 240px);
+  min-width: var(--sidebar-width, 240px);
   height: calc(100% - 16px);
   margin: 8px 6px 8px 8px;
   flex-shrink: 0;
   background: var(--sidebar-bg);
-  backdrop-filter: var(--glass-blur, blur(28px));
-  -webkit-backdrop-filter: var(--glass-blur, blur(28px));
+  backdrop-filter: var(--glass-blur-sidebar, blur(24px)) saturate(180%);
+  -webkit-backdrop-filter: var(--glass-blur-sidebar, blur(24px)) saturate(180%);
   border-radius: var(--radius-card, 16px);
   border: 1px solid var(--sidebar-border);
   display: flex;
   flex-direction: column;
   gap: 0;
-  padding: 10px 8px 8px;
+  padding: 24px 10px 12px;
   overflow: hidden;
   z-index: 100;
   box-shadow:
     var(--shadow-md),
     inset 0 1px 0 var(--specular-highlight);
   transition:
-    width 0.28s cubic-bezier(0.4, 0, 0.2, 1),
-    min-width 0.28s cubic-bezier(0.4, 0, 0.2, 1),
-    margin 0.28s ease,
-    border-radius 0.28s ease;
+    width 0.32s var(--ease-panel, cubic-bezier(0.16, 1, 0.3, 1)),
+    min-width 0.32s var(--ease-panel, cubic-bezier(0.16, 1, 0.3, 1)),
+    margin 0.32s var(--ease-panel, cubic-bezier(0.16, 1, 0.3, 1)),
+    padding 0.32s var(--ease-panel, cubic-bezier(0.16, 1, 0.3, 1)),
+    border-radius 0.32s var(--ease-panel, cubic-bezier(0.16, 1, 0.3, 1));
 }
 
 /* -- Collapsed State ----------------------------------- */

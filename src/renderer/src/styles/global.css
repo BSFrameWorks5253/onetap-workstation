@@ -203,7 +203,7 @@ input, select, option, textarea, button {
   pointer-events: none;
 }
 
-/* Floating Main Workspace Container (With Subtle Watermark Pattern behind every page) */
+/* Floating Main Workspace Container (With Performance-Defended 12px Blur) */
 .app-main-container {
   flex: 1;
   display: flex;
@@ -216,6 +216,8 @@ input, select, option, textarea, button {
   box-shadow: 
     var(--shadow-md),
     inset 0 1px 0 0 var(--specular-highlight);
+  backdrop-filter: var(--glass-blur-stage, blur(12px)) saturate(160%);
+  -webkit-backdrop-filter: var(--glass-blur-stage, blur(12px)) saturate(160%);
   position: relative;
   z-index: 1;
 }
@@ -973,4 +975,114 @@ h1, h2, h3 {
     gap: 6px !important;
   }
 }
+
+/* ════════════════════════════════════════════════════════════════
+   PHYSICAL GLASSMORPHISM SYSTEM MASTER SPECIFICATION
+   - Base Material: rgba(16, 16, 16, 0.45)
+   - Frosted Structure: blur(20px) saturate(180%)
+   - Specular Border: 0.5px solid rgba(255, 255, 255, 0.08)
+   - Light Specular Sheen (Diagonal Gradient Mask)
+   - Strict 32px Outer Boundary / 12-20px Internal Density
+   - 1.25px Monoline Stroke & Micro-Reflection Radial Masks
+════════════════════════════════════════════════════════════════ */
+
+/* Outer Workspace Boundary: 32px on Desktop */
+.page-scroll,
+.workspace-stage {
+  padding: 32px;
+}
+
+/* Hyper-dense inner component layouts: 12px to 20px padding */
+.card,
+.stat-card,
+.trends-card,
+.details-card,
+.summary-card,
+.panel,
+.glass-panel {
+  padding: 14px 18px;
+}
+
+/* Light Specular Sheen Diagonal Mask on Cards & Panels */
+.card::before,
+.panel::before,
+.stat-card::before,
+.details-card::before,
+.glass-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-image: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.12) 0%,
+    rgba(255, 255, 255, 0) 50%,
+    rgba(255, 255, 255, 0.02) 100%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* UI Interface Icons: Strict 1px / 1.25px stroke geometry, monoline, zero geometric fills */
+.nav-item-icon svg,
+.toolbar svg,
+.btn svg,
+.button svg,
+.action-btn svg,
+.table-wrap svg {
+  stroke-width: 1.25px !important;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 0.22s cubic-bezier(0.25, 1, 0.5, 1),
+              filter 0.22s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+/* Micro-Reflections: Hovering an icon animates a localized radial reflection mask beneath the asset */
+.nav-item-icon,
+.toolbar-btn-pill,
+.icon-btn,
+.icon-reflection-container {
+  position: relative;
+}
+
+.nav-item-icon::after,
+.toolbar-btn-pill::after,
+.icon-btn::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.06) 0%, transparent 65%);
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 0.22s cubic-bezier(0.25, 1, 0.5, 1),
+              transform 0.22s cubic-bezier(0.25, 1, 0.5, 1);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.nav-item:hover .nav-item-icon::after,
+.toolbar-btn-pill:hover::after,
+.icon-btn:hover::after {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Main App Desktop/PWA Icon: Frosted glass structure, 1.5px white specular reflection gradient rim, refractive colored drop shadow glow */
+.brand-mark,
+.app-brand-icon,
+.one-tap-glass-icon {
+  position: relative;
+  border-radius: 12px;
+  background: rgba(16, 16, 16, 0.45);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 0.5px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    inset 0 1.5px 0 0 rgba(255, 255, 255, 0.85),
+    0 8px 16px -4px rgba(0, 0, 0, 0.35);
+  filter: drop-shadow(0 8px 12px color-mix(in srgb, var(--theme-accent, #6366F1) 15%, transparent));
+}
+
 

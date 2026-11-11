@@ -33,9 +33,27 @@ export default function Toolbar({ activePage, onOpenCmdPalette }: ToolbarProps):
     return () => clearInterval(id)
   }, [])
 
+  const handleMinimize = () => {
+    try {
+      (window as any).api?.system?.minimizeWindow?.()
+    } catch {}
+  }
+
+  const handleMaximize = () => {
+    try {
+      (window as any).api?.system?.maximizeWindow?.()
+    } catch {}
+  }
+
+  const handleClose = () => {
+    try {
+      (window as any).api?.system?.closeWindow?.()
+    } catch {}
+  }
+
   return (
     <header className="toolbar drag-region">
-      <div className="toolbar-inner no-drag">
+      <div className="toolbar-inner">
         {/* Breadcrumb */}
         <div className="toolbar-breadcrumb">
           <span 
@@ -125,6 +143,37 @@ export default function Toolbar({ activePage, onOpenCmdPalette }: ToolbarProps):
             <span>Live</span>
           </div>
           <span className="toolbar-clock">{clock}</span>
+
+          {/* Frameless Native Window Traffic Lights */}
+          <div className="window-traffic-lights no-drag" aria-label="Window controls">
+            <button
+              type="button"
+              className="traffic-light traffic-light-minimize"
+              onClick={handleMinimize}
+              title="Minimize window"
+              aria-label="Minimize"
+            >
+              <span className="traffic-glyph" aria-hidden="true">&minus;</span>
+            </button>
+            <button
+              type="button"
+              className="traffic-light traffic-light-maximize"
+              onClick={handleMaximize}
+              title="Maximize / Restore window"
+              aria-label="Maximize"
+            >
+              <span className="traffic-glyph" aria-hidden="true">&#x25A2;</span>
+            </button>
+            <button
+              type="button"
+              className="traffic-light traffic-light-close"
+              onClick={handleClose}
+              title="Close window to Tray"
+              aria-label="Close"
+            >
+              <span className="traffic-glyph" aria-hidden="true">&times;</span>
+            </button>
+          </div>
         </div>
       </div>
 

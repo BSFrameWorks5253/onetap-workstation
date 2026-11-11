@@ -1,5 +1,5 @@
 import path from 'path'
-import { ipcMain, app, Notification } from 'electron'
+import { ipcMain, app, Notification, BrowserWindow } from 'electron'
 import os from 'os'
 import fs from 'fs'
 import { checkFfmpeg, getVideoEncoder } from '../core/gpuDetector'
@@ -52,6 +52,59 @@ export function registerSystemIPC(): void {
       console.warn('[System] Notification failed:', err)
     }
     return false
+  })
+
+  // Frameless Window Management Controls
+  ipcMain.handle('system:minimizeWindow', (event) => {
+    try {
+      const win = BrowserWindow.fromWebContents(event.sender)
+      if (win && !win.isDestroyed()) {
+        win.minimize()
+        return true
+      }
+    } catch (err) {
+      console.warn('[System] minimizeWindow failed:', err)
+    }
+    return false
+  })
+
+  ipcMain.handle('system:maximizeWindow', (event) => {
+    try {
+      const win = BrowserWindow.fromWebContents(event.sender)
+      if (win && !win.isDestroyed()) {
+        if (win.isMaximized()) {
+          win.unmaximize()
+        } else {
+          win.maximize()
+        }
+        return win.isMaximized()
+      }
+    } catch (err) {
+      console.warn('[System] maximizeWindow failed:', err)
+    }
+    return false
+  })
+
+  ipcMain.handle('system:closeWindow', (event) => {
+    try {
+      const win = BrowserWindow.fromWebContents(event.sender)
+      if (win && !win.isDestroyed()) {
+        win.close()
+        return true
+      }
+    } catch (err) {
+      console.warn('[System] closeWindow failed:', err)
+    }
+    return false
+  })
+
+  ipcMain.handle('system:isWindowMaximized', (event) => {
+    try {
+      const win = BrowserWindow.fromWebContents(event.sender)
+      return win && !win.isDestroyed() ? win.isMaximized() : false
+    } catch {
+      return false
+    }
   })
 
   // Auto-launch startup settings
