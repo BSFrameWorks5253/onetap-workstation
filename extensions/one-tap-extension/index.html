@@ -1128,6 +1128,60 @@
             line-height: 1;
         }
         .gpi-rm-btn:hover { background: rgba(239, 68, 68, 0.28); }
+        .gpi-autocomplete-dropdown {
+            position: fixed;
+            background: var(--surface-card);
+            border: 1px solid var(--border-highlight);
+            border-radius: 6px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+            max-height: 190px;
+            overflow-y: auto;
+            z-index: 999999;
+            display: none;
+            font-family: inherit;
+        }
+        .gpi-autocomplete-dropdown::-webkit-scrollbar {
+            width: 4px;
+        }
+        .gpi-autocomplete-dropdown::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+        .gpi-autocomplete-item {
+            padding: 5px 8px;
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--text-primary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            transition: background 0.1s ease;
+        }
+        .gpi-autocomplete-item:last-child {
+            border-bottom: none;
+        }
+        .gpi-autocomplete-item:hover,
+        .gpi-autocomplete-item.active {
+            background: var(--surface-hover);
+            color: var(--accent);
+        }
+        .gpi-autocomplete-item .match-highlight {
+            color: var(--accent);
+            font-weight: 800;
+            text-decoration: underline;
+        }
+        .gpi-autocomplete-item .item-tag {
+            font-size: 8px;
+            font-weight: 700;
+            padding: 1px 4px;
+            border-radius: 3px;
+            background: rgba(226, 137, 18, 0.15);
+            color: var(--accent);
+            text-transform: uppercase;
+        }
         .gpi-add-btn {
             width: 100%;
             height: 25px;
@@ -1613,6 +1667,10 @@
             setInterval(checkAppConnection, 8000);
             setTimeout(fetchTimelineStats, 600);
             setInterval(fetchTimelineStats, 4000);
+            setTimeout(function() {
+                var qInp = document.getElementById('gpiQuickClipInp');
+                if (qInp && typeof gpiAttachAutocomplete === 'function') gpiAttachAutocomplete(qInp);
+            }, 250);
         });
 
         // Responsive dock engine
@@ -1756,8 +1814,293 @@
         var gpiState = {
             gpSources: [],   // [{gpNum, clipName, hasClip, dur}]
             nikaahCount: 0,
-            assignmentCount: 0
+            assignmentCount: 0,
+            allKnownClips: []
         };
+
+        function gpiStripExt(str) {
+            if (!str) return '';
+            return String(str).replace(/\.[a-zA-Z0-9]{2,5}$/i, '').replace(/^\s+|\s+$/g, '');
+        }
+
+        function gpiEscapeHtml(str) {
+            return String(str || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        // Fetch clip names from ExtendScript for autocomplete suggestions
+        function gpiFetchClipSuggestions(callback) {
+            if (typeof cs === 'undefined' || !cs.evalScript) {
+                if (callback) callback(gpiState.allKnownClips || []);
+                return;
+            }
+            cs.evalScript('$.runScript.getSequenceClipNames()', function(clipRes) {
+                var seen = {};
+                var cleanList = [];
+                function addClip(raw) {
+                    var c = gpiStripExt(raw);
+                    if (c && !seen[c.toLowerCase()]) {
+                        seen[c.toLowerCase()] = true;
+                        cleanList.push(c);
+                    }
+                }
+                if (gpiState.gpSources && gpiState.gpSources.length > 0) {
+                    gpiState.gpSources.forEach(function(g) {
+                        addClip(g.clipName);
+                        addClip('GP ' + g.gpNum);
+                    });
+                }
+                if (clipRes && clipRes.indexOf('SUCCESS|||') === 0) {
+                    var clipArr = clipRes.replace('SUCCESS|||', '').split('|||');
+                    clipArr.forEach(function(cn) {
+                        addClip(cn);
+                    });
+                }
+                gpiState.allKnownClips = cleanList;
+
+                // Sync with HTML datalist fallback
+                var datalist = document.getElementById('gpiClipSuggestions');
+                if (datalist) {
+                    datalist.innerHTML = '';
+                    cleanList.forEach(function(val) {
+                        var opt = document.createElement('option');
+                        opt.value = val;
+                        datalist.appendChild(opt);
+                    });
+                }
+                if (callback) callback(cleanList);
+            });
+        }
+
+        // Custom Floating Autocomplete Dropdown Controller
+        var gpiActiveDropdownInput = null;
+        var gpiActiveDropdownIndex = -1;
+
+        function gpiGetOrCreateDropdown() {
+            var dd = document.getElementById('gpiAutocompleteDropdown');
+            if (!dd) {
+                dd = document.createElement('div');
+                dd.id = 'gpiAutocompleteDropdown';
+                dd.className = 'gpi-autocomplete-dropdown';
+                document.body.appendChild(dd);
+            }
+            return dd;
+        }
+
+        function gpiHideAutocomplete() {
+            var dd = document.getElementById('gpiAutocompleteDropdown');
+            if (dd) {
+                dd.style.display = 'none';
+                dd.innerHTML = '';
+            }
+            gpiActiveDropdownInput = null;
+            gpiActiveDropdownIndex = -1;
+        }
+
+        function gpiPositionDropdown(input, dd) {
+            var rect = input.getBoundingClientRect();
+            var spaceBelow = window.innerHeight - rect.bottom;
+            var spaceAbove = rect.top;
+
+            dd.style.left = Math.max(4, rect.left) + 'px';
+            dd.style.width = Math.max(rect.width, 190) + 'px';
+
+            if (spaceBelow < 140 && spaceAbove > spaceBelow) {
+                dd.style.top = '';
+                dd.style.bottom = (window.innerHeight - rect.top + 3) + 'px';
+            } else {
+                dd.style.bottom = '';
+                dd.style.top = (rect.bottom + 3) + 'px';
+            }
+            dd.style.display = 'block';
+        }
+
+        function gpiFilterSuggestions(query) {
+            var q = gpiStripExt(query).toLowerCase();
+            var list = gpiState.allKnownClips || [];
+            if (!q) {
+                return list.slice(0, 20);
+            }
+            var exact = [];
+            var startsWith = [];
+            var contains = [];
+
+            for (var i = 0; i < list.length; i++) {
+                var item = list[i];
+                var itemLower = item.toLowerCase();
+                if (itemLower === q) {
+                    exact.push(item);
+                } else if (itemLower.indexOf(q) === 0) {
+                    startsWith.push(item);
+                } else if (itemLower.indexOf(q) !== -1) {
+                    contains.push(item);
+                }
+            }
+            // Items starting with query are prioritized first
+            return exact.concat(startsWith, contains).slice(0, 30);
+        }
+
+        function gpiHighlightMatch(text, query) {
+            if (!query) return gpiEscapeHtml(text);
+            var q = query.toLowerCase();
+            var idx = text.toLowerCase().indexOf(q);
+            if (idx === -1) return gpiEscapeHtml(text);
+            var before = text.substring(0, idx);
+            var match = text.substring(idx, idx + q.length);
+            var after = text.substring(idx + q.length);
+            return gpiEscapeHtml(before) + '<span class="match-highlight">' + gpiEscapeHtml(match) + '</span>' + gpiEscapeHtml(after);
+        }
+
+        function gpiShowAutocomplete(input) {
+            gpiActiveDropdownInput = input;
+            var rawVal = input.value || '';
+            if (/\.[a-zA-Z0-9]{2,5}$/i.test(rawVal)) {
+                input.value = gpiStripExt(rawVal);
+                rawVal = input.value;
+            }
+
+            function render(matches) {
+                var dd = gpiGetOrCreateDropdown();
+                if (!matches || matches.length === 0) {
+                    dd.style.display = 'none';
+                    return;
+                }
+
+                gpiActiveDropdownIndex = -1;
+                var html = '';
+                var qClean = gpiStripExt(rawVal);
+                for (var i = 0; i < matches.length; i++) {
+                    var val = matches[i];
+                    var isGp = /^GP\s*\d+/i.test(val);
+                    var tagLabel = isGp ? 'GP' : 'CLIP';
+                    html += '<div class="gpi-autocomplete-item" data-index="' + i + '" data-val="' + gpiEscapeHtml(val) + '">' +
+                        '<span class="item-name">' + gpiHighlightMatch(val, qClean) + '</span>' +
+                        '<span class="item-tag">' + tagLabel + '</span>' +
+                        '</div>';
+                }
+                dd.innerHTML = html;
+                gpiPositionDropdown(input, dd);
+
+                var itemEls = dd.querySelectorAll('.gpi-autocomplete-item');
+                itemEls.forEach(function(el) {
+                    el.addEventListener('mousedown', function(e) {
+                        e.preventDefault();
+                        var chosen = el.getAttribute('data-val');
+                        if (chosen && gpiActiveDropdownInput) {
+                            gpiActiveDropdownInput.value = gpiStripExt(chosen);
+                            var evt = new Event('input', { bubbles: true });
+                            gpiActiveDropdownInput.dispatchEvent(evt);
+                        }
+                        gpiHideAutocomplete();
+                    });
+                });
+            }
+
+            if (!gpiState.allKnownClips || gpiState.allKnownClips.length === 0) {
+                gpiFetchClipSuggestions(function() {
+                    render(gpiFilterSuggestions(rawVal));
+                });
+            } else {
+                render(gpiFilterSuggestions(rawVal));
+            }
+        }
+
+        function gpiHandleAutocompleteKey(e, input) {
+            var dd = document.getElementById('gpiAutocompleteDropdown');
+            if (!dd || dd.style.display === 'none') {
+                if (e.key === 'ArrowDown') {
+                    gpiShowAutocomplete(input);
+                    e.preventDefault();
+                }
+                return;
+            }
+
+            var items = dd.querySelectorAll('.gpi-autocomplete-item');
+            if (items.length === 0) return;
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                gpiActiveDropdownIndex++;
+                if (gpiActiveDropdownIndex >= items.length) gpiActiveDropdownIndex = 0;
+                for (var i = 0; i < items.length; i++) {
+                    items[i].classList.toggle('active', i === gpiActiveDropdownIndex);
+                }
+                if (items[gpiActiveDropdownIndex]) items[gpiActiveDropdownIndex].scrollIntoView({ block: 'nearest' });
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                gpiActiveDropdownIndex--;
+                if (gpiActiveDropdownIndex < 0) gpiActiveDropdownIndex = items.length - 1;
+                for (var j = 0; j < items.length; j++) {
+                    items[j].classList.toggle('active', j === gpiActiveDropdownIndex);
+                }
+                if (items[gpiActiveDropdownIndex]) items[gpiActiveDropdownIndex].scrollIntoView({ block: 'nearest' });
+            } else if (e.key === 'Enter' || e.key === 'Tab') {
+                if (gpiActiveDropdownIndex >= 0 && gpiActiveDropdownIndex < items.length) {
+                    e.preventDefault();
+                    var chosen = items[gpiActiveDropdownIndex].getAttribute('data-val');
+                    if (chosen) {
+                        input.value = gpiStripExt(chosen);
+                        var evt = new Event('input', { bubbles: true });
+                        input.dispatchEvent(evt);
+                    }
+                    gpiHideAutocomplete();
+                } else {
+                    gpiHideAutocomplete();
+                }
+            } else if (e.key === 'Escape') {
+                gpiHideAutocomplete();
+            }
+        }
+
+        function gpiAttachAutocomplete(input) {
+            if (!input || input._hasGpiAutocomplete) return;
+            input._hasGpiAutocomplete = true;
+
+            input.addEventListener('focus', function() {
+                gpiShowAutocomplete(input);
+            });
+
+            input.addEventListener('input', function() {
+                if (/\.[a-zA-Z0-9]{2,5}$/i.test(input.value)) {
+                    var start = input.selectionStart;
+                    input.value = gpiStripExt(input.value);
+                    if (start) input.setSelectionRange(start, start);
+                }
+                gpiShowAutocomplete(input);
+            });
+
+            input.addEventListener('keydown', function(e) {
+                gpiHandleAutocompleteKey(e, input);
+            });
+
+            input.addEventListener('blur', function() {
+                if (input.value) {
+                    input.value = gpiStripExt(input.value);
+                }
+                setTimeout(function() {
+                    if (gpiActiveDropdownInput === input) {
+                        gpiHideAutocomplete();
+                    }
+                }, 150);
+            });
+        }
+
+        document.addEventListener('mousedown', function(e) {
+            var dd = document.getElementById('gpiAutocompleteDropdown');
+            if (!dd || dd.style.display === 'none') return;
+            if (e.target.closest('#gpiAutocompleteDropdown') || (e.target && e.target.classList && e.target.classList.contains('gpi-clip-input'))) {
+                return;
+            }
+            gpiHideAutocomplete();
+        });
+
+        window.addEventListener('scroll', function() {
+            gpiHideAutocomplete();
+        }, true);
 
         function gpiScan() {
             showStatus('⏳ Scanning sequence for Group Photo markers...', 'var(--warning)');
@@ -1775,7 +2118,7 @@
                     var gpData = (parts[2 + i] || '').split('|');
                     gps.push({
                         gpNum: parseInt(gpData[0], 10) || (i + 1),
-                        clipName: gpData[1] || ('Group Photo ' + (i + 1)),
+                        clipName: gpiStripExt(gpData[1] || ('Group Photo ' + (i + 1))),
                         hasClip: (gpData[2] === '1'),
                         dur: parseFloat(gpData[3]) || 0
                     });
@@ -1788,6 +2131,7 @@
                 gpiState.nikaahCount = nikaahCount;
 
                 gpiRenderScanResults(gps, nikaahCount);
+                gpiFetchClipSuggestions();
                 showStatus('✅ Found ' + gpCount + ' Group Photo source(s) + ' + nikaahCount + ' Nikaah markers', 'var(--success)');
             });
         }
@@ -1815,42 +2159,13 @@
                     var pillClass = g.hasClip ? 'gpi-source-pill' : 'gpi-source-pill no-clip';
                     var statusTxt = g.hasClip ? ('✓ ' + (g.dur ? g.dur.toFixed(1) + 's' : 'Ready')) : '⚠ No Clip';
                     html += '<div class="' + pillClass + '">' +
-                        '<span class="name">GP ' + g.gpNum + ': ' + g.clipName + '</span>' +
+                        '<span class="name">GP ' + g.gpNum + ': ' + gpiEscapeHtml(g.clipName) + '</span>' +
                         '<span class="dur">' + statusTxt + '</span>' +
                         '</div>';
                 });
             }
 
             box.innerHTML = html;
-
-            // Update datalist suggestions with detected GP sources AND timeline/project clips
-            var datalist = document.getElementById('gpiClipSuggestions');
-            if (datalist) {
-                datalist.innerHTML = '';
-                var seenOpts = {};
-                function addOpt(val) {
-                    if (!val || seenOpts[val]) return;
-                    seenOpts[val] = true;
-                    var opt = document.createElement('option');
-                    opt.value = val;
-                    datalist.appendChild(opt);
-                }
-
-                gps.forEach(function(g) {
-                    if (g.clipName) addOpt(g.clipName);
-                    addOpt('GP ' + g.gpNum);
-                });
-
-                // Also fetch all timeline and project clips for autocomplete
-                cs.evalScript('$.runScript.getSequenceClipNames()', function(clipRes) {
-                    if (clipRes && clipRes.indexOf('SUCCESS|||') === 0) {
-                        var clipArr = clipRes.replace('SUCCESS|||', '').split('|||');
-                        clipArr.forEach(function(cn) {
-                            if (cn) addOpt(cn);
-                        });
-                    }
-                });
-            }
 
             // If no assignments exist yet, auto-add a default assignment
             var list = document.getElementById('gpiAssignmentList');
@@ -1896,12 +2211,14 @@
             inpClip.type = 'text';
             inpClip.className = 'gpi-clip-input';
             inpClip.setAttribute('list', 'gpiClipSuggestions');
+            inpClip.setAttribute('autocomplete', 'off');
             inpClip.placeholder = 'Enter Clip Name (e.g. 01N or GP_1)';
             if (defClip) {
-                inpClip.value = defClip;
+                inpClip.value = gpiStripExt(defClip);
             } else if (gpiState.gpSources.length >= gpiState.assignmentCount) {
-                inpClip.value = gpiState.gpSources[gpiState.assignmentCount - 1].clipName;
+                inpClip.value = gpiStripExt(gpiState.gpSources[gpiState.assignmentCount - 1].clipName);
             }
+            gpiAttachAutocomplete(inpClip);
 
             var pickBtn = document.createElement('button');
             pickBtn.className = 'gpi-pick-btn';
@@ -1966,7 +2283,7 @@
             showStatus('⏳ Reading selected clip from timeline...', 'var(--warning)');
             cs.evalScript("$.runScript.getSelectedTimelineClipName()", function(res) {
                 if (res && res.indexOf("SUCCESS|||") === 0) {
-                    var clipName = res.split("|||")[1];
+                    var clipName = gpiStripExt(res.split("|||")[1]);
                     clipInp.value = clipName;
                     showStatus('✓ Selected clip: ' + clipName, 'var(--accent)');
                 } else {
@@ -1980,7 +2297,7 @@
             var card = btn.closest('.gpi-assignment-card');
             if (!card) return;
             var clipInp = card.querySelector('.gpi-clip-input');
-            var clipVal = (clipInp && clipInp.value ? clipInp.value : '').trim();
+            var clipVal = gpiStripExt(clipInp && clipInp.value ? clipInp.value : '');
             if (!clipVal) {
                 showStatus('⚠ Enter clip name or pick clip first.', 'var(--warning)');
                 return;
@@ -2001,9 +2318,9 @@
                 }
                 var parts = res.split('|||');
                 if (parts[2] && clipInp) {
-                    clipInp.value = parts[2];
+                    clipInp.value = gpiStripExt(parts[2]);
                 } else if (parts[1] && clipInp) {
-                    clipInp.value = parts[1];
+                    clipInp.value = gpiStripExt(parts[1]);
                 }
                 showStatus('✓ Added ' + (parts[1] || 'GP marker') + ' on timeline' + (parts[3] ? ' at ' + parts[3] : ''), 'var(--success)');
                 gpiScan();
@@ -2016,7 +2333,7 @@
             showStatus('⏳ Reading selected clip from timeline...', 'var(--warning)');
             cs.evalScript("$.runScript.getSelectedTimelineClipName()", function(res) {
                 if (res && res.indexOf("SUCCESS|||") === 0) {
-                    var clipName = res.split("|||")[1];
+                    var clipName = gpiStripExt(res.split("|||")[1]);
                     inp.value = clipName;
                     showStatus('✓ Selected clip: ' + clipName, 'var(--accent)');
                 } else {
@@ -2029,7 +2346,7 @@
         function gpiAddGpMarkerFromQuick() {
             var inp = document.getElementById('gpiQuickClipInp');
             var sel = document.getElementById('gpiQuickGpSelect');
-            var clipVal = (inp && inp.value ? inp.value : '').trim();
+            var clipVal = gpiStripExt(inp && inp.value ? inp.value : '');
             var gpNum = (sel && sel.value ? sel.value : '1');
             if (!clipVal) {
                 showStatus('⚠ Enter a clip name or click Pick first.', 'var(--warning)');
@@ -2045,7 +2362,7 @@
                 }
                 var parts = res.split('|||');
                 var mName = parts[1] || ('GROUP_PHOTO_' + gpNum);
-                var cName = parts[2] || clipVal;
+                var cName = gpiStripExt(parts[2] || clipVal);
                 var tStr = parts[3] ? (' at ' + parts[3]) : '';
                 // Also update any matching assignment card input
                 var cards = document.querySelectorAll('.gpi-assignment-card');
@@ -2954,7 +3271,7 @@
                         <span>Mark Clip as GP (Skip manual coloring)</span>
                     </div>
                     <div style="display:flex; gap:3px; align-items:center;">
-                        <input id="gpiQuickClipInp" type="text" class="gpi-clip-input" placeholder="Clip Name/Number (e.g. 01W, 1448...)" list="gpiClipSuggestions" style="flex:1;">
+                        <input id="gpiQuickClipInp" type="text" class="gpi-clip-input" placeholder="Clip Name/Number (e.g. 01W, 1448...)" list="gpiClipSuggestions" autocomplete="off" style="flex:1;">
                         <select id="gpiQuickGpSelect" class="gpi-num-input" style="width:54px; font-weight:700; font-size:9px; height:24px; padding:1px 2px;">
                             <option value="1">GP 1</option>
                             <option value="2">GP 2</option>

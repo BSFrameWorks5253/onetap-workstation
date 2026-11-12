@@ -3661,8 +3661,14 @@ $.runScript.getSequenceClipNames = function() {
         function addName(nm) {
             if (!nm) return;
             var clean = String(nm).replace(/^\s+|\s+$/g, "");
-            if (clean && !seen[clean]) {
-                seen[clean] = true;
+            if (!clean) return;
+            var noExt = clean.replace(/\.[a-zA-Z0-9]{2,5}$/, "");
+            if (noExt && !seen[noExt.toLowerCase()]) {
+                seen[noExt.toLowerCase()] = true;
+                names.push(noExt);
+            }
+            if (noExt !== clean && !seen[clean.toLowerCase()]) {
+                seen[clean.toLowerCase()] = true;
                 names.push(clean);
             }
         }
@@ -3695,14 +3701,14 @@ $.runScript.getSequenceClipNames = function() {
             }
         }
 
-        // 3. Project panel bins
+        // 3. Project panel bins (searched deeply)
         if (app.project && app.project.rootItem && app.project.rootItem.children) {
             function scanBinNames(bin, depth) {
-                if (!bin || !bin.children || depth > 3) return;
+                if (!bin || !bin.children || depth > 8) return;
                 for (var bi = 0; bi < bin.children.numItems; bi++) {
                     var child = bin.children[bi];
                     if (!child) continue;
-                    if (child.type === 1) { // Bin
+                    if (isItemBin(child)) {
                         scanBinNames(child, depth + 1);
                     } else if (child.type !== 2) {
                         addName(child.name);
