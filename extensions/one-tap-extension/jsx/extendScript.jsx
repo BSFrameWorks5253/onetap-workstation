@@ -2223,216 +2223,7 @@ $.runScript.distributeNikahGroupPhoto = function() {
             return (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
         }
 
-        // 1. Identify the Group Photo Video Clip & its Native Duration
-        var groupProjectItem = null;
-        var detectedDuration = 0;
-        var sourceInPoint = 0;
-        var sourceOutPoint = 0;
-        var selectedClipTrackIndex = null;
-
-        // Strategy A0: Scan timeline video tracks for Mango-colored clip (Label index 7 or 8)
-        try {
-            var vtA0 = seq.videoTracks;
-            if (vtA0) {
-                for (var ti0 = 0; ti0 < vtA0.numTracks; ti0++) {
-                    var trk0 = vtA0[ti0];
-                    if (!trk0 || !trk0.clips) continue;
-                    for (var ci0 = 0; ci0 < trk0.clips.numItems; ci0++) {
-                        var c0 = trk0.clips[ci0];
-                        if (!c0) continue;
-                        var cColor = (typeof c0.getColorLabel === "function") ? c0.getColorLabel() : -1;
-                        var pColor = (c0.projectItem && typeof c0.projectItem.getColorLabel === "function") ? c0.projectItem.getColorLabel() : -1;
-                        if (cColor === 7 || cColor === 8 || pColor === 7 || pColor === 8) {
-                            groupProjectItem = c0.projectItem;
-                            if (c0.duration && c0.duration.seconds > 0) {
-                                detectedDuration = c0.duration.seconds;
-                            } else if (c0.start && c0.end && c0.end.seconds > c0.start.seconds) {
-                                detectedDuration = c0.end.seconds - c0.start.seconds;
-                            }
-                            if (c0.inPoint && !isNaN(Number(c0.inPoint.seconds))) {
-                                sourceInPoint = Number(c0.inPoint.seconds);
-                            }
-                            if (c0.outPoint && !isNaN(Number(c0.outPoint.seconds))) {
-                                sourceOutPoint = Number(c0.outPoint.seconds);
-                            }
-                            selectedClipTrackIndex = ti0;
-                            break;
-                        }
-                    }
-                    if (groupProjectItem) break;
-                }
-            }
-        } catch (eMango) {}
-
-        // Strategy A: Check current selection in timeline
-        if (!groupProjectItem) {
-            try {
-                var sel = seq.getSelection();
-                if (sel && sel.length > 0) {
-                    for (var s = 0; s < sel.length; s++) {
-                        var itm = sel[s];
-                        if (itm && (itm.mediaType === "VIDEO" || itm.projectItem)) {
-                            groupProjectItem = itm.projectItem;
-                            if (itm.duration && itm.duration.seconds > 0) {
-                                detectedDuration = itm.duration.seconds;
-                            } else if (itm.start && itm.end && itm.end.seconds > itm.start.seconds) {
-                                detectedDuration = itm.end.seconds - itm.start.seconds;
-                            }
-                            if (itm.inPoint && !isNaN(Number(itm.inPoint.seconds))) {
-                                sourceInPoint = Number(itm.inPoint.seconds);
-                            }
-                            if (itm.outPoint && !isNaN(Number(itm.outPoint.seconds))) {
-                                sourceOutPoint = Number(itm.outPoint.seconds);
-                            }
-                            // Detect track index
-                            for (var vi = 0; vi < seq.videoTracks.numTracks; vi++) {
-                                var vTrk = seq.videoTracks[vi];
-                                if (!vTrk || !vTrk.clips) continue;
-                                for (var cvi = 0; cvi < vTrk.clips.numItems; cvi++) {
-                                    var tc = vTrk.clips[cvi];
-                                    if (tc === itm || (tc.projectItem === itm.projectItem && Math.abs(tc.start.seconds - itm.start.seconds) < 0.05)) {
-                                        selectedClipTrackIndex = vi;
-                                        break;
-                                    }
-                                }
-                                if (selectedClipTrackIndex !== null) break;
-                            }
-                            break;
-                        }
-                    }
-                }
-            } catch (eSel) {}
-        }
-
-        // Strategy B: Scan sequence video tracks for clip name matching group photo keywords
-        if (!groupProjectItem) {
-            var vt = seq.videoTracks;
-            if (vt) {
-                for (var ti = 0; ti < vt.numTracks; ti++) {
-                    var trk = vt[ti];
-                    if (!trk || !trk.clips) continue;
-                    for (var ci = 0; ci < trk.clips.numItems; ci++) {
-                        var c = trk.clips[ci];
-                        var cName = (c && c.name) ? c.name : "";
-                        var pName = (c && c.projectItem && c.projectItem.name) ? c.projectItem.name : "";
-                        if (isGroupPhotoName(cName) || isGroupPhotoName(pName)) {
-                            groupProjectItem = c.projectItem;
-                            if (c.duration && c.duration.seconds > 0) {
-                                detectedDuration = c.duration.seconds;
-                            } else if (c.start && c.end && c.end.seconds > c.start.seconds) {
-                                detectedDuration = c.end.seconds - c.start.seconds;
-                            }
-                            if (c.inPoint && !isNaN(Number(c.inPoint.seconds))) {
-                                sourceInPoint = Number(c.inPoint.seconds);
-                            }
-                            if (c.outPoint && !isNaN(Number(c.outPoint.seconds))) {
-                                sourceOutPoint = Number(c.outPoint.seconds);
-                            }
-                            selectedClipTrackIndex = ti;
-                            break;
-                        }
-                    }
-                    if (groupProjectItem) break;
-                }
-            }
-        }
-
-        // Strategy C: Check project items in project bins
-        if (!groupProjectItem) {
-            function findGpInBin(bin) {
-                if (!bin || !bin.children) return null;
-                for (var b = 0; b < bin.children.numItems; b++) {
-                    var child = bin.children[b];
-                    if (!child) continue;
-                    if (child.type === 2 || (child.isSequence && child.isSequence())) continue;
-                    if (child.type === 1) { // BIN
-                        var subFound = findGpInBin(child);
-                        if (subFound) return subFound;
-                    } else {
-                        var nm = child.name || "";
-                        if (isGroupPhotoName(nm)) {
-                            return child;
-                        }
-                    }
-                }
-                return null;
-            }
-            groupProjectItem = findGpInBin(app.project.rootItem);
-        }
-
-        if (!groupProjectItem) {
-            var warnMsg = "Could not automatically identify the Nikah Group Photo video clip.\n\n" +
-                          "How to use:\n" +
-                          "1. Select your Group Photo video clip on the Timeline\n" +
-                          "   OR name the clip in your Bin 'Group Photo' / 'GP1' / 'GP'\n" +
-                          "2. Click 'Nikah Group Photo' again.";
-            $.runScript.showWorkspaceModal("One Tap — Nikah Group Photo", "Group Photo Video Not Found", warnMsg, "WARNING");
-            return "ERROR|||Group photo video clip not found. Please select it on timeline.";
-        }
-
-        // Determine effective duration of group photo video
-        var groupDuration = detectedDuration;
-        if (groupDuration <= 0 && sourceOutPoint > sourceInPoint) {
-            groupDuration = sourceOutPoint - sourceInPoint;
-        }
-        if (groupDuration <= 0 && groupProjectItem) {
-            try {
-                var inP = groupProjectItem.getInPoint ? groupProjectItem.getInPoint() : null;
-                var outP = groupProjectItem.getOutPoint ? groupProjectItem.getOutPoint() : null;
-                if (outP && outP.seconds > 0) {
-                    var inPSec = (inP && inP.seconds > 0) ? inP.seconds : 0;
-                    if (outP.seconds > inPSec) groupDuration = outP.seconds - inPSec;
-                }
-            } catch (eDurP) {}
-        }
-        if (groupDuration <= 0 && groupProjectItem) {
-            try {
-                var meta = groupProjectItem.getProjectMetadata ? groupProjectItem.getProjectMetadata() : "";
-                var match = meta.match(/Column\.Intrinsic\.MediaDuration[^\>]*\>([^\<]+)\</i);
-                if (match && match[1]) {
-                    var p = match[1].split(/[:;]/);
-                    if (p.length === 4) {
-                        var totalSec = (parseFloat(p[0]) || 0) * 3600 + (parseFloat(p[1]) || 0) * 60 + (parseFloat(p[2]) || 0) + ((parseFloat(p[3]) || 0) / 25.0);
-                        if (totalSec > 0) groupDuration = totalSec;
-                    }
-                }
-            } catch (eMeta) {}
-        }
-        // Fallback: place temporarily far downstream to inspect intrinsic duration
-        if (groupDuration <= 0 && groupProjectItem && seq.videoTracks && seq.videoTracks.numTracks > 0) {
-            try {
-                var farEnd = 86400;
-                try {
-                    var sE = Number(seq.end && seq.end.seconds);
-                    if (isFinite(sE) && sE > 0) farEnd = sE + 3600;
-                } catch(eFE) {}
-                var testTrk = seq.videoTracks[0];
-                testTrk.overwriteClip(groupProjectItem, toTime(farEnd));
-                for (var tci = testTrk.clips.numItems - 1; tci >= 0; tci--) {
-                    var tClip = testTrk.clips[tci];
-                    if (tClip && Math.abs(tClip.start.seconds - farEnd) < 0.5) {
-                        if (tClip.duration && tClip.duration.seconds > 0) {
-                            groupDuration = tClip.duration.seconds;
-                        } else if (tClip.end && tClip.start && tClip.end.seconds > tClip.start.seconds) {
-                            groupDuration = tClip.end.seconds - tClip.start.seconds;
-                        }
-                        try { tClip.end = toTime(farEnd + 0.001); } catch(eRm) {}
-                        break;
-                    }
-                }
-            } catch(eTempDur) {}
-        }
-        if (groupDuration <= 0) {
-            var promptVal = prompt("Enter Group Photo Video duration in seconds (e.g. 15 or 20):", "15");
-            var parsedVal = parseFloat(promptVal);
-            groupDuration = (parsedVal && !isNaN(parsedVal) && parsedVal > 0) ? parsedVal : 15.0;
-        }
-
-        // Round duration to 2 decimal places for clean calculations
-        groupDuration = Math.round(groupDuration * 100) / 100;
-        var clipNameDisplay = groupProjectItem.name || "Group Photo Video";
-
-        // 2. Identify all Nikah (N) markers
+        // 1. Identify all Nikah (N) markers & ceremonies first
         var markers = seq.markers;
         var nikahSegments = [];
         var allMarkersList = [];
@@ -2464,7 +2255,6 @@ $.runScript.distributeNikahGroupPhoto = function() {
                     if (mi < allMarkersList.length - 1) {
                         e = allMarkersList[mi + 1].startSec;
                     } else {
-                        // Look for end of video clip on timeline near s
                         var foundClipEnd = null;
                         if (seq.videoTracks && seq.videoTracks.numTracks > 0) {
                             var vTrk0 = seq.videoTracks[0];
@@ -2500,7 +2290,7 @@ $.runScript.distributeNikahGroupPhoto = function() {
             }
         }
 
-        // FALLBACK: If no Nikah markers found in seq.markers, scan timeline video tracks for Nikaah clips directly
+        // Fallback: Scan timeline clips if no markers found
         if (nikahSegments.length === 0 && seq.videoTracks) {
             var clipCandidates = [];
             for (var fvi = 0; fvi < seq.videoTracks.numTracks; fvi++) {
@@ -2536,80 +2326,304 @@ $.runScript.distributeNikahGroupPhoto = function() {
             return "ERROR|||No Nikah sections found in sequence.";
         }
 
-        // Sort Nikah segments chronologically
+        // Sort Nikah segments chronologically and assign 1-based sequence numbers
         nikahSegments.sort(function(a, b) { return a.startSec - b.startSec; });
-
-        // Prompt user to select which Nikah sequence marker(s) to place the Group Photo into
-        var defaultRange = "1-" + nikahSegments.length;
-        var markerListText = "";
-        for (var nIdx = 0; nIdx < Math.min(nikahSegments.length, 8); nIdx++) {
-            markerListText += (nIdx + 1) + ". " + nikahSegments[nIdx].name + "\n";
-        }
-        if (nikahSegments.length > 8) {
-            markerListText += "... (" + (nikahSegments.length - 8) + " more)\n";
+        for (var nsi = 0; nsi < nikahSegments.length; nsi++) {
+            nikahSegments[nsi].seqNum = nsi + 1;
         }
 
-        var rangeInput = prompt(
-            "Found " + nikahSegments.length + " Nikah (N) marker(s):\n\n" +
-            markerListText + "\n" +
-            "Enter sequence range to place into (e.g. 1-" + nikahSegments.length + " or 1,2 or 'all'):",
-            defaultRange
-        );
+        // 2. Candidate Detection: 3-stage hierarchy to find default clip suggestion
+        var detectedClipName = "";
+        var detectedTrackIndex = 0;
 
-        if (rangeInput === null) {
-            return "ERROR|||Operation cancelled by user.";
-        }
-
-        // Filter nikahSegments based on rangeInput
-        var activeNikahSegments = [];
-        var cleanInput = (rangeInput || "").replace(/^\s+|\s+$/g, "").toLowerCase();
-        if (!cleanInput || cleanInput === "all" || cleanInput === "*") {
-            activeNikahSegments = nikahSegments;
-        } else {
-            var selectedIndices = {};
-            var rangeTokens = cleanInput.split(",");
-            for (var rk = 0; rk < rangeTokens.length; rk++) {
-                var tok = rangeTokens[rk].replace(/^\s+|\s+$/g, "");
-                if (tok.indexOf("-") > -1) {
-                    var parts = tok.split("-");
-                    var startI = parseInt(parts[0], 10);
-                    var endI = parseInt(parts[1], 10);
-                    if (!isNaN(startI) && !isNaN(endI)) {
-                        var minK = Math.min(startI, endI);
-                        var maxK = Math.max(startI, endI);
-                        for (var curI = minK; curI <= maxK; curI++) {
-                            if (curI >= 1 && curI <= nikahSegments.length) {
-                                selectedIndices[curI - 1] = true;
-                            }
+        // Stage 1: Mango / Lavender Color Label (Highest Priority - Color 7 or 8)
+        try {
+            var vtA0 = seq.videoTracks;
+            if (vtA0) {
+                for (var ti0 = 0; ti0 < vtA0.numTracks; ti0++) {
+                    var trk0 = vtA0[ti0];
+                    if (!trk0 || !trk0.clips) continue;
+                    for (var ci0 = 0; ci0 < trk0.clips.numItems; ci0++) {
+                        var c0 = trk0.clips[ci0];
+                        if (!c0) continue;
+                        var cColor = (typeof c0.getColorLabel === "function") ? c0.getColorLabel() : -1;
+                        var pColor = (c0.projectItem && typeof c0.projectItem.getColorLabel === "function") ? c0.projectItem.getColorLabel() : -1;
+                        if (cColor === 7 || cColor === 8 || pColor === 7 || pColor === 8) {
+                            detectedClipName = c0.name || (c0.projectItem && c0.projectItem.name) || "";
+                            detectedTrackIndex = ti0;
+                            break;
                         }
                     }
-                } else {
-                    var sVal = parseInt(tok, 10);
-                    if (!isNaN(sVal) && sVal >= 1 && sVal <= nikahSegments.length) {
-                        selectedIndices[sVal - 1] = true;
+                    if (detectedClipName) break;
+                }
+            }
+        } catch (eMango) {}
+
+        // Stage 2: Current Timeline Selection
+        if (!detectedClipName) {
+            try {
+                var sel = seq.getSelection();
+                if (sel && sel.length > 0) {
+                    for (var s = 0; s < sel.length; s++) {
+                        var itm = sel[s];
+                        if (itm && (itm.mediaType === "VIDEO" || itm.projectItem)) {
+                            detectedClipName = itm.name || (itm.projectItem && itm.projectItem.name) || "";
+                            break;
+                        }
+                    }
+                }
+            } catch (eSel) {}
+        }
+
+        // Stage 3: Bin / Timeline clip matching "Group Photo" / "GP" keywords
+        if (!detectedClipName) {
+            try {
+                for (var ti1 = 0; ti1 < seq.videoTracks.numTracks; ti1++) {
+                    var trk1 = seq.videoTracks[ti1];
+                    if (!trk1 || !trk1.clips) continue;
+                    for (var ci1 = 0; ci1 < trk1.clips.numItems; ci1++) {
+                        var c1 = trk1.clips[ci1];
+                        var c1Nm = c1 ? (c1.name || (c1.projectItem && c1.projectItem.name) || "") : "";
+                        if (isGroupPhotoName(c1Nm)) {
+                            detectedClipName = c1Nm;
+                            detectedTrackIndex = ti1;
+                            break;
+                        }
+                    }
+                    if (detectedClipName) break;
+                }
+            } catch (eGpKw) {}
+        }
+
+        // Helper: Resolve a clip by user-entered name (searches Timeline Video Tracks & Project Bins)
+        function resolveClipByName(queryName) {
+            if (!queryName) return null;
+            var cleanQuery = String(queryName).replace(/^\s+|\s+$/g, "");
+            if (!cleanQuery) return null;
+            var qLower = cleanQuery.toLowerCase();
+            var qStem = qLower.replace(/\.[a-z0-9]{2,5}$/i, "");
+
+            // A. Search timeline video tracks
+            if (seq.videoTracks) {
+                for (var tIdx = 0; tIdx < seq.videoTracks.numTracks; tIdx++) {
+                    var vTrack = seq.videoTracks[tIdx];
+                    if (!vTrack || !vTrack.clips) continue;
+                    for (var clIdx = 0; clIdx < vTrack.clips.numItems; clIdx++) {
+                        var cObj = vTrack.clips[clIdx];
+                        if (!cObj) continue;
+                        var cNm = (cObj.name || "").toLowerCase();
+                        var pNm = (cObj.projectItem && cObj.projectItem.name) ? cObj.projectItem.name.toLowerCase() : "";
+                        var cStem = cNm.replace(/\.[a-z0-9]{2,5}$/i, "");
+                        var pStem = pNm.replace(/\.[a-z0-9]{2,5}$/i, "");
+
+                        if (cNm === qLower || pNm === qLower || cStem === qStem || pStem === qStem ||
+                            cNm.indexOf(qStem) !== -1 || pNm.indexOf(qStem) !== -1) {
+                            var dur = (cObj.duration && cObj.duration.seconds > 0) ? cObj.duration.seconds : (cObj.end.seconds - cObj.start.seconds);
+                            var inP = (cObj.inPoint && !isNaN(Number(cObj.inPoint.seconds))) ? Number(cObj.inPoint.seconds) : 0;
+                            var outP = (cObj.outPoint && !isNaN(Number(cObj.outPoint.seconds))) ? Number(cObj.outPoint.seconds) : (inP + dur);
+                            return {
+                                projectItem: cObj.projectItem,
+                                name: cObj.name || (cObj.projectItem && cObj.projectItem.name) || cleanQuery,
+                                duration: Math.round(dur * 100) / 100,
+                                inPoint: inP,
+                                outPoint: outP,
+                                trackIndex: tIdx
+                            };
+                        }
                     }
                 }
             }
-            for (var si = 0; si < nikahSegments.length; si++) {
-                if (selectedIndices[si]) {
-                    activeNikahSegments.push(nikahSegments[si]);
+
+            // B. Search Project Bins recursively
+            function searchBinItems(bin) {
+                if (!bin || !bin.children) return null;
+                for (var bi = 0; bi < bin.children.numItems; bi++) {
+                    var bChild = bin.children[bi];
+                    if (!bChild) continue;
+                    if (bChild.type === 1) { // Bin
+                        var sub = searchBinItems(bChild);
+                        if (sub) return sub;
+                    } else if (bChild.type === 2 || (bChild.isSequence && bChild.isSequence())) {
+                        continue;
+                    } else {
+                        var bNm = (bChild.name || "").toLowerCase();
+                        var bStem = bNm.replace(/\.[a-z0-9]{2,5}$/i, "");
+                        if (bNm === qLower || bStem === qStem || bNm.indexOf(qStem) !== -1) {
+                            var bIn = (bChild.getInPoint && bChild.getInPoint().seconds > 0) ? bChild.getInPoint().seconds : 0;
+                            var bOut = (bChild.getOutPoint && bChild.getOutPoint().seconds > 0) ? bChild.getOutPoint().seconds : 0;
+                            var bDur = (bOut > bIn) ? (bOut - bIn) : 0;
+                            return {
+                                projectItem: bChild,
+                                name: bChild.name || cleanQuery,
+                                duration: Math.round(bDur * 100) / 100,
+                                inPoint: bIn,
+                                outPoint: bOut,
+                                trackIndex: 0
+                            };
+                        }
+                    }
+                }
+                return null;
+            }
+
+            return searchBinItems(app.project.rootItem);
+        }
+
+        // 3. User Input Step: Enter Clip Name & Range for each Group Photo
+        // Preview list of found Nikaahs
+        var markerListText = "";
+        for (var nIdx = 0; nIdx < Math.min(nikahSegments.length, 6); nIdx++) {
+            markerListText += (nIdx + 1) + ". " + nikahSegments[nIdx].name + "\n";
+        }
+        if (nikahSegments.length > 6) {
+            markerListText += "... (" + (nikahSegments.length - 6) + " more)\n";
+        }
+
+        var groupPhotoAssignments = [];
+        var assignedIndices = {};
+        var gpCounter = 1;
+
+        while (true) {
+            // Count unassigned Nikaahs
+            var unassigned = [];
+            for (var u = 0; u < nikahSegments.length; u++) {
+                if (!assignedIndices[u]) unassigned.push(u + 1);
+            }
+            if (unassigned.length === 0) break;
+
+            var defaultRangeStr = (unassigned.length === nikahSegments.length)
+                ? ("1-" + nikahSegments.length)
+                : (unassigned[0] + "-" + unassigned[unassigned.length - 1]);
+
+            var defaultClipName = (gpCounter === 1 && detectedClipName)
+                ? detectedClipName
+                : ("Group Photo " + gpCounter);
+
+            // Step A: Prompt user to enter Group Photo clip name
+            var clipPromptMsg = "Found " + nikahSegments.length + " Nikah ceremony marker(s):\n" +
+                                markerListText + "\n" +
+                                "Step 1 of 2: Enter Clip Name for Group Photo " + gpCounter + ":\n" +
+                                "(Matches clip in Timeline or Project Bins)";
+
+            if (gpCounter > 1) {
+                clipPromptMsg = "Remaining unassigned Nikaah(s): " + unassigned.join(", ") + "\n\n" +
+                                "Enter Clip Name for Group Photo " + gpCounter + "\n" +
+                                "(or leave blank / Cancel to proceed with current assignments):";
+            }
+
+            var enteredClipName = prompt(clipPromptMsg, defaultClipName);
+            if (enteredClipName === null || enteredClipName.replace(/^\s+|\s+$/g, "") === "") {
+                if (groupPhotoAssignments.length > 0) {
+                    break; // Proceed with existing assignments
+                } else {
+                    return "ERROR|||Operation cancelled by user.";
                 }
             }
+
+            var resolvedClip = resolveClipByName(enteredClipName);
+            if (!resolvedClip) {
+                alert("Clip '" + enteredClipName + "' was not found on the Timeline or in Project Bins.\n\nPlease check the exact clip name and try again.");
+                continue;
+            }
+
+            // Ensure valid duration
+            if (resolvedClip.duration <= 0) {
+                var dPrompt = prompt("Enter video duration in seconds for '" + resolvedClip.name + "' (e.g. 15):", "15");
+                var parsedD = parseFloat(dPrompt);
+                resolvedClip.duration = (!isNaN(parsedD) && parsedD > 0) ? parsedD : 15.0;
+            }
+
+            // Step B: Prompt user to enter Nikaah range for this clip
+            var rangePromptMsg = "Step 2 of 2: Enter Nikaah range for '" + resolvedClip.name + "' (" + resolvedClip.duration + "s):\n\n" +
+                                 "Examples:\n" +
+                                 "• '1-" + nikahSegments.length + "' (all ceremonies)\n" +
+                                 "• '1-4' or '5-8' (specific span)\n" +
+                                 "• '1,3,5' (specific individual ceremonies)";
+
+            var enteredRange = prompt(rangePromptMsg, defaultRangeStr);
+            if (enteredRange === null || enteredRange.replace(/^\s+|\s+$/g, "") === "") {
+                if (groupPhotoAssignments.length > 0) break;
+                return "ERROR|||Operation cancelled by user.";
+            }
+
+            // Parse selected range indices
+            var selectedMap = {};
+            var cleanRange = enteredRange.replace(/^\s+|\s+$/g, "").toLowerCase();
+            if (cleanRange === "all" || cleanRange === "*") {
+                for (var allI = 0; allI < nikahSegments.length; allI++) {
+                    selectedMap[allI] = true;
+                }
+            } else {
+                var tokens = cleanRange.split(",");
+                for (var tk = 0; tk < tokens.length; tk++) {
+                    var tok = tokens[tk].replace(/^\s+|\s+$/g, "");
+                    if (tok.indexOf("-") > -1) {
+                        var parts = tok.split("-");
+                        var startI = parseInt(parts[0], 10);
+                        var endI = parseInt(parts[1], 10);
+                        if (!isNaN(startI) && !isNaN(endI)) {
+                            var minK = Math.min(startI, endI);
+                            var maxK = Math.max(startI, endI);
+                            for (var curI = minK; curI <= maxK; curI++) {
+                                if (curI >= 1 && curI <= nikahSegments.length) {
+                                    selectedMap[curI - 1] = true;
+                                }
+                            }
+                        }
+                    } else {
+                        var sVal = parseInt(tok, 10);
+                        if (!isNaN(sVal) && sVal >= 1 && sVal <= nikahSegments.length) {
+                            selectedMap[sVal - 1] = true;
+                        }
+                    }
+                }
+            }
+
+            var matchedNikaahIndices = [];
+            for (var mKey in selectedMap) {
+                if (selectedMap.hasOwnProperty(mKey)) {
+                    var idx = parseInt(mKey, 10);
+                    matchedNikaahIndices.push(idx);
+                    assignedIndices[idx] = true;
+                }
+            }
+
+            if (matchedNikaahIndices.length === 0) {
+                alert("No valid Nikaah ceremonies matched the range '" + enteredRange + "'. Please try again.");
+                continue;
+            }
+
+            groupPhotoAssignments.push({
+                clip: resolvedClip,
+                indices: matchedNikaahIndices
+            });
+
+            gpCounter++;
         }
 
-        if (activeNikahSegments.length === 0) {
-            activeNikahSegments = nikahSegments;
+        if (groupPhotoAssignments.length === 0) {
+            return "ERROR|||No group photo assignments configured.";
         }
-        nikahSegments = activeNikahSegments;
 
-        // 3. User Confirmation Dialog for Ripple Insert
-        var confirmMsg = "Nikah Group Photo Video — Ripple Insertion\n\n" +
-                         "• Video Asset: " + clipNameDisplay + "\n" +
-                         "• Video Duration: " + groupDuration + " seconds\n" +
-                         "• Target Nikah Ceremonies: " + nikahSegments.length + "\n" +
-                         "• Insertion Point: END of each Nikah ceremony (Recommended)\n\n" +
-                         "All downstream timeline video tracks & audio tracks will shift forward by +" + groupDuration + "s so ZERO content is cut.\n\n" +
-                         "Proceed with Ripple Insertion?";
+        // 4. User Confirmation Dialog for Ripple Insertion
+        var confirmLines = [];
+        var totalCeremonies = 0;
+        for (var ga = 0; ga < groupPhotoAssignments.length; ga++) {
+            var asgn = groupPhotoAssignments[ga];
+            var nNums = [];
+            for (var gIdx = 0; gIdx < asgn.indices.length; gIdx++) {
+                nNums.push(nikahSegments[asgn.indices[gIdx]].seqNum);
+            }
+            confirmLines.push("• '" + asgn.clip.name + "' (" + asgn.clip.duration + "s) → Nikaah(s): " + nNums.join(", "));
+            totalCeremonies += asgn.indices.length;
+        }
+
+        var confirmMsg = "Nikah Group Photo — Ripple Insertion Summary\n\n" +
+                         confirmLines.join("\n") + "\n\n" +
+                         "Total Ceremonies Receiving Group Photos: " + totalCeremonies + "\n" +
+                         "All downstream timeline footage will automatically ripple forward.\n\n" +
+                         "Proceed with Timeline Ripple Insertion?";
+
         var userApproved = true;
         try {
             userApproved = confirm(confirmMsg);
@@ -2619,119 +2633,57 @@ $.runScript.distributeNikahGroupPhoto = function() {
             return "ERROR|||Operation cancelled by user.";
         }
 
-        // Determine destination video track (V1 default, or track of selected clip)
-        var targetTrackIndex = (selectedClipTrackIndex !== null && selectedClipTrackIndex < seq.videoTracks.numTracks) ? selectedClipTrackIndex : 0;
-        var targetVideoTrack = seq.videoTracks[targetTrackIndex];
-
-        // Ensure all tracks are unlocked
-        for (var vi = 0; vi < seq.videoTracks.numTracks; vi++) {
-            try {
-                var vTrk = seq.videoTracks[vi];
-                if (typeof vTrk.isLocked === "function" && vTrk.isLocked()) vTrk.setLocked(false);
-                else if (vTrk.isLocked === true) vTrk.isLocked = false;
-            } catch (eVLk) {}
-        }
-        for (var ai = 0; ai < seq.audioTracks.numTracks; ai++) {
-            try {
-                var aTrk = seq.audioTracks[ai];
-                if (typeof aTrk.isLocked === "function" && aTrk.isLocked()) aTrk.setLocked(false);
-                else if (aTrk.isLocked === true) aTrk.isLocked = false;
-            } catch (eALk) {}
+        // 5. Build Flat Work Items & Sort Chronologically (Ascending by Marker End Time)
+        // Rule 3: Collect & Sort Marker End Times First
+        var insertionWorkList = [];
+        for (var ai = 0; ai < groupPhotoAssignments.length; ai++) {
+            var itemAsgn = groupPhotoAssignments[ai];
+            for (var aj = 0; aj < itemAsgn.indices.length; aj++) {
+                var targetSeg = nikahSegments[itemAsgn.indices[aj]];
+                insertionWorkList.push({
+                    seg: targetSeg,
+                    clip: itemAsgn.clip
+                });
+            }
         }
 
-        // Helper: Shift an individual clip forward by shiftAmount seconds
-        function shiftClipForward(clip, track, shiftAmount) {
-            if (!clip || shiftAmount <= 0) return false;
-            var oldStart = clip.start ? clip.start.seconds : 0;
-            var oldEnd = clip.end ? clip.end.seconds : 0;
-            var dur = (oldEnd > oldStart) ? (oldEnd - oldStart) : (clip.duration ? clip.duration.seconds : 0);
-            var targetStartSec = oldStart + shiftAmount;
-            var targetEndSec = oldEnd + shiftAmount;
-
-            var moved = false;
-
-            // Attempt 1: clip.move(Time) if supported by Premiere Pro version
-            if (typeof clip.move === "function") {
-                try {
-                    clip.move(toTime(targetStartSec));
-                    if (Math.abs(clip.start.seconds - targetStartSec) < 0.2) moved = true;
-                } catch (eMv) {}
-            }
-
-            // Attempt 2: Direct assignment of Time to clip.start (safe because shifting right-to-left into empty space)
-            if (!moved) {
-                try {
-                    clip.start = toTime(targetStartSec);
-                    if (Math.abs(clip.start.seconds - targetStartSec) < 0.2) moved = true;
-                } catch (eSt) {}
-            }
-
-            // Attempt 3: Assign clip.end first then clip.start
-            if (!moved) {
-                try {
-                    clip.end = toTime(targetEndSec);
-                    clip.start = toTime(targetStartSec);
-                    if (Math.abs(clip.start.seconds - targetStartSec) < 0.2) moved = true;
-                } catch (eEndSt) {}
-            }
-
-            // Attempt 4: Overwrite recreation fallback
-            if (!moved && clip.projectItem) {
-                try {
-                    var pItem = clip.projectItem;
-                    var inSec = (clip.inPoint && !isNaN(clip.inPoint.seconds)) ? clip.inPoint.seconds : 0;
-                    var outSec = (clip.outPoint && !isNaN(clip.outPoint.seconds)) ? clip.outPoint.seconds : (inSec + dur);
-
-                    track.overwriteClip(pItem, toTime(targetStartSec));
-                    for (var ci = track.clips.numItems - 1; ci >= 0; ci--) {
-                        var placed = track.clips[ci];
-                        if (placed && Math.abs(placed.start.seconds - targetStartSec) < 0.25) {
-                            try {
-                                placed.inPoint = toTime(inSec);
-                                placed.outPoint = toTime(outSec);
-                            } catch (eInO) {}
-                            moved = true;
-                            break;
-                        }
-                    }
-                } catch (eOv) {}
-            }
-
-            return moved;
-        }
-
-        // 4. Reverse-Chronological Processing (N_last -> N_1)
-        // Rule 3: Collect & Sort Marker End Times First: Extract and sort chronologically ascending
-        nikahSegments.sort(function(a, b) {
-            return (Number(a.endSec) || 0) - (Number(b.endSec) || 0);
+        insertionWorkList.sort(function(a, b) {
+            return (Number(a.seg.endSec) || 0) - (Number(b.seg.endSec) || 0);
         });
 
-        var placedCount = 0;
-        var timeSummary = [];
-
-        // Rule 7: Track Targeting Safety: Ensure the target video track index is valid
-        var targetTrackIndex = (selectedClipTrackIndex !== null && selectedClipTrackIndex >= 0 && selectedClipTrackIndex < seq.videoTracks.numTracks) ? selectedClipTrackIndex : 0;
+        // Determine destination video track safely (Rule 7: Track Targeting Safety)
+        var targetTrackIndex = (detectedTrackIndex >= 0 && detectedTrackIndex < seq.videoTracks.numTracks) ? detectedTrackIndex : 0;
         var targetVideoTrack = seq.videoTracks[targetTrackIndex];
         if (!targetVideoTrack) {
             targetVideoTrack = seq.videoTracks[0];
         }
 
-        // Configure projectItem in/out duration so insertClip takes exactly groupDuration
-        try {
-            if (typeof groupProjectItem.setInPoint === "function" && sourceInPoint >= 0) {
-                groupProjectItem.setInPoint(toTime(sourceInPoint));
-            }
-            if (typeof groupProjectItem.setOutPoint === "function" && groupDuration > 0) {
-                groupProjectItem.setOutPoint(toTime(sourceInPoint + groupDuration));
-            }
-        } catch (eIO) {}
+        var placedCount = 0;
+        var timeSummary = [];
+        var totalExtensionSec = 0;
 
-        // Rule 4: Loop Backward (Reverse Order): Iterate from the last marker to the first (i = length - 1; i >= 0; i--)
-        // Prevents earlier ripple insertions from shifting subsequent marker positions
-        for (var ni = nikahSegments.length - 1; ni >= 0; ni--) {
-            var seg = nikahSegments[ni];
-            var insertSec = Number(seg.endSec); // Insertion at the exact END of the marker
+        // Rule 4: Loop Backward (Reverse Order) from the last marker to the first (i = length - 1; i >= 0; i--)
+        // This prevents earlier ripple insertions from shifting subsequent marker coordinates
+        for (var wi = insertionWorkList.length - 1; wi >= 0; wi--) {
+            var workItem = insertionWorkList[wi];
+            var seg = workItem.seg;
+            var clip = workItem.clip;
+            var insertSec = Number(seg.endSec);
             if (isNaN(insertSec) || insertSec < 0) continue;
+
+            var gpProjectItem = clip.projectItem;
+            var groupDuration = clip.duration;
+            var sourceInPoint = clip.inPoint;
+
+            // Configure projectItem in/out duration so insertClip takes exactly groupDuration
+            try {
+                if (typeof gpProjectItem.setInPoint === "function" && sourceInPoint >= 0) {
+                    gpProjectItem.setInPoint(toTime(sourceInPoint));
+                }
+                if (typeof gpProjectItem.setOutPoint === "function" && groupDuration > 0) {
+                    gpProjectItem.setOutPoint(toTime(sourceInPoint + groupDuration));
+                }
+            } catch (eIO) {}
 
             // Rule 5: Use Ripple Insert (insertClip) instead of overwriteClip()
             // Rule 6: Consistent Time Units
@@ -2739,68 +2691,45 @@ $.runScript.distributeNikahGroupPhoto = function() {
                 var insertTime = toTime(insertSec);
                 var insertOk = false;
                 try {
-                    targetVideoTrack.insertClip(groupProjectItem, insertTime);
+                    targetVideoTrack.insertClip(gpProjectItem, insertTime);
                     insertOk = true;
                 } catch (eIns1) {
                     try {
-                        targetVideoTrack.insertClip(groupProjectItem, insertSec);
+                        targetVideoTrack.insertClip(gpProjectItem, insertSec);
                         insertOk = true;
                     } catch (eIns2) {}
                 }
 
                 if (insertOk) {
                     placedCount++;
+                    totalExtensionSec += groupDuration;
                     var startFormatted = formatSec(insertSec);
                     var endFormatted = formatSec(insertSec + groupDuration);
-                    timeSummary.unshift("• " + seg.name + ": Target clip inserted at " + startFormatted + " -> " + endFormatted + " (+" + groupDuration + "s ripple)");
+                    timeSummary.unshift("• " + seg.name + ": '" + clip.name + "' inserted at " + startFormatted + " -> " + endFormatted + " (+" + groupDuration + "s ripple)");
+
+                    // Create Timeline Marker for this Group Photo segment
+                    try {
+                        var gpMarker = markers.createMarker(insertSec);
+                        if (gpMarker) {
+                            gpMarker.name = seg.name + " - Group Photo";
+                            gpMarker.comments = clip.name + " (" + groupDuration + "s)";
+                            gpMarker.end = toTime(insertSec + groupDuration);
+                            try { gpMarker.setTypeAsChapter(); } catch(eCh) {}
+                        }
+                    } catch (eMk) {}
                 }
             } catch (ePlaceGp) {}
-
-            // D. Shift Downstream Sequence Markers forward by +groupDuration
-            try {
-                var mList = [];
-                var mk = markers.getFirstMarker();
-                while (mk) {
-                    mList.push(mk);
-                    mk = markers.getNextMarker(mk);
-                }
-                for (var mki = 0; mki < mList.length; mki++) {
-                    var curMk = mList[mki];
-                    if (curMk && curMk.start && curMk.start.seconds >= (insertSec - 0.05)) {
-                        try {
-                            var mkS = curMk.start.seconds;
-                            var mkE = (curMk.end && !isNaN(curMk.end.seconds)) ? curMk.end.seconds : mkS;
-                            var mkD = (mkE > mkS) ? (mkE - mkS) : 0;
-
-                            curMk.start = toTime(mkS + groupDuration);
-                            if (mkD > 0) {
-                                curMk.end = toTime(mkE + groupDuration);
-                            }
-                        } catch (eMkShift) {}
-                    }
-                }
-
-                // Create a clear Timeline Marker for this Group Photo segment
-                var gpMarker = markers.createMarker(insertSec);
-                if (gpMarker) {
-                    gpMarker.name = seg.name + " - Group Photo";
-                    gpMarker.comments = "Nikah Group Photo Video (" + groupDuration + "s)";
-                    gpMarker.end = toTime(insertSec + groupDuration);
-                    try { gpMarker.setTypeAsChapter(); } catch(eCh) {}
-                }
-            } catch (eMkAll) {}
         }
 
-        var totalExtension = Math.round(placedCount * groupDuration * 10) / 10;
-        var summaryBody = "Successfully ripple-inserted '" + clipNameDisplay + "' across " + placedCount + " Nikah section(s) on Track V" + (targetTrackIndex + 1) + ":\n\n" +
-                          "• Each Group Video Duration: " + groupDuration + "s\n" +
-                          "• Total Timeline Extension: +" + totalExtension + "s\n" +
-                          "• All downstream footage & audio tracks shifted forward (0% cuts)\n" +
-                          "• Synchronized timeline markers updated\n\n" +
+        totalExtensionSec = Math.round(totalExtensionSec * 10) / 10;
+        var summaryBody = "Successfully ripple-inserted across " + placedCount + " Nikah ceremony section(s) on Track V" + (targetTrackIndex + 1) + ":\n\n" +
+                          "• Total Timeline Extension: +" + totalExtensionSec + "s\n" +
+                          "• All downstream footage & audio tracks rippled forward (0% cuts)\n" +
+                          "• Synchronized timeline markers created\n\n" +
                           timeSummary.join("\n");
 
-        $.runScript.showWorkspaceModal("One Tap — Nikah Group Photo Complete", placedCount + " Nikah Group Videos Inserted", summaryBody, "SUCCESS");
-        return "SUCCESS|||" + placedCount + "|||" + clipNameDisplay + "|||" + totalExtension;
+        $.runScript.showWorkspaceModal("One Tap — Nikah Group Photo Complete", placedCount + " Group Photo Videos Inserted", summaryBody, "SUCCESS");
+        return "SUCCESS|||" + placedCount + "|||" + (groupPhotoAssignments[0].clip.name) + "|||" + totalExtensionSec;
     } catch (err) {
         $.runScript.showWorkspaceModal("One Tap — Nikah Group Photo", "Error Processing", err.toString(), "ERROR");
         return "ERROR|||" + err.toString();
