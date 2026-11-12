@@ -980,24 +980,42 @@
             display: flex;
             flex-direction: column;
             gap: 4px;
-            max-height: 140px;
+            max-height: 150px;
             overflow-y: auto;
             margin-bottom: 5px;
         }
         .gpi-assignment-list::-webkit-scrollbar { width: 3px; }
         .gpi-assignment-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-        .gpi-assignment-row {
-            display: flex;
-            align-items: center;
-            gap: 4px;
+        .gpi-assignment-card {
             background: var(--surface-card);
             border: 1px solid var(--border);
             border-radius: 8px;
             padding: 5px 7px;
             transition: border-color 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
         }
-        .gpi-assignment-row:hover { border-color: var(--border-highlight); }
-        .gpi-select, .gpi-num-input {
+        .gpi-assignment-card:hover { border-color: var(--border-highlight); }
+        .gpi-card-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .gpi-card-badge {
+            font-size: 9px;
+            font-weight: 800;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .gpi-card-controls {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+        .gpi-clip-input, .gpi-num-input {
             background: var(--surface);
             border: 1px solid var(--border);
             border-radius: 5px;
@@ -1005,21 +1023,52 @@
             font-family: inherit;
             font-size: 10px;
             font-weight: 700;
-            padding: 3px 5px;
+            padding: 3px 6px;
             outline: none;
+            transition: border-color 0.15s ease;
         }
-        .gpi-select { flex: 1.4; }
-        .gpi-num-input { width: 36px; text-align: center; }
-        .gpi-select:focus, .gpi-num-input:focus { border-color: var(--accent); }
+        .gpi-clip-input {
+            flex: 1;
+            min-width: 95px;
+        }
+        .gpi-clip-input:focus, .gpi-num-input:focus { border-color: var(--accent); }
+        .gpi-pick-btn {
+            height: 22px;
+            padding: 0 6px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            background: var(--surface-hover);
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 8.5px;
+            font-weight: 750;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            flex-shrink: 0;
+            transition: all 0.15s ease;
+        }
+        .gpi-pick-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        .gpi-num-input { width: 34px; text-align: center; }
         .gpi-row-label {
             font-size: 9px;
             font-weight: 750;
             color: var(--text-muted);
             white-space: nowrap;
         }
+        .gpi-range-box {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            flex-shrink: 0;
+        }
         .gpi-rm-btn {
-            width: 18px;
-            height: 18px;
+            width: 16px;
+            height: 16px;
             border-radius: 50%;
             border: none;
             background: rgba(239, 68, 68, 0.12);
@@ -1032,6 +1081,7 @@
             justify-content: center;
             flex-shrink: 0;
             transition: background 0.15s ease;
+            line-height: 1;
         }
         .gpi-rm-btn:hover { background: rgba(239, 68, 68, 0.28); }
         .gpi-add-btn {
@@ -1729,53 +1779,83 @@
 
             box.innerHTML = html;
 
-            // Re-populate all dropdown selects in assignment rows
-            var selects = document.querySelectorAll('.gpi-select');
-            selects.forEach(function(s) {
-                var curVal = s.value;
-                gpiPopulateSelect(s);
-                if (curVal) s.value = curVal;
-            });
+            // Update datalist suggestions
+            var datalist = document.getElementById('gpiClipSuggestions');
+            if (datalist) {
+                datalist.innerHTML = '';
+                gps.forEach(function(g) {
+                    if (g.clipName) {
+                        var opt1 = document.createElement('option');
+                        opt1.value = g.clipName;
+                        datalist.appendChild(opt1);
+                    }
+                    var opt2 = document.createElement('option');
+                    opt2.value = 'GP ' + g.gpNum;
+                    datalist.appendChild(opt2);
+                });
+            }
 
             // If no assignments exist yet, auto-add a default assignment
             var list = document.getElementById('gpiAssignmentList');
-            if (list && list.children.length === 0 && gps.length > 0 && nikaahCount > 0) {
-                gpiAddAssignment(1, 1, nikaahCount);
+            if (list && list.children.length === 0) {
+                var firstClip = (gps.length > 0 && gps[0].clipName) ? gps[0].clipName : 'GP 1';
+                gpiAddAssignment(firstClip, 1, nikaahCount || 10);
             }
         }
 
-        function gpiPopulateSelect(selectEl) {
-            selectEl.innerHTML = '';
-            if (gpiState.gpSources.length === 0) {
-                var opt = document.createElement('option');
-                opt.value = '';
-                opt.textContent = '-- Scan for Sources first --';
-                selectEl.appendChild(opt);
-                return;
-            }
-            gpiState.gpSources.forEach(function(g) {
-                var opt = document.createElement('option');
-                opt.value = g.gpNum;
-                opt.textContent = 'GP ' + g.gpNum + ': ' + g.clipName + (g.hasClip ? '' : ' (no clip)');
-                selectEl.appendChild(opt);
-            });
-        }
-
-        function gpiAddAssignment(defGp, defFrom, defTo) {
+        function gpiAddAssignment(defClip, defFrom, defTo) {
             var list = document.getElementById('gpiAssignmentList');
             if (!list) return;
 
             gpiState.assignmentCount++;
             var rowId = 'gpiRow_' + gpiState.assignmentCount;
 
-            var row = document.createElement('div');
-            row.className = 'gpi-assignment-row';
-            row.id = rowId;
+            var card = document.createElement('div');
+            card.className = 'gpi-assignment-card';
+            card.id = rowId;
 
-            var sel = document.createElement('select');
-            sel.className = 'gpi-select';
-            gpiPopulateSelect(sel);
-            if (defGp) sel.value = defGp;
+            var head = document.createElement('div');
+            head.className = 'gpi-card-head';
+
+            var badge = document.createElement('span');
+            badge.className = 'gpi-card-badge';
+            badge.textContent = 'Assignment #' + gpiState.assignmentCount;
+
+            var rmBtn = document.createElement('button');
+            rmBtn.className = 'gpi-rm-btn';
+            rmBtn.innerHTML = '×';
+            rmBtn.title = 'Remove assignment';
+            rmBtn.onclick = function() {
+                card.parentNode.removeChild(card);
+            };
+
+            head.appendChild(badge);
+            head.appendChild(rmBtn);
+
+            var controls = document.createElement('div');
+            controls.className = 'gpi-card-controls';
+
+            var inpClip = document.createElement('input');
+            inpClip.type = 'text';
+            inpClip.className = 'gpi-clip-input';
+            inpClip.setAttribute('list', 'gpiClipSuggestions');
+            inpClip.placeholder = 'Enter Clip Name (e.g. 01N or GP_1)';
+            if (defClip) {
+                inpClip.value = defClip;
+            } else if (gpiState.gpSources.length >= gpiState.assignmentCount) {
+                inpClip.value = gpiState.gpSources[gpiState.assignmentCount - 1].clipName;
+            }
+
+            var pickBtn = document.createElement('button');
+            pickBtn.className = 'gpi-pick-btn';
+            pickBtn.title = 'Grab currently selected clip from Premiere timeline';
+            pickBtn.innerHTML = '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg> Pick';
+            pickBtn.onclick = function() {
+                gpiPickSelected(this);
+            };
+
+            var rangeBox = document.createElement('div');
+            rangeBox.className = 'gpi-range-box';
 
             var lbl1 = document.createElement('span');
             lbl1.className = 'gpi-row-label';
@@ -1795,39 +1875,54 @@
             inpTo.type = 'number';
             inpTo.className = 'gpi-num-input gpi-to';
             inpTo.min = '1';
-            inpTo.value = defTo !== undefined ? defTo : (gpiState.nikaahCount || 1);
+            inpTo.value = defTo !== undefined ? defTo : (gpiState.nikaahCount || 10);
 
-            var rmBtn = document.createElement('button');
-            rmBtn.className = 'gpi-rm-btn';
-            rmBtn.innerHTML = '×';
-            rmBtn.title = 'Remove assignment';
-            rmBtn.onclick = function() {
-                row.parentNode.removeChild(row);
-            };
+            rangeBox.appendChild(lbl1);
+            rangeBox.appendChild(inpFrom);
+            rangeBox.appendChild(lbl2);
+            rangeBox.appendChild(inpTo);
 
-            row.appendChild(sel);
-            row.appendChild(lbl1);
-            row.appendChild(inpFrom);
-            row.appendChild(lbl2);
-            row.appendChild(inpTo);
-            row.appendChild(rmBtn);
+            controls.appendChild(inpClip);
+            controls.appendChild(pickBtn);
+            controls.appendChild(rangeBox);
 
-            list.appendChild(row);
+            card.appendChild(head);
+            card.appendChild(controls);
+
+            list.appendChild(card);
+        }
+
+        function gpiPickSelected(btn) {
+            var card = btn.closest('.gpi-assignment-card');
+            if (!card) return;
+            var clipInp = card.querySelector('.gpi-clip-input');
+            if (!clipInp) return;
+            showStatus('⏳ Reading selected clip from timeline...', 'var(--warning)');
+            cs.evalScript("$.runScript.getSelectedTimelineClipName()", function(res) {
+                if (res && res.indexOf("SUCCESS|||") === 0) {
+                    var clipName = res.split("|||")[1];
+                    clipInp.value = clipName;
+                    showStatus('✓ Selected clip: ' + clipName, 'var(--accent)');
+                } else {
+                    var err = res ? res.replace(/^ERROR\|\|\|/, "") : "No clip selected on timeline.";
+                    showStatus('⚠ ' + err, 'var(--warning)');
+                }
+            });
         }
 
         function gpiBuildAssignmentsStr() {
-            var rows = document.querySelectorAll('.gpi-assignment-row');
+            var cards = document.querySelectorAll('.gpi-assignment-card');
             var tokens = [];
-            rows.forEach(function(r) {
-                var sel = r.querySelector('.gpi-select');
-                var inpFrom = r.querySelector('.gpi-from');
-                var inpTo = r.querySelector('.gpi-to');
-                if (sel && inpFrom && inpTo) {
-                    var gp = parseInt(sel.value, 10);
+            cards.forEach(function(c) {
+                var inpClip = c.querySelector('.gpi-clip-input');
+                var inpFrom = c.querySelector('.gpi-from');
+                var inpTo = c.querySelector('.gpi-to');
+                if (inpClip && inpFrom && inpTo) {
+                    var clipVal = (inpClip.value || '').trim();
                     var f = parseInt(inpFrom.value, 10);
                     var t = parseInt(inpTo.value, 10);
-                    if (gp && !isNaN(f) && !isNaN(t) && f <= t) {
-                        tokens.push(gp + ':' + f + '-' + t);
+                    if (clipVal && !isNaN(f) && !isNaN(t) && f <= t) {
+                        tokens.push(clipVal + '|' + f + '|' + t);
                     }
                 }
             });
@@ -1837,7 +1932,7 @@
         function gpiPreview() {
             var assignmentsStr = gpiBuildAssignmentsStr();
             if (!assignmentsStr) {
-                showStatus('⚠ Configure at least one valid assignment first (GP:from-to).', 'var(--warning)');
+                showStatus('⚠ Enter a Clip Name and Nikaah Range (e.g. 1 to 10) first.', 'var(--warning)');
                 return;
             }
             showStatus('⏳ Calculating insertion preview...', 'var(--warning)');
@@ -2700,14 +2795,15 @@
                     <div class="gpi-empty-box">Click "Scan Sequence" to detect Group Photo sources and Nikaah markers.<br><br><span style="font-size:9px;opacity:0.7;">Identifies markers like <b>01N</b>, <b>GROUP_PHOTO_1</b>, Mango/Lavender clips, or timeline selections.</span></div>
                 </div>
 
-                <!-- Assignment Builder -->
+                <!-- Step 1: Assignment Builder -->
                 <div style="flex-shrink:0; margin-top:4px;">
-                    <div class="gpi-section-label">Assignments — GP Source → Nikaah Range</div>
+                    <div class="gpi-section-label">Step 1: Enter Clip Name &amp; Nikaah Range</div>
+                    <datalist id="gpiClipSuggestions"></datalist>
                     <div id="gpiAssignmentList" class="gpi-assignment-list"></div>
                     <button class="gpi-add-btn" onclick="gpiAddAssignment()">＋ Add Assignment</button>
                 </div>
 
-                <!-- Action Buttons -->
+                <!-- Step 2 & 3: Action Buttons -->
                 <div class="gpi-action-row" style="flex-shrink:0; margin-top:4px;">
                     <button class="gpi-action-btn preview" onclick="gpiPreview()" title="Preview planned group photo insertions">
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="vertical-align:middle;margin-right:3px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>

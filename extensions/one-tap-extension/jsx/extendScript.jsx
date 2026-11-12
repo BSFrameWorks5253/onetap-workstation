@@ -3110,6 +3110,150 @@ function collectNikaahMarkers(seq) {
     return nikaahList;
 }
 
+// ── Universal Clip Source Resolver ──────────────────────────────────────────
+// Finds a clip by numeric GP index, clip name (partial or exact), or timeline selection
+function resolveClipSource(seq, clipId, gpSources) {
+    if (!clipId) return null;
+    var strId = String(clipId).replace(/^\s+|\s+$/g, "");
+    if (!strId) return null;
+
+    // 1. If numeric string (e.g. "1"), check if it matches a gpNum in gpSources
+    var num = parseInt(strId, 10);
+    if (!isNaN(num) && (String(num) === strId || strId.indexOf("GP") === 0 || strId.indexOf("GP ") === 0)) {
+        for (var i = 0; i < gpSources.length; i++) {
+            if (gpSources[i].gpNum === num) return gpSources[i];
+        }
+    }
+
+    // 2. Check if strId matches clipName in gpSources (case-insensitive substring or exact)
+    var lowerId = strId.toLowerCase();
+    for (var j = 0; j < gpSources.length; j++) {
+        var gNm = (gpSources[j].clipName || "").toLowerCase();
+        if (gNm === lowerId || gNm.indexOf(lowerId) !== -1 || lowerId.indexOf(gNm) !== -1) {
+            return gpSources[j];
+        }
+    }
+
+    // 3. Check active sequence timeline selection (seq.getSelection())
+    try {
+        if (seq && typeof seq.getSelection === "function") {
+            var sel = seq.getSelection();
+            if (sel && sel.length > 0) {
+                for (var si = 0; si < sel.length; si++) {
+                    var sc = sel[si];
+                    if (!sc) continue;
+                    var scNm = (sc.name || (sc.projectItem && sc.projectItem.name) || "").toLowerCase();
+                    if (lowerId === "selected" || scNm === lowerId || scNm.indexOf(lowerId) !== -1 || lowerId.indexOf(scNm) !== -1) {
+                        var sDur = (sc.duration && sc.duration.seconds > 0) ? Number(sc.duration.seconds) : ((sc.end && sc.start) ? (sc.end.seconds - sc.start.seconds) : 15);
+                        var sIn = (sc.inPoint && !isNaN(Number(sc.inPoint.seconds))) ? Number(sc.inPoint.seconds) : 0;
+                        var sOut = (sc.outPoint && !isNaN(Number(sc.outPoint.seconds))) ? Number(sc.outPoint.seconds) : (sIn + sDur);
+                        return {
+                            gpNum: num || 1,
+                            clipName: sc.name || (sc.projectItem && sc.projectItem.name) || strId,
+                            projectItem: sc.projectItem || null,
+                            duration: sDur,
+                            inPoint: sIn,
+                            outPoint: sOut,
+                            hasClip: (sc.projectItem !== null)
+                        };
+                    }
+                }
+            }
+        }
+    } catch(eSel) {}
+
+    // 4. Scan timeline video tracks for matching clip name
+    try {
+        if (seq && seq.videoTracks) {
+            for (var ti = 0; ti < seq.videoTracks.numTracks; ti++) {
+                var trk = seq.videoTracks[ti];
+                if (!trk || !trk.clips) continue;
+                for (var ci = 0; ci < trk.clips.numItems; ci++) {
+                    var tc = trk.clips[ci];
+                    if (!tc) continue;
+                    var tcNm = (tc.name || (tc.projectItem && tc.projectItem.name) || "").toLowerCase();
+                    if (tcNm === lowerId || tcNm.indexOf(lowerId) !== -1 || lowerId.indexOf(tcNm) !== -1) {
+                        var tDur = (tc.duration && tc.duration.seconds > 0) ? Number(tc.duration.seconds) : ((tc.end && tc.start) ? (tc.end.seconds - tc.start.seconds) : 15);
+                        var tIn = (tc.inPoint && !isNaN(Number(tc.inPoint.seconds))) ? Number(tc.inPoint.seconds) : 0;
+                        var tOut = (tc.outPoint && !isNaN(Number(tc.outPoint.seconds))) ? Number(tc.outPoint.seconds) : (tIn + tDur);
+                        return {
+                            gpNum: num || 1,
+                            clipName: tc.name || (tc.projectItem && tc.projectItem.name) || strId,
+                            projectItem: tc.projectItem || null,
+                            duration: tDur,
+                            inPoint: tIn,
+                            outPoint: tOut,
+                            hasClip: (tc.projectItem !== null)
+                        };
+                    }
+                }
+            }
+        }
+    } catch(eTrk) {}
+
+    // 5. Scan project bins recursively for projectItem with matching name
+    try {
+        if (app.project && app.project.rootItem) {
+            var matchedItem = null;
+            function searchBin(bin) {
+                if (!bin || !bin.children || matchedItem) return;
+                for (var bi = 0; bi < bin.children.numItems; bi++) {
+                    var ch = bin.children[bi];
+                    if (!ch) continue;
+                    if (ch.type === 1) { // Bin
+                        searchBin(ch);
+                    } else {
+                        var cNm = (ch.name || "").toLowerCase();
+                        var stem = cNm.replace(/\.[a-z0-9]+$/i, "");
+                        if (cNm === lowerId || stem === lowerId || cNm.indexOf(lowerId) !== -1 || lowerId.indexOf(stem) !== -1) {
+                            matchedItem = ch;
+                            return;
+                        }
+                    }
+                }
+            }
+            searchBin(app.project.rootItem);
+            if (matchedItem) {
+                var pDur = 15.0;
+                try {
+                    var inP = matchedItem.getInPoint ? matchedItem.getInPoint() : null;
+                    var outP = matchedItem.getOutPoint ? matchedItem.getOutPoint() : null;
+                    if (inP && outP && outP.seconds > inP.seconds) pDur = outP.seconds - inP.seconds;
+                } catch(eP) {}
+                return {
+                    gpNum: num || 1,
+                    clipName: matchedItem.name,
+                    projectItem: matchedItem,
+                    duration: pDur,
+                    inPoint: 0,
+                    outPoint: pDur,
+                    hasClip: true
+                };
+            }
+        }
+    } catch(eBin) {}
+
+    return null;
+}
+
+// ── Get Name of Currently Selected Timeline Clip ─────────────────────────────
+$.runScript.getSelectedTimelineClipName = function() {
+    try {
+        var seq = app.project.activeSequence;
+        if (!seq) return "ERROR|||No active sequence found.";
+        if (typeof seq.getSelection === "function") {
+            var sel = seq.getSelection();
+            if (sel && sel.length > 0 && sel[0]) {
+                var nm = sel[0].name || (sel[0].projectItem && sel[0].projectItem.name) || "";
+                if (nm) return "SUCCESS|||" + nm;
+            }
+        }
+        return "ERROR|||No clip currently selected on the timeline. Click a clip in Premiere Pro first.";
+    } catch(e) {
+        return "ERROR|||" + e.toString();
+    }
+};
+
 // ── Scan: returns GP sources + Nikaah count ───────────────────────────────────
 // Return format: "SUCCESS|||gpCount|||n1Name|n1Has|n1Dur|||n2Name|n2Has|n2Dur|||...|||NIKAAH_COUNT|||total"
 $.runScript.groupPhotoInserterScan = function() {
@@ -3137,8 +3281,8 @@ $.runScript.groupPhotoInserterScan = function() {
 };
 
 // ── Preview: dry-run plan without touching the timeline ───────────────────────
-// assignmentsStr format: "gpNum,fromN,toN;gpNum,fromN,toN;..."
-// e.g. "1,1,15;2,16,20"
+// assignmentsStr format: "clipKey|fromN|toN;clipKey|fromN|toN;..." (also supports comma)
+// e.g. "GP_PHOTO_1|1|10;GP_PHOTO_2|11|25" or "1|1|15"
 // Returns "SUCCESS|||line1\nline2\n...\n|||STATS|||inserted=N|skipped=N|warnings=W"
 $.runScript.groupPhotoInserterPreview = function(assignmentsStr) {
     try {
@@ -3152,52 +3296,49 @@ $.runScript.groupPhotoInserterPreview = function(assignmentsStr) {
             return "ERROR|||No Nikaah (N-prefix) markers found in this sequence. Run Auto In/Out Markers first.";
         }
 
-        // Build lookup: gpNum -> gpSource
-        var gpByNum = {};
-        for (var gi = 0; gi < gpSources.length; gi++) {
-            gpByNum[gpSources[gi].gpNum] = gpSources[gi];
-        }
-
         // Parse assignments
         var assignments = [];
         var rawTokens = (assignmentsStr || "").replace(/^\s+|\s+$/g, "").split(";");
         for (var ai = 0; ai < rawTokens.length; ai++) {
             var tok = rawTokens[ai].replace(/^\s+|\s+$/g, "");
             if (!tok) continue;
-            var fields = tok.split(",");
+            var fields = tok.indexOf("|") !== -1 ? tok.split("|") : tok.split(",");
             if (fields.length < 3) continue;
-            var gpNum  = parseInt(fields[0], 10);
-            var fromN  = parseInt(fields[1], 10);
-            var toN    = parseInt(fields[2], 10);
-            if (isNaN(gpNum) || isNaN(fromN) || isNaN(toN)) continue;
-            assignments.push({ gpNum: gpNum, fromN: fromN, toN: toN });
+            var clipKey = fields[0].replace(/^\s+|\s+$/g, "");
+            var fromN   = parseInt(fields[1], 10);
+            var toN     = parseInt(fields[2], 10);
+            if (!clipKey || isNaN(fromN) || isNaN(toN)) continue;
+            assignments.push({ clipKey: clipKey, fromN: fromN, toN: toN });
         }
 
         if (assignments.length === 0) {
-            return "ERROR|||No valid assignments provided.";
+            return "ERROR|||No valid assignments provided. Enter at least one clip name and Nikaah range.";
         }
 
-        // Build assignment map: nikaahSeqNum -> gpNum
-        var nikaahToGp = {};
+        // Resolve clips & build assignment map: nikaahSeqNum -> clipKey
+        var resolvedClipMap = {};
+        var nikaahToClip = {};
         var warnings = [];
 
         for (var asi = 0; asi < assignments.length; asi++) {
             var asgn = assignments[asi];
-            var gp = gpByNum[asgn.gpNum];
-            if (!gp) {
-                warnings.push("⚠ GROUP_PHOTO_" + asgn.gpNum + " marker not found in sequence.");
-                continue;
+            var key = asgn.clipKey;
+            if (!resolvedClipMap.hasOwnProperty(key)) {
+                resolvedClipMap[key] = resolveClipSource(seq, key, gpSources);
             }
-            if (!gp.hasClip) {
-                warnings.push("⚠ GROUP_PHOTO_" + asgn.gpNum + ": No video clip found at marker position.");
+            var src = resolvedClipMap[key];
+            if (!src) {
+                warnings.push("⚠ Clip '" + key + "' not found on timeline or in Project panel.");
+            } else if (!src.hasClip || !src.projectItem) {
+                warnings.push("⚠ Clip '" + key + "' found but has no project media item.");
             }
             var lo = Math.min(asgn.fromN, asgn.toN);
             var hi = Math.max(asgn.fromN, asgn.toN);
             for (var ni = lo; ni <= hi; ni++) {
-                if (nikaahToGp.hasOwnProperty(ni)) {
-                    warnings.push("⚠ Nikaah " + ni + " is assigned to both GP" + nikaahToGp[ni] + " and GP" + asgn.gpNum + " — GP" + asgn.gpNum + " will be used.");
+                if (nikaahToClip.hasOwnProperty(ni)) {
+                    warnings.push("⚠ Nikaah " + ni + " is assigned to both '" + nikaahToClip[ni] + "' and '" + key + "' — '" + key + "' will be used.");
                 }
-                nikaahToGp[ni] = asgn.gpNum;
+                nikaahToClip[ni] = key;
             }
         }
 
@@ -3208,14 +3349,14 @@ $.runScript.groupPhotoInserterPreview = function(assignmentsStr) {
 
         for (var nki = 0; nki < nikaahMarkers.length; nki++) {
             var nk = nikaahMarkers[nki];
-            var assignedGpNum = nikaahToGp[nk.seqNum];
+            var assignedKey = nikaahToClip[nk.seqNum];
 
-            if (assignedGpNum === undefined || assignedGpNum === null) {
+            if (assignedKey === undefined || assignedKey === null) {
                 lines.push("  — Nikaah " + nk.seqNum + "  [" + nk.name + "]  → (no assignment — skipped)");
                 skippedCount++;
             } else {
-                var srcGp = gpByNum[assignedGpNum];
-                var gpLabel = srcGp ? srcGp.clipName : ("GROUP_PHOTO_" + assignedGpNum);
+                var srcGp = resolvedClipMap[assignedKey];
+                var gpLabel = srcGp ? srcGp.clipName : assignedKey;
                 var dur = srcGp ? (" [" + Math.round(srcGp.duration * 10) / 10 + "s]") : "";
                 var noClipWarn = (srcGp && !srcGp.hasClip) ? " ⚠ clip not found!" : "";
                 lines.push("  ✓ Nikaah " + nk.seqNum + "  [" + nk.name + "]  →  " + gpLabel + dur + noClipWarn);
@@ -3354,27 +3495,36 @@ $.runScript.groupPhotoInserterExecute = function(assignmentsStr) {
         for (var ai = 0; ai < rawTokens.length; ai++) {
             var tok = rawTokens[ai].replace(/^\s+|\s+$/g, "");
             if (!tok) continue;
-            var fields = tok.split(",");
+            var fields = tok.indexOf("|") !== -1 ? tok.split("|") : tok.split(",");
             if (fields.length < 3) continue;
-            var gpNum = parseInt(fields[0], 10);
-            var fromN = parseInt(fields[1], 10);
-            var toN   = parseInt(fields[2], 10);
-            if (isNaN(gpNum) || isNaN(fromN) || isNaN(toN)) continue;
-            assignments.push({ gpNum: gpNum, fromN: fromN, toN: toN });
+            var clipKey = fields[0].replace(/^\s+|\s+$/g, "");
+            var fromN   = parseInt(fields[1], 10);
+            var toN     = parseInt(fields[2], 10);
+            if (!clipKey || isNaN(fromN) || isNaN(toN)) continue;
+            assignments.push({ clipKey: clipKey, fromN: fromN, toN: toN });
         }
 
         if (assignments.length === 0) {
-            return "ERROR|||No valid assignments provided.";
+            return "ERROR|||No valid assignments provided. Enter at least one clip name and Nikaah range.";
         }
 
-        // Build nikaahSeqNum -> gpNum map (last assignment wins for overlaps)
-        var nikaahToGp = {};
+        // Resolve all clips once
+        var resolvedClipMap = {};
+        for (var rci = 0; rci < assignments.length; rci++) {
+            var ck = assignments[rci].clipKey;
+            if (!resolvedClipMap.hasOwnProperty(ck)) {
+                resolvedClipMap[ck] = resolveClipSource(seq, ck, gpSources);
+            }
+        }
+
+        // Build nikaahSeqNum -> clipKey map (last assignment wins for overlaps)
+        var nikaahToClip = {};
         for (var asi = 0; asi < assignments.length; asi++) {
             var asgn = assignments[asi];
             var lo = Math.min(asgn.fromN, asgn.toN);
             var hi = Math.max(asgn.fromN, asgn.toN);
             for (var ni = lo; ni <= hi; ni++) {
-                nikaahToGp[ni] = asgn.gpNum;
+                nikaahToClip[ni] = asgn.clipKey;
             }
         }
 
@@ -3403,9 +3553,9 @@ $.runScript.groupPhotoInserterExecute = function(assignmentsStr) {
         var workList = [];
         for (var nki = 0; nki < nikaahMarkers.length; nki++) {
             var nk = nikaahMarkers[nki];
-            var assignedGpNum = nikaahToGp[nk.seqNum];
-            if (assignedGpNum === undefined || assignedGpNum === null) continue;
-            workList.push({ nk: nk, gpNum: assignedGpNum });
+            var assignedClipKey = nikaahToClip[nk.seqNum];
+            if (assignedClipKey === undefined || assignedClipKey === null) continue;
+            workList.push({ nk: nk, clipKey: assignedClipKey });
         }
 
         workList.sort(function(a, b) {
@@ -3415,29 +3565,29 @@ $.runScript.groupPhotoInserterExecute = function(assignmentsStr) {
         // Rule 4: Loop Backward (Reverse Order): Iterate from the last marker to the first
         for (var wi = workList.length - 1; wi >= 0; wi--) {
             var nk = workList[wi].nk;
-            var gpNum = workList[wi].gpNum;
-            var gp = gpByNum[gpNum];
+            var clipKey = workList[wi].clipKey;
+            var gp = resolvedClipMap[clipKey] || resolveClipSource(seq, clipKey, gpSources);
 
             if (!gp) {
-                reportLines.push("✗ Nikaah " + nk.seqNum + " — GROUP_PHOTO_" + gpNum + " marker not found. Skipped.");
+                reportLines.push("✗ Nikaah " + nk.seqNum + " — Clip '" + clipKey + "' not found on timeline or in Project panel. Skipped.");
                 skippedCount++;
                 continue;
             }
             if (!gp.hasClip || !gp.projectItem) {
-                reportLines.push("✗ Nikaah " + nk.seqNum + " — GROUP_PHOTO_" + gpNum + " has no source clip. Skipped.");
+                reportLines.push("✗ Nikaah " + nk.seqNum + " — Clip '" + clipKey + "' has no source media item. Skipped.");
                 skippedCount++;
                 continue;
             }
 
             var groupDuration = gp.duration;
             if (groupDuration <= 0) {
-                reportLines.push("✗ Nikaah " + nk.seqNum + " — GP" + gpNum + " duration is 0. Skipped.");
+                reportLines.push("✗ Nikaah " + nk.seqNum + " — Clip '" + clipKey + "' duration is 0. Skipped.");
                 skippedCount++;
                 continue;
             }
 
             // Duplicate prevention: scan target track for clip with OT_GP comment
-            var dupKey = "OT_GP_INSERTED|GP:" + gpNum + "|NIKAAH:" + nk.seqNum;
+            var dupKey = "OT_GP_INSERTED|CLIP:" + (gp.clipName || clipKey) + "|NIKAAH:" + nk.seqNum;
             var isDuplicate = false;
             try {
                 var vt = seq.videoTracks;
@@ -3466,7 +3616,7 @@ $.runScript.groupPhotoInserterExecute = function(assignmentsStr) {
                         var mkCmt = "";
                         try { mkCmt = chkMk.comments || ""; } catch(e) {}
                         var mkNm = chkMk.name || "";
-                        if (mkCmt.indexOf(dupKey) !== -1 || mkNm === (nk.name + " - GP" + gpNum)) {
+                        if (mkCmt.indexOf(dupKey) !== -1 || mkNm === (nk.name + " - " + (gp.clipName || clipKey))) {
                             isDuplicate = true;
                             break;
                         }
@@ -3476,7 +3626,7 @@ $.runScript.groupPhotoInserterExecute = function(assignmentsStr) {
             }
 
             if (isDuplicate) {
-                reportLines.push("↷ Nikaah " + nk.seqNum + " — GP" + gpNum + " already inserted. Skipped (duplicate).");
+                reportLines.push("↷ Nikaah " + nk.seqNum + " — " + (gp.clipName || clipKey) + " already inserted. Skipped (duplicate).");
                 skippedCount++;
                 continue;
             }
@@ -3563,7 +3713,7 @@ $.runScript.groupPhotoInserterExecute = function(assignmentsStr) {
                 // Create a marker for the inserted GP
                 var newMk = seq.markers.createMarker(insertSec);
                 if (newMk) {
-                    newMk.name = nk.name + " - GP" + gpNum;
+                    newMk.name = nk.name + " - " + (gp.clipName || clipKey);
                     newMk.comments = dupKey;
                     try { newMk.end = toTime(insertSec + groupDuration); } catch(e) {}
                     try { newMk.setColorByIndex(4, 0); } catch(e) {} // Yellow = N color
@@ -3571,7 +3721,7 @@ $.runScript.groupPhotoInserterExecute = function(assignmentsStr) {
             } catch(eMkAll) {}
 
             insertedCount++;
-            reportLines.unshift("✓ Nikaah " + nk.seqNum + " [" + nk.name + "] → GP" + gpNum + " (" + gp.clipName + ") @ " + formatSec(insertSec) + " (+" + groupDuration + "s)");
+            reportLines.unshift("✓ Nikaah " + nk.seqNum + " [" + nk.name + "] → " + (gp.clipName || clipKey) + " @ " + formatSec(insertSec) + " (+" + groupDuration + "s)");
         }
 
         var statsStr = "inserted=" + insertedCount + "|skipped=" + skippedCount + "|failed=" + failedCount;

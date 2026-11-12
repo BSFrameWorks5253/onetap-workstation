@@ -861,11 +861,20 @@ export default function TitleAdder(): JSX.Element {
       localStorage.setItem('ot_converter_batch_pairs', JSON.stringify(batchPairs))
       if (batchPairs.length > 0) {
         const first = batchPairs[0]
-        localStorage.setItem('ot_converter_video_target', first.videoFolder)
-        sessionStorage.setItem('ot_converter_video_folder', first.videoFolder)
+        if (first.videoFolder) {
+          localStorage.setItem('ot_converter_video_target', first.videoFolder)
+          sessionStorage.setItem('ot_converter_video_folder', first.videoFolder)
+          const api = (window as any).api
+          if (api?.settings?.setAndSave) {
+            api.settings.setAndSave('converter_video_target', first.videoFolder).catch(() => {})
+          }
+        }
+      } else if (baseOut) {
+        localStorage.setItem('ot_converter_video_target', baseOut)
+        sessionStorage.setItem('ot_converter_video_folder', baseOut)
         const api = (window as any).api
         if (api?.settings?.setAndSave) {
-          api.settings.setAndSave('converter_video_target', first.videoFolder).catch(() => {})
+          api.settings.setAndSave('converter_video_target', baseOut).catch(() => {})
         }
       }
       window.dispatchEvent(new CustomEvent('refresh-converter-paths', { detail: { batchPairs, outputFolder: baseOut, batchOutputs: batchOutputsOverride } }))
@@ -2594,16 +2603,19 @@ export default function TitleAdder(): JSX.Element {
         } else {
           playSuccess()
         }
-        const outDir = d.outputFolder || outputFolder
+        const outDir = d.outputFolder || outputFolder || storeState.outputFolder || lastRenderedOutputDir
         if (outDir) {
           setLastRenderedOutputDir(outDir)
           sessionStorage.setItem('ot_converter_video_folder', outDir)
           localStorage.setItem('ot_converter_video_target', outDir)
+          localStorage.setItem('ot_ta_output_folder', outDir)
           const apiInst = (window as any).api
           if (apiInst?.settings?.setAndSave) {
             apiInst.settings.setAndSave('converter_video_target', outDir).catch(() => {})
+            apiInst.settings.setAndSave('last_output_adder', outDir).catch(() => {})
           }
-          syncBatchesToConverter(batchSources, outDir, d.batchOutputs)
+          const effectiveSources = (batchSources && batchSources.length > 0) ? batchSources : Object.keys(d.batchOutputs || {})
+          syncBatchesToConverter(effectiveSources, outDir, d.batchOutputs)
           window.dispatchEvent(new CustomEvent('refresh-converter-paths', { detail: { outputFolder: outDir, batchOutputs: d.batchOutputs } }))
         }
 

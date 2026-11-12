@@ -98,7 +98,8 @@ export default function Converter(): JSX.Element {
 
       const chainedVideo = evtDetail?.outputFolder ||
                             sessionStorage.getItem('ot_converter_video_folder') ||
-                            localStorage.getItem('ot_converter_video_target')
+                            localStorage.getItem('ot_converter_video_target') ||
+                            localStorage.getItem('ot_ta_output_folder') || ''
       const existingUserJpeg = localStorage.getItem('ot_converter_source_jpeg') || ''
       const chainedJpeg = evtDetail?.jpegFolder || existingUserJpeg
 
@@ -108,12 +109,13 @@ export default function Converter(): JSX.Element {
         const activePair = latestBatchPairs[targetIdx]
         if (activePair) {
           const jTarget = cleanPath(existingUserJpeg || activePair.jpegFolder || chainedJpeg)
-          const vTarget = cleanPath((targetIdx === 0 && chainedVideo) ? chainedVideo : activePair.videoFolder)
+          const vTarget = cleanPath((targetIdx === 0 && chainedVideo) ? chainedVideo : (activePair.videoFolder || chainedVideo))
           if (jTarget && !jpegFolder) {
             setJpegFolder(jTarget)
             localStorage.setItem('ot_converter_source_jpeg', jTarget)
           }
           if (vTarget) {
+            chainedHandledRef.current = true
             setVideoFolder(vTarget)
             localStorage.setItem('ot_converter_video_target', vTarget)
             if (api?.settings?.setAndSave) {
@@ -130,6 +132,7 @@ export default function Converter(): JSX.Element {
           localStorage.setItem('ot_converter_source_jpeg', jClean)
         }
         if (chainedVideo) {
+          chainedHandledRef.current = true
           const vClean = cleanPath(chainedVideo)
           setVideoFolder(vClean)
           localStorage.setItem('ot_converter_video_target', vClean)
@@ -144,6 +147,7 @@ export default function Converter(): JSX.Element {
 
     checkChained()
     window.addEventListener('refresh-converter-paths', checkChained)
+    window.addEventListener('focus', () => checkChained())
 
     if (!api || !api.converter) return
     api.settings.getAll().then((all: any) => {
@@ -169,11 +173,16 @@ export default function Converter(): JSX.Element {
       }
 
       if (!chainedHandledRef.current) {
-        const savedTarget = localStorage.getItem('ot_converter_video_target') || all.converter_video_target
+        const savedTarget = sessionStorage.getItem('ot_converter_video_folder') ||
+                            localStorage.getItem('ot_converter_video_target') ||
+                            localStorage.getItem('ot_ta_output_folder') ||
+                            all.converter_video_target ||
+                            all.last_output_adder
         if (savedTarget) {
           const safeVideo = cleanPath(savedTarget)
           setVideoFolder(safeVideo)
           localStorage.setItem('ot_converter_video_target', safeVideo)
+          loadFiles(activeJpeg || undefined, safeVideo)
         }
       }
 
