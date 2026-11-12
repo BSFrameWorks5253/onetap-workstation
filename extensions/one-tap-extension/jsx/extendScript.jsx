@@ -618,11 +618,13 @@ $.runScript.autoInOutMarkers = function (userChoice, addSeqPrefix) {
             var s = sFrame / fps;
             var e;
             if (i < list.length - 1) {
-
                 var nsFrame = Math.round(Number(list[i + 1].startSec || s) * fps);
-                var eFrame = Math.max(sFrame, nsFrame - 1); e = eFrame / fps;
+                var eFrame = Math.max(sFrame, nsFrame);
+                e = eFrame / fps;
             } else {
-                var seqEndFrame = Math.round(Number(seqEndSec) * fps); var eFrameLast = Math.max(sFrame, seqEndFrame - 1); e = eFrameLast / fps;
+                var seqEndFrame = Math.round(Number(seqEndSec) * fps);
+                var eFrameLast = Math.max(sFrame, seqEndFrame);
+                e = eFrameLast / fps;
             }
             if (!isFinite(e) || e < s) e = s;
 
@@ -3288,6 +3290,7 @@ function collectNikaahMarkers(seq) {
             var endSec   = (cur.end   && !isNaN(Number(cur.end.seconds)))   ? Number(cur.end.seconds)   : 0;
             var durSec   = (cur.duration && !isNaN(Number(cur.duration.seconds))) ? Number(cur.duration.seconds) : 0;
             allMarkers.push({
+                markerObj: cur,
                 name: cur.name || "",
                 startSec: startSec,
                 endSec: (endSec > startSec) ? endSec : (startSec + durSec)
@@ -3332,27 +3335,33 @@ function collectNikaahMarkers(seq) {
         var s = item.startSec;
         var e = item.endSec;
 
-        // If marker has no duration (or point marker), find next NIKAAH marker start or seqEnd
-        if (e <= s) {
-            var nextNikaahStart = null;
-            for (var nj = mi + 1; nj < allMarkers.length; nj++) {
-                if (allMarkers[nj].startSec > (s + 0.5) && isStrictNikaahMarker(allMarkers[nj].name)) {
-                    nextNikaahStart = allMarkers[nj].startSec;
-                    break;
-                }
+        // Find next Nikaah start if available
+        var nextNikaahStart = null;
+        for (var nj = mi + 1; nj < allMarkers.length; nj++) {
+            if (allMarkers[nj].startSec > (s + 0.5) && isStrictNikaahMarker(allMarkers[nj].name)) {
+                nextNikaahStart = allMarkers[nj].startSec;
+                break;
             }
-            if (nextNikaahStart !== null) {
+        }
+
+        if (nextNikaahStart !== null) {
+            // If marker had no duration, OR was set with 1-2 frame gap deficit (e < nextNikaahStart <= e + 0.28):
+            // Snap e to nextNikaahStart so full ceremony content is preserved without missing frames
+            if (e <= s || (e < nextNikaahStart && (nextNikaahStart - e) <= 0.28)) {
                 e = nextNikaahStart;
-            } else if (seqEndSec > s) {
-                e = seqEndSec;
-            } else {
-                e = s + 5.0;
             }
+        } else if (seqEndSec > s) {
+            if (e <= s || (seqEndSec > e && (seqEndSec - e) <= 0.28)) {
+                e = seqEndSec;
+            }
+        } else if (e <= s) {
+            e = s + 5.0;
         }
 
         var seqNum = (cerNum !== null && cerNum > 0) ? cerNum : nikahCount;
 
         nikaahList.push({
+            markerObj: item.markerObj,
             seqNum: seqNum,                  // Ceremony number if parsed (e.g. 16 for 16N), else sequential
             ceremonyNum: cerNum,             // Exact parsed ceremony number (or null)
             chronologicalIndex: nikahCount,  // 1, 2, 3...
@@ -3995,6 +4004,72 @@ $.runScript.createProjectSnapshot = function() {
     }
 };
 
+// ── Precision Timeline Cut-Point Snapping Helper ─────────────────────────────
+// Prevents the 1-2 frame cut offset / jerk effect by snapping insertSec to the
+// exact cut point (clip end / next clip start) on the timeline.
+function findBestTimelineCutPoint(seq, preferredTrack, targetSec, maxToleranceSec) {
+    if (!seq || targetSec === undefined || targetSec === null) return targetSec;
+    if (isNaN(Number(targetSec))) return targetSec;
+    targetSec = Number(targetSec);
+    if (!maxToleranceSec) maxToleranceSec = 0.45; // ~11-13 frames tolerance
+
+    var candidateCuts = [];
+
+    // Prioritize preferredTrack (targetVideoTrack), then other video tracks
+    var tracks = [];
+    if (preferredTrack && preferredTrack.clips) tracks.push(preferredTrack);
+    if (seq.videoTracks) {
+        for (var vi = 0; vi < seq.videoTracks.numTracks; vi++) {
+            var vt = seq.videoTracks[vi];
+            if (vt && vt !== preferredTrack && vt.clips) tracks.push(vt);
+        }
+    }
+
+    for (var ti = 0; ti < tracks.length; ti++) {
+        var trk = tracks[ti];
+        for (var ci = 0; ci < trk.clips.numItems; ci++) {
+            var clip = trk.clips[ci];
+            if (!clip) continue;
+
+            var cStart = (clip.start && !isNaN(Number(clip.start.seconds))) ? Number(clip.start.seconds) : -1;
+            var cEnd   = (clip.end   && !isNaN(Number(clip.end.seconds)))   ? Number(clip.end.seconds)   : -1;
+
+            // 1. Clip end point: where the previous clip finishes
+            if (cEnd >= 0) {
+                var dEnd = Math.abs(cEnd - targetSec);
+                if (dEnd <= maxToleranceSec) {
+                    // Prioritize cEnd if targetSec is slightly before cEnd (the classic 1-2 frames before cut)
+                    var scoreEnd = dEnd;
+                    if (cEnd >= targetSec && (cEnd - targetSec) <= 0.28) {
+                        scoreEnd = dEnd * 0.4; // strongly prioritize moving forward to complete the clip
+                    }
+                    candidateCuts.push({ time: cEnd, diff: dEnd, score: scoreEnd, type: "end" });
+                }
+            }
+
+            // 2. Clip start point: where the next clip begins
+            if (cStart >= 0) {
+                var dStart = Math.abs(cStart - targetSec);
+                if (dStart <= maxToleranceSec) {
+                    var scoreStart = dStart;
+                    if (targetSec >= cStart && (targetSec - cStart) <= 0.28) {
+                        scoreStart = dStart * 0.4;
+                    }
+                    candidateCuts.push({ time: cStart, diff: dStart, score: scoreStart, type: "start" });
+                }
+            }
+        }
+    }
+
+    if (candidateCuts.length === 0) {
+        return targetSec;
+    }
+
+    // Sort by lowest score (closest and properly oriented cut point)
+    candidateCuts.sort(function(a, b) { return a.score - b.score; });
+    return candidateCuts[0].time;
+}
+
 // ── Execute: ripple-insert with duplicate prevention ─────────────────────────
 // assignmentsStr same format as preview
 // Returns "SUCCESS|||inserted=N|skipped=N|failed=N|||reportLines"
@@ -4233,11 +4308,6 @@ $.runScript.groupPhotoInserterExecute = function(assignmentsStr) {
                 continue;
             }
 
-            var insertSec = nk.endSec;
-            var gpProjectItem = gp.projectItem;
-            var sourceIn = gp.inPoint;
-            var sourceOut = gp.outPoint;
-
             // Determine target track safely (Rule 7: Track Targeting Safety)
             var targetTrackIndex = 0;
             if (targetTrackIndex >= seq.videoTracks.numTracks) targetTrackIndex = 0;
@@ -4247,6 +4317,14 @@ $.runScript.groupPhotoInserterExecute = function(assignmentsStr) {
                 reportLines.push("✗ Nikaah " + nk.seqNum + " — No valid target video track.");
                 continue;
             }
+
+            // Snap insertion point to the exact timeline clip boundary / cut point
+            // This prevents cutting 1-2 frames before the natural edit point, eliminating any jerk/flash
+            var rawInsertSec = nk.endSec;
+            var insertSec = findBestTimelineCutPoint(seq, targetVideoTrack, rawInsertSec, 0.45);
+            var gpProjectItem = gp.projectItem;
+            var sourceIn = gp.inPoint;
+            var sourceOut = gp.outPoint;
 
             // Set In/Out on projectItem so insertClip takes groupDuration
             try {
