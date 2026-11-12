@@ -50,8 +50,9 @@ export function isSpecialWaazOrId(identifier?: string | null): boolean {
     return true
   }
 
-  const waazOrIdPattern = /(?:^|[\s_.-])(?:ID|WAAZ|IDAARA|IDARAAT)(?:[\s_.-]|$)/i
-  return waazOrIdPattern.test(stem)
+  const waazOrIdPattern = /(?:^|[\s_.-])(?:ID|IDAARA|IDARAAT)(?:[\s_.-]|$)/i
+  const waazPattern = /(?:^|[\s_.\d-])WAAZ(?:[\s_.\d-]|$)/i
+  return waazOrIdPattern.test(stem) || waazPattern.test(stem)
 }
 
 function isGroupPhotoVideo(filenameOrPath: any): boolean {
@@ -126,7 +127,7 @@ const initialState: TitleAdderState = {
   hasReceivedExtensionPath: false,
   expectedVideos: JSON.parse(safeGet('ot_ta_expected_videos', '[]')),
   autoStartOnEncoderSignal: safeGet('ot_ta_auto_start_ame', 'true') === 'true',
-  alwaysKeepOgAudioKeywords: JSON.parse(safeGet('ot_ta_og_keywords', '[]')),
+  alwaysKeepOgAudioKeywords: JSON.parse(safeGet('ot_ta_og_keywords', '["WAAZ", "ID", "SPEECH", "BAYAAN"]')),
   predefinedVideoMutes: JSON.parse(safeGet('ot_ta_predefined_mutes', '{}')),
   predefinedAudioTracks: JSON.parse(safeGet('ot_ta_predefined_audio', '{}')),
   predefinedTitleImages: JSON.parse(safeGet('ot_ta_predefined_images', '{}')),
@@ -241,7 +242,9 @@ class TitleAdderStoreManager {
                 const dotIdx = lowerF.lastIndexOf('.')
                 const stemF = dotIdx > 0 ? lowerF.substring(0, dotIdx) : lowerF
                 // ID and WAAZ videos default to keeping original audio (not muted)
-                // By default all videos (including ID and WAAZ) are muted unless in exceptions
+                if (isSpecialWaazOrId(f) || isSpecialWaazOrId(stemF)) {
+                  return false
+                }
                 return !exceptionsSet.has(lowerF) && !exceptionsSet.has(stemF)
               })
             } else {

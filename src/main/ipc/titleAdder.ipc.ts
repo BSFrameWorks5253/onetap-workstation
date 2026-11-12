@@ -944,8 +944,9 @@ export function isSpecialWaazOrId(identifier?: string | null): boolean {
     return true
   }
 
-  const waazOrIdPattern = /(?:^|[\s_.-])(?:ID|WAAZ|IDAARA|IDARAAT)(?:[\s_.-]|$)/i
-  return waazOrIdPattern.test(stem)
+  const waazOrIdPattern = /(?:^|[\s_.-])(?:ID|IDAARA|IDARAAT)(?:[\s_.-]|$)/i
+  const waazPattern = /(?:^|[\s_.\d-])WAAZ(?:[\s_.\d-]|$)/i
+  return waazOrIdPattern.test(stem) || waazPattern.test(stem)
 }
 
 function isSpecialPrefix(prefix: string): boolean {
@@ -1702,7 +1703,8 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
         shouldMute = explicitMute
       } else {
         // Thumbnails and videos that are NOT ID or WAAZ MUST be muted automatically!
-        shouldMute = params.muteOriginal !== false && !isExcluded
+        // WAAZ and ID videos keep original audio by default!
+        shouldMute = isWaazId ? false : (params.muteOriginal !== false && !isExcluded)
       }
 
       const isWatermarkExcluded = params.watermarkExceptions?.some(ex => {
@@ -1867,7 +1869,7 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
       let nonSilentSegs: Array<[number, number]> | undefined = undefined
 
       // Run silence detection for WAAZ/ID (always), mute-exceptions (isExcluded), and non-muted normal videos
-      if (!isNikah && (!shouldMute || isExcluded)) {
+      if (!isNikah && (isWaazId || !shouldMute || isExcluded)) {
         send('titleAdder:log', { jobId: params.jobId, message: `  🔍 Analysing audio silence…`, level: 'info' })
         const res = detectSilence(videoPath, info.duration)
         nonSilentSegs = res.nonSilent
@@ -1884,7 +1886,7 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
       }
 
       // ── Per-video decision summary ────────────────────────────
-      send('titleAdder:log', { jobId: params.jobId, message: `  🔇 Mute original audio: ${shouldMute ? 'YES' : 'NO (kept)'}${params.muteOriginal && isExcluded ? ' [mute exception — OG audio preserved]' : ''}`, level: 'info' })
+      send('titleAdder:log', { jobId: params.jobId, message: `  🔇 Mute original audio: ${shouldMute ? 'YES' : 'NO (kept)'}${isWaazId ? ' [WAAZ/ID — OG audio preserved]' : params.muteOriginal && isExcluded ? ' [mute exception — OG audio preserved]' : ''}`, level: 'info' })
       send('titleAdder:log', { jobId: params.jobId, message: `  🏷 Watermark: ${shouldAddWatermark ? 'YES' : 'NO (skipped)'}${isWatermarkExcluded ? ' [exception applied]' : ''}`, level: 'info' })
       if (isWaazId && !shouldMute) {
         send('titleAdder:log', { jobId: params.jobId, message: `  ⭐ [WAAZ/ID] Instrumental fill mode: OG audio preserved + ${primary ? path.basename(primary) : 'no fill audio'} fills silent gaps`, level: 'info' })
