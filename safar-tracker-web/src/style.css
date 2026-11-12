@@ -2,49 +2,52 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V4 · weakest: V, Safar production dashboard layout kept */
 
 :root {
-  /* Hallmark Solstice Master Design Tokens */
-  --color-paper: oklch(95% 0.02 85);
-  --color-paper-2: oklch(97.5% 0.015 85);
-  --color-paper-3: oklch(91% 0.035 80);
-  --color-plate: oklch(99% 0.008 85);
-  --color-ink: oklch(24% 0.04 55);
-  --color-ink-2: oklch(34% 0.04 55);
-  --color-muted: oklch(48% 0.05 60);
-  --color-rule: oklch(86% 0.03 80);
-  --color-rule-2: oklch(78% 0.04 78);
-  --color-accent: oklch(54% 0.20 24);
-  --color-accent-ink: oklch(98% 0.015 85);
-  --color-focus: oklch(54% 0.20 24);
-  --color-gold: oklch(74% 0.14 75);
-  --color-gold-2: oklch(84% 0.11 80);
+  /* Pristine Modern Crisp White Master Design Tokens */
+  --color-paper: #f8fafc;
+  --color-paper-2: #ffffff;
+  --color-paper-3: #f1f5f9;
+  --color-plate: #ffffff;
+  --color-ink: #0f172a;
+  --color-ink-2: #1e293b;
+  --color-muted: #64748b;
+  --color-rule: #e2e8f0;
+  --color-rule-2: #cbd5e1;
+  --color-accent: #0f172a;
+  --color-accent-ink: #ffffff;
+  --color-focus: #3b82f6;
+  --color-gold: #d97706;
+  --color-gold-2: #f59e0b;
   --color-slot: var(--color-gold);
 
   /* Semantic System Tokens */
-  --surface: var(--color-paper-2);
-  --surface-2: var(--color-paper-3);
-  --border: var(--color-rule);
-  --text-primary: var(--color-ink);
-  --text-secondary: var(--color-muted);
-  --gold: var(--color-gold);
-  --gold-soft: var(--color-paper-3);
-  --green: oklch(62% 0.16 145);
-  --green-soft: oklch(94% 0.04 145);
-  --blue: oklch(58% 0.15 240);
-  --blue-soft: oklch(93% 0.04 240);
-  --violet: oklch(62% 0.18 290);
-  --amber: oklch(72% 0.16 75);
-  --amber-soft: oklch(95% 0.05 75);
-  --shadow: 0 10px 25px -5px oklch(24% 0.04 55 / 0.06), 0 8px 10px -6px oklch(24% 0.04 55 / 0.03);
+  --surface: #ffffff;
+  --surface-2: #f8fafc;
+  --surface-3: #f1f5f9;
+  --border: #e2e8f0;
+  --border-subtle: #f1f5f9;
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
+  --text-muted: #94a3b8;
+  --gold: #d97706;
+  --gold-soft: #fef3c7;
+  --green: #10b981;
+  --green-soft: #ecfdf5;
+  --blue: #3b82f6;
+  --blue-soft: #eff6ff;
+  --violet: #8b5cf6;
+  --amber: #f59e0b;
+  --amber-soft: #fffbeb;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 4px 12px rgba(0, 0, 0, 0.03);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 14px rgba(15, 23, 42, 0.03);
 
-  --font-display: "Outfit", "Yeseva One", ui-serif, Georgia, serif;
-  --font-body: "DM Sans", "Archivo", ui-sans-serif, system-ui, sans-serif;
-  --font-outlier: "Plus Jakarta Sans", "Archivo Narrow", ui-sans-serif, sans-serif;
+  --font-display: "Plus Jakarta Sans", "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-body: "Plus Jakarta Sans", "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-outlier: "Plus Jakarta Sans", ui-sans-serif, sans-serif;
 
   --radius-card: 12px;
-  --radius-pill: 999px;
+  --radius-pill: 9999px;
   --rule-hair: 1px;
   --rule-bar: 2px;
-  --shadow-card: 0 4px 18px oklch(24% 0.04 55 / 0.06);
 
   --space-xs: 4px;
   --space-sm: 8px;
@@ -69,10 +72,9 @@ body {
   min-height: 100vh;
   font-family: var(--font-body);
   color: var(--color-ink);
-  background-color: var(--color-paper);
+  background-color: #f8fafc;
   background-image:
-    radial-gradient(ellipse at 83% 8%, color-mix(in oklch, var(--color-gold) 15%, transparent), transparent 36%),
-    radial-gradient(ellipse at 15% 90%, color-mix(in oklch, var(--color-paper-3) 40%, transparent), transparent 40%);
+    radial-gradient(circle at 50% 0%, #ffffff 0%, #f8fafc 100%);
   background-attachment: fixed;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -438,29 +440,42 @@ button:active {
 
 .button-primary,
 .button-secondary {
-  height: 35px;
-  border-radius: 8px;
-  padding: 0 13px;
+  height: 32px;
+  border-radius: 6px;
+  padding: 0 12px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
-  font-size: 10px;
-  font-weight: 700;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
   cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
 }
 
 .button-primary {
-  background: var(--color-gold);
-  color: var(--color-accent-ink);
-  border: 1px solid var(--color-gold);
-  box-shadow: 0 3px 8px color-mix(in oklch, var(--color-gold) 25%, transparent);
+  background: var(--text-primary);
+  color: #ffffff;
+  border: 1px solid var(--text-primary);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.button-primary:hover {
+  background: var(--color-ink-2);
+  border-color: var(--color-ink-2);
 }
 
 .button-secondary {
-  background: var(--surface);
+  background: #ffffff;
   color: var(--text-primary);
   border: 1px solid var(--border);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.button-secondary:hover {
+  background: #f8fafc;
+  border-color: var(--color-rule-2);
 }
 
 /* ── Summary & Stats Grid ── */
