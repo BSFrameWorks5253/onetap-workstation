@@ -2115,6 +2115,80 @@ function extractGpNumber(name) {
     return 1;
 }
 
+// ============================================================================
+// TIMELINE INSERTION: Ripple Insert Target Clip at Marker End Positions
+// 1. Target clip placed at the exact end of every detected marker
+// 2. Extracts & sorts marker end times chronologically first
+// 3. Loops backward (reverse order) from last to first to preserve coordinates
+// 4. Uses targetTrack.insertClip(projectItem, timeInSeconds) for native ripple
+// 5. Consistent Time units (.seconds / Time object)
+// 6. Safe track targeting bounds check
+// ============================================================================
+function insertClipAtMarkerEndPoints(targetProjectItem, targetTrackIndex) {
+    try {
+        var seq = app.project.activeSequence;
+        if (!seq) return false;
+
+        // Rule 7: Track Targeting Safety
+        if (typeof targetTrackIndex !== "number" || targetTrackIndex < 0 || targetTrackIndex >= seq.videoTracks.numTracks) {
+            targetTrackIndex = 0;
+        }
+        var targetTrack = seq.videoTracks[targetTrackIndex];
+        if (!targetTrack || !targetProjectItem) return false;
+
+        // Rule 3: Collect & Sort Marker End Times First
+        var markerEndTimes = [];
+        var markers = seq.markers;
+        if (!markers) return false;
+
+        var curMarker = markers.getFirstMarker();
+        while (curMarker) {
+            var endSec = 0;
+            if (curMarker.end && !isNaN(curMarker.end.seconds) && curMarker.end.seconds > 0) {
+                endSec = curMarker.end.seconds;
+            } else if (curMarker.start && !isNaN(curMarker.start.seconds)) {
+                endSec = curMarker.start.seconds;
+            }
+            if (endSec > 0) {
+                markerEndTimes.push(endSec);
+            }
+            curMarker = markers.getNextMarker(curMarker);
+        }
+
+        // Sort chronologically (ascending order)
+        markerEndTimes.sort(function(a, b) {
+            return a - b;
+        });
+
+        // Rule 4: Loop Backward (Reverse Order): Iterate from the last marker to the first
+        // Prevents earlier ripple insertions from shifting subsequent marker positions
+        var insertedCount = 0;
+        for (var i = markerEndTimes.length - 1; i >= 0; i--) {
+            var timeInSeconds = markerEndTimes[i];
+
+            // Rule 6: Consistent Time Units
+            var insertTime = new Time();
+            insertTime.seconds = timeInSeconds;
+
+            // Rule 5: Use Ripple Insert (insertClip) instead of overwriteClip()
+            try {
+                targetTrack.insertClip(targetProjectItem, insertTime);
+                insertedCount++;
+            } catch (e1) {
+                try {
+                    targetTrack.insertClip(targetProjectItem, timeInSeconds);
+                    insertedCount++;
+                } catch (e2) {}
+            }
+        }
+
+        return insertedCount > 0;
+    } catch (eAll) {
+        return false;
+    }
+}
+$.runScript.insertClipAtMarkerEndPoints = insertClipAtMarkerEndPoints;
+
 // ----------------------
 // Distribute Nikah Group Photo Video across all Nikah (N) Sections with Non-Destructive Multi-Track Ripple Insert
 // Shifts downstream video/audio footage forward so NO content is cut or lost
@@ -2627,186 +2701,59 @@ $.runScript.distributeNikahGroupPhoto = function() {
         }
 
         // 4. Reverse-Chronological Processing (N_last -> N_1)
-        // Shifting and inserting from the end ensures earlier Nikah timestamps are never shifted or corrupted
+        // Rule 3: Collect & Sort Marker End Times First: Extract and sort chronologically ascending
+        nikahSegments.sort(function(a, b) {
+            return (Number(a.endSec) || 0) - (Number(b.endSec) || 0);
+        });
+
         var placedCount = 0;
         var timeSummary = [];
 
+        // Rule 7: Track Targeting Safety: Ensure the target video track index is valid
+        var targetTrackIndex = (selectedClipTrackIndex !== null && selectedClipTrackIndex >= 0 && selectedClipTrackIndex < seq.videoTracks.numTracks) ? selectedClipTrackIndex : 0;
+        var targetVideoTrack = seq.videoTracks[targetTrackIndex];
+        if (!targetVideoTrack) {
+            targetVideoTrack = seq.videoTracks[0];
+        }
+
+        // Configure projectItem in/out duration so insertClip takes exactly groupDuration
+        try {
+            if (typeof groupProjectItem.setInPoint === "function" && sourceInPoint >= 0) {
+                groupProjectItem.setInPoint(toTime(sourceInPoint));
+            }
+            if (typeof groupProjectItem.setOutPoint === "function" && groupDuration > 0) {
+                groupProjectItem.setOutPoint(toTime(sourceInPoint + groupDuration));
+            }
+        } catch (eIO) {}
+
+        // Rule 4: Loop Backward (Reverse Order): Iterate from the last marker to the first (i = length - 1; i >= 0; i--)
+        // Prevents earlier ripple insertions from shifting subsequent marker positions
         for (var ni = nikahSegments.length - 1; ni >= 0; ni--) {
             var seg = nikahSegments[ni];
-            var insertSec = seg.endSec; // Default insertion at the END of the Nikah ceremony
+            var insertSec = Number(seg.endSec); // Insertion at the exact END of the marker
+            if (isNaN(insertSec) || insertSec < 0) continue;
 
-            // A. Shift all downstream clips across ALL Video Tracks (Right-to-Left)
-            for (var vIdx = 0; vIdx < seq.videoTracks.numTracks; vIdx++) {
-                var vTrk = seq.videoTracks[vIdx];
-                if (!vTrk || !vTrk.clips) continue;
-
-                var vClipsToShift = [];
-                var vSpanningClips = [];
-
-                // Scan right-to-left (from end of timeline backwards)
-                for (var ci = vTrk.clips.numItems - 1; ci >= 0; ci--) {
-                    var c = vTrk.clips[ci];
-                    if (!c) continue;
-                    var cStart = c.start ? c.start.seconds : 0;
-                    var cEnd = c.end ? c.end.seconds : 0;
-
-                    if (cStart >= (insertSec - 0.05)) {
-                        vClipsToShift.push(c);
-                    } else if (cStart < (insertSec - 0.05) && cEnd > (insertSec + 0.05)) {
-                        vSpanningClips.push(c);
-                    }
-                }
-
-                // Shift downstream clips from right to left
-                for (var si = 0; si < vClipsToShift.length; si++) {
-                    shiftClipForward(vClipsToShift[si], vTrk, groupDuration);
-                }
-
-                // Handle spanning clips (trim left half, replicate right half after gap)
-                for (var sp = 0; sp < vSpanningClips.length; sp++) {
-                    var spClip = vSpanningClips[sp];
-                    try {
-                        var oStart = spClip.start.seconds;
-                        var oEnd = spClip.end.seconds;
-                        var oIn = (spClip.inPoint && !isNaN(spClip.inPoint.seconds)) ? spClip.inPoint.seconds : 0;
-                        var pItm = spClip.projectItem;
-
-                        // Trim original clip to end at insertSec
-                        spClip.end = toTime(insertSec);
-
-                        // Recreate the second half starting at insertSec + groupDuration
-                        if (pItm) {
-                            var secondHalfStart = insertSec + groupDuration;
-                            var secondHalfIn = oIn + (insertSec - oStart);
-                            var secondHalfDur = oEnd - insertSec;
-                            vTrk.overwriteClip(pItm, toTime(secondHalfStart));
-
-                            for (var rci = vTrk.clips.numItems - 1; rci >= 0; rci--) {
-                                var repClip = vTrk.clips[rci];
-                                if (repClip && Math.abs(repClip.start.seconds - secondHalfStart) < 0.25) {
-                                    try {
-                                        repClip.inPoint = toTime(secondHalfIn);
-                                        repClip.outPoint = toTime(secondHalfIn + secondHalfDur);
-                                    } catch (eRep) {}
-                                    break;
-                                }
-                            }
-                        }
-                    } catch (eSpanV) {}
-                }
-            }
-
-            // B. Shift all downstream clips across ALL Audio Tracks (Right-to-Left)
-            for (var aIdx = 0; aIdx < seq.audioTracks.numTracks; aIdx++) {
-                var aTrk = seq.audioTracks[aIdx];
-                if (!aTrk || !aTrk.clips) continue;
-
-                var aClipsToShift = [];
-                var aSpanningClips = [];
-
-                for (var aci = aTrk.clips.numItems - 1; aci >= 0; aci--) {
-                    var ac = aTrk.clips[aci];
-                    if (!ac) continue;
-                    var acStart = ac.start ? ac.start.seconds : 0;
-                    var acEnd = ac.end ? ac.end.seconds : 0;
-
-                    if (acStart >= (insertSec - 0.05)) {
-                        aClipsToShift.push(ac);
-                    } else if (acStart < (insertSec - 0.05) && acEnd > (insertSec + 0.05)) {
-                        aSpanningClips.push(ac);
-                    }
-                }
-
-                // Shift downstream audio clips from right to left
-                for (var asi = 0; asi < aClipsToShift.length; asi++) {
-                    shiftClipForward(aClipsToShift[asi], aTrk, groupDuration);
-                }
-
-                // Handle spanning audio clips
-                for (var asp = 0; asp < aSpanningClips.length; asp++) {
-                    var aspClip = aSpanningClips[asp];
-                    try {
-                        var aoStart = aspClip.start.seconds;
-                        var aoEnd = aspClip.end.seconds;
-                        var aoIn = (aspClip.inPoint && !isNaN(aspClip.inPoint.seconds)) ? aspClip.inPoint.seconds : 0;
-                        var apItm = aspClip.projectItem;
-
-                        aspClip.end = toTime(insertSec);
-
-                        if (apItm) {
-                            var aSecondStart = insertSec + groupDuration;
-                            var aSecondIn = aoIn + (insertSec - aoStart);
-                            var aSecondDur = aoEnd - insertSec;
-                            aTrk.overwriteClip(apItm, toTime(aSecondStart));
-
-                            for (var arci = aTrk.clips.numItems - 1; arci >= 0; arci--) {
-                                var arepClip = aTrk.clips[arci];
-                                if (arepClip && Math.abs(arepClip.start.seconds - aSecondStart) < 0.25) {
-                                    try {
-                                        arepClip.inPoint = toTime(aSecondIn);
-                                        arepClip.outPoint = toTime(aSecondIn + aSecondDur);
-                                    } catch (eARep) {}
-                                    break;
-                                }
-                            }
-                        }
-                    } catch (eSpanA) {}
-                }
-            }
-
-            // C. Insert Group Photo Video at the cleared window [insertSec, insertSec + groupDuration]
+            // Rule 5: Use Ripple Insert (insertClip) instead of overwriteClip()
+            // Rule 6: Consistent Time Units
             try {
-                targetVideoTrack.overwriteClip(groupProjectItem, toTime(insertSec));
-
-                // Find the placed group photo clip to enforce trimmed in/out and duration
-                var placedClip = null;
-                for (var pci = targetVideoTrack.clips.numItems - 1; pci >= 0; pci--) {
-                    var candClip = targetVideoTrack.clips[pci];
-                    if (candClip && Math.abs(candClip.start.seconds - insertSec) < 0.35) {
-                        placedClip = candClip;
-                        break;
-                    }
+                var insertTime = toTime(insertSec);
+                var insertOk = false;
+                try {
+                    targetVideoTrack.insertClip(groupProjectItem, insertTime);
+                    insertOk = true;
+                } catch (eIns1) {
+                    try {
+                        targetVideoTrack.insertClip(groupProjectItem, insertSec);
+                        insertOk = true;
+                    } catch (eIns2) {}
                 }
 
-                if (placedClip) {
-                    try {
-                        if (sourceInPoint > 0 || sourceOutPoint > sourceInPoint) {
-                            placedClip.inPoint = toTime(sourceInPoint);
-                            placedClip.outPoint = toTime(sourceInPoint + groupDuration);
-                        }
-                    } catch (eIO2) {}
-
-                    try {
-                        placedClip.end = toTime(insertSec + groupDuration);
-                    } catch (eEnd2) {}
+                if (insertOk) {
+                    placedCount++;
+                    var startFormatted = formatSec(insertSec);
+                    var endFormatted = formatSec(insertSec + groupDuration);
+                    timeSummary.unshift("• " + seg.name + ": Target clip inserted at " + startFormatted + " -> " + endFormatted + " (+" + groupDuration + "s ripple)");
                 }
-
-                // Place audio on Audio Track 1 if sequence has audio tracks
-                if (seq.audioTracks && seq.audioTracks.numTracks > 0) {
-                    try {
-                        seq.audioTracks[0].overwriteClip(groupProjectItem, toTime(insertSec));
-                        for (var apci = seq.audioTracks[0].clips.numItems - 1; apci >= 0; apci--) {
-                            var aCand = seq.audioTracks[0].clips[apci];
-                            if (aCand && Math.abs(aCand.start.seconds - insertSec) < 0.35) {
-                                try {
-                                    if (sourceInPoint > 0 || sourceOutPoint > sourceInPoint) {
-                                        aCand.inPoint = toTime(sourceInPoint);
-                                        aCand.outPoint = toTime(sourceInPoint + groupDuration);
-                                    }
-                                } catch (eAIO2) {}
-                                try {
-                                    aCand.end = toTime(insertSec + groupDuration);
-                                } catch (eAEnd2) {}
-                                break;
-                            }
-                        }
-                    } catch (eAudPlace) {}
-                }
-
-                placedCount++;
-                var startFormatted = formatSec(insertSec);
-                var endFormatted = formatSec(insertSec + groupDuration);
-                timeSummary.unshift("• " + seg.name + ": Group Photo video inserted at " + startFormatted + " -> " + endFormatted + " (+" + groupDuration + "s shift)");
             } catch (ePlaceGp) {}
 
             // D. Shift Downstream Sequence Markers forward by +groupDuration
@@ -3474,16 +3421,21 @@ $.runScript.groupPhotoInserterExecute = function(assignmentsStr) {
         var failedCount = 0;
         var reportLines = [];
 
-        // Filter to only assigned Nikaah, reverse-chronological for safe ripple
+        // Rule 3: Collect & Sort Marker End Times First: extract all assignments and sort chronologically
         var workList = [];
-        for (var nki = nikaahMarkers.length - 1; nki >= 0; nki--) {
+        for (var nki = 0; nki < nikaahMarkers.length; nki++) {
             var nk = nikaahMarkers[nki];
             var assignedGpNum = nikaahToGp[nk.seqNum];
             if (assignedGpNum === undefined || assignedGpNum === null) continue;
             workList.push({ nk: nk, gpNum: assignedGpNum });
         }
 
-        for (var wi = 0; wi < workList.length; wi++) {
+        workList.sort(function(a, b) {
+            return (Number(a.nk.endSec) || 0) - (Number(b.nk.endSec) || 0);
+        });
+
+        // Rule 4: Loop Backward (Reverse Order): Iterate from the last marker to the first
+        for (var wi = workList.length - 1; wi >= 0; wi--) {
             var nk = workList[wi].nk;
             var gpNum = workList[wi].gpNum;
             var gp = gpByNum[gpNum];
@@ -3556,156 +3508,56 @@ $.runScript.groupPhotoInserterExecute = function(assignmentsStr) {
             var sourceIn = gp.inPoint;
             var sourceOut = gp.outPoint;
 
-            // Determine target track (V1 = index 0)
+            // Determine target track safely (Rule 7: Track Targeting Safety)
             var targetTrackIndex = 0;
+            if (targetTrackIndex >= seq.videoTracks.numTracks) targetTrackIndex = 0;
             var targetVideoTrack = seq.videoTracks[targetTrackIndex];
-
-            // === RIPPLE: Shift all downstream video clips forward ===
-            for (var vIdx = 0; vIdx < seq.videoTracks.numTracks; vIdx++) {
-                var vTrk2 = seq.videoTracks[vIdx];
-                if (!vTrk2 || !vTrk2.clips) continue;
-
-                var clipsToShift = [];
-                var spanningClips = [];
-
-                for (var ci2 = vTrk2.clips.numItems - 1; ci2 >= 0; ci2--) {
-                    var c2 = vTrk2.clips[ci2];
-                    if (!c2) continue;
-                    var cStart = (c2.start) ? c2.start.seconds : 0;
-                    var cEnd   = (c2.end)   ? c2.end.seconds   : 0;
-                    if (cStart >= (insertSec - 0.05)) {
-                        clipsToShift.push(c2);
-                    } else if (cStart < (insertSec - 0.05) && cEnd > (insertSec + 0.05)) {
-                        spanningClips.push(c2);
-                    }
-                }
-
-                for (var si = 0; si < clipsToShift.length; si++) {
-                    shiftClipForward(clipsToShift[si], vTrk2, groupDuration);
-                }
-                for (var sp = 0; sp < spanningClips.length; sp++) {
-                    var spClip = spanningClips[sp];
-                    try {
-                        var oStart = spClip.start.seconds;
-                        var oEnd   = spClip.end.seconds;
-                        var oIn    = (spClip.inPoint && !isNaN(spClip.inPoint.seconds)) ? spClip.inPoint.seconds : 0;
-                        var pItm   = spClip.projectItem;
-                        spClip.end = toTime(insertSec);
-                        if (pItm) {
-                            var sh2Start = insertSec + groupDuration;
-                            var sh2In    = oIn + (insertSec - oStart);
-                            var sh2Dur   = oEnd - insertSec;
-                            vTrk2.overwriteClip(pItm, toTime(sh2Start));
-                            for (var rci = vTrk2.clips.numItems - 1; rci >= 0; rci--) {
-                                var rc = vTrk2.clips[rci];
-                                if (rc && Math.abs(rc.start.seconds - sh2Start) < 0.25) {
-                                    try { rc.inPoint = toTime(sh2In); rc.outPoint = toTime(sh2In + sh2Dur); } catch(e) {}
-                                    break;
-                                }
-                            }
-                        }
-                    } catch(eSpan) {}
-                }
+            if (!targetVideoTrack) {
+                failedCount++;
+                reportLines.push("✗ Nikaah " + nk.seqNum + " — No valid target video track.");
+                continue;
             }
 
-            // === RIPPLE: Shift all downstream audio clips forward ===
-            for (var aIdx2 = 0; aIdx2 < seq.audioTracks.numTracks; aIdx2++) {
-                var aTrk2 = seq.audioTracks[aIdx2];
-                if (!aTrk2 || !aTrk2.clips) continue;
-
-                var aToShift = [];
-                var aSpanning = [];
-
-                for (var aci = aTrk2.clips.numItems - 1; aci >= 0; aci--) {
-                    var ac = aTrk2.clips[aci];
-                    if (!ac) continue;
-                    var acStart = (ac.start) ? ac.start.seconds : 0;
-                    var acEnd   = (ac.end)   ? ac.end.seconds   : 0;
-                    if (acStart >= (insertSec - 0.05)) {
-                        aToShift.push(ac);
-                    } else if (acStart < (insertSec - 0.05) && acEnd > (insertSec + 0.05)) {
-                        aSpanning.push(ac);
-                    }
+            // Set In/Out on projectItem so insertClip takes groupDuration
+            try {
+                if (typeof gpProjectItem.setInPoint === "function" && sourceIn >= 0) {
+                    gpProjectItem.setInPoint(toTime(sourceIn));
                 }
-
-                for (var asi2 = 0; asi2 < aToShift.length; asi2++) {
-                    shiftClipForward(aToShift[asi2], aTrk2, groupDuration);
+                if (typeof gpProjectItem.setOutPoint === "function" && groupDuration > 0) {
+                    gpProjectItem.setOutPoint(toTime(sourceIn + groupDuration));
                 }
-                for (var asp = 0; asp < aSpanning.length; asp++) {
-                    var aspClip = aSpanning[asp];
-                    try {
-                        var aoStart = aspClip.start.seconds;
-                        var aoEnd   = aspClip.end.seconds;
-                        var aoIn    = (aspClip.inPoint && !isNaN(aspClip.inPoint.seconds)) ? aspClip.inPoint.seconds : 0;
-                        var apItm   = aspClip.projectItem;
-                        aspClip.end = toTime(insertSec);
-                        if (apItm) {
-                            var ash2Start = insertSec + groupDuration;
-                            var ash2In    = aoIn + (insertSec - aoStart);
-                            var ash2Dur   = aoEnd - insertSec;
-                            aTrk2.overwriteClip(apItm, toTime(ash2Start));
-                            for (var arci = aTrk2.clips.numItems - 1; arci >= 0; arci--) {
-                                var arc = aTrk2.clips[arci];
-                                if (arc && Math.abs(arc.start.seconds - ash2Start) < 0.25) {
-                                    try { arc.inPoint = toTime(ash2In); arc.outPoint = toTime(ash2In + ash2Dur); } catch(e) {}
-                                    break;
-                                }
-                            }
-                        }
-                    } catch(eASpan) {}
-                }
-            }
+            } catch(eSetIO) {}
 
-            // === INSERT: Place GP clip at cleared window ===
+            // === RIPPLE INSERT: Place target clip at marker end using native insertClip ===
+            // Rule 5: Use Ripple Insert (insertClip) instead of overwriteClip()
+            // Rule 6: Consistent Time Units
             var insertOk = false;
             try {
-                // Set In/Out on projectItem if supported so overwriteClip only takes groupDuration
+                var insertTime = toTime(insertSec);
                 try {
-                    if (typeof gpProjectItem.setInPoint === "function") {
-                        gpProjectItem.setInPoint(toTime(sourceIn));
-                    }
-                    if (typeof gpProjectItem.setOutPoint === "function") {
-                        gpProjectItem.setOutPoint(toTime(sourceIn + groupDuration));
-                    }
-                } catch(eSetIO) {}
-
-                targetVideoTrack.overwriteClip(gpProjectItem, toTime(insertSec));
-
-                // Locate the placed clip and enforce exact inPoint, outPoint, end and stamp duplicate-prevention comment
-                for (var pci = targetVideoTrack.clips.numItems - 1; pci >= 0; pci--) {
-                    var placedClip = targetVideoTrack.clips[pci];
-                    if (placedClip && Math.abs(placedClip.start.seconds - insertSec) < 0.35) {
-                        try {
-                            placedClip.inPoint  = toTime(sourceIn);
-                            placedClip.outPoint = toTime(sourceIn + groupDuration);
-                        } catch(eIO) {}
-                        try { placedClip.end = toTime(insertSec + groupDuration); } catch(eEnd) {}
-                        try { placedClip.comment = dupKey; } catch(eCmt) {}
-                        insertOk = true;
-                        break;
-                    }
-                }
-
-                // Place audio on Audio Track 1 if sequence has audio tracks
-                if (seq.audioTracks && seq.audioTracks.numTracks > 0) {
+                    targetVideoTrack.insertClip(gpProjectItem, insertTime);
+                    insertOk = true;
+                } catch(eIns1) {
                     try {
-                        seq.audioTracks[0].overwriteClip(gpProjectItem, toTime(insertSec));
-                        for (var apci2 = seq.audioTracks[0].clips.numItems - 1; apci2 >= 0; apci2--) {
-                            var aPlaced = seq.audioTracks[0].clips[apci2];
-                            if (aPlaced && Math.abs(aPlaced.start.seconds - insertSec) < 0.35) {
-                                try {
-                                    aPlaced.inPoint  = toTime(sourceIn);
-                                    aPlaced.outPoint = toTime(sourceIn + groupDuration);
-                                } catch(eAIO) {}
-                                try { aPlaced.end = toTime(insertSec + groupDuration); } catch(eAEnd) {}
-                                try { aPlaced.comment = dupKey; } catch(eACmt) {}
-                                break;
-                            }
-                        }
-                    } catch(eAudPlc) {}
+                        targetVideoTrack.insertClip(gpProjectItem, insertSec);
+                        insertOk = true;
+                    } catch(eIns2) {}
                 }
 
-                if (!insertOk) insertOk = true; // clip placed even if comment stamp failed
+                if (insertOk) {
+                    // Tag placed clip with duplicate prevention comment
+                    for (var pci = targetVideoTrack.clips.numItems - 1; pci >= 0; pci--) {
+                        var placedClip = targetVideoTrack.clips[pci];
+                        if (placedClip && Math.abs(placedClip.start.seconds - insertSec) < 0.35) {
+                            try { placedClip.comment = dupKey; } catch(eCmt) {}
+                            break;
+                        }
+                    }
+                } else {
+                    failedCount++;
+                    reportLines.push("✗ Nikaah " + nk.seqNum + " — insertClip failed on target track.");
+                    continue;
+                }
             } catch(ePlc) {
                 failedCount++;
                 reportLines.push("✗ Nikaah " + nk.seqNum + " — insertion failed: " + ePlc.toString());
