@@ -2010,7 +2010,7 @@ export default function App(): JSX.Element {
     const pendingDatesList = ongoingGroup ? ongoingGroup.tasks.filter(t => t.stage === 'editing' || t.stage === 'rendering').map(dateFolderName) : []
 
     return (
-      <div className="app-shell" style={{ display: 'block', minHeight: '100vh', background: 'radial-gradient(ellipse at 83% 8%, rgba(222, 212, 183, 0.18), transparent 36%), #f5f4ee' }}>
+      <div className="app-shell" style={{ display: 'block', minHeight: '100vh', background: '#f8fafc' }}>
         <SafarBriefingView
           safarName={ongoingGroup?.safarName || targetSafarName || 'Active Safar'}
           safarYear={ongoingGroup?.safarYear || '1448'}
@@ -2046,7 +2046,7 @@ export default function App(): JSX.Element {
   if (view === 'widget') {
     const ongoingGroup = activeSafarGroups.find(g => g.safarName === effectiveOngoingSafar) || activeSafarGroups[0]
     return (
-      <div className="app-shell" style={{ display: 'block', minHeight: '100vh', background: '#f5f4ee' }}>
+      <div className="app-shell" style={{ display: 'block', minHeight: '100vh', background: '#f8fafc' }}>
         <StandaloneWidgetView
           safarName={ongoingGroup?.safarName || effectiveOngoingSafar || 'Active Safar'}
           totalDates={ongoingGroup?.total || ongoingGroup?.tasks.length || 0}

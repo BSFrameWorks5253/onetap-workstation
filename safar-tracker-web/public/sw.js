@@ -1,4 +1,4 @@
-const CACHE = 'one-tap-safar-v6'
+const CACHE = 'one-tap-safar-v7'
 
 self.addEventListener('install', event => {
   event.waitUntil(

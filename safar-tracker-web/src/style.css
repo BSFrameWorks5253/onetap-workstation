@@ -15,8 +15,8 @@
   --color-accent: #0f172a;
   --color-accent-ink: #ffffff;
   --color-focus: #3b82f6;
-  --color-gold: #d97706;
-  --color-gold-2: #f59e0b;
+  --color-gold: #4f46e5;
+  --color-gold-2: #6366f1;
   --color-slot: var(--color-gold);
 
   /* Semantic System Tokens */
@@ -73,8 +73,7 @@ body {
   font-family: var(--font-body);
   color: var(--color-ink);
   background-color: #f8fafc;
-  background-image:
-    radial-gradient(circle at 50% 0%, #ffffff 0%, #f8fafc 100%);
+  background-image: none;
   background-attachment: fixed;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -140,10 +139,10 @@ button:active {
   border-radius: 12px;
   display: grid;
   place-items: center;
-  background: var(--color-gold);
-  color: var(--color-accent-ink);
-  font: 800 22px var(--font-display);
-  box-shadow: 0 5px 12px color-mix(in oklch, var(--color-gold) 35%, transparent);
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  color: #ffffff;
+  font: 800 20px var(--font-display);
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.15);
 }
 
 .brand strong {
@@ -374,8 +373,9 @@ button:active {
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: color-mix(in oklch, var(--color-gold) 25%, var(--surface-2));
-  color: var(--color-ink);
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: #0f172a;
   font-size: 11px;
   font-weight: 700;
 }
