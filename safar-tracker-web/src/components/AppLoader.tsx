@@ -26,6 +26,7 @@ export default function AppLoader({
         userSelect: 'none'
       }}
     >
+      <style>{`:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; } button:active { transform: scale(0.98); } button:disabled { opacity: 0.6; cursor: not-allowed; }`}</style>
       <div
         style={{
           position: 'relative',
@@ -52,8 +53,8 @@ export default function AppLoader({
               inset: 0,
               borderRadius: '20px',
               border: '2px solid transparent',
-              borderTopColor: '#4F46E5',
-              borderRightColor: '#818CF8',
+              borderTopColor: 'var(--color-gold)',
+              borderRightColor: 'var(--color-gold-2)',
               animation: 'spin 1s linear infinite'
             }}
           />
@@ -63,16 +64,16 @@ export default function AppLoader({
               width: '52px',
               height: '52px',
               borderRadius: '16px',
-              background: 'linear-gradient(135deg, #4F46E5 0%, #312E81 100%)',
+              background: 'linear-gradient(135deg, var(--color-gold) 0%, oklch(58% 0.12 70) 100%)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 8px 20px rgba(79, 70, 229, 0.35)'
+              boxShadow: '0 8px 20px color-mix(in oklch, var(--color-gold) 35%, transparent)'
             }}
           >
-            <Zap size={26} color="#FFFFFF" fill="#FFFFFF" />
+            <Zap size={26} color="var(--color-accent-ink)" fill="var(--color-accent-ink)" />
           </div>
-          <span style={{ position: 'absolute', top: -4, right: -4, color: '#818CF8' }}>
+          <span style={{ position: 'absolute', top: -4, right: -4, color: 'var(--color-gold)' }}>
             <Sparkles size={16} />
           </span>
         </div>
@@ -85,20 +86,20 @@ export default function AppLoader({
               fontWeight: 800,
               letterSpacing: '0.8px',
               textTransform: 'uppercase',
-              color: '#4F46E5',
+              color: 'var(--color-gold)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: '6px'
             }}
           >
-            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4F46E5', animation: 'ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite' }} />
-            One Tap &middot; AnyShare Nexus
+            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--color-gold)', animation: 'ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite' }} />
+            One Tap Workspace
           </div>
-          <h2 style={{ margin: 0, fontSize: '17px', fontWeight: 700, color: '#0F172A', letterSpacing: '-0.3px' }}>
+          <h2 style={{ margin: 0, fontSize: '17px', fontWeight: 700, color: 'var(--color-ink)', letterSpacing: '-0.3px' }}>
             {message}
           </h2>
-          <p style={{ margin: 0, fontSize: '12px', color: '#64748B', lineHeight: '1.5' }}>
+          <p style={{ margin: 0, fontSize: '12px', color: 'var(--color-muted)', lineHeight: '1.5' }}>
             {subtext}
           </p>
         </div>
@@ -108,7 +109,7 @@ export default function AppLoader({
           style={{
             width: '100%',
             height: '6px',
-            background: '#E2E8F0',
+            background: 'var(--color-rule)',
             borderRadius: '999px',
             overflow: 'hidden',
             position: 'relative'
@@ -120,15 +121,15 @@ export default function AppLoader({
               top: 0,
               bottom: 0,
               width: '50%',
-              background: 'linear-gradient(90deg, #4F46E5, #818CF8, #4F46E5)',
+              background: 'linear-gradient(90deg, var(--color-gold), var(--color-gold-2), var(--color-gold))',
               borderRadius: '999px',
               animation: 'safar-skeleton-shimmer 1.5s infinite ease-in-out'
             }}
           />
         </div>
 
-        <div style={{ fontSize: '10px', color: '#94A3B8', fontFamily: 'monospace' }}>
-          Port 5253 &middot; Supabase Realtime &middot; GS Photo Sync
+        <div style={{ fontSize: '10px', color: 'var(--color-muted)', fontFamily: 'var(--font-outlier)' }}>
+          Supabase Realtime Sync Engine Active
         </div>
       </div>
     </div>

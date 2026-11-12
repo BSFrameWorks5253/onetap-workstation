@@ -85,13 +85,14 @@ export default function EmailLoginModal({
         WebkitBackdropFilter: 'blur(10px)'
       }}
     >
+      <style>{`:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; } button:active { transform: scale(0.98); } button:disabled { opacity: 0.6; cursor: not-allowed; }`}</style>
       <div
         style={{
           width: '100%',
           maxWidth: '420px',
           borderRadius: '24px',
-          background: '#FFFFFF',
-          border: '1px solid #E2E8F0',
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
           overflow: 'hidden',
           display: 'flex',
@@ -102,26 +103,26 @@ export default function EmailLoginModal({
         <div
           style={{
             padding: '18px 24px',
-            borderBottom: '1px solid #E2E8F0',
-            background: '#F8FAFC',
+            borderBottom: '1px solid var(--border)',
+            background: 'var(--surface-2)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between'
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: '#4F46E5', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'var(--color-gold)', color: 'var(--color-accent-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Mail size={16} />
             </div>
             <div>
-              <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: '#0F172A' }}>Passwordless Email Sign In</h3>
-              <p style={{ margin: 0, fontSize: '11px', color: '#64748B' }}>Google Apps Script Authentication</p>
+              <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>Passwordless Email Sign In</h3>
+              <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-secondary)' }}>Google Apps Script Authentication</p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '6px', color: '#94A3B8' }}
+            style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '6px', color: 'var(--text-secondary)' }}
           >
             <X size={18} />
           </button>
@@ -130,14 +131,14 @@ export default function EmailLoginModal({
         {/* Content */}
         <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {error && (
-            <div style={{ padding: '10px 14px', borderRadius: '12px', background: '#FEF2F2', border: '1px solid #FECACA', color: '#991B1B', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ padding: '10px 14px', borderRadius: '12px', background: 'color-mix(in oklch, var(--color-accent) 12%, transparent)', border: '1px solid var(--border)', color: 'var(--color-accent)', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <AlertCircle size={16} />
               <span>{error}</span>
             </div>
           )}
 
           {success && (
-            <div style={{ padding: '10px 14px', borderRadius: '12px', background: '#ECFDF5', border: '1px solid #A7F3D0', color: '#065F46', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ padding: '10px 14px', borderRadius: '12px', background: 'color-mix(in oklch, var(--green) 12%, transparent)', border: '1px solid var(--border)', color: 'var(--green)', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <CheckCircle2 size={16} />
               <span>{success}</span>
             </div>
@@ -146,11 +147,11 @@ export default function EmailLoginModal({
           {step === 'input' ? (
             <form onSubmit={handleSendCode} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '6px' }}>
                   Email Address
                 </label>
                 <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                  <Mail size={16} color="#94A3B8" style={{ position: 'absolute', left: '12px' }} />
+                  <Mail size={16} color="var(--text-secondary)" style={{ position: 'absolute', left: '12px' }} />
                   <input
                     type="email"
                     required
@@ -161,15 +162,15 @@ export default function EmailLoginModal({
                       width: '100%',
                       padding: '10px 12px 10px 36px',
                       borderRadius: '12px',
-                      border: '1px solid #CBD5E1',
+                      border: '1px solid var(--border)',
                       fontSize: '13px',
-                      color: '#0F172A',
+                      color: 'var(--text-primary)',
                       outline: 'none',
-                      background: '#F8FAFC'
+                      background: 'var(--surface-2)'
                     }}
                   />
                 </div>
-                <p style={{ margin: '6px 0 0', fontSize: '11px', color: '#64748B' }}>
+                <p style={{ margin: '6px 0 0', fontSize: '11px', color: 'var(--text-secondary)' }}>
                   Google Apps Script will dispatch a one-time 6-digit magic code from your Gmail to sign in.
                 </p>
               </div>
@@ -181,8 +182,8 @@ export default function EmailLoginModal({
                   width: '100%',
                   padding: '11px',
                   borderRadius: '12px',
-                  background: '#4F46E5',
-                  color: '#FFFFFF',
+                  background: 'var(--color-gold)',
+                  color: 'var(--color-accent-ink)',
                   border: 'none',
                   fontSize: '13px',
                   fontWeight: 700,
@@ -191,27 +192,28 @@ export default function EmailLoginModal({
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '8px',
+                  whiteSpace: 'nowrap',
                   opacity: loading ? 0.6 : 1
                 }}
               >
-                {loading ? <span>Sending Code...</span> : <><Send size={15} /><span>Send Magic Verification Code</span></>}
+                {loading ? <span>Sending Code…</span> : <><Send size={15} /><span>Send Magic Verification Code</span></>}
               </button>
             </form>
           ) : (
             <form onSubmit={handleVerifyCode} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div style={{ padding: '10px 12px', borderRadius: '10px', background: '#F1F5F9', fontSize: '12px', color: '#334155', display: 'flex', justifyContent: 'space-between' }}>
+              <div style={{ padding: '10px 12px', borderRadius: '10px', background: 'var(--surface-2)', fontSize: '12px', color: 'var(--text-primary)', display: 'flex', justifyContent: 'space-between' }}>
                 <span>Code sent to: <strong>{email}</strong></span>
-                <button type="button" onClick={() => setStep('input')} style={{ background: 'none', border: 'none', color: '#4F46E5', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}>
+                <button type="button" onClick={() => setStep('input')} style={{ background: 'none', border: 'none', color: 'var(--color-gold)', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}>
                   Change
                 </button>
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '6px' }}>
                   Enter 6-Digit Code
                 </label>
                 <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                  <KeyRound size={16} color="#94A3B8" style={{ position: 'absolute', left: '12px' }} />
+                  <KeyRound size={16} color="var(--text-secondary)" style={{ position: 'absolute', left: '12px' }} />
                   <input
                     type="text"
                     maxLength={6}
@@ -224,15 +226,15 @@ export default function EmailLoginModal({
                       width: '100%',
                       padding: '10px 12px 10px 36px',
                       borderRadius: '12px',
-                      border: '1px solid #CBD5E1',
+                      border: '1px solid var(--border)',
                       fontSize: '18px',
                       letterSpacing: '6px',
                       fontWeight: 800,
                       textAlign: 'center',
                       fontFamily: 'monospace',
-                      color: '#0F172A',
+                      color: 'var(--text-primary)',
                       outline: 'none',
-                      background: '#F8FAFC'
+                      background: 'var(--surface-2)'
                     }}
                   />
                 </div>
@@ -245,8 +247,8 @@ export default function EmailLoginModal({
                   width: '100%',
                   padding: '11px',
                   borderRadius: '12px',
-                  background: '#4F46E5',
-                  color: '#FFFFFF',
+                  background: 'var(--color-gold)',
+                  color: 'var(--color-accent-ink)',
                   border: 'none',
                   fontSize: '13px',
                   fontWeight: 700,
@@ -255,10 +257,11 @@ export default function EmailLoginModal({
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '8px',
+                  whiteSpace: 'nowrap',
                   opacity: (loading || code.length < 6) ? 0.6 : 1
                 }}
               >
-                {loading ? <span>Verifying...</span> : <><LogIn size={15} /><span>Verify & Enter Portal</span></>}
+                {loading ? <span>Verifying…</span> : <><LogIn size={15} /><span>Verify & Enter Portal</span></>}
               </button>
             </form>
           )}

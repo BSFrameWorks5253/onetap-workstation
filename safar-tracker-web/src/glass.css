@@ -1,3 +1,10 @@
+/* Hallmark · theme: solstice · posture: restrained · shape: app screen · copy: verbatim · nav: sidebar · footer: simple */
+/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V4 · weakest: V, Safar production dashboard layout kept */
+
+html, body {
+  overflow-x: clip;
+}
+
 :root {
   /* ── Physical Glassmorphism Master Specification Tokens ── */
   --glass-base: rgba(16, 16, 16, 0.45);
@@ -415,7 +422,7 @@ td { color: #514d43; font-size: .875rem; }
 .main-content:focus { outline: none; }
 
 @media (max-width: 760px) {
-  .sidebar { width: min(320px, calc(100vw - 44px)); }
+  .sidebar { width: 100%; max-width: 320px; }
   .sidebar-close { width: 44px; height: 44px; }
   .content-wrap { padding: 20px 16px; }
   .page-heading { gap: 14px; }
@@ -816,7 +823,7 @@ td { color: #514d43; font-size: .875rem; }
   box-shadow: 0 12px 32px rgba(99, 102, 241, 0.08);
 }
 .dashboard-safar-percent {
-  color: #4f46e5;
+  color: var(--color-gold);
   font-size: 1.5rem;
   font-weight: 800;
 }
@@ -870,41 +877,43 @@ td { color: #514d43; font-size: .875rem; }
 .safar-group-progress-info strong {
   font-size: 0.9375rem;
   font-weight: 800;
-  color: #4f46e5;
+  color: var(--color-gold);
 }
 .safar-group-progress-info span {
   font-size: 0.75rem;
   color: #64748b;
 }
 
-/* Vibrant App Background and Sidebar */
+/* Hallmark Solstice Warm Canvas and Elevated Elements */
 body {
   background:
-    radial-gradient(circle at 12% 8%, rgba(99, 102, 241, 0.08), transparent 32%),
-    radial-gradient(circle at 88% 12%, rgba(6, 182, 212, 0.08), transparent 32%),
-    radial-gradient(circle at 85% 82%, rgba(139, 92, 246, 0.07), transparent 36%),
-    radial-gradient(circle at 15% 88%, rgba(16, 185, 129, 0.06), transparent 36%),
-    linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
+    radial-gradient(circle at 12% 8%, color-mix(in oklch, var(--color-gold) 12%, transparent), transparent 32%),
+    radial-gradient(circle at 88% 12%, color-mix(in oklch, var(--color-paper-3) 25%, transparent), transparent 32%),
+    radial-gradient(circle at 85% 82%, color-mix(in oklch, var(--color-gold-2) 16%, transparent), transparent 36%),
+    radial-gradient(circle at 15% 88%, color-mix(in oklch, var(--color-paper-2) 30%, transparent), transparent 36%),
+    linear-gradient(135deg, var(--color-paper) 0%, var(--color-paper-2) 100%) !important;
   background-attachment: fixed !important;
 }
 .brand-mark {
-  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #06b6d4 100%) !important;
-  box-shadow: 0 8px 20px rgba(79, 70, 229, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.45) !important;
+  background: linear-gradient(135deg, var(--color-gold) 0%, oklch(58% 0.12 70) 100%) !important;
+  color: var(--color-accent-ink) !important;
+  box-shadow: 0 8px 20px color-mix(in oklch, var(--color-ink) 16%, transparent), inset 0 1px 0 color-mix(in oklch, var(--color-paper) 40%, transparent) !important;
 }
 .nav-link.active {
-  background: linear-gradient(135deg, rgba(79, 70, 229, 0.12), rgba(6, 182, 212, 0.06)) !important;
-  color: #4338ca !important;
-  border-left: 3px solid #4f46e5;
+  background: color-mix(in oklch, var(--color-gold) 16%, transparent) !important;
+  color: var(--color-ink) !important;
+  border-left: 3px solid var(--color-gold);
 }
 .nav-count {
-  background: rgba(99, 102, 241, 0.15) !important;
-  color: #4338ca !important;
+  background: color-mix(in oklch, var(--color-gold) 22%, transparent) !important;
+  color: var(--color-ink) !important;
   font-weight: 700 !important;
 }
 .button-primary {
-  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%) !important;
-  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3) !important;
-  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  background: linear-gradient(135deg, var(--color-gold) 0%, oklch(62% 0.12 70) 100%) !important;
+  color: var(--color-accent-ink) !important;
+  box-shadow: 0 4px 14px color-mix(in oklch, var(--color-ink) 18%, transparent) !important;
+  border: 1px solid var(--color-rule) !important;
 }
 
 /* Media Sync Badges: Photo & Video Cross-Status */
@@ -1239,13 +1248,13 @@ body {
   gap: 6px;
   padding: 8px 14px;
   border-radius: 10px;
-  border: 1px solid #cbd5e1;
-  background: #ffffff;
-  color: #334155;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-primary);
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
 }
 
 .kanban-rescan-btn:hover {
@@ -1804,7 +1813,7 @@ body {
     flex-shrink: 0;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
   }
   .mobile-stage-tab:active {
     transform: scale(0.95);
@@ -1857,8 +1866,8 @@ body {
   }
 
   .kanban-column {
-    min-width: calc(100vw - 32px) !important;
-    max-width: calc(100vw - 32px) !important;
+    min-width: min(100%, 360px) !important;
+    max-width: 100% !important;
     scroll-snap-align: center !important;
     flex-shrink: 0 !important;
   }
@@ -2128,7 +2137,7 @@ body {
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(90deg, #4f46e5, #06b6d4, #10b981);
+  background: linear-gradient(90deg, var(--color-gold), var(--color-accent), var(--green));
   opacity: 0;
   transition: opacity 0.25s ease;
 }
@@ -2335,7 +2344,7 @@ button:active,
   display: grid;
   place-items: center;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background 0.2s ease, transform 0.2s ease, color 0.2s ease;
 }
 
 .widget-icon-btn:hover {
@@ -2463,7 +2472,7 @@ button:active,
 
 .widget-linear-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, #4f46e5 0%, #3b82f6 100%);
+  background: linear-gradient(90deg, var(--color-gold) 0%, var(--green) 100%);
   border-radius: 999px;
   transition: width 0.6s cubic-bezier(0.23, 1, 0.32, 1);
 }
@@ -2565,17 +2574,17 @@ button:active,
   width: 100%;
   height: 44px;
   border-radius: 12px;
-  background: #10b981;
-  color: #ffffff;
-  border: 1px solid #059669;
+  background: var(--green);
+  color: var(--color-accent-ink);
+  border: 1px solid var(--border);
   font: 700 13px Manrope, sans-serif;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.28);
-  transition: all 0.15s ease;
+  box-shadow: 0 4px 14px color-mix(in oklch, var(--green) 25%, transparent);
+  transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .widget-briefing-btn:hover {
@@ -2742,22 +2751,22 @@ button:active,
   border: 1px solid var(--border, rgba(0, 0, 0, 0.08));
   color: var(--text-primary, #1e293b);
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: background 0.2s var(--ease-panel), border-color 0.2s var(--ease-panel), transform 0.2s var(--ease-panel);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
 }
 .quick-chip:hover {
   transform: translateY(-1px);
-  border-color: #6366f1;
+  border-color: var(--color-gold);
 }
 .quick-chip.active {
-  background: #4f46e5;
-  color: #ffffff;
-  border-color: #4338ca;
-  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+  background: var(--color-gold);
+  color: var(--color-accent-ink);
+  border-color: var(--color-gold);
+  box-shadow: 0 4px 12px color-mix(in oklch, var(--color-gold) 30%, transparent);
 }
 .quick-chip.active .chip-badge {
-  background: rgba(255, 255, 255, 0.25);
-  color: #ffffff;
+  background: color-mix(in oklch, var(--color-paper) 30%, transparent);
+  color: var(--color-accent-ink);
 }
 .quick-chip .chip-badge {
   font-size: 10px;
@@ -2768,12 +2777,12 @@ button:active,
 }
 .quick-chip.batch-chip {
   margin-left: auto;
-  border: 1px dashed #6366f1;
-  color: #4f46e5;
+  border: 1px dashed var(--color-gold);
+  color: var(--color-gold);
 }
 .quick-chip.batch-chip.active {
-  background: #0f172a;
-  border-color: #0f172a;
+  background: var(--color-ink);
+  border-color: var(--color-ink);
   color: #ffffff;
 }
 
@@ -2827,8 +2836,8 @@ button:active,
   font-weight: 700;
 }
 .batch-bar-count {
-  background: #4f46e5;
-  color: #ffffff;
+  background: var(--color-gold);
+  color: var(--color-accent-ink);
   padding: 3px 9px;
   border-radius: 12px;
   font-size: 11px;
@@ -2855,27 +2864,27 @@ button:active,
   color: #f8fafc;
   border: 1px solid rgba(255, 255, 255, 0.1);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background 0.15s ease, transform 0.15s ease;
 }
 .batch-btn:hover {
   background: rgba(255, 255, 255, 0.22);
   transform: translateY(-1px);
 }
 .batch-btn.primary {
-  background: #059669;
-  border-color: #047857;
-  color: #ffffff;
+  background: var(--green);
+  border-color: var(--border);
+  color: var(--color-accent-ink);
 }
 .batch-btn.primary:hover {
-  background: #10b981;
+  background: color-mix(in oklch, var(--green) 85%, black);
 }
 .batch-btn.cancel {
   background: transparent;
-  color: #94a3b8;
+  color: var(--text-secondary);
   border: none;
 }
 .batch-btn.cancel:hover {
-  color: #ef4444;
+  color: var(--color-accent);
 }
 
 /* ── Checkbox on Card ── */
@@ -2883,7 +2892,7 @@ button:active,
   width: 18px;
   height: 18px;
   border-radius: 5px;
-  accent-color: #4f46e5;
+  accent-color: var(--color-gold);
   cursor: pointer;
   flex-shrink: 0;
 }
@@ -2897,15 +2906,15 @@ button:active,
   border-radius: 8px;
   font-size: 10px;
   font-weight: 700;
-  background: rgba(79, 70, 229, 0.08);
-  color: #4f46e5;
-  border: 1px solid rgba(79, 70, 229, 0.2);
+  background: color-mix(in oklch, var(--color-gold) 12%, transparent);
+  color: var(--color-ink);
+  border: 1px solid var(--border);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
 }
 .day-batch-pill:hover {
-  background: #4f46e5;
-  color: #ffffff;
+  background: var(--color-gold);
+  color: var(--color-accent-ink);
 }
 
 /* ── Team Push Alerts Modal & Banner ── */
@@ -2921,10 +2930,10 @@ button:active,
   border: 1px solid var(--border, rgba(0, 0, 0, 0.1));
   color: var(--text-primary, #1e293b);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background 0.2s ease, transform 0.2s ease, color 0.2s ease;
 }
 .team-push-badge-btn:hover {
-  border-color: #6366f1;
+  border-color: var(--color-gold);
 }
 .team-push-badge-btn.active {
   background: rgba(5, 150, 105, 0.1);
@@ -3199,14 +3208,14 @@ svg.lucide {
   padding: 6px 13px;
   border-radius: 999px;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: background 0.2s var(--ease-panel), color 0.2s var(--ease-panel), transform 0.2s var(--ease-panel);
 }
 
 .briefing-btn-open-site:hover {
-  background: #d97706;
-  color: #ffffff;
+  background: var(--color-gold);
+  color: var(--color-accent-ink);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(217, 119, 6, 0.25);
+  box-shadow: 0 4px 12px color-mix(in oklch, var(--color-gold) 30%, transparent);
 }
 
 .briefing-hero {
@@ -3481,7 +3490,7 @@ svg.lucide {
   padding: 6px 12px;
   border-radius: 8px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
 .briefing-tab.active {
@@ -3545,8 +3554,8 @@ svg.lucide {
   width: 100%;
   max-width: 440px;
   height: 48px;
-  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
-  color: #ffffff;
+  background: linear-gradient(135deg, var(--color-gold) 0%, oklch(62% 0.12 70) 100%);
+  color: var(--color-accent-ink);
   border: none;
   border-radius: 14px;
   font-family: var(--font-display, "Plus Jakarta Sans", sans-serif);
@@ -3557,13 +3566,13 @@ svg.lucide {
   justify-content: center;
   gap: 10px;
   cursor: pointer;
-  box-shadow: 0 8px 24px rgba(217, 119, 6, 0.32);
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 8px 24px color-mix(in oklch, var(--color-gold) 35%, transparent);
+  transition: transform 0.2s var(--ease-panel), box-shadow 0.2s var(--ease-panel);
 }
 
 .briefing-primary-website-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 30px rgba(217, 119, 6, 0.42);
+  box-shadow: 0 12px 30px color-mix(in oklch, var(--color-gold) 45%, transparent);
 }
 
 .briefing-cta-hint {
@@ -3591,7 +3600,7 @@ svg.lucide {
   justify-content: center;
   gap: 7px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
   padding: 0 16px;
 }
 
