@@ -210,59 +210,72 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
       const musicClips = clips.filter(c => c.type === 'music')
       const numMusicClips = musicClips.length
 
-      if (numMusicClips > 1) {
-        f += `[bg_full]asplit=${numMusicClips}`
-        for (let i = 0; i < numMusicClips; i++) f += `[bg_split_${i}]`
-        f += ';'
-      }
-
-      let concatInputs = ''
-      let musicIdx = 0
-      let silenceIdx = 0
-      const filterParts: string[] = []
-
-      for (const clip of clips) {
-        if (clip.type === 'music') {
-          const inputPad = numMusicClips > 1 ? `[bg_split_${musicIdx}]` : '[bg_full]'
-          const outputPad = `[music_clip_${musicIdx}]`
-          const fadeDur = Math.min(0.2, clip.duration * 0.4)
-          const fadeOutSt = Math.max(clip.duration - fadeDur, 0)
-          filterParts.push(
-            `${inputPad}atrim=${clip.musicStart!.toFixed(3)}:${clip.musicEnd!.toFixed(3)},` +
-            `asetpts=PTS-STARTPTS,` +
-            `afade=t=in:st=0:d=${fadeDur.toFixed(3)},` +
-            `afade=t=out:st=${fadeOutSt.toFixed(3)}:d=${fadeDur.toFixed(3)}${outputPad}`
-          )
-          concatInputs += outputPad
-          musicIdx++
-        } else {
-          const outputPad = `[silence_clip_${silenceIdx}]`
-          filterParts.push(`anullsrc=channel_layout=stereo:sample_rate=48000:d=${clip.duration.toFixed(3)}${outputPad}`)
-          concatInputs += outputPad
-          silenceIdx++
-        }
-      }
-
-      if (clips.length > 0) {
-        f += filterParts.join(';') + ';'
-        f += `${concatInputs}concat=n=${clips.length}:v=0:a=1[bg_final_mix];`
+      if (numMusicClips > 15 || clips.length > 30) {
+        // Fallback for long speech recordings with many pauses:
+        // Clean background ducking (10% volume) prevents filter complexity stalls and Windows CLI length limits
+        const delayPart = leadMs > 0 ? `adelay=${leadMs}|${leadMs}[vid_delayed];` : `anull[vid_delayed];`
+        audioFilter =
+          `[${audioIdx}:a]aresample=48000,atrim=0:${totalLength.toFixed(3)},asetpts=PTS-STARTPTS,` +
+          `afade=t=in:st=0:d=2,afade=t=out:st=${fadeStart.toFixed(3)}:d=2[bg_full];` +
+          `[bg_full]volume=0.10[bg_quiet];` +
+          `${videoAudioSrc},atrim=0:${vidDuration.toFixed(3)},asetpts=PTS-STARTPTS,` +
+          delayPart +
+          `[bg_quiet][vid_delayed]amix=inputs=2:normalize=0:duration=longest[final_audio];`
       } else {
-        f += `anullsrc=channel_layout=stereo:sample_rate=48000:d=${totalLength.toFixed(3)}[bg_final_mix];`
+        if (numMusicClips > 1) {
+          f += `[bg_full]asplit=${numMusicClips}`
+          for (let i = 0; i < numMusicClips; i++) f += `[bg_split_${i}]`
+          f += ';'
+        }
+
+        let concatInputs = ''
+        let musicIdx = 0
+        let silenceIdx = 0
+        const filterParts: string[] = []
+
+        for (const clip of clips) {
+          if (clip.type === 'music') {
+            const inputPad = numMusicClips > 1 ? `[bg_split_${musicIdx}]` : '[bg_full]'
+            const outputPad = `[music_clip_${musicIdx}]`
+            const fadeDur = Math.min(0.2, clip.duration * 0.4)
+            const fadeOutSt = Math.max(clip.duration - fadeDur, 0)
+            filterParts.push(
+              `${inputPad}atrim=${clip.musicStart!.toFixed(3)}:${clip.musicEnd!.toFixed(3)},` +
+              `asetpts=PTS-STARTPTS,` +
+              `afade=t=in:st=0:d=${fadeDur.toFixed(3)},` +
+              `afade=t=out:st=${fadeOutSt.toFixed(3)}:d=${fadeDur.toFixed(3)}${outputPad}`
+            )
+            concatInputs += outputPad
+            musicIdx++
+          } else {
+            const outputPad = `[silence_clip_${silenceIdx}]`
+            filterParts.push(`anullsrc=channel_layout=stereo:sample_rate=48000:d=${clip.duration.toFixed(3)}${outputPad}`)
+            concatInputs += outputPad
+            silenceIdx++
+          }
+        }
+
+        if (clips.length > 0) {
+          f += filterParts.join(';') + ';'
+          f += `${concatInputs}concat=n=${clips.length}:v=0:a=1[bg_final_mix];`
+        } else {
+          f += `anullsrc=channel_layout=stereo:sample_rate=48000:d=${totalLength.toFixed(3)}[bg_final_mix];`
+        }
+
+        // Delay OG audio to start after the intro and transition
+        const delayPart = leadMs > 0 ? `,adelay=${leadMs}|${leadMs}` : ''
+        f +=
+          `${videoAudioSrc},atrim=0:${vidDuration.toFixed(3)},` +
+          `asetpts=PTS-STARTPTS${delayPart}[og_audio];`
+
+        f +=
+          `[bg_final_mix]afade=t=in:st=0:d=2[bg_faded];` +
+          `[bg_faded][og_audio]amix=inputs=2:normalize=0:duration=longest,` +
+          `atrim=0:${totalLength.toFixed(3)},asetpts=PTS-STARTPTS,` +
+          `afade=t=out:st=${fadeStart}:d=2[final_audio];`
+
+        audioFilter = f
       }
-
-      // Delay OG audio to start after the intro and transition
-      const delayPart = leadMs > 0 ? `,adelay=${leadMs}|${leadMs}` : ''
-      f +=
-        `${videoAudioSrc},atrim=0:${vidDuration.toFixed(3)},` +
-        `asetpts=PTS-STARTPTS${delayPart}[og_audio];`
-
-      f +=
-        `[bg_final_mix]afade=t=in:st=0:d=2[bg_faded];` +
-        `[bg_faded][og_audio]amix=inputs=2:normalize=0:duration=longest,` +
-        `atrim=0:${totalLength.toFixed(3)},asetpts=PTS-STARTPTS,` +
-        `afade=t=out:st=${fadeStart}:d=2[final_audio];`
-
-      audioFilter = f
     } else {
       audioInputs = []
       const delayPart = leadMs > 0 ? `,adelay=${leadMs}|${leadMs}` : ''
@@ -450,7 +463,23 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
   proc.stdout?.on('data', handleOutput)
   proc.stderr?.on('data', handleOutput)
 
+  let doneEmitted = false
+
+  proc.on('error', (err) => {
+    if (doneEmitted) return
+    doneEmitted = true
+    _activeJobs.delete(jobId)
+    onEvent({
+      type: 'done',
+      jobId,
+      success: false,
+      message: `✖ FFmpeg Process Error: ${err.message}`
+    })
+  })
+
   proc.on('close', (code) => {
+    if (doneEmitted) return
+    doneEmitted = true
     _activeJobs.delete(jobId)
     const exists = fs.existsSync(outputPath)
     const size = exists ? fs.statSync(outputPath).size : 0

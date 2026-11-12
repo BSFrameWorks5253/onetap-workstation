@@ -16,7 +16,7 @@
 
 import { ipcMain, BrowserWindow, shell } from 'electron'
 import { openInEcosystemExplorer } from '../core/ecosystemExplorer'
-import { spawnSync, execFileSync } from 'child_process'
+import { spawn, spawnSync, execFileSync } from 'child_process'
 import fs from 'fs'
 import path from 'path'
 import os from 'os'
@@ -521,7 +521,7 @@ function getVideoInfo(filePath: string): {
       '-v', 'error', '-select_streams', 'v:0',
       '-show_entries', 'stream=width,height,duration,r_frame_rate',
       '-of', 'json', filePath
-    ], { windowsHide: true, env: process.env }).toString()
+    ], { windowsHide: true, env: process.env, timeout: 10000 }).toString()
     const s = JSON.parse(out).streams[0]
     return {
       width: parseInt(s.width),
@@ -539,7 +539,7 @@ function hasAudioStream(filePath: string): boolean {
       '-v', 'error', '-select_streams', 'a:0',
       '-show_entries', 'stream=index',
       '-of', 'json', filePath
-    ], { windowsHide: true, env: process.env }).toString()
+    ], { windowsHide: true, env: process.env, timeout: 10000 }).toString()
     const parsed = JSON.parse(out)
     return !!(parsed.streams && parsed.streams.length > 0)
   } catch { return false }
@@ -552,7 +552,7 @@ function getAudioSamples(filePath: string): number {
       '-v', 'error', '-select_streams', 'a:0',
       '-show_entries', 'stream=duration,sample_rate',
       '-of', 'json', filePath
-    ], { windowsHide: true, env: process.env }).toString()
+    ], { windowsHide: true, env: process.env, timeout: 10000 }).toString()
     const parsed = JSON.parse(out)
     const stream = parsed.streams?.[0]
     if (stream) {
@@ -566,7 +566,7 @@ function getAudioSamples(filePath: string): number {
       '-v', 'error',
       '-show_entries', 'format=duration',
       '-of', 'json', filePath
-    ], { windowsHide: true, env: process.env }).toString()
+    ], { windowsHide: true, env: process.env, timeout: 10000 }).toString()
     const parsed = JSON.parse(out)
     const duration = parseFloat(parsed.format?.duration ?? '0')
     return Math.round(duration * 48000)
@@ -574,70 +574,88 @@ function getAudioSamples(filePath: string): number {
   return 0
 }
 
-function detectSilence(filePath: string, vidDuration: number): {
+async function detectSilence(filePath: string, vidDuration: number): Promise<{
   nonSilent: Array<[number, number]>;
   isSpecialAudioCondition: boolean;
   onlyTitleScreensSilent: boolean;
   startSilenceDuration: number;
   endSilenceDuration: number;
-} {
-  try {
-    const ffmpegExe = getFfmpegExePath()
-    const out = spawnSync(ffmpegExe, [
-      '-i', filePath, '-map', '0:a',
-      '-af', 'silencedetect=n=-45dB:d=1.5',
-      '-f', 'null', '-'
-    ], { windowsHide: true, env: process.env }).stderr?.toString() ?? ''
+}> {
+  return new Promise(resolve => {
+    try {
+      const ffmpegExe = getFfmpegExePath()
+      const proc = spawn(ffmpegExe, [
+        '-vn', '-sn', '-dn',
+        '-i', filePath,
+        '-map', '0:a:0?',
+        '-af', 'silencedetect=n=-45dB:d=1.5',
+        '-f', 'null', '-'
+      ], { windowsHide: true, env: process.env })
 
-    const starts = [...out.matchAll(/silence_start: (\S+)/g)].map(m => parseFloat(m[1]))
-    const ends   = [...out.matchAll(/silence_end: (\S+)/g)].map(m => parseFloat(m[1]))
+      let out = ''
+      proc.stderr?.on('data', chunk => { out += chunk.toString() })
 
-    const silent: Array<[number, number]> = starts.map((s, i) => [
-      Math.max(0, s), Math.min(ends[i] ?? vidDuration, vidDuration)
-    ] as [number, number]).sort((a, b) => a[0] - b[0])
+      // Safety timeout: 15 seconds max so audio analysis never hangs or stalls the queue
+      const timer = setTimeout(() => {
+        try { proc.kill('SIGKILL') } catch {}
+        resolve({ nonSilent: [], isSpecialAudioCondition: false, onlyTitleScreensSilent: false, startSilenceDuration: 0, endSilenceDuration: 0 })
+      }, 15000)
 
-    // Find silence at the very start
-    let startSilenceDuration = 0
-    if (silent.length > 0 && silent[0][0] <= 0.1) {
-      startSilenceDuration = silent[0][1] - silent[0][0]
+      proc.on('close', () => {
+        clearTimeout(timer)
+        try {
+          const starts = [...out.matchAll(/silence_start: (\S+)/g)].map(m => parseFloat(m[1]))
+          const ends   = [...out.matchAll(/silence_end: (\S+)/g)].map(m => parseFloat(m[1]))
+
+          const silent: Array<[number, number]> = starts.map((s, i) => [
+            Math.max(0, s), Math.min(ends[i] ?? vidDuration, vidDuration)
+          ] as [number, number]).sort((a, b) => a[0] - b[0])
+
+          let startSilenceDuration = 0
+          if (silent.length > 0 && silent[0][0] <= 0.1) {
+            startSilenceDuration = silent[0][1] - silent[0][0]
+          }
+
+          let endSilenceDuration = 0
+          if (silent.length > 0) {
+            const last = silent[silent.length - 1]
+            if (last[1] >= vidDuration - 0.1) {
+              endSilenceDuration = last[1] - last[0]
+            }
+          }
+
+          const nonSilent: Array<[number, number]> = []
+          let pos = 0
+          for (const [ss, se] of silent) {
+            if (pos < ss - 0.05) nonSilent.push([pos, ss])
+            pos = Math.max(pos, se)
+          }
+          if (pos < vidDuration - 0.05) nonSilent.push([pos, vidDuration])
+
+          const hasOgAudio = nonSilent.length > 0 && nonSilent.some(([s, e]) => (e - s) > 0.1)
+          const isSpecialAudioCondition =
+            ((startSilenceDuration > 0 && startSilenceDuration < 10) ||
+             (endSilenceDuration > 0 && endSilenceDuration < 10)) &&
+            hasOgAudio
+          const onlyTitleScreensSilent = silent.every(([s, e]) => 
+            (s <= 0.5 && (e - s) <= 2.0) || 
+            (e >= vidDuration - 0.5 && (e - s) <= 2.0)
+          ) && hasOgAudio
+
+          resolve({ nonSilent, isSpecialAudioCondition, onlyTitleScreensSilent, startSilenceDuration, endSilenceDuration })
+        } catch {
+          resolve({ nonSilent: [], isSpecialAudioCondition: false, onlyTitleScreensSilent: false, startSilenceDuration: 0, endSilenceDuration: 0 })
+        }
+      })
+
+      proc.on('error', () => {
+        clearTimeout(timer)
+        resolve({ nonSilent: [], isSpecialAudioCondition: false, onlyTitleScreensSilent: false, startSilenceDuration: 0, endSilenceDuration: 0 })
+      })
+    } catch {
+      resolve({ nonSilent: [], isSpecialAudioCondition: false, onlyTitleScreensSilent: false, startSilenceDuration: 0, endSilenceDuration: 0 })
     }
-
-    // Find silence at the very end
-    let endSilenceDuration = 0
-    if (silent.length > 0) {
-      const last = silent[silent.length - 1]
-      if (last[1] >= vidDuration - 0.1) {
-        endSilenceDuration = last[1] - last[0]
-      }
-    }
-
-    const nonSilent: Array<[number, number]> = []
-    let pos = 0
-    for (const [ss, se] of silent) {
-      if (pos < ss - 0.05) nonSilent.push([pos, ss])
-      pos = Math.max(pos, se)
-    }
-    if (pos < vidDuration - 0.05) nonSilent.push([pos, vidDuration])
-
-    const hasOgAudio = nonSilent.length > 0 && nonSilent.some(([s, e]) => (e - s) > 0.1)
-    // Special audio triggers when silence at start OR end is present but
-    // LESS than 10 seconds. A short silent region means the video's
-    // intro/outro title screens don't have enough room for the regular
-    // background audio, so we use a shorter instrumental track from the
-    // titles/Special folder instead.
-    const isSpecialAudioCondition =
-      ((startSilenceDuration > 0 && startSilenceDuration < 10) ||
-       (endSilenceDuration > 0 && endSilenceDuration < 10)) &&
-      hasOgAudio
-    const onlyTitleScreensSilent = silent.every(([s, e]) => 
-      (s <= 0.5 && (e - s) <= 2.0) || 
-      (e >= vidDuration - 0.5 && (e - s) <= 2.0)
-    ) && hasOgAudio
-
-    return { nonSilent, isSpecialAudioCondition, onlyTitleScreensSilent, startSilenceDuration, endSilenceDuration }
-  } catch {
-    return { nonSilent: [], isSpecialAudioCondition: false, onlyTitleScreensSilent: false, startSilenceDuration: 0, endSilenceDuration: 0 }
-  }
+  })
 }
 
 /**
@@ -1868,10 +1886,12 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
 
       let nonSilentSegs: Array<[number, number]> | undefined = undefined
 
-      // Run silence detection for WAAZ/ID (always), mute-exceptions (isExcluded), and non-muted normal videos
-      if (!isNikah && (isWaazId || !shouldMute || isExcluded)) {
+      // Run silence detection ONLY when needed:
+      // nonSilentSegs is consumed exclusively by WAAZ/ID fill logic when fill audio (primary) is provided
+      const needsSilenceDetection = isWaazId && !shouldMute && !isNikah && !!primary && fs.existsSync(primary)
+      if (needsSilenceDetection) {
         send('titleAdder:log', { jobId: params.jobId, message: `  🔍 Analysing audio silence…`, level: 'info' })
-        const res = detectSilence(videoPath, info.duration)
+        const res = await detectSilence(videoPath, info.duration)
         nonSilentSegs = res.nonSilent
         const startSil = res.startSilenceDuration
         const endSil   = res.endSilenceDuration
@@ -2273,7 +2293,8 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
           try {
             const pyProc = spawnSync(pyCmd, [targetScript, '--folder', rootPath, '--titles-folder', titlesFolder, '--json'], {
               windowsHide: true,
-              encoding: 'utf-8'
+              encoding: 'utf-8',
+              timeout: 30000
             })
             if (pyProc.status === 0 && pyProc.stdout) {
               const parsed = JSON.parse(pyProc.stdout.trim())
