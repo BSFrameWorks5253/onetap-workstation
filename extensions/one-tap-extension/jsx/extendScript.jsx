@@ -76,9 +76,11 @@ $.runScript.getMarkerNames = function() {
         var markerItems = [];
         var mScan = markers.getFirstMarker();
         while (mScan) {
-            var mStart = (mScan.start && !isNaN(Number(mScan.start.seconds))) ? Number(mScan.start.seconds) : 0;
-            // Collect marker for sort
-            markerItems.push({ obj: mScan, name: mScan.name || '', startSec: mStart });
+            var mNm = mScan.name || '';
+            if (!isGroupPhotoName(mNm)) {
+                var mStart = (mScan.start && !isNaN(Number(mScan.start.seconds))) ? Number(mScan.start.seconds) : 0;
+                markerItems.push({ obj: mScan, name: mNm, startSec: mStart });
+            }
             mScan = markers.getNextMarker(mScan);
         }
         markerItems.sort(function (a, b) { return a.startSec - b.startSec; });
@@ -369,20 +371,36 @@ $.runScript.autoInOutMarkers = function (userChoice, addSeqPrefix) {
 
         // collect sequence markers
         var list = [];
+        var gpMarkersToPreserve = [];
         var m = markers.getFirstMarker();
         while (m) {
             try {
+                var mName = (m.name !== undefined ? m.name : "");
+                var mStart = (m.start && !isNaN(Number(m.start.seconds))) ? Number(m.start.seconds) : 0;
+                var mEnd = (m.end && !isNaN(Number(m.end.seconds))) ? Number(m.end.seconds) : 0;
                 var cIdx = 5;
                 if (typeof m.getColorByIndex === "function") {
                     try { cIdx = m.getColorByIndex(0); } catch (eColor) { cIdx = 5; }
                 }
-                list.push({
-                    obj: m,
-                    name: (m.name !== undefined ? m.name : ""),
-                    startSec: (m.start && !isNaN(Number(m.start.seconds))) ? Number(m.start.seconds) : 0,
-                    comment: (m.comments !== undefined ? m.comments : ""),
-                    colorIndex: cIdx
-                });
+
+                if (isGroupPhotoName(mName)) {
+                    // Group Photo markers (GP1, GROUP_PHOTO_1, etc.) must NEVER be treated as video separation markers!
+                    gpMarkersToPreserve.push({
+                        name: mName,
+                        startSec: mStart,
+                        endSec: mEnd,
+                        comment: (m.comments !== undefined ? m.comments : ""),
+                        colorIndex: cIdx
+                    });
+                } else {
+                    list.push({
+                        obj: m,
+                        name: mName,
+                        startSec: mStart,
+                        comment: (m.comments !== undefined ? m.comments : ""),
+                        colorIndex: cIdx
+                    });
+                }
             } catch (e) {
                 list.push({ obj: m, name: "", startSec: 0, comment: "", colorIndex: 5 });
             }
@@ -708,6 +726,28 @@ $.runScript.autoInOutMarkers = function (userChoice, addSeqPrefix) {
             }
         }
 
+        // Restore preserved Group Photo markers so they remain intact on timeline for GPI
+        for (var gpi = 0; gpi < gpMarkersToPreserve.length; gpi++) {
+            var gpm = gpMarkersToPreserve[gpi];
+            try {
+                var restM = markers.createMarker(gpm.startSec);
+                if (restM) {
+                    restM.name = gpm.name;
+                    restM.comments = gpm.comment;
+                    if (gpm.endSec > gpm.startSec) {
+                        try { restM.end = timeObj(gpm.endSec); } catch(eE) {
+                            try { restM.end = gpm.endSec; } catch(eE2) {}
+                        }
+                    }
+                    if (typeof restM.setColorByIndex === "function") {
+                        try { restM.setColorByIndex(gpm.colorIndex || 7, 0); } catch(eC1) {
+                            try { restM.setColorByIndex(gpm.colorIndex || 7); } catch(eC2) {}
+                        }
+                    }
+                }
+            } catch(eRest) {}
+        }
+
         var breakdownLines = [];
         for (var p = 0; p < prefixOrder.length; p++) {
             var pfxKey = prefixOrder[p];
@@ -828,9 +868,11 @@ $.runScript.autoMEIO = function (selectedMarkersStr, explicitExtOrPresetPath) {
         var markerItems = [];
         var mScan = markers.getFirstMarker();
         while (mScan) {
-            var mStart = (mScan.start && !isNaN(Number(mScan.start.seconds))) ? Number(mScan.start.seconds) : 0;
-            // Collect marker for sort
-            markerItems.push({ obj: mScan, name: mScan.name || '', startSec: mStart });
+            var mNm = mScan.name || '';
+            if (!isGroupPhotoName(mNm)) {
+                var mStart = (mScan.start && !isNaN(Number(mScan.start.seconds))) ? Number(mScan.start.seconds) : 0;
+                markerItems.push({ obj: mScan, name: mNm, startSec: mStart });
+            }
             mScan = markers.getNextMarker(mScan);
         }
         markerItems.sort(function (a, b) { return a.startSec - b.startSec; });
@@ -1024,15 +1066,23 @@ $.runScript.getTimelineStats = function () {
         if (markers) {
             var m = markers.getFirstMarker();
             while (m) {
-                totalMarkers++;
                 var mName = m.name || "";
-                var pfxInfo = getPrefixFromMarkerName(mName);
-                var code = (pfxInfo && pfxInfo.prefix) ? pfxInfo.prefix.toUpperCase() : "OTHER";
-                if (!breakdownMap[code]) {
-                    breakdownMap[code] = { count: 0, code: code };
-                    breakdownOrder.push(code);
+                if (isGroupPhotoName(mName)) {
+                    if (!breakdownMap["GP"]) {
+                        breakdownMap["GP"] = { count: 0, code: "GP" };
+                        breakdownOrder.push("GP");
+                    }
+                    breakdownMap["GP"].count++;
+                } else {
+                    totalMarkers++;
+                    var pfxInfo = getPrefixFromMarkerName(mName);
+                    var code = (pfxInfo && pfxInfo.prefix) ? pfxInfo.prefix.toUpperCase() : "OTHER";
+                    if (!breakdownMap[code]) {
+                        breakdownMap[code] = { count: 0, code: code };
+                        breakdownOrder.push(code);
+                    }
+                    breakdownMap[code].count++;
                 }
-                breakdownMap[code].count++;
                 m = markers.getNextMarker(m);
             }
         }
@@ -1134,9 +1184,11 @@ $.runScript.legacy_autoMEIO = function (selectedMarkersStr, explicitExtOrPresetP
         var markerItems = [];
         var mScan = markers.getFirstMarker();
         while (mScan) {
-            var mStart = (mScan.start && !isNaN(Number(mScan.start.seconds))) ? Number(mScan.start.seconds) : 0;
-            // Collect marker for sort
-            markerItems.push({ obj: mScan, name: mScan.name || '', startSec: mStart });
+            var mNm = mScan.name || '';
+            if (!isGroupPhotoName(mNm)) {
+                var mStart = (mScan.start && !isNaN(Number(mScan.start.seconds))) ? Number(mScan.start.seconds) : 0;
+                markerItems.push({ obj: mScan, name: mNm, startSec: mStart });
+            }
             mScan = markers.getNextMarker(mScan);
         }
         markerItems.sort(function (a, b) { return a.startSec - b.startSec; });
@@ -2114,8 +2166,36 @@ $.runScript.importMediaXml = function(explicitXmlPath) {
 function isGroupPhotoName(name) {
     if (!name) return false;
     var s = String(name).replace(/\.[a-z0-9]{2,5}$/i, "").replace(/^\s+|\s+$/g, "");
-    if (/group\s*photo|group\s*video|nikah\s*group|nikaah\s*group|nikah\s*photo|nikah\s*video/i.test(s)) return true;
+    if (/group\s*photo|group\s*video|group\s*pic|nikah\s*group|nikaah\s*group|nikah\s*photo|nikaah\s*photo|nikah\s*video|nikaah\s*video/i.test(s)) return true;
     if (/(?:^|[\s_.-])gp(?:[_\s-]*\d+)?(?:[\s_.-]|$)/i.test(s)) return true;
+    if (/^gp\s*\d*$/i.test(s)) return true;
+    return false;
+}
+
+// Helper: Robust check for Mango (Color 7) or Lavender (Color 3 / 8) on TrackItem or ProjectItem
+function isMangoOrLavenderColor(c) {
+    if (!c) return false;
+    var vals = [];
+    try {
+        if (typeof c.getColorLabel === "function") vals.push(c.getColorLabel());
+        else if (c.colorLabel !== undefined) vals.push(c.colorLabel);
+    } catch(e) {}
+    try {
+        if (c.projectItem) {
+            if (typeof c.projectItem.getColorLabel === "function") vals.push(c.projectItem.getColorLabel());
+            else if (c.projectItem.colorLabel !== undefined) vals.push(c.projectItem.colorLabel);
+        }
+    } catch(e) {}
+
+    for (var i = 0; i < vals.length; i++) {
+        var v = vals[i];
+        if (v === null || v === undefined) continue;
+        // In Premiere Pro: 7 = Mango, 3 = Lavender, 8 = Purple / Lavender alternate
+        if (v === 7 || v === 3 || v === 8) return true;
+        var s = String(v).toLowerCase();
+        if (s === "7" || s === "3" || s === "8") return true;
+        if (s.indexOf("mango") !== -1 || s.indexOf("lavender") !== -1 || s.indexOf("purple") !== -1) return true;
+    }
     return false;
 }
 
@@ -2361,9 +2441,7 @@ $.runScript.distributeNikahGroupPhoto = function() {
                     for (var ci0 = 0; ci0 < trk0.clips.numItems; ci0++) {
                         var c0 = trk0.clips[ci0];
                         if (!c0) continue;
-                        var cColor = (typeof c0.getColorLabel === "function") ? c0.getColorLabel() : -1;
-                        var pColor = (c0.projectItem && typeof c0.projectItem.getColorLabel === "function") ? c0.projectItem.getColorLabel() : -1;
-                        if (cColor === 7 || cColor === 8 || pColor === 7 || pColor === 8) {
+                        if (isMangoOrLavenderColor(c0)) {
                             detectedClipName = c0.name || (c0.projectItem && c0.projectItem.name) || "";
                             detectedTrackIndex = ti0;
                             break;
@@ -2922,9 +3000,7 @@ function detectGroupPhotoSources(seq) {
                 var c3 = trk3.clips[ci3];
                 if (!c3) continue;
                 var c3Nm = c3.name || (c3.projectItem && c3.projectItem.name) || "";
-                var cColor = (typeof c3.getColorLabel === "function") ? c3.getColorLabel() : -1;
-                var pColor = (c3.projectItem && typeof c3.projectItem.getColorLabel === "function") ? c3.projectItem.getColorLabel() : -1;
-                var isMango = (cColor === 7 || cColor === 8 || pColor === 7 || pColor === 8);
+                var isMango = isMangoOrLavenderColor(c3);
 
                 if (isGroupPhotoName(c3Nm) || isMango) {
                     var gpN = extractGpNumber(c3Nm);
@@ -3251,6 +3327,109 @@ $.runScript.getSelectedTimelineClipName = function() {
         return "ERROR|||No clip currently selected on the timeline. Click a clip in Premiere Pro first.";
     } catch(e) {
         return "ERROR|||" + e.toString();
+    }
+};
+
+// ── Mark Clip as Group Photo on Sequence Timeline ─────────────────────────────
+// Finds the clip by name/number on the timeline (or selection) and creates GROUP_PHOTO_N marker
+// This allows editors to completely skip manual marker creation and clip coloring!
+$.runScript.addGpMarkerAtClip = function(clipIdentifier, gpNumber) {
+    try {
+        var seq = app.project.activeSequence;
+        if (!seq) return "ERROR|||No active sequence found.";
+        if (!clipIdentifier) return "ERROR|||Please enter a clip name or number.";
+
+        var cleanId = String(clipIdentifier).replace(/^\s+|\s+$/g, "");
+        var num = parseInt(gpNumber, 10);
+        if (isNaN(num) || num < 1) num = 1;
+        var markerName = "GROUP_PHOTO_" + num;
+
+        var foundClip = null;
+        var lowerId = cleanId.toLowerCase();
+
+        // 1. Check currently selected clip if cleanId is "selected" or matches
+        try {
+            if (typeof seq.getSelection === "function") {
+                var sel = seq.getSelection();
+                if (sel && sel.length > 0) {
+                    for (var s = 0; s < sel.length; s++) {
+                        var sc = sel[s];
+                        if (sc && (sc.mediaType === "VIDEO" || sc.projectItem)) {
+                            var scNm = (sc.name || (sc.projectItem && sc.projectItem.name) || "").toLowerCase();
+                            if (cleanId.toLowerCase() === "selected" || scNm === lowerId || scNm.indexOf(lowerId) !== -1 || lowerId.indexOf(scNm) !== -1) {
+                                foundClip = sc;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        } catch(eSel) {}
+
+        // 2. Scan timeline video tracks for matching clip
+        if (!foundClip && seq.videoTracks) {
+            for (var ti = 0; ti < seq.videoTracks.numTracks; ti++) {
+                var trk = seq.videoTracks[ti];
+                if (!trk || !trk.clips) continue;
+                for (var ci = 0; ci < trk.clips.numItems; ci++) {
+                    var tc = trk.clips[ci];
+                    if (!tc) continue;
+                    var tcNm = (tc.name || (tc.projectItem && tc.projectItem.name) || "").toLowerCase();
+                    if (tcNm === lowerId || tcNm.indexOf(lowerId) !== -1 || lowerId.indexOf(tcNm) !== -1) {
+                        foundClip = tc;
+                        break;
+                    }
+                }
+                if (foundClip) break;
+            }
+        }
+
+        if (!foundClip) {
+            return "ERROR|||Clip '" + cleanId + "' not found on active timeline. Check spelling or use 'Pick' from timeline.";
+        }
+
+        var clipStartSec = 0;
+        if (foundClip.start && !isNaN(Number(foundClip.start.seconds))) {
+            clipStartSec = Number(foundClip.start.seconds);
+        } else {
+            return "ERROR|||Could not determine start time of clip '" + cleanId + "'.";
+        }
+
+        var markers = seq.markers;
+        if (!markers) return "ERROR|||Sequence markers not accessible.";
+
+        // Delete any existing marker for this GP number or at this exact position
+        var cur = markers.getFirstMarker();
+        while (cur) {
+            var cNm = (cur.name || "").replace(/^\s+|\s+$/g, "");
+            var cStart = (cur.start && !isNaN(Number(cur.start.seconds))) ? Number(cur.start.seconds) : -1;
+            if (cNm === markerName || (isGroupPhotoName(cNm) && extractGpNumber(cNm) === num) || Math.abs(cStart - clipStartSec) < 0.1) {
+                markers.deleteMarker(cur);
+                break;
+            }
+            cur = markers.getNextMarker(cur);
+        }
+
+        var newMarker = markers.createMarker(clipStartSec);
+        if (!newMarker) return "ERROR|||Failed to create marker on sequence.";
+        newMarker.name = markerName;
+        newMarker.comments = "Group Photo Source #" + num + " (" + (foundClip.name || cleanId) + ")";
+        if (typeof newMarker.setColorByIndex === "function") {
+            try { newMarker.setColorByIndex(7, 0); } catch(eColor1) {
+                try { newMarker.setColorByIndex(7); } catch(eColor2) {}
+            }
+        }
+
+        var timeStr = "";
+        try {
+            var min = Math.floor(clipStartSec / 60);
+            var sec = Math.floor(clipStartSec % 60);
+            timeStr = (min < 10 ? "0" : "") + min + ":" + (sec < 10 ? "0" : "") + sec;
+        } catch(eT) {}
+
+        return "SUCCESS|||" + markerName + "|||" + (foundClip.name || cleanId) + "|||" + timeStr;
+    } catch(err) {
+        return "ERROR|||" + err.toString();
     }
 };
 

@@ -1053,6 +1053,35 @@
             border-color: var(--accent);
             color: var(--accent);
         }
+        .gpi-mark-btn {
+            height: 22px;
+            padding: 0 6px;
+            border-radius: 4px;
+            border: 1px solid rgba(226, 137, 18, 0.4);
+            background: rgba(226, 137, 18, 0.12);
+            color: #F59E0B;
+            font-family: inherit;
+            font-size: 8.5px;
+            font-weight: 750;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            flex-shrink: 0;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+        }
+        .gpi-mark-btn:hover {
+            background: rgba(226, 137, 18, 0.25);
+            border-color: #F59E0B;
+            transform: translateY(-0.5px);
+        }
+        .gpi-quick-mark-box {
+            background: var(--surface-card);
+            border: 1px solid var(--border);
+            border-radius: 7px;
+            padding: 6px 8px;
+        }
         .gpi-num-input { width: 34px; text-align: center; }
         .gpi-row-label {
             font-size: 9px;
@@ -1854,6 +1883,14 @@
                 gpiPickSelected(this);
             };
 
+            var markBtn = document.createElement('button');
+            markBtn.className = 'gpi-mark-btn';
+            markBtn.title = 'Place GROUP_PHOTO marker on timeline at this clip';
+            markBtn.innerHTML = '📍 Mark';
+            markBtn.onclick = function() {
+                gpiMarkCardClip(this);
+            };
+
             var rangeBox = document.createElement('div');
             rangeBox.className = 'gpi-range-box';
 
@@ -1884,6 +1921,7 @@
 
             controls.appendChild(inpClip);
             controls.appendChild(pickBtn);
+            controls.appendChild(markBtn);
             controls.appendChild(rangeBox);
 
             card.appendChild(head);
@@ -1907,6 +1945,77 @@
                     var err = res ? res.replace(/^ERROR\|\|\|/, "") : "No clip selected on timeline.";
                     showStatus('⚠ ' + err, 'var(--warning)');
                 }
+            });
+        }
+
+        function gpiMarkCardClip(btn) {
+            var card = btn.closest('.gpi-assignment-card');
+            if (!card) return;
+            var clipInp = card.querySelector('.gpi-clip-input');
+            var clipVal = (clipInp && clipInp.value ? clipInp.value : '').trim();
+            if (!clipVal) {
+                showStatus('⚠ Enter clip name or pick clip first.', 'var(--warning)');
+                return;
+            }
+            var cardIdx = 1;
+            var badge = card.querySelector('.gpi-card-badge');
+            if (badge && badge.textContent) {
+                var m = badge.textContent.match(/\d+/);
+                if (m) cardIdx = parseInt(m[0], 10);
+            }
+            showStatus('⏳ Adding GP' + cardIdx + ' marker on timeline...', 'var(--warning)');
+            var escaped = clipVal.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            cs.evalScript("$.runScript.addGpMarkerAtClip('" + escaped + "', " + cardIdx + ")", function(res) {
+                if (!res) { showStatus('❌ No response from Premiere Pro.', 'var(--danger)'); return; }
+                if (res.indexOf('ERROR|||') === 0) {
+                    showStatus('❌ ' + res.replace('ERROR|||', ''), 'var(--danger)');
+                    return;
+                }
+                var parts = res.split('|||');
+                showStatus('✓ Added ' + (parts[1] || 'GP marker') + ' on timeline' + (parts[3] ? ' at ' + parts[3] : ''), 'var(--success)');
+                gpiScan();
+            });
+        }
+
+        function gpiPickQuickClip() {
+            var inp = document.getElementById('gpiQuickClipInp');
+            if (!inp) return;
+            showStatus('⏳ Reading selected clip from timeline...', 'var(--warning)');
+            cs.evalScript("$.runScript.getSelectedTimelineClipName()", function(res) {
+                if (res && res.indexOf("SUCCESS|||") === 0) {
+                    var clipName = res.split("|||")[1];
+                    inp.value = clipName;
+                    showStatus('✓ Selected clip: ' + clipName, 'var(--accent)');
+                } else {
+                    var err = res ? res.replace(/^ERROR\|\|\|/, "") : "No clip selected on timeline.";
+                    showStatus('⚠ ' + err, 'var(--warning)');
+                }
+            });
+        }
+
+        function gpiAddGpMarkerFromQuick() {
+            var inp = document.getElementById('gpiQuickClipInp');
+            var sel = document.getElementById('gpiQuickGpSelect');
+            var clipVal = (inp && inp.value ? inp.value : '').trim();
+            var gpNum = (sel && sel.value ? sel.value : '1');
+            if (!clipVal) {
+                showStatus('⚠ Enter a clip name or click Pick first.', 'var(--warning)');
+                return;
+            }
+            showStatus('⏳ Adding GP marker to clip on timeline...', 'var(--warning)');
+            var escaped = clipVal.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            cs.evalScript("$.runScript.addGpMarkerAtClip('" + escaped + "', " + gpNum + ")", function(res) {
+                if (!res) { showStatus('❌ No response from Premiere Pro.', 'var(--danger)'); return; }
+                if (res.indexOf('ERROR|||') === 0) {
+                    showStatus('❌ ' + res.replace('ERROR|||', ''), 'var(--danger)');
+                    return;
+                }
+                var parts = res.split('|||');
+                var mName = parts[1] || ('GROUP_PHOTO_' + gpNum);
+                var cName = parts[2] || clipVal;
+                var tStr = parts[3] ? (' at ' + parts[3]) : '';
+                showStatus('✓ Added ' + mName + ' on ' + cName + tStr, 'var(--success)');
+                gpiScan();
             });
         }
 
@@ -2795,6 +2904,29 @@
                 <!-- Scan Results -->
                 <div id="gpiScanResults" style="flex-shrink:0;">
                     <div class="gpi-empty-box">Click "Scan Sequence" to detect Group Photo sources and Nikaah markers.<br><br><span style="font-size:9px;opacity:0.7;">Identifies markers like <b>01N</b>, <b>GROUP_PHOTO_1</b>, Mango/Lavender clips, or timeline selections.</span></div>
+                </div>
+
+                <!-- Quick Clip Marker Adder: Enter clip name/number to create GP marker without coloring clips -->
+                <div class="gpi-quick-mark-box" style="flex-shrink:0; margin-top:4px;">
+                    <div class="gpi-section-label" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3px;">
+                        <span>Mark Clip as GP (Skip manual coloring)</span>
+                    </div>
+                    <div style="display:flex; gap:3px; align-items:center;">
+                        <input id="gpiQuickClipInp" type="text" class="gpi-clip-input" placeholder="Clip Name/Number (e.g. 01W, 1448...)" list="gpiClipSuggestions" style="flex:1;">
+                        <select id="gpiQuickGpSelect" class="gpi-num-input" style="width:54px; font-weight:700; font-size:9px; height:24px; padding:1px 2px;">
+                            <option value="1">GP 1</option>
+                            <option value="2">GP 2</option>
+                            <option value="3">GP 3</option>
+                            <option value="4">GP 4</option>
+                            <option value="5">GP 5</option>
+                        </select>
+                        <button class="gpi-pick-btn" onclick="gpiPickQuickClip()" title="Pick currently selected timeline clip">
+                            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg> Pick
+                        </button>
+                        <button class="gpi-mark-btn" onclick="gpiAddGpMarkerFromQuick()" title="Create GROUP_PHOTO marker on timeline at this clip">
+                            📍 Mark GP
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Step 1: Assignment Builder -->

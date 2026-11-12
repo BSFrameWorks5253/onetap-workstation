@@ -1286,8 +1286,36 @@ $.runScript.importMediaXml = function() {
 function isGroupPhotoName(name) {
     if (!name) return false;
     var s = String(name).replace(/\.[a-z0-9]{2,5}$/i, "").replace(/^\s+|\s+$/g, "");
-    if (/group\s*photo|group\s*video|nikah\s*group|nikaah\s*group|nikah\s*photo|nikah\s*video/i.test(s)) return true;
+    if (/group\s*photo|group\s*video|group\s*pic|nikah\s*group|nikaah\s*group|nikah\s*photo|nikaah\s*photo|nikah\s*video|nikaah\s*video/i.test(s)) return true;
     if (/(?:^|[\s_.-])gp(?:[_\s-]*\d+)?(?:[\s_.-]|$)/i.test(s)) return true;
+    if (/^gp\s*\d*$/i.test(s)) return true;
+    return false;
+}
+
+// Helper: Robust check for Mango (Color 7) or Lavender (Color 3 / 8) on TrackItem or ProjectItem
+function isMangoOrLavenderColor(c) {
+    if (!c) return false;
+    var vals = [];
+    try {
+        if (typeof c.getColorLabel === "function") vals.push(c.getColorLabel());
+        else if (c.colorLabel !== undefined) vals.push(c.colorLabel);
+    } catch(e) {}
+    try {
+        if (c.projectItem) {
+            if (typeof c.projectItem.getColorLabel === "function") vals.push(c.projectItem.getColorLabel());
+            else if (c.projectItem.colorLabel !== undefined) vals.push(c.projectItem.colorLabel);
+        }
+    } catch(e) {}
+
+    for (var i = 0; i < vals.length; i++) {
+        var v = vals[i];
+        if (v === null || v === undefined) continue;
+        // In Premiere Pro: 7 = Mango, 3 = Lavender, 8 = Purple / Lavender alternate
+        if (v === 7 || v === 3 || v === 8) return true;
+        var s = String(v).toLowerCase();
+        if (s === "7" || s === "3" || s === "8") return true;
+        if (s.indexOf("mango") !== -1 || s.indexOf("lavender") !== -1 || s.indexOf("purple") !== -1) return true;
+    }
     return false;
 }
 
@@ -1353,9 +1381,7 @@ $.runScript.distributeNikahGroupPhoto = function() {
                     for (var ci0 = 0; ci0 < trk0.clips.numItems; ci0++) {
                         var c0 = trk0.clips[ci0];
                         if (!c0) continue;
-                        var cColor = (typeof c0.getColorLabel === "function") ? c0.getColorLabel() : -1;
-                        var pColor = (c0.projectItem && typeof c0.projectItem.getColorLabel === "function") ? c0.projectItem.getColorLabel() : -1;
-                        if (cColor === 7 || cColor === 8 || pColor === 7 || pColor === 8) {
+                        if (isMangoOrLavenderColor(c0)) {
                             groupProjectItem = c0.projectItem;
                             if (c0.duration && c0.duration.seconds > 0) {
                                 detectedDuration = c0.duration.seconds;
@@ -2218,9 +2244,7 @@ function detectGroupPhotoSources(seq) {
                 var c3 = trk3.clips[ci3];
                 if (!c3) continue;
                 var c3Nm = c3.name || (c3.projectItem && c3.projectItem.name) || "";
-                var cColor = (typeof c3.getColorLabel === "function") ? c3.getColorLabel() : -1;
-                var pColor = (c3.projectItem && typeof c3.projectItem.getColorLabel === "function") ? c3.projectItem.getColorLabel() : -1;
-                var isMango = (cColor === 7 || cColor === 8 || pColor === 7 || pColor === 8);
+                var isMango = isMangoOrLavenderColor(c3);
 
                 if (isGroupPhotoName(c3Nm) || isMango) {
                     var gpN = extractGpNumber(c3Nm);
