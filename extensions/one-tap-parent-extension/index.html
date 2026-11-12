@@ -1936,13 +1936,75 @@
                 var failed = statsMap['failed'] || 0;
                 showStatus('✅ Complete: ' + inserted + ' inserted' + (skipped ? ', ' + skipped + ' skipped' : '') + (failed ? ', ' + failed + ' failed' : '') + '.', 'var(--success)');
                 fetchTimelineStats();
+                broadcastTimelineSync('group_photos_inserted', {
+                    inserted: inserted,
+                    skipped: skipped,
+                    failed: failed,
+                    sequenceName: document.getElementById('statSequenceName') ? document.getElementById('statSequenceName').innerText : '',
+                    summary: '💍 Inserted ' + inserted + ' Group Photos into timeline'
+                });
             });
         }
 
+        function takeTimelineSnapshot() {
+            showStatus("⏳ Saving timeline snapshot...", "var(--warning)");
+            cs.evalScript("$.runScript.createProjectSnapshot()", function(r) {
+                if (r && r.indexOf("SUCCESS|||") === 0) {
+                    showStatus("🛡 " + r.replace("SUCCESS|||", ""), "var(--success)");
+                } else {
+                    showStatus("❌ Snapshot failed: " + (r || "unknown error"), "var(--danger)");
+                }
+            });
+        }
 
+        function broadcastTimelineSync(action, details) {
+            details = details || {};
+            var seqName = document.getElementById('statSequenceName') ? document.getElementById('statSequenceName').innerText : '';
+            var summary = details.summary || (action === 'group_photos_inserted'
+                ? ('💍 ' + (details.inserted || 0) + ' Group Photos inserted in ' + (seqName || 'sequence'))
+                : ('🎬 Premiere timeline updated: ' + (seqName || 'active sequence')));
 
+            // 1. Send to local desktop server on port 49152 (if running)
+            try {
+                var xhrLocal = new XMLHttpRequest();
+                xhrLocal.open("POST", "http://127.0.0.1:49152/timeline-sync", true);
+                xhrLocal.setRequestHeader("Content-Type", "application/json");
+                xhrLocal.timeout = 2000;
+                xhrLocal.send(JSON.stringify({
+                    source: 'one-tap-premiere',
+                    action: action,
+                    details: details,
+                    sequenceName: seqName,
+                    summary: summary,
+                    timestamp: new Date().toISOString()
+                }));
+            } catch(eL) {}
 
-        function checkAppConnection() {
+            // 2. Direct broadcast to Supabase Realtime so Web Kanban & Photo Tracker update live
+            try {
+                var broadcastPayload = {
+                    messages: [{
+                        topic: "anyshare_realtime_nexus",
+                        event: "website_user_notification",
+                        payload: {
+                            type: action,
+                            title: action === 'group_photos_inserted' ? '💍 Group Photos Inserted' : '🎬 Premiere Pro Sync',
+                            message: summary,
+                            sequenceName: seqName,
+                            details: details,
+                            timestamp: new Date().toISOString()
+                        }
+                    }]
+                };
+
+                var xhrSb = new XMLHttpRequest();
+                xhrSb.open("POST", "https://dubscvthmkgkeiqdladp.supabase.co/realtime/v1/api/broadcast", true);
+                xhrSb.setRequestHeader("apikey", "sb_publishable_kYApNvq2_6HAfNwJb8hW1g_7iLMSVyk");
+                xhrSb.setRequestHeader("Content-Type", "application/json");
+                xhrSb.timeout = 3000;
+                xhrSb.send(JSON.stringify(broadcastPayload));
+            } catch(eSb) {}
+        }
             var badge = document.getElementById('syncBadge');
             var text = document.getElementById('syncText');
             var xhr = new XMLHttpRequest();
@@ -2233,6 +2295,11 @@
                     showStatus("✅ Auto In/Out Complete! " + total + " markers created.", "var(--success)");
                     openSummaryModal(total, breakdownStr, warnings);
                     fetchTimelineStats();
+                    broadcastTimelineSync('markers_generated', {
+                        total: total,
+                        sequenceName: document.getElementById('statSequenceName') ? document.getElementById('statSequenceName').innerText : '',
+                        summary: '⚡ ' + total + ' timeline markers generated'
+                    });
                 } else if (r.indexOf("ERROR") !== -1) {
                     showStatus("❌ " + r.replace("ERROR|||", ""), "var(--danger)");
                 } else {
@@ -2506,10 +2573,16 @@
                             <span class="stats-heading">Timeline Intelligence</span>
                             <span id="statSequenceName" class="stats-seq-pill">—</span>
                         </div>
-                        <button class="stats-refresh-btn" onclick="fetchTimelineStats()" title="Refresh timeline markers and duration">
-                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-                            Refresh
-                        </button>
+                        <div style="display:flex; align-items:center; gap:4px;">
+                            <button class="stats-refresh-btn" onclick="takeTimelineSnapshot()" title="Save timeline checkpoint / snapshot (Ctrl+Z protection)">
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                                Snapshot
+                            </button>
+                            <button class="stats-refresh-btn" onclick="fetchTimelineStats()" title="Refresh timeline markers and duration">
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                                Refresh
+                            </button>
+                        </div>
                     </div>
 
                     <div id="statsCollapsibleBody" class="stats-collapsible-body">

@@ -1046,8 +1046,18 @@ export default function App(): JSX.Element {
     const onVisibilityOrFocus = () => {
       if (document.visibilityState === 'visible') void load()
     }
+    const onOnline = () => {
+      setNotice('Network reconnected! Synchronizing latest Safar updates...')
+      void persistSnapshot(snapshotRef.current)
+      void load()
+    }
+    const onOffline = () => {
+      setNotice('Offline mode active. All progress is cached locally and will sync once reconnected.')
+    }
     window.addEventListener('focus', onVisibilityOrFocus)
-    document.addEventListener('visibilitychange', onVisibilityOrFocus)
+    window.addEventListener('visibilitychange', onVisibilityOrFocus)
+    window.addEventListener('online', onOnline)
+    window.addEventListener('offline', onOffline)
     const syncInterval = window.setInterval(load, 15000)
 
     const nexusChannel = supabase.channel('anyshare_realtime_nexus', { config: { broadcast: { self: false } } })
@@ -1067,6 +1077,17 @@ export default function App(): JSX.Element {
           message = message || 'Media Encoder finished rendering batch. Videos are ready for Title Adder review.'
           url = '/ongoing'
           try { if ('vibrate' in navigator) navigator.vibrate([200, 100, 200, 100, 300]) } catch {}
+        } else if (type === 'group_photos_inserted') {
+          title = `💍 ${title || 'Group Photos Inserted!'}`
+          message = message || `${payload?.details?.inserted || ''} Group Photos inserted into timeline (${payload?.sequenceName || 'Sequence'}).`
+          url = '/ongoing'
+          try { if ('vibrate' in navigator) navigator.vibrate([150, 80, 150]) } catch {}
+          void load()
+        } else if (type === 'markers_generated' || type === 'premiere_sync') {
+          title = `⚡ ${title || 'Premiere Pro Sync'}`
+          message = message || `${payload?.details?.total || ''} Sequence markers configured in ${payload?.sequenceName || 'Premiere Pro'}.`
+          url = '/ongoing'
+          void load()
         }
 
         void notify(title, message, url)
@@ -1084,6 +1105,8 @@ export default function App(): JSX.Element {
       if (loadingTimeout !== undefined) window.clearTimeout(loadingTimeout)
       window.removeEventListener('focus', onVisibilityOrFocus)
       document.removeEventListener('visibilitychange', onVisibilityOrFocus)
+      window.removeEventListener('online', onOnline)
+      window.removeEventListener('offline', onOffline)
       window.clearInterval(syncInterval)
       trackerChannelRef.current = null
       nexusChannelRef.current = null

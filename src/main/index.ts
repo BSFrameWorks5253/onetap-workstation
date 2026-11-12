@@ -1375,6 +1375,31 @@ function normalizeFolderPath(folderPath: any): string {
         })
         res.end(JSON.stringify({ error: String(err) }))
       }
+    } else if (req.method === 'POST' && req.url === '/timeline-sync') {
+      let body = ''
+      req.on('data', chunk => { body += chunk.toString() })
+      req.on('end', () => {
+        try {
+          const payload = body ? JSON.parse(body) : {}
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('timeline:sync-event', payload)
+          }
+          if (Notification.isSupported()) {
+            const notif = new Notification({
+              title: payload.action === 'group_photos_inserted' ? 'Group Photos Inserted 💍' : 'Premiere Pro Timeline Updated 🎬',
+              body: payload.summary || `${payload.sequenceName || 'Sequence'} updated from Premiere Pro.`
+            })
+            notif.show()
+          }
+        } catch (e) {
+          console.warn('[Server] Error parsing timeline-sync:', e)
+        }
+        res.writeHead(200, {
+          'Access-Control-Allow-Origin': '*',
+          'Content-Type': 'application/json'
+        })
+        res.end(JSON.stringify({ success: true }))
+      })
     } else if (req.method === 'OPTIONS') {
       res.writeHead(200, {
         'Access-Control-Allow-Origin': '*',

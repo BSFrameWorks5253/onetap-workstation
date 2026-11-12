@@ -325,6 +325,7 @@ function legacy_getLastUsedEncoderPreset(extPath) {
 // Auto In/Out Markers (Auto-Numbering & Prefix Breakdown)
 // ----------------------
 $.runScript.autoInOutMarkers = function (userChoice, addSeqPrefix) {
+    var undoStarted = false;
     try {
         if (typeof userChoice === "boolean") {
             addSeqPrefix = userChoice;
@@ -334,6 +335,16 @@ $.runScript.autoInOutMarkers = function (userChoice, addSeqPrefix) {
 
         var seq = app.project.activeSequence;
         if (!seq) return "No active sequence found.";
+
+        // Undo Boundary & Safety snapshot
+        try {
+            if (typeof app.beginUndoGroup === "function") {
+                app.beginUndoGroup("One Tap Auto In/Out Markers");
+                undoStarted = true;
+            } else if (typeof app.enableUndo === "function") {
+                app.enableUndo(true);
+            }
+        } catch(eUG) {}
 
         // get fps safely
         var fps = 25.0;
@@ -725,6 +736,10 @@ $.runScript.autoInOutMarkers = function (userChoice, addSeqPrefix) {
             $.runScript.showWorkspaceModal("One Tap — Marker Processing Error", "Operation Failed", err.toString(), "ERROR");
         } catch (eErr) {}
         return "ERROR|||" + err.toString();
+    } finally {
+        if (undoStarted) {
+            try { if (typeof app.endUndoGroup === "function") app.endUndoGroup(); } catch(eEG) {}
+        }
     }
 };
 
@@ -3218,16 +3233,52 @@ $.runScript.groupPhotoInserterPreview = function(assignmentsStr) {
     }
 };
 
+// ── Manual Timeline Snapshot Helper ──────────────────────────────────────────
+$.runScript.createProjectSnapshot = function() {
+    try {
+        if (!app.project) return "ERROR|||No project open.";
+        if (typeof app.project.save === "function") {
+            app.project.save();
+            var d = new Date();
+            var timeStr = (d.getHours() < 10 ? "0" : "") + d.getHours() + ":" +
+                          (d.getMinutes() < 10 ? "0" : "") + d.getMinutes() + ":" +
+                          (d.getSeconds() < 10 ? "0" : "") + d.getSeconds();
+            return "SUCCESS|||Snapshot checkpoint saved at " + timeStr;
+        }
+        return "ERROR|||Project save not supported in this host.";
+    } catch(e) {
+        return "ERROR|||" + e.toString();
+    }
+};
+
 // ── Execute: ripple-insert with duplicate prevention ─────────────────────────
 // assignmentsStr same format as preview
 // Returns "SUCCESS|||inserted=N|skipped=N|failed=N|||reportLines"
 $.runScript.groupPhotoInserterExecute = function(assignmentsStr) {
+    var undoStarted = false;
     try {
         var seq = app.project.activeSequence;
         if (!seq) return "ERROR|||No active sequence found.";
 
         // Enable QE DOM if available
         try { if (typeof app.enableQE === "function") app.enableQE(); } catch(eQE) {}
+
+        // Safety 1: Trigger an internal project snapshot before any destructive ripple insert
+        try {
+            if (app.project && typeof app.project.save === "function") {
+                app.project.save();
+            }
+        } catch(eSave) {}
+
+        // Safety 2: Group all upcoming operations into a single Undo Boundary so Ctrl+Z restores everything in 1 step
+        try {
+            if (typeof app.beginUndoGroup === "function") {
+                app.beginUndoGroup("One Tap Group Photo Ripple Insert");
+                undoStarted = true;
+            } else if (typeof app.enableUndo === "function") {
+                app.enableUndo(true);
+            }
+        } catch(eUndo) {}
 
         function toTime(sec) {
             var t = new Time();
@@ -3547,6 +3598,14 @@ $.runScript.groupPhotoInserterExecute = function(assignmentsStr) {
             $.runScript.showWorkspaceModal("One Tap — Group Photo Inserter", "Error", err.toString(), "ERROR");
         } catch(eErr) {}
         return "ERROR|||" + err.toString();
+    } finally {
+        if (undoStarted) {
+            try {
+                if (typeof app.endUndoGroup === "function") {
+                    app.endUndoGroup();
+                }
+            } catch(eEndUndo) {}
+        }
     }
 };
 // ====================================================================
