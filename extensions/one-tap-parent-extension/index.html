@@ -1376,7 +1376,7 @@
         @media (min-width: 420px) {
             .panel-container { max-width: 100%; }
             #page-batch.tab-page.active, #page-custom.tab-page.active { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
-            #page-relink.tab-page.active { display: flex !important; flex-direction: column !important; gap: 8px; }
+            #page-gp.tab-page.active { display: flex !important; flex-direction: column !important; gap: 6px; }
             .chrome-btn-wrap { width: 100%; }
         }
     </style>
@@ -1508,256 +1508,294 @@
             if (activeTab) activeTab.classList.add('active');
             if (activePage) activePage.classList.add('active');
             fetchTimelineStats();
-            if (tabId === 'relink') {
-                scanRelinkStatus();
+            if (tabId === 'gp') {
+                if (typeof gpiState !== 'undefined' && gpiState.gpSources.length === 0) gpiScan();
             }
         }
 
-        // ── MEDIA RELOCATION & RELINKING — JS Logic ──────────────────────
-        var relinkState = {
-            projectPath: '',
-            projectName: '',
-            projectFolder: '',
-            searchFolder: '',
-            manifestPath: '',
-            manifestJsonPath: '',
-            totalClips: 0,
-            offlineClips: 0,
-            onlineClips: 0,
-            offlineOnly: true,
-            isScanning: false,
-            isRelinking: false,
-            manifestFiles: null
+        // ── GROUP PHOTO INSERTER — JS Logic ──────────────────────────────────────
+        var gpiState = {
+            gpSources: [],   // [{gpNum, clipName, hasClip, dur}]
+            nikaahCount: 0,
+            assignmentCount: 0
         };
 
-        function scanRelinkStatus() {
-            if (relinkState.isScanning) return;
-            relinkState.isScanning = true;
-            updateRelinkUI();
-
-            cs.evalScript('$.runScript.scanProjectMediaStatus()', function(r) {
-                relinkState.isScanning = false;
-                if (!r) {
-                    updateRelinkUI('No response from Premiere Pro');
-                    return;
-                }
+        function gpiScan() {
+            showStatus('⏳ Scanning sequence for Group Photo markers...', 'var(--warning)');
+            cs.evalScript('$.runScript.groupPhotoInserterScan()', function(r) {
+                if (!r) { showStatus('❌ No response from Premiere Pro.', 'var(--danger)'); return; }
                 if (r.indexOf('ERROR|||') === 0) {
-                    var err = r.replace('ERROR|||', '');
-                    updateRelinkUI(err);
+                    showStatus('❌ ' + r.replace('ERROR|||', ''), 'var(--danger)');
+                    gpiRenderScanError(r.replace('ERROR|||', ''));
                     return;
                 }
-                try {
-                    var jsonStr = r.replace('SUCCESS|||', '');
-                    var data = JSON.parse(jsonStr);
-                    relinkState.projectPath = data.projectPath || '';
-                    relinkState.projectName = data.projectName || 'Project';
-                    relinkState.projectFolder = data.projectFolder || '';
-                    if (!relinkState.searchFolder) {
-                        relinkState.searchFolder = data.projectFolder || '';
-                    }
-                    relinkState.totalClips = data.totalClips || 0;
-                    relinkState.offlineClips = data.offlineClips || 0;
-                    relinkState.onlineClips = data.onlineClips || 0;
-                    relinkState.manifestPath = data.manifestPath || '';
-                    relinkState.manifestJsonPath = data.manifestJsonPath || '';
-
-                    checkParseWorkstationManifest();
-                    updateRelinkUI();
-                } catch (pe) {
-                    updateRelinkUI('JSON parse error: ' + pe.message);
+                var parts = r.split('|||');
+                var gpCount = parseInt(parts[1], 10) || 0;
+                var gps = [];
+                for (var i = 0; i < gpCount; i++) {
+                    var gpData = (parts[2 + i] || '').split('|');
+                    gps.push({
+                        gpNum: parseInt(gpData[0], 10) || (i + 1),
+                        clipName: gpData[1] || ('Group Photo ' + (i + 1)),
+                        hasClip: (gpData[2] === '1'),
+                        dur: parseFloat(gpData[3]) || 0
+                    });
                 }
+                var nikaahCount = 0;
+                var ncIdx = parts.indexOf('NIKAAH_COUNT');
+                if (ncIdx !== -1 && parts[ncIdx + 1]) nikaahCount = parseInt(parts[ncIdx + 1], 10) || 0;
+
+                gpiState.gpSources = gps;
+                gpiState.nikaahCount = nikaahCount;
+
+                gpiRenderScanResults(gps, nikaahCount);
+                showStatus('✅ Found ' + gpCount + ' Group Photo source(s) + ' + nikaahCount + ' Nikaah markers', 'var(--success)');
             });
         }
 
-        function checkParseWorkstationManifest() {
-            var sFolder = relinkState.searchFolder || relinkState.projectFolder;
-            if (!sFolder) return;
-
-            var xhr = new XMLHttpRequest();
-            xhr.open('POST', 'http://127.0.0.1:49152/parse-manifest', true);
-            xhr.setRequestHeader('Content-Type', 'application/json');
-            xhr.timeout = 3000;
-            xhr.onreadystatechange = function() {
-                if (xhr.readyState === 4 && xhr.status === 200) {
-                    try {
-                        var res = JSON.parse(xhr.responseText);
-                        if (res && res.success && res.files && res.files.length > 0) {
-                            relinkState.manifestFiles = res.files;
-                            var manEl = document.getElementById('relinkManifestStatus');
-                            if (manEl) {
-                                manEl.innerText = 'Manifest Loaded (' + res.files.length + ' clips indexed)';
-                                manEl.style.color = 'var(--success)';
-                            }
-                        }
-                    } catch (e) {}
-                }
-            };
-            xhr.send(JSON.stringify({
-                searchFolder: sFolder,
-                manifestPath: relinkState.manifestPath || relinkState.manifestJsonPath,
-                projectPath: relinkState.projectPath
-            }));
+        function gpiRenderScanError(msg) {
+            var box = document.getElementById('gpiScanResults');
+            if (!box) return;
+            box.innerHTML = '<div class="gpi-warn-box">⚠ ' + msg + '</div>';
         }
 
-        function chooseRelinkFolder() {
-            cs.evalScript('$.runScript.browseForMediaFolder("Select Date Folder or Media Directory")', function(r) {
-                if (!r || r.indexOf('CANCEL|||') === 0) return;
-                if (r.indexOf('SUCCESS|||') === 0) {
-                    var fPath = r.replace('SUCCESS|||', '');
-                    relinkState.searchFolder = fPath;
-                    checkParseWorkstationManifest();
-                    updateRelinkUI();
-                }
-            });
-        }
+        function gpiRenderScanResults(gps, nikaahCount) {
+            var box = document.getElementById('gpiScanResults');
+            if (!box) return;
 
-        function chooseRelinkManifest() {
-            cs.evalScript('$.runScript.browseForManifestFile()', function(r) {
-                if (!r || r.indexOf('CANCEL|||') === 0) return;
-                if (r.indexOf('SUCCESS|||') === 0) {
-                    var mPath = r.replace('SUCCESS|||', '');
-                    relinkState.manifestPath = mPath;
-                    checkParseWorkstationManifest();
-                    updateRelinkUI();
-                }
-            });
-        }
+            var html = '<div class="gpi-stat-bar">' +
+                '<div class="gpi-stat"><div class="gpi-stat-num">' + gps.length + '</div><div class="gpi-stat-lbl">GP Sources</div></div>' +
+                '<div class="gpi-stat"><div class="gpi-stat-num">' + nikaahCount + '</div><div class="gpi-stat-lbl">Nikaah Clips</div></div>' +
+                '</div>';
 
-        function executeMediaRelink() {
-            if (relinkState.isRelinking) return;
-            relinkState.isRelinking = true;
-            updateRelinkUI();
-
-            showStatus('⏳ Relinking media in Premiere Pro...', 'var(--accent)');
-
-            var options = {
-                searchDir: relinkState.searchFolder || relinkState.projectFolder,
-                manifestPath: relinkState.manifestPath,
-                offlineOnly: relinkState.offlineOnly,
-                manifestFiles: relinkState.manifestFiles
-            };
-
-            var encodedOptions = encodeURIComponent(JSON.stringify(options));
-
-            cs.evalScript("$.runScript.relinkProjectMedia(decodeURIComponent('" + encodedOptions + "'))", function(r) {
-                relinkState.isRelinking = false;
-                if (!r) {
-                    showStatus('❌ No response received from Premiere Pro.', 'var(--danger)');
-                    updateRelinkUI();
-                    return;
-                }
-
-                if (r.indexOf('ERROR|||') === 0) {
-                    var errMsg = r.replace('ERROR|||', '');
-                    showStatus('❌ Relink error: ' + errMsg, 'var(--danger)');
-                    updateRelinkUI();
-                    return;
-                }
-
-                if (r.indexOf('CANCEL|||') === 0) {
-                    showStatus('ℹ ' + r.replace('CANCEL|||', ''), 'var(--text-muted)');
-                    updateRelinkUI();
-                    return;
-                }
-
-                try {
-                    var jsonStr = r.replace('SUCCESS|||', '');
-                    var result = JSON.parse(jsonStr);
-
-                    var relinked = result.relinkedCount || 0;
-                    var online = result.alreadyOnlineCount || 0;
-                    var unresolved = result.unresolvedCount || 0;
-                    var total = result.totalClips || 0;
-
-                    relinkState.offlineClips = unresolved;
-                    relinkState.onlineClips = total - unresolved;
-
-                    if (unresolved === 0) {
-                        showStatus('✅ Relinked ' + relinked + ' clip(s)! All project media is online.', 'var(--success)');
-                    } else {
-                        showStatus('⚠️ Relinked ' + relinked + ' clip(s), ' + unresolved + ' remain offline.', 'var(--warning)');
-                    }
-
-                    renderRelinkResults(result);
-                    updateRelinkUI();
-                } catch (parseErr) {
-                    showStatus('❌ Error parsing relink result: ' + parseErr.message, 'var(--danger)');
-                    updateRelinkUI();
-                }
-            });
-        }
-
-        function updateRelinkUI(errorMsg) {
-            var totEl = document.getElementById('relinkTotalClips');
-            var offEl = document.getElementById('relinkOfflineClips');
-            var onEl = document.getElementById('relinkOnlineClips');
-            var projEl = document.getElementById('relinkProjectName');
-            var folEl = document.getElementById('relinkSearchFolder');
-            var manEl = document.getElementById('relinkManifestStatus');
-            var btnLabel = document.getElementById('btnRelinkLabel');
-            var btnSub = document.getElementById('btnRelinkSubtext');
-
-            if (totEl) totEl.innerText = relinkState.isScanning ? '…' : relinkState.totalClips;
-            if (offEl) {
-                offEl.innerText = relinkState.isScanning ? '…' : relinkState.offlineClips;
-                offEl.style.color = (relinkState.offlineClips > 0) ? 'var(--warning)' : 'var(--text-muted)';
-            }
-            if (onEl) onEl.innerText = relinkState.isScanning ? '…' : relinkState.onlineClips;
-            if (projEl && relinkState.projectName) projEl.innerText = relinkState.projectName;
-
-            if (folEl) {
-                if (relinkState.searchFolder) {
-                    folEl.innerText = relinkState.searchFolder;
-                    folEl.title = relinkState.searchFolder;
-                } else {
-                    folEl.innerText = 'Default: Project Date Folder';
-                }
-            }
-
-            if (manEl && !relinkState.manifestFiles) {
-                if (relinkState.manifestPath || relinkState.manifestJsonPath) {
-                    var mName = (relinkState.manifestPath || relinkState.manifestJsonPath).split(/[\\/]/).pop();
-                    manEl.innerText = 'Found: ' + mName;
-                    manEl.style.color = 'var(--text-secondary)';
-                } else {
-                    manEl.innerText = 'Auto-detecting Media_Relink_Manifest…';
-                    manEl.style.color = 'var(--text-muted)';
-                }
-            }
-
-            if (btnLabel && btnSub) {
-                if (relinkState.isRelinking) {
-                    btnLabel.innerText = 'Relinking Media…';
-                    btnSub.innerText = 'Matching disk clips to project items';
-                } else if (relinkState.offlineClips === 0 && relinkState.totalClips > 0) {
-                    btnLabel.innerText = 'All Media Online';
-                    btnSub.innerText = 'Click to force re-verify media links';
-                } else {
-                    btnLabel.innerText = 'Relink ' + (relinkState.offlineClips > 0 ? relinkState.offlineClips + ' ' : '') + 'Project Media';
-                    btnSub.innerText = 'Resolve offline clips & refresh waveforms';
-                }
-            }
-        }
-
-        function renderRelinkResults(result) {
-            var box = document.getElementById('relinkResultsBox');
-            var sum = document.getElementById('relinkResultsSummary');
-            var miss = document.getElementById('relinkMissingList');
-            if (!box || !sum || !miss) return;
-
-            box.style.display = 'flex';
-            sum.innerText = 'Relink Summary: ' + result.relinkedCount + ' relinked, ' +
-                result.alreadyOnlineCount + ' already online, ' +
-                result.unresolvedCount + ' unresolved.';
-
-            if (result.missingFiles && result.missingFiles.length > 0) {
-                miss.innerHTML = '<b>Missing from target folder:</b><br>' + result.missingFiles.map(function(f) {
-                    return '• ' + f;
-                }).join('<br>');
+            if (gps.length === 0) {
+                html += '<div class="gpi-warn-box">⚠ No GROUP_PHOTO_N markers found.<br>Add sequence markers named <b>GROUP_PHOTO_1</b>, <b>GROUP_PHOTO_2</b>... or color clips Mango/Lavender on timeline.</div>';
             } else {
-                miss.innerHTML = '<span style="color:var(--success);">✓ 100% of project items are online and active.</span>';
+                html += '<div class="gpi-section-label">Detected Sources</div>';
+                gps.forEach(function(g) {
+                    var pillClass = g.hasClip ? 'gpi-source-pill' : 'gpi-source-pill no-clip';
+                    var statusTxt = g.hasClip ? ('✓ ' + (g.dur ? g.dur.toFixed(1) + 's' : 'Ready')) : '⚠ No Clip';
+                    html += '<div class="' + pillClass + '">' +
+                        '<span class="name">GP ' + g.gpNum + ': ' + g.clipName + '</span>' +
+                        '<span class="dur">' + statusTxt + '</span>' +
+                        '</div>';
+                });
+            }
+
+            box.innerHTML = html;
+
+            // Re-populate all dropdown selects in assignment rows
+            var selects = document.querySelectorAll('.gpi-select');
+            selects.forEach(function(s) {
+                var curVal = s.value;
+                gpiPopulateSelect(s);
+                if (curVal) s.value = curVal;
+            });
+
+            // If no assignments exist yet, auto-add a default assignment
+            var list = document.getElementById('gpiAssignmentList');
+            if (list && list.children.length === 0 && gps.length > 0 && nikaahCount > 0) {
+                gpiAddAssignment(1, 1, nikaahCount);
             }
         }
+
+        function gpiPopulateSelect(selectEl) {
+            selectEl.innerHTML = '';
+            if (gpiState.gpSources.length === 0) {
+                var opt = document.createElement('option');
+                opt.value = '';
+                opt.textContent = '-- Scan for Sources first --';
+                selectEl.appendChild(opt);
+                return;
+            }
+            gpiState.gpSources.forEach(function(g) {
+                var opt = document.createElement('option');
+                opt.value = g.gpNum;
+                opt.textContent = 'GP ' + g.gpNum + ': ' + g.clipName + (g.hasClip ? '' : ' (no clip)');
+                selectEl.appendChild(opt);
+            });
+        }
+
+        function gpiAddAssignment(defGp, defFrom, defTo) {
+            var list = document.getElementById('gpiAssignmentList');
+            if (!list) return;
+
+            gpiState.assignmentCount++;
+            var rowId = 'gpiRow_' + gpiState.assignmentCount;
+
+            var row = document.createElement('div');
+            row.className = 'gpi-assignment-row';
+            row.id = rowId;
+
+            var sel = document.createElement('select');
+            sel.className = 'gpi-select';
+            gpiPopulateSelect(sel);
+            if (defGp) sel.value = defGp;
+
+            var lbl1 = document.createElement('span');
+            lbl1.className = 'gpi-row-label';
+            lbl1.textContent = 'for N';
+
+            var inpFrom = document.createElement('input');
+            inpFrom.type = 'number';
+            inpFrom.className = 'gpi-num-input gpi-from';
+            inpFrom.min = '1';
+            inpFrom.value = defFrom !== undefined ? defFrom : 1;
+
+            var lbl2 = document.createElement('span');
+            lbl2.className = 'gpi-row-label';
+            lbl2.textContent = 'to';
+
+            var inpTo = document.createElement('input');
+            inpTo.type = 'number';
+            inpTo.className = 'gpi-num-input gpi-to';
+            inpTo.min = '1';
+            inpTo.value = defTo !== undefined ? defTo : (gpiState.nikaahCount || 1);
+
+            var rmBtn = document.createElement('button');
+            rmBtn.className = 'gpi-rm-btn';
+            rmBtn.innerHTML = '×';
+            rmBtn.title = 'Remove assignment';
+            rmBtn.onclick = function() {
+                row.parentNode.removeChild(row);
+            };
+
+            row.appendChild(sel);
+            row.appendChild(lbl1);
+            row.appendChild(inpFrom);
+            row.appendChild(lbl2);
+            row.appendChild(inpTo);
+            row.appendChild(rmBtn);
+
+            list.appendChild(row);
+        }
+
+        function gpiBuildAssignmentsStr() {
+            var rows = document.querySelectorAll('.gpi-assignment-row');
+            var tokens = [];
+            rows.forEach(function(r) {
+                var sel = r.querySelector('.gpi-select');
+                var inpFrom = r.querySelector('.gpi-from');
+                var inpTo = r.querySelector('.gpi-to');
+                if (sel && inpFrom && inpTo) {
+                    var gp = parseInt(sel.value, 10);
+                    var f = parseInt(inpFrom.value, 10);
+                    var t = parseInt(inpTo.value, 10);
+                    if (gp && !isNaN(f) && !isNaN(t) && f <= t) {
+                        tokens.push(gp + ':' + f + '-' + t);
+                    }
+                }
+            });
+            return tokens.join(';');
+        }
+
+        function gpiPreview() {
+            var assignmentsStr = gpiBuildAssignmentsStr();
+            if (!assignmentsStr) {
+                showStatus('⚠ Configure at least one valid assignment first (GP:from-to).', 'var(--warning)');
+                return;
+            }
+            showStatus('⏳ Calculating insertion preview...', 'var(--warning)');
+            var escaped = assignmentsStr.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            cs.evalScript("$.runScript.groupPhotoInserterPreview('" + escaped + "')", function(r) {
+                if (!r) { showStatus('❌ No response from Premiere Pro.', 'var(--danger)'); return; }
+                if (r.indexOf('ERROR|||') === 0) {
+                    showStatus('❌ ' + r.replace('ERROR|||', '').substring(0, 80), 'var(--danger)');
+                    return;
+                }
+                var parts = r.split('|||');
+                var previewText = parts[1] || '';
+                var statsStr = '';
+                var warnsStr = '';
+                var statsIdx = parts.indexOf('STATS');
+                var warnIdx = parts.indexOf('WARNINGS');
+                if (statsIdx !== -1) statsStr = parts[statsIdx + 1] || '';
+                if (warnIdx !== -1) warnsStr = parts[warnIdx + 1] || '';
+
+                var statsMap = {};
+                (statsStr || '').split('|').forEach(function(p) {
+                    var kv = p.split('=');
+                    if (kv.length === 2) statsMap[kv[0]] = parseInt(kv[1], 10) || 0;
+                });
+
+                var listEl = document.getElementById('gpPreviewList');
+                if (listEl) listEl.textContent = previewText || '(no items)';
+
+                var statsEl = document.getElementById('gpPreviewStats');
+                if (statsEl) {
+                    statsEl.innerHTML =
+                        '<div class="gp-stat-pill green">✓ ' + (statsMap['inserted'] || 0) + ' Planned</div>' +
+                        '<div class="gp-stat-pill amber">↷ ' + (statsMap['skipped'] || 0) + ' Skipped</div>' +
+                        ((statsMap['warnings'] || 0) > 0 ? '<div class="gp-stat-pill red">⚠ ' + statsMap['warnings'] + ' Warn</div>' : '');
+                }
+
+                var warnEl = document.getElementById('gpPreviewWarnings');
+                if (warnEl) {
+                    if (warnsStr && warnsStr.replace(/^\s+|\s+$/g, '') !== '') {
+                        warnEl.style.display = 'block';
+                        warnEl.textContent = warnsStr;
+                    } else {
+                        warnEl.style.display = 'none';
+                        warnEl.textContent = '';
+                    }
+                }
+
+                window._gpiPendingAssignments = assignmentsStr;
+
+                var modal = document.getElementById('gpPreviewModal');
+                if (modal) modal.classList.add('active');
+                showStatus('✅ Preview ready — ' + (statsMap['inserted'] || 0) + ' planned insertions', 'var(--success)');
+            });
+        }
+
+        function gpiPreviewAndExecute() {
+            var assignmentsStr = gpiBuildAssignmentsStr();
+            if (!assignmentsStr) {
+                showStatus('⚠ Add at least one assignment row first.', 'var(--warning)');
+                return;
+            }
+            gpiPreview();
+        }
+
+        function gpiExecuteFromModal() {
+            var modal = document.getElementById('gpPreviewModal');
+            if (modal) modal.classList.remove('active');
+            gpiExecute(window._gpiPendingAssignments || gpiBuildAssignmentsStr());
+        }
+
+        function gpiExecute(assignmentsStr) {
+            if (!assignmentsStr) {
+                assignmentsStr = gpiBuildAssignmentsStr();
+            }
+            if (!assignmentsStr) {
+                showStatus('⚠ No assignments configured.', 'var(--warning)');
+                return;
+            }
+            showStatus('⏳ Inserting Group Photos — rippling timeline...', 'var(--warning)');
+            var escaped = assignmentsStr.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            cs.evalScript("$.runScript.groupPhotoInserterExecute('" + escaped + "')", function(r) {
+                if (!r) { showStatus('❌ No response from Premiere Pro.', 'var(--danger)'); return; }
+                if (r.indexOf('ERROR|||') === 0) {
+                    showStatus('❌ ' + r.replace('ERROR|||', '').substring(0, 80), 'var(--danger)');
+                    return;
+                }
+                var parts = r.split('|||');
+                var statsStr = parts[1] || '';
+                var statsMap = {};
+                statsStr.split('|').forEach(function(p) {
+                    var kv = p.split('=');
+                    if (kv.length === 2) statsMap[kv[0]] = parseInt(kv[1], 10) || 0;
+                });
+                var inserted = statsMap['inserted'] || 0;
+                var skipped = statsMap['skipped'] || 0;
+                var failed = statsMap['failed'] || 0;
+                showStatus('✅ Complete: ' + inserted + ' inserted' + (skipped ? ', ' + skipped + ' skipped' : '') + (failed ? ', ' + failed + ' failed' : '') + '.', 'var(--success)');
+                fetchTimelineStats();
+            });
+        }
+
+
+
 
         function checkAppConnection() {
             var badge = document.getElementById('syncBadge');
@@ -2290,10 +2328,6 @@
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                         Import XML
                     </button>
-                    <button id="relinkMediaBtn" class="locate-xml-btn" onclick="switchTab('relink'); scanRelinkStatus();" title="Relink / Relocate offline or moved project media using Date Folder Excel Manifest">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-                        Relink
-                    </button>
                     <button id="themeBtn" class="theme-toggle-btn" onclick="toggleTheme()" title="Toggle Dark/Light Mode">
                         <span>☀️</span> Light
                     </button>
@@ -2313,7 +2347,7 @@
             <div class="tab-bar">
                 <button id="tab-batch" class="tab-btn active" onclick="switchTab('batch')">⚡ Batch</button>
                 <button id="tab-custom" class="tab-btn" onclick="switchTab('custom')">🎯 Custom</button>
-                <button id="tab-relink" class="tab-btn" onclick="switchTab('relink')">🔗 Relink</button>
+                <button id="tab-gp" class="tab-btn" onclick="switchTab('gp')">📸 Group Photo</button>
             </div>
 
             <!-- TIMELINE STATS & EVENT BREAKDOWN CARD -->
@@ -2428,88 +2462,40 @@
                 </div>
             </div>
 
-            <!-- TAB 3: MEDIA RELOCATION & RELINKING -->
-            <div id="page-relink" class="tab-page">
-                <!-- Media Stats Card -->
-                <div style="background:var(--surface-card); border:1px solid var(--border); border-radius:10px; padding:9px 11px; display:flex; flex-direction:column; gap:6px;">
-                    <div style="display:flex; align-items:center; justify-content:space-between;">
-                        <div style="display:flex; align-items:center; gap:6px;">
-                            <span style="font-size:11px; font-weight:700; color:var(--text-primary);">Media Status</span>
-                            <span id="relinkProjectName" style="font-size:9.5px; color:var(--text-secondary); max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Active Project</span>
-                        </div>
-                        <button class="locate-xml-btn" onclick="scanRelinkStatus()" style="padding:2px 7px; font-size:9.5px; height:20px;" title="Refresh media status">↻ Scan</button>
-                    </div>
-
-                    <!-- 3 Metric Pills -->
-                    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px;">
-                        <div style="background:var(--surface); border:1px solid var(--border); border-radius:7px; padding:5px 6px; text-align:center;">
-                            <div id="relinkTotalClips" style="font-size:14px; font-weight:800; color:var(--text-primary); font-family:monospace;">—</div>
-                            <div style="font-size:8.5px; font-weight:600; color:var(--text-secondary); text-transform:uppercase;">Total Clips</div>
-                        </div>
-                        <div style="background:var(--surface); border:1px solid var(--border); border-radius:7px; padding:5px 6px; text-align:center;">
-                            <div id="relinkOfflineClips" style="font-size:14px; font-weight:800; color:var(--warning); font-family:monospace;">—</div>
-                            <div style="font-size:8.5px; font-weight:600; color:var(--text-secondary); text-transform:uppercase;">Offline</div>
-                        </div>
-                        <div style="background:var(--surface); border:1px solid var(--border); border-radius:7px; padding:5px 6px; text-align:center;">
-                            <div id="relinkOnlineClips" style="font-size:14px; font-weight:800; color:var(--success); font-family:monospace;">—</div>
-                            <div style="font-size:8.5px; font-weight:600; color:var(--text-secondary); text-transform:uppercase;">Online</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Search Folder Selector Card -->
-                <div style="background:var(--surface-card); border:1px solid var(--border); border-radius:10px; padding:8px 10px; display:flex; flex-direction:column; gap:5px;">
-                    <div style="display:flex; align-items:center; justify-content:space-between;">
-                        <span style="font-size:10px; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.02em;">Search Directory</span>
-                        <button class="locate-xml-btn" onclick="chooseRelinkFolder()" style="padding:2px 7px; font-size:9.5px; height:20px;">Browse…</button>
-                    </div>
-                    <div id="relinkSearchFolder" style="font-size:9.5px; color:var(--text-primary); font-family:monospace; background:var(--surface); border:1px solid var(--border-subtle); border-radius:6px; padding:5px 7px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="Folder searched for relocated media">
-                        Default: Project Date Folder
-                    </div>
-                    <div style="display:flex; align-items:center; justify-content:space-between; font-size:9px; color:var(--text-muted); margin-top:1px;">
-                        <span id="relinkManifestStatus">Auto-detecting Media_Relink_Manifest…</span>
-                        <a href="javascript:void(0)" onclick="chooseRelinkManifest()" style="color:var(--accent); text-decoration:none;">Pick Manifest</a>
-                    </div>
-                </div>
-
-                <!-- Action Button -->
-                <div class="chrome-btn-wrap" style="margin-top:2px;">
-                    <button id="btnExecuteRelink" class="btn-card btn-primary" onclick="executeMediaRelink()">
-                        <div class="btn-icon">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-                        </div>
-                        <div class="btn-text-wrap">
-                            <span id="btnRelinkLabel" class="btn-label">Relink Project Media</span>
-                            <span id="btnRelinkSubtext" class="btn-sub">Resolve offline clips &amp; refresh waveforms</span>
-                        </div>
+            <!-- TAB 3: GROUP PHOTO INSERTER (DEDICATED TAB) -->
+            <div id="page-gp" class="tab-page">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px; flex-shrink:0;">
+                    <div style="font-size:10px; font-weight:750; color:var(--text-secondary);">💍 Group Photo Inserter</div>
+                    <button class="locate-xml-btn" onclick="gpiScan()" title="Scan active sequence for Group Photo sources and Nikaah markers">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        Scan Sequence
                     </button>
                 </div>
 
-                <!-- Results / Missing box (hidden until run) -->
-                <div id="relinkResultsBox" style="display:none; background:var(--surface-card); border:1px solid var(--border); border-radius:9px; padding:8px 10px; flex-direction:column; gap:4px; max-height:100px; overflow-y:auto;">
-                    <div id="relinkResultsSummary" style="font-size:10px; font-weight:700; color:var(--text-primary);"></div>
-                    <div id="relinkMissingList" style="font-size:9px; color:var(--danger); font-family:monospace; line-height:1.4;"></div>
+                <!-- Scan Results -->
+                <div id="gpiScanResults" style="flex-shrink:0;">
+                    <div class="gpi-empty-box">Click "Scan Sequence" to detect Group Photo sources and Nikaah markers.<br><br><span style="font-size:9px;opacity:0.7;">Identifies markers like <b>01N</b>, <b>GROUP_PHOTO_1</b>, Mango/Lavender clips, or timeline selections.</span></div>
                 </div>
-            </div>
 
                 <!-- Assignment Builder -->
-                <div style="flex-shrink:0;">
+                <div style="flex-shrink:0; margin-top:4px;">
                     <div class="gpi-section-label">Assignments — GP Source → Nikaah Range</div>
                     <div id="gpiAssignmentList" class="gpi-assignment-list"></div>
                     <button class="gpi-add-btn" onclick="gpiAddAssignment()">＋ Add Assignment</button>
                 </div>
 
                 <!-- Action Buttons -->
-                <div class="gpi-action-row" style="flex-shrink:0;">
+                <div class="gpi-action-row" style="flex-shrink:0; margin-top:4px;">
                     <button class="gpi-action-btn preview" onclick="gpiPreview()">
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" style="vertical-align:middle;margin-right:3px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                         Preview
                     </button>
-                    <button class="gpi-action-btn execute" onclick="gpiPreview()">
+                    <button class="gpi-action-btn execute" onclick="gpiPreviewAndExecute()">
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" style="vertical-align:middle;margin-right:3px;"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                         Preview &amp; Execute
                     </button>
                 </div>
+            </div>
 
             </div>
 
@@ -2616,6 +2602,25 @@
     </div>
 
     
+    </div>
+
+    <!-- Group Photo Inserter Preview Modal -->
+    <div id="gpPreviewModal" class="modal-overlay">
+        <div class="modal-content" style="max-height:85vh; display:flex; flex-direction:column;">
+            <div class="modal-header-row">
+                <span class="modal-header-title">📸 Group Photo Insertion Plan</span>
+                <span class="modal-badge" style="background:var(--accent-soft); color:var(--accent);">Review Plan</span>
+            </div>
+
+            <div id="gpPreviewStats" class="gp-stats-row"></div>
+            <div id="gpPreviewWarnings" class="gpi-warn-box" style="display:none;"></div>
+            <div id="gpPreviewList" class="gp-preview-list"></div>
+
+            <div class="modal-footer" style="margin-top:8px;">
+                <button type="button" onclick="document.getElementById('gpPreviewModal').classList.remove('active')">Cancel</button>
+                <button type="button" class="primary" onclick="gpiExecuteFromModal()">Execute All Insertions</button>
+            </div>
+        </div>
     </div>
 
 </body>
