@@ -211,7 +211,8 @@ export function extractCleanWebDate(name: string): string {
   if (!name) return ''
   const clean = name.trim()
   const sessionMatch = clean.match(/(_\d{2}[A-Za-z]|\s*_\d{2}|\s*Session\s*\d+|\s*Morning|\s*Evening|\s*Night)/i)
-  const sessionTag = sessionMatch ? ` ${sessionMatch[1].trim()}` : ''
+  const rawTag = sessionMatch ? sessionMatch[1].trim() : ''
+  const sessionTag = rawTag.startsWith('_') ? rawTag : (rawTag ? ` ${rawTag}` : '')
   const ymdMatch = clean.match(/(?:^|[^\d])(\d{4})[\s._\-](\d{1,2})[\s._\-](\d{1,2})(?:[^\d]|$)/i)
   if (ymdMatch) return `${ymdMatch[1]}-${ymdMatch[2].padStart(2, '0')}-${ymdMatch[3].padStart(2, '0')}${sessionTag}`
   const dmyMatch = clean.match(/(?:^|[^\d])(\d{1,2})[\s._\-](\d{1,2})[\s._\-](\d{4})(?:[^\d]|$)/i)
@@ -2555,30 +2556,29 @@ export default function App(): JSX.Element {
                   const isPhotoUp = task.photoStage === 'uploaded' || Boolean(task.photoUploaded) || (task.stage === 'upload' || task.stage === 'jameya' || task.stage === 'completed')
                   const isVideoUp = task.stage === 'upload' || task.stage === 'jameya' || task.stage === 'completed'
                   return (
-                    <li key={task.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                    <li key={task.id} className="safar-preview-row">
+                      <div className="safar-preview-date">
                         <span className={`chip-dot dot-${task.stage}`} title={`Stage: ${task.stage}`} />
-                        <strong title={dateFolderName(task)} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{dateFolderName(task)}</strong>
+                        <strong title={dateFolderName(task)}>{dateFolderName(task)}</strong>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                      <div className="safar-preview-status">
                         {isPhotoUp && isVideoUp ? (
                           <span className="media-sync-badge both-uploaded" title="Both Photo & Video Uploaded">
                             <CheckCircle2 size={11} /> Both Uploaded
                           </span>
                         ) : isPhotoUp && !isVideoUp ? (
-                          <span className="media-sync-badge photo-only" title="Photo Uploaded by Muffadal Peti · Video Pending">
-                            <Camera size={11} /> Photo Up · Video Pend
+                          <span className="media-sync-badge photo-only" title="Photo Uploaded · Video Pending">
+                            <Camera size={11} /> Photo Up
                           </span>
                         ) : !isPhotoUp && isVideoUp ? (
-                          <span className="media-sync-badge video-only" title="Video Uploaded by Murtaza · Photo Pending">
-                            <Film size={11} /> Video Up · Photo Pend
+                          <span className="media-sync-badge video-only" title="Video Uploaded · Photo Pending">
+                            <Film size={11} /> Video Up
                           </span>
                         ) : (
-                          <span className="media-sync-badge both-pending" title="Both Photo & Video Pending Upload">
-                            <Clock size={11} /> Both Pending
+                          <span className={`stage-tag stage-${task.stage}`}>
+                            {STAGES.find(s => s.id === task.stage)?.label || task.stage}
                           </span>
                         )}
-                        <span className={`stage-tag stage-${task.stage}`}>{STAGES.find(s => s.id === task.stage)?.label || task.stage}</span>
                         <button
                           type="button"
                           className="preview-remove-btn"
@@ -2597,31 +2597,31 @@ export default function App(): JSX.Element {
                   )
                 })}</ul> : <p className="safar-preview-empty">Waiting for date folders to sync.</p>}
 
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginTop: '12px', paddingTop: '10px', borderTop: '1px solid var(--border)', flexWrap: 'wrap' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div className="dashboard-safar-card-footer">
+                  <div className="footer-left">
                     <button type="button" className="safar-open-link" onClick={() => { setSelectedSafar(group.safarName); navigateTo('ongoing') }}>
-                      View Safar Kanban <ArrowUpRight aria-hidden="true" size={15}/>
+                      View Safar Kanban <ArrowUpRight aria-hidden="true" size={14}/>
                     </button>
                     {group.safarName === effectiveOngoingSafar ? (
-                      <span style={{ fontSize: '11px', fontWeight: 700, color: '#4338ca', backgroundColor: 'rgba(79, 70, 229, 0.1)', padding: '2px 8px', borderRadius: '6px' }} title="Designated as Ongoing Safar">
+                      <span className="badge-active-ongoing" title="Designated as Ongoing Safar">
                         ★ Active Ongoing
                       </span>
                     ) : (
                       <button
                         type="button"
                         onClick={() => handleSetOngoingSafar(group.safarName)}
-                        style={{ background: 'none', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '11px', fontWeight: 600, color: '#475569', padding: '2px 6px', cursor: 'pointer' }}
+                        className="btn-set-ongoing"
                         title="Set this as the active ongoing safar for WhatsApp updates"
                       >
                         Set as Ongoing
                       </button>
                     )}
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div className="footer-right">
                     <button
                       type="button"
                       onClick={() => shareDailyBriefingWhatsApp(group.safarName)}
-                      style={{ background: '#25D366', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '4px 8px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                      className="btn-card-whatsapp"
                       title={`Send WhatsApp status for ${group.safarName}`}
                     >
                       <MessageCircle size={13} /> WhatsApp

@@ -454,8 +454,8 @@ td { color: #514d43; font-size: .875rem; }
 .dashboard-safars-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .dashboard-safars-heading h2 { margin: 0 0 4px; color: #38362f; font: 700 1.25rem var(--font-display); }
 .dashboard-safars-heading p { margin: 0; color: #625d52; font-size: .9375rem; }
-.dashboard-safar-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 310px), 1fr)); gap: 14px; align-items: start; }
-.dashboard-safar-card { padding: 19px; contain: content; content-visibility: auto; contain-intrinsic-size: auto 265px; background: rgba(255, 255, 252, .88); backdrop-filter: none; -webkit-backdrop-filter: none; }
+.dashboard-safar-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); gap: 16px; align-items: stretch; }
+.dashboard-safar-card { padding: 20px; display: flex; flex-direction: column; height: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow-card); }
 .dashboard-safar-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .dashboard-safar-title { min-width: 0; display: grid; gap: 4px; padding: 0; border: 0; background: transparent; text-align: left; }
 .dashboard-safar-title span { overflow-wrap: anywhere; color: #37352e; font: 700 1.125rem var(--font-display); }
@@ -978,15 +978,142 @@ body {
 
 /* Dashboard Percentage Styling */
 .dashboard-safar-percent {
-  font-size: 1.25rem;
+  font-size: 1.35rem;
   font-weight: 800;
-  color: #4f46e5;
+  color: var(--color-ink);
   font-family: var(--font-display, sans-serif);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
 }
 .dashboard-safar-percent-sub {
   font-size: 0.6875rem;
   font-weight: 700;
-  color: #059669;
+  color: var(--green);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Dashboard Card Preview Rows & Footers */
+.safar-preview-list {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  margin: 10px 0 0 !important;
+  padding: 0 !important;
+  list-style: none !important;
+  flex: 1;
+}
+.safar-preview-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+  padding: 6px 10px !important;
+  border-radius: 8px !important;
+  background: color-mix(in oklch, var(--surface-2) 65%, transparent) !important;
+  border: 1px solid color-mix(in oklch, var(--border) 60%, transparent) !important;
+  transition: background 0.15s ease;
+}
+.safar-preview-row:hover {
+  background: var(--surface-2) !important;
+}
+.safar-preview-date {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+.safar-preview-date strong {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.safar-preview-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.dashboard-safar-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.dashboard-safar-card-footer .footer-left,
+.dashboard-safar-card-footer .footer-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.badge-active-ongoing {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-gold);
+  background: color-mix(in oklch, var(--color-gold) 15%, transparent);
+  border: 1px solid color-mix(in oklch, var(--color-gold) 35%, transparent);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+.btn-set-ongoing {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 2px 7px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.btn-set-ongoing:hover {
+  background: var(--surface-2);
+  color: var(--text-primary);
+  border-color: var(--color-gold);
+}
+.btn-card-whatsapp {
+  background: #25d366;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 9px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  box-shadow: 0 2px 6px rgba(37, 211, 102, 0.25);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+.btn-card-whatsapp:hover {
+  background: #20ba59;
+  transform: translateY(-1px);
+}
+.button-safar-remove {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 4px 7px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.button-safar-remove:hover {
+  color: var(--color-accent);
+  background: color-mix(in oklch, var(--color-accent) 10%, transparent);
 }
 
 /* Dashboard Ongoing Hero & Actions Layout */
@@ -2115,20 +2242,21 @@ body {
 /* Elevated Dashboard Safar Cards */
 .dashboard-safar-card {
   position: relative;
-  background: rgba(255, 255, 255, 0.9) !important;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(226, 232, 240, 0.95) !important;
-  border-radius: 20px !important;
-  padding: 22px !important;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.035), 0 1px 3px rgba(0, 0, 0, 0.02) !important;
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 16px !important;
+  padding: 20px !important;
+  box-shadow: var(--shadow-card) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
   transition: transform 0.22s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.22s cubic-bezier(0.23, 1, 0.32, 1), border-color 0.2s ease !important;
   overflow: hidden;
 }
 .dashboard-safar-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 12px 36px rgba(79, 70, 229, 0.09), 0 4px 12px rgba(0, 0, 0, 0.03) !important;
-  border-color: rgba(99, 102, 241, 0.4) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px color-mix(in oklch, var(--color-ink) 10%, transparent) !important;
+  border-color: var(--color-gold) !important;
 }
 .dashboard-safar-card::before {
   content: '';
