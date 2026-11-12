@@ -2779,8 +2779,7 @@ function detectGroupPhotoSources(seq) {
     var allMarkers = [];
     if (seq.markers) {
         var cur = seq.markers.getFirstMarker();
-        for (var mi = 0; mi < markerItems.length; mi++) {
-            var cur = markerItems[mi];
+        while (cur) {
             var nm = (cur.name || "").replace(/^\s+|\s+$/g, "");
             if (isGroupPhotoName(nm)) {
                 var gpNum = extractGpNumber(nm);
@@ -2983,8 +2982,7 @@ function collectNikaahMarkers(seq) {
     var allMarkers = [];
     if (seq.markers) {
         var cur = seq.markers.getFirstMarker();
-        for (var mi = 0; mi < markerItems.length; mi++) {
-            var cur = markerItems[mi];
+        while (cur) {
             var startSec = (cur.start && !isNaN(Number(cur.start.seconds))) ? Number(cur.start.seconds) : 0;
             var endSec   = (cur.end   && !isNaN(Number(cur.end.seconds)))   ? Number(cur.end.seconds)   : 0;
             var durSec   = (cur.duration && !isNaN(Number(cur.duration.seconds))) ? Number(cur.duration.seconds) : 0;
