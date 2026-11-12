@@ -3186,8 +3186,64 @@ function collectNikaahMarkers(seq) {
     return nikaahList;
 }
 
+// ── Multi-Tier Clip Name & Path Matching Engine ──────────────────────────────
+// Normalizes spaces, hyphens, underscores, file extensions (.mp4, .mov, etc.),
+// and compares exact names, substrings, slugs, and disk file basenames.
+function isClipMatch(candidateStrings, queryString) {
+    if (!queryString) return false;
+    var q = String(queryString).replace(/^\s+|\s+$/g, "");
+    if (!q) return false;
+    var qLower = q.toLowerCase();
+    var qClean = qLower.replace(/\.[a-z0-9]{2,5}$/i, "");
+    var qSlug = qClean.replace(/[\s_.-]+/g, "");
+
+    for (var i = 0; i < candidateStrings.length; i++) {
+        var raw = candidateStrings[i];
+        if (!raw) continue;
+        var c = String(raw).replace(/^\s+|\s+$/g, "");
+        if (!c) continue;
+        var cLower = c.toLowerCase();
+        var cClean = cLower.replace(/\.[a-z0-9]{2,5}$/i, "");
+        var cSlug = cClean.replace(/[\s_.-]+/g, "");
+
+        // 1. Exact match (case-insensitive, with or without extension)
+        if (cLower === qLower || cClean === qClean) return true;
+
+        // 2. Substring match
+        if (qClean.length >= 2 && (cClean.indexOf(qClean) !== -1 || qClean.indexOf(cClean) !== -1)) return true;
+
+        // 3. Normalized slug match (stripping all spaces, underscores, dots, hyphens)
+        // e.g. "1448-05-02_01M" matches "1448-05-02 _01M"
+        if (qSlug.length >= 2 && (cSlug.indexOf(qSlug) !== -1 || qSlug.indexOf(cSlug) !== -1)) return true;
+
+        // 4. Basename match if candidate is a full file path (e.g. C:\Footage\01M-10-01W.mp4)
+        if (c.indexOf("\\") !== -1 || c.indexOf("/") !== -1) {
+            var bName = c.replace(/^.*[\\\/]/, "").toLowerCase().replace(/\.[a-z0-9]{2,5}$/i, "");
+            var bSlug = bName.replace(/[\s_.-]+/g, "");
+            if (bName === qClean || (qClean.length >= 2 && bName.indexOf(qClean) !== -1)) return true;
+            if (qSlug.length >= 2 && (bSlug.indexOf(qSlug) !== -1 || qSlug.indexOf(bSlug) !== -1)) return true;
+        }
+    }
+    return false;
+}
+
+function getClipCandidateStrings(tc) {
+    var arr = [];
+    if (!tc) return arr;
+    try { if (tc.name) arr.push(tc.name); } catch(e1) {}
+    try { if (tc.projectItem && tc.projectItem.name) arr.push(tc.projectItem.name); } catch(e2) {}
+    try {
+        if (tc.projectItem && typeof tc.projectItem.getMediaPath === "function") {
+            var mp = tc.projectItem.getMediaPath();
+            if (mp) arr.push(mp);
+        }
+    } catch(e3) {}
+    try { if (tc.projectItem && tc.projectItem.treePath) arr.push(tc.projectItem.treePath); } catch(e4) {}
+    return arr;
+}
+
 // ── Universal Clip Source Resolver ──────────────────────────────────────────
-// Finds a clip by numeric GP index, clip name (partial or exact), or timeline selection
+// Finds a clip by numeric GP index, clip name (partial, exact, slug, or basename), or timeline selection
 function resolveClipSource(seq, clipId, gpSources) {
     if (!clipId) return null;
     var strId = String(clipId).replace(/^\s+|\s+$/g, "");
@@ -3201,11 +3257,19 @@ function resolveClipSource(seq, clipId, gpSources) {
         }
     }
 
-    // 2. Check if strId matches clipName in gpSources (case-insensitive substring or exact)
-    var lowerId = strId.toLowerCase();
+    // 2. Check if strId matches clipName in gpSources using multi-tier matcher
     for (var j = 0; j < gpSources.length; j++) {
-        var gNm = (gpSources[j].clipName || "").toLowerCase();
-        if (gNm === lowerId || gNm.indexOf(lowerId) !== -1 || lowerId.indexOf(gNm) !== -1) {
+        var gCandidates = [gpSources[j].clipName];
+        if (gpSources[j].projectItem) {
+            gCandidates.push(gpSources[j].projectItem.name);
+            try {
+                if (typeof gpSources[j].projectItem.getMediaPath === "function") {
+                    var gpMp = gpSources[j].projectItem.getMediaPath();
+                    if (gpMp) gCandidates.push(gpMp);
+                }
+            } catch(eGM) {}
+        }
+        if (isClipMatch(gCandidates, strId)) {
             return gpSources[j];
         }
     }
@@ -3218,8 +3282,8 @@ function resolveClipSource(seq, clipId, gpSources) {
                 for (var si = 0; si < sel.length; si++) {
                     var sc = sel[si];
                     if (!sc) continue;
-                    var scNm = (sc.name || (sc.projectItem && sc.projectItem.name) || "").toLowerCase();
-                    if (lowerId === "selected" || scNm === lowerId || scNm.indexOf(lowerId) !== -1 || lowerId.indexOf(scNm) !== -1) {
+                    var sCandidates = getClipCandidateStrings(sc);
+                    if (strId.toLowerCase() === "selected" || isClipMatch(sCandidates, strId)) {
                         var sDur = (sc.duration && sc.duration.seconds > 0) ? Number(sc.duration.seconds) : ((sc.end && sc.start) ? (sc.end.seconds - sc.start.seconds) : 15);
                         var sIn = (sc.inPoint && !isNaN(Number(sc.inPoint.seconds))) ? Number(sc.inPoint.seconds) : 0;
                         var sOut = (sc.outPoint && !isNaN(Number(sc.outPoint.seconds))) ? Number(sc.outPoint.seconds) : (sIn + sDur);
@@ -3238,7 +3302,7 @@ function resolveClipSource(seq, clipId, gpSources) {
         }
     } catch(eSel) {}
 
-    // 4. Scan timeline video tracks for matching clip name
+    // 4. Scan timeline video tracks for matching clip
     try {
         if (seq && seq.videoTracks) {
             for (var ti = 0; ti < seq.videoTracks.numTracks; ti++) {
@@ -3247,8 +3311,8 @@ function resolveClipSource(seq, clipId, gpSources) {
                 for (var ci = 0; ci < trk.clips.numItems; ci++) {
                     var tc = trk.clips[ci];
                     if (!tc) continue;
-                    var tcNm = (tc.name || (tc.projectItem && tc.projectItem.name) || "").toLowerCase();
-                    if (tcNm === lowerId || tcNm.indexOf(lowerId) !== -1 || lowerId.indexOf(tcNm) !== -1) {
+                    var tcCandidates = getClipCandidateStrings(tc);
+                    if (isClipMatch(tcCandidates, strId)) {
                         var tDur = (tc.duration && tc.duration.seconds > 0) ? Number(tc.duration.seconds) : ((tc.end && tc.start) ? (tc.end.seconds - tc.start.seconds) : 15);
                         var tIn = (tc.inPoint && !isNaN(Number(tc.inPoint.seconds))) ? Number(tc.inPoint.seconds) : 0;
                         var tOut = (tc.outPoint && !isNaN(Number(tc.outPoint.seconds))) ? Number(tc.outPoint.seconds) : (tIn + tDur);
@@ -3267,7 +3331,36 @@ function resolveClipSource(seq, clipId, gpSources) {
         }
     } catch(eTrk) {}
 
-    // 5. Scan project bins recursively for projectItem with matching name
+    // 4b. Also scan timeline audio tracks
+    try {
+        if (seq && seq.audioTracks) {
+            for (var ai = 0; ai < seq.audioTracks.numTracks; ai++) {
+                var atrk = seq.audioTracks[ai];
+                if (!atrk || !atrk.clips) continue;
+                for (var aci = 0; aci < atrk.clips.numItems; aci++) {
+                    var atc = atrk.clips[aci];
+                    if (!atc) continue;
+                    var atcCandidates = getClipCandidateStrings(atc);
+                    if (isClipMatch(atcCandidates, strId)) {
+                        var aDur = (atc.duration && atc.duration.seconds > 0) ? Number(atc.duration.seconds) : ((atc.end && atc.start) ? (atc.end.seconds - atc.start.seconds) : 15);
+                        var aIn = (atc.inPoint && !isNaN(Number(atc.inPoint.seconds))) ? Number(atc.inPoint.seconds) : 0;
+                        var aOut = (atc.outPoint && !isNaN(Number(atc.outPoint.seconds))) ? Number(atc.outPoint.seconds) : (aIn + aDur);
+                        return {
+                            gpNum: num || 1,
+                            clipName: atc.name || (atc.projectItem && atc.projectItem.name) || strId,
+                            projectItem: atc.projectItem || null,
+                            duration: aDur,
+                            inPoint: aIn,
+                            outPoint: aOut,
+                            hasClip: (atc.projectItem !== null)
+                        };
+                    }
+                }
+            }
+        }
+    } catch(eATrk) {}
+
+    // 5. Scan project bins recursively for projectItem with matching name or mediaPath
     try {
         if (app.project && app.project.rootItem) {
             var matchedItem = null;
@@ -3279,9 +3372,16 @@ function resolveClipSource(seq, clipId, gpSources) {
                     if (ch.type === 1) { // Bin
                         searchBin(ch);
                     } else {
-                        var cNm = (ch.name || "").toLowerCase();
-                        var stem = cNm.replace(/\.[a-z0-9]+$/i, "");
-                        if (cNm === lowerId || stem === lowerId || cNm.indexOf(lowerId) !== -1 || lowerId.indexOf(stem) !== -1) {
+                        var bCandidates = [ch.name];
+                        try {
+                            if (typeof ch.getMediaPath === "function") {
+                                var mp2 = ch.getMediaPath();
+                                if (mp2) bCandidates.push(mp2);
+                            }
+                        } catch(eMP) {}
+                        if (ch.treePath) bCandidates.push(ch.treePath);
+
+                        if (isClipMatch(bCandidates, strId)) {
                             matchedItem = ch;
                             return;
                         }
@@ -3330,6 +3430,75 @@ $.runScript.getSelectedTimelineClipName = function() {
     }
 };
 
+// ── Get All Sequence & Project Clip Names for Autocomplete Suggestions ────────
+$.runScript.getSequenceClipNames = function() {
+    try {
+        var seq = app.project.activeSequence;
+        if (!seq) return "ERROR|||No active sequence found.";
+
+        var names = [];
+        var seen = {};
+
+        function addName(nm) {
+            if (!nm) return;
+            var clean = String(nm).replace(/^\s+|\s+$/g, "");
+            if (clean && !seen[clean]) {
+                seen[clean] = true;
+                names.push(clean);
+            }
+        }
+
+        // 1. Sequence video clips
+        if (seq.videoTracks) {
+            for (var ti = 0; ti < seq.videoTracks.numTracks; ti++) {
+                var trk = seq.videoTracks[ti];
+                if (!trk || !trk.clips) continue;
+                for (var ci = 0; ci < trk.clips.numItems; ci++) {
+                    var c = trk.clips[ci];
+                    if (!c) continue;
+                    addName(c.name);
+                    if (c.projectItem) addName(c.projectItem.name);
+                }
+            }
+        }
+
+        // 2. Sequence audio clips
+        if (seq.audioTracks) {
+            for (var ai = 0; ai < seq.audioTracks.numTracks; ai++) {
+                var atrk = seq.audioTracks[ai];
+                if (!atrk || !atrk.clips) continue;
+                for (var aci = 0; aci < atrk.clips.numItems; aci++) {
+                    var ac = atrk.clips[aci];
+                    if (!ac) continue;
+                    addName(ac.name);
+                    if (ac.projectItem) addName(ac.projectItem.name);
+                }
+            }
+        }
+
+        // 3. Project panel bins
+        if (app.project && app.project.rootItem && app.project.rootItem.children) {
+            function scanBinNames(bin, depth) {
+                if (!bin || !bin.children || depth > 3) return;
+                for (var bi = 0; bi < bin.children.numItems; bi++) {
+                    var child = bin.children[bi];
+                    if (!child) continue;
+                    if (child.type === 1) { // Bin
+                        scanBinNames(child, depth + 1);
+                    } else if (child.type !== 2) {
+                        addName(child.name);
+                    }
+                }
+            }
+            scanBinNames(app.project.rootItem, 0);
+        }
+
+        return "SUCCESS|||" + names.join("|||");
+    } catch(err) {
+        return "ERROR|||" + err.toString();
+    }
+};
+
 // ── Mark Clip as Group Photo on Sequence Timeline ─────────────────────────────
 // Finds the clip by name/number on the timeline (or selection) and creates GROUP_PHOTO_N marker
 // This allows editors to completely skip manual marker creation and clip coloring!
@@ -3345,9 +3514,8 @@ $.runScript.addGpMarkerAtClip = function(clipIdentifier, gpNumber) {
         var markerName = "GROUP_PHOTO_" + num;
 
         var foundClip = null;
-        var lowerId = cleanId.toLowerCase();
 
-        // 1. Check currently selected clip if cleanId is "selected" or matches
+        // 1. Check currently selected clip
         try {
             if (typeof seq.getSelection === "function") {
                 var sel = seq.getSelection();
@@ -3355,8 +3523,8 @@ $.runScript.addGpMarkerAtClip = function(clipIdentifier, gpNumber) {
                     for (var s = 0; s < sel.length; s++) {
                         var sc = sel[s];
                         if (sc && (sc.mediaType === "VIDEO" || sc.projectItem)) {
-                            var scNm = (sc.name || (sc.projectItem && sc.projectItem.name) || "").toLowerCase();
-                            if (cleanId.toLowerCase() === "selected" || scNm === lowerId || scNm.indexOf(lowerId) !== -1 || lowerId.indexOf(scNm) !== -1) {
+                            var scCandidates = getClipCandidateStrings(sc);
+                            if (cleanId.toLowerCase() === "selected" || isClipMatch(scCandidates, cleanId)) {
                                 foundClip = sc;
                                 break;
                             }
@@ -3374,8 +3542,8 @@ $.runScript.addGpMarkerAtClip = function(clipIdentifier, gpNumber) {
                 for (var ci = 0; ci < trk.clips.numItems; ci++) {
                     var tc = trk.clips[ci];
                     if (!tc) continue;
-                    var tcNm = (tc.name || (tc.projectItem && tc.projectItem.name) || "").toLowerCase();
-                    if (tcNm === lowerId || tcNm.indexOf(lowerId) !== -1 || lowerId.indexOf(tcNm) !== -1) {
+                    var tcCandidates = getClipCandidateStrings(tc);
+                    if (isClipMatch(tcCandidates, cleanId)) {
                         foundClip = tc;
                         break;
                     }
@@ -3384,8 +3552,26 @@ $.runScript.addGpMarkerAtClip = function(clipIdentifier, gpNumber) {
             }
         }
 
+        // 3. Scan timeline audio tracks for matching clip
+        if (!foundClip && seq.audioTracks) {
+            for (var ai = 0; ai < seq.audioTracks.numTracks; ai++) {
+                var atrk = seq.audioTracks[ai];
+                if (!atrk || !atrk.clips) continue;
+                for (var aci = 0; aci < atrk.clips.numItems; aci++) {
+                    var atc = atrk.clips[aci];
+                    if (!atc) continue;
+                    var atcCandidates = getClipCandidateStrings(atc);
+                    if (isClipMatch(atcCandidates, cleanId)) {
+                        foundClip = atc;
+                        break;
+                    }
+                }
+                if (foundClip) break;
+            }
+        }
+
         if (!foundClip) {
-            return "ERROR|||Clip '" + cleanId + "' not found on active timeline. Check spelling or use 'Pick' from timeline.";
+            return "ERROR|||Clip '" + cleanId + "' not found on timeline tracks. Ensure the clip is placed on the sequence or click 'Pick'.";
         }
 
         var clipStartSec = 0;

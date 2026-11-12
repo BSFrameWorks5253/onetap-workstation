@@ -1808,19 +1808,32 @@
 
             box.innerHTML = html;
 
-            // Update datalist suggestions
+            // Update datalist suggestions with detected GP sources AND timeline/project clips
             var datalist = document.getElementById('gpiClipSuggestions');
             if (datalist) {
                 datalist.innerHTML = '';
+                var seenOpts = {};
+                function addOpt(val) {
+                    if (!val || seenOpts[val]) return;
+                    seenOpts[val] = true;
+                    var opt = document.createElement('option');
+                    opt.value = val;
+                    datalist.appendChild(opt);
+                }
+
                 gps.forEach(function(g) {
-                    if (g.clipName) {
-                        var opt1 = document.createElement('option');
-                        opt1.value = g.clipName;
-                        datalist.appendChild(opt1);
+                    if (g.clipName) addOpt(g.clipName);
+                    addOpt('GP ' + g.gpNum);
+                });
+
+                // Also fetch all timeline and project clips for autocomplete
+                cs.evalScript('$.runScript.getSequenceClipNames()', function(clipRes) {
+                    if (clipRes && clipRes.indexOf('SUCCESS|||') === 0) {
+                        var clipArr = clipRes.replace('SUCCESS|||', '').split('|||');
+                        clipArr.forEach(function(cn) {
+                            if (cn) addOpt(cn);
+                        });
                     }
-                    var opt2 = document.createElement('option');
-                    opt2.value = 'GP ' + g.gpNum;
-                    datalist.appendChild(opt2);
                 });
             }
 
