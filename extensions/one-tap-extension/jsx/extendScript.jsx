@@ -2965,10 +2965,19 @@ function isStrictNikaahMarker(markerName) {
     return false;
 }
 
+// ── Color label palette for GP assignments ────────────────────────────────────
+// Palette: 1: Green (13), 2: Purple (8), 3: Lavender (3), 4: Mango (7), 5: Teal (10),
+//          6: Caribbean (2), 7: Magenta (11), 8: Rose (6), 9: Iris (1), 10: Cerulean (4)
+function getAssignmentColorIndex(asgnIdx) {
+    var palette = [13, 8, 3, 7, 10, 2, 11, 6, 1, 4];
+    var idx = (parseInt(asgnIdx, 10) - 1) % palette.length;
+    if (isNaN(idx) || idx < 0) idx = 0;
+    return palette[idx];
+}
+
 // ── Shared helper: match Nikaah marker against assigned range ────────────────
-function findAssignedKeyForNikaah(nk, assignments) {
+function findAssignedObjectForNikaah(nk, assignments) {
     if (!nk || !assignments || assignments.length === 0) return null;
-    var matchedKey = null;
     for (var asi = 0; asi < assignments.length; asi++) {
         var asgn = assignments[asi];
         var lo = Math.min(asgn.fromN, asgn.toN);
@@ -2984,10 +2993,15 @@ function findAssignedKeyForNikaah(nk, assignments) {
         }
 
         if (inRange) {
-            matchedKey = asgn.clipKey;
+            return asgn;
         }
     }
-    return matchedKey;
+    return null;
+}
+
+function findAssignedKeyForNikaah(nk, assignments) {
+    var obj = findAssignedObjectForNikaah(nk, assignments);
+    return obj ? obj.clipKey : null;
 }
 
 // ── Shared helper: detect GROUP_PHOTO_N sequence markers or clips ─────────────
@@ -3817,12 +3831,12 @@ $.runScript.addGpMarkerAtClip = function(clipIdentifier, gpNumber) {
         var markers = seq.markers;
         if (!markers) return "ERROR|||Sequence markers not accessible.";
 
-        // Delete any existing marker for this GP number or at this exact position
+        // Delete any existing marker for this GP number or at this exact position (ONLY if it is a GP recognition marker)
         var cur = markers.getFirstMarker();
         while (cur) {
             var cNm = (cur.name || "").replace(/^\s+|\s+$/g, "");
             var cStart = (cur.start && !isNaN(Number(cur.start.seconds))) ? Number(cur.start.seconds) : -1;
-            if (cNm === markerName || (isGroupPhotoName(cNm) && extractGpNumber(cNm) === num) || Math.abs(cStart - clipStartSec) < 0.1) {
+            if (isGroupPhotoName(cNm) && (cNm === markerName || extractGpNumber(cNm) === num || Math.abs(cStart - clipStartSec) < 0.1)) {
                 markers.deleteMarker(cur);
                 break;
             }
@@ -4090,7 +4104,7 @@ $.runScript.groupPhotoInserterExecute = function(assignmentsStr) {
             var fromN   = parseInt(fields[1], 10);
             var toN     = parseInt(fields[2], 10);
             if (!clipKey || isNaN(fromN) || isNaN(toN)) continue;
-            assignments.push({ clipKey: clipKey, fromN: fromN, toN: toN });
+            assignments.push({ clipKey: clipKey, fromN: fromN, toN: toN, asgnNum: (ai + 1) });
         }
 
         if (assignments.length === 0) {
@@ -4131,9 +4145,9 @@ $.runScript.groupPhotoInserterExecute = function(assignmentsStr) {
         var workList = [];
         for (var nki = 0; nki < nikaahMarkers.length; nki++) {
             var nk = nikaahMarkers[nki];
-            var assignedClipKey = findAssignedKeyForNikaah(nk, assignments);
-            if (assignedClipKey === undefined || assignedClipKey === null) continue;
-            workList.push({ nk: nk, clipKey: assignedClipKey });
+            var asgnObj = findAssignedObjectForNikaah(nk, assignments);
+            if (!asgnObj) continue;
+            workList.push({ nk: nk, clipKey: asgnObj.clipKey, asgnNum: asgnObj.asgnNum || 1 });
         }
 
         workList.sort(function(a, b) {
@@ -4144,6 +4158,8 @@ $.runScript.groupPhotoInserterExecute = function(assignmentsStr) {
         for (var wi = workList.length - 1; wi >= 0; wi--) {
             var nk = workList[wi].nk;
             var clipKey = workList[wi].clipKey;
+            var asgnNum = workList[wi].asgnNum || 1;
+            var asgnColor = getAssignmentColorIndex(asgnNum);
             var gp = resolvedClipMap[clipKey] || resolveClipSource(seq, clipKey, gpSources);
 
             if (!gp) {
@@ -4259,11 +4275,29 @@ $.runScript.groupPhotoInserterExecute = function(assignmentsStr) {
                 }
 
                 if (insertOk) {
-                    // Tag placed clip with duplicate prevention comment
+                    // Tag placed clip with duplicate prevention comment & assignment color label
                     for (var pci = targetVideoTrack.clips.numItems - 1; pci >= 0; pci--) {
                         var placedClip = targetVideoTrack.clips[pci];
                         if (placedClip && Math.abs(placedClip.start.seconds - insertSec) < 0.35) {
                             try { placedClip.comment = dupKey; } catch(eCmt) {}
+                            // Color clip based on assignment number:
+                            // Assignment 1 = Green (13), Assignment 2 = Purple (8), Assignment 3 = Lavender (3), etc.
+                            try {
+                                if (typeof placedClip.setColorLabel === "function") {
+                                    placedClip.setColorLabel(asgnColor);
+                                } else if (placedClip.colorLabel !== undefined) {
+                                    placedClip.colorLabel = asgnColor;
+                                }
+                            } catch(eColClip) {}
+                            try {
+                                if (placedClip.projectItem) {
+                                    if (typeof placedClip.projectItem.setColorLabel === "function") {
+                                        placedClip.projectItem.setColorLabel(asgnColor);
+                                    } else if (placedClip.projectItem.colorLabel !== undefined) {
+                                        placedClip.projectItem.colorLabel = asgnColor;
+                                    }
+                                }
+                            } catch(eColProj) {}
                             break;
                         }
                     }
@@ -4331,6 +4365,34 @@ $.runScript.groupPhotoInserterExecute = function(assignmentsStr) {
             reportLines.unshift("✓ Nikaah " + nk.seqNum + " [" + nk.name + "] → " + (gp.clipName || clipKey) + " @ " + formatSec(insertSec) + " (+" + groupDuration + "s)");
         }
 
+        // Clean up ONLY the GP recognition markers from the sequence
+        // (leaves all Nikaah markers and other event markers 100% untouched)
+        var deletedGpCount = 0;
+        try {
+            if (seq.markers) {
+                var curMk = seq.markers.getFirstMarker();
+                while (curMk) {
+                    var mName = (curMk.name || "").replace(/^\s+|\s+$/g, "");
+                    var mCmt = curMk.comments || "";
+                    var isGpRec = isGroupPhotoName(mName) || /^GROUP_PHOTO_\d+$/i.test(mName) || /^GP\s*\d+$/i.test(mName) || mCmt.indexOf("Group Photo Source") !== -1 || mCmt.indexOf("OT_GP_INSERTED") !== -1;
+                    if (isGpRec) {
+                        var toDel = curMk;
+                        curMk = seq.markers.getNextMarker(curMk);
+                        try {
+                            seq.markers.deleteMarker(toDel);
+                            deletedGpCount++;
+                        } catch(eD) {}
+                    } else {
+                        curMk = seq.markers.getNextMarker(curMk);
+                    }
+                }
+            }
+        } catch(eCleanGp) {}
+
+        if (deletedGpCount > 0) {
+            reportLines.push("✓ Cleaned up " + deletedGpCount + " GP recognition marker(s) from timeline.");
+        }
+
         var statsStr = "inserted=" + insertedCount + "|skipped=" + skippedCount + "|failed=" + failedCount;
         var reportStr = reportLines.join("\n");
 
@@ -4363,6 +4425,34 @@ $.runScript.groupPhotoInserterExecute = function(assignmentsStr) {
                 }
             } catch(eEndUndo) {}
         }
+    }
+};
+
+// ── Delete ONLY Group Photo recognition markers from active sequence ─────────
+$.runScript.deleteGroupPhotoMarkers = function() {
+    try {
+        var seq = app.project.activeSequence;
+        if (!seq || !seq.markers) return "ERROR|||No active sequence or markers found.";
+        var curMk = seq.markers.getFirstMarker();
+        var deletedGpCount = 0;
+        while (curMk) {
+            var mName = (curMk.name || "").replace(/^\s+|\s+$/g, "");
+            var mCmt = curMk.comments || "";
+            var isGpRec = isGroupPhotoName(mName) || /^GROUP_PHOTO_\d+$/i.test(mName) || /^GP\s*\d+$/i.test(mName) || mCmt.indexOf("Group Photo Source") !== -1 || mCmt.indexOf("OT_GP_INSERTED") !== -1;
+            if (isGpRec) {
+                var toDel = curMk;
+                curMk = seq.markers.getNextMarker(curMk);
+                try {
+                    seq.markers.deleteMarker(toDel);
+                    deletedGpCount++;
+                } catch(eD) {}
+            } else {
+                curMk = seq.markers.getNextMarker(curMk);
+            }
+        }
+        return "SUCCESS|||" + deletedGpCount;
+    } catch(err) {
+        return "ERROR|||" + err.toString();
     }
 };
 // ====================================================================

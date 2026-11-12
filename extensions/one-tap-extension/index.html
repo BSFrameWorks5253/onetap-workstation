@@ -1182,6 +1182,77 @@
             color: var(--accent);
             text-transform: uppercase;
         }
+        .gpi-color-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            font-size: 8px;
+            font-weight: 800;
+            padding: 1px 5px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            line-height: 1.2;
+        }
+        .gpi-color-chip::before {
+            content: '';
+            display: inline-block;
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+        .gpi-color-chip.green {
+            background: rgba(34, 197, 94, 0.14);
+            border-color: rgba(34, 197, 94, 0.35);
+            color: #10B981;
+        }
+        .gpi-color-chip.purple {
+            background: rgba(168, 85, 247, 0.14);
+            border-color: rgba(168, 85, 247, 0.35);
+            color: #A855F7;
+        }
+        .gpi-color-chip.lavender {
+            background: rgba(192, 132, 252, 0.14);
+            border-color: rgba(192, 132, 252, 0.35);
+            color: #C084FC;
+        }
+        .gpi-color-chip.mango {
+            background: rgba(245, 158, 11, 0.14);
+            border-color: rgba(245, 158, 11, 0.35);
+            color: #F59E0B;
+        }
+        .gpi-color-chip.teal {
+            background: rgba(20, 184, 166, 0.14);
+            border-color: rgba(20, 184, 166, 0.35);
+            color: #14B8A6;
+        }
+        .gpi-color-chip.caribbean {
+            background: rgba(6, 182, 212, 0.14);
+            border-color: rgba(6, 182, 212, 0.35);
+            color: #06B6D4;
+        }
+        .gpi-color-chip.magenta {
+            background: rgba(236, 72, 153, 0.14);
+            border-color: rgba(236, 72, 153, 0.35);
+            color: #EC4899;
+        }
+        .gpi-color-chip.rose {
+            background: rgba(244, 63, 94, 0.14);
+            border-color: rgba(244, 63, 94, 0.35);
+            color: #F43F5E;
+        }
+        .gpi-color-chip.iris {
+            background: rgba(99, 102, 241, 0.14);
+            border-color: rgba(99, 102, 241, 0.35);
+            color: #6366F1;
+        }
+        .gpi-color-chip.cerulean {
+            background: rgba(56, 189, 248, 0.14);
+            border-color: rgba(56, 189, 248, 0.35);
+            color: #38BDF8;
+        }
         .gpi-add-btn {
             width: 100%;
             height: 25px;
@@ -2136,6 +2207,20 @@
             });
         }
 
+        function gpiClearGpMarkers() {
+            showStatus('⏳ Deleting Group Photo recognition markers...', 'var(--warning)');
+            cs.evalScript('$.runScript.deleteGroupPhotoMarkers()', function(r) {
+                if (!r) { showStatus('❌ No response from Premiere Pro.', 'var(--danger)'); return; }
+                if (r.indexOf('ERROR|||') === 0) {
+                    showStatus('❌ ' + r.replace('ERROR|||', ''), 'var(--danger)');
+                    return;
+                }
+                var count = r.split('|||')[1] || '0';
+                showStatus('✓ Cleaned up ' + count + ' GP recognition marker(s). Nikaah markers preserved.', 'var(--accent)');
+                gpiScan();
+            });
+        }
+
         function gpiRenderScanError(msg) {
             var box = document.getElementById('gpiScanResults');
             if (!box) return;
@@ -2189,9 +2274,35 @@
             var head = document.createElement('div');
             head.className = 'gpi-card-head';
 
+            var headLeft = document.createElement('div');
+            headLeft.style.display = 'flex';
+            headLeft.style.alignItems = 'center';
+            headLeft.style.gap = '6px';
+
             var badge = document.createElement('span');
             badge.className = 'gpi-card-badge';
             badge.textContent = 'Assignment #' + gpiState.assignmentCount;
+
+            var palette = [
+                { name: 'Green', cls: 'green' },
+                { name: 'Purple', cls: 'purple' },
+                { name: 'Lavender', cls: 'lavender' },
+                { name: 'Mango', cls: 'mango' },
+                { name: 'Teal', cls: 'teal' },
+                { name: 'Caribbean', cls: 'caribbean' },
+                { name: 'Magenta', cls: 'magenta' },
+                { name: 'Rose', cls: 'rose' },
+                { name: 'Iris', cls: 'iris' },
+                { name: 'Cerulean', cls: 'cerulean' }
+            ];
+            var colorInfo = palette[(gpiState.assignmentCount - 1) % palette.length];
+            var colorChip = document.createElement('span');
+            colorChip.className = 'gpi-color-chip ' + colorInfo.cls;
+            colorChip.textContent = colorInfo.name;
+            colorChip.title = 'Premiere clip label color for Assignment #' + gpiState.assignmentCount;
+
+            headLeft.appendChild(badge);
+            headLeft.appendChild(colorChip);
 
             var rmBtn = document.createElement('button');
             rmBtn.className = 'gpi-rm-btn';
@@ -2201,7 +2312,7 @@
                 card.parentNode.removeChild(card);
             };
 
-            head.appendChild(badge);
+            head.appendChild(headLeft);
             head.appendChild(rmBtn);
 
             var controls = document.createElement('div');
@@ -3254,10 +3365,16 @@
             <div id="page-gp" class="tab-page">
                 <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px; flex-shrink:0;">
                     <div style="font-size:10px; font-weight:750; color:var(--text-secondary);">💍 Group Photo Inserter</div>
-                    <button class="locate-xml-btn" onclick="gpiScan()" title="Scan active sequence for Group Photo sources and Nikaah markers">
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                        Scan Sequence
-                    </button>
+                    <div style="display:flex; gap:4px; align-items:center;">
+                        <button class="locate-xml-btn" onclick="gpiClearGpMarkers()" title="Delete ONLY Group Photo recognition markers from active sequence (keeps all Nikaah markers intact)" style="border-color:rgba(239, 68, 68, 0.4); color:var(--danger); background:rgba(239, 68, 68, 0.08);">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                            Delete GP Markers
+                        </button>
+                        <button class="locate-xml-btn" onclick="gpiScan()" title="Scan active sequence for Group Photo sources and Nikaah markers">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                            Scan Sequence
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Scan Results -->
