@@ -77,7 +77,9 @@ $.runScript.getMarkerNames = function() {
         var mScan = markers.getFirstMarker();
         while (mScan) {
             var mNm = mScan.name || '';
-            if (!isGroupPhotoName(mNm)) {
+            var mCmt = mScan.comments || '';
+            var isGp = isGroupPhotoName(mNm) || (mCmt.indexOf("OT_GP_INSERTED") !== -1) || (/ - (?:GP\s*\d+|Group\s*Photo)/i.test(mNm));
+            if (!isGp) {
                 var mStart = (mScan.start && !isNaN(Number(mScan.start.seconds))) ? Number(mScan.start.seconds) : 0;
                 markerItems.push({ obj: mScan, name: mNm, startSec: mStart });
             }
@@ -869,7 +871,9 @@ $.runScript.autoMEIO = function (selectedMarkersStr, explicitExtOrPresetPath) {
         var mScan = markers.getFirstMarker();
         while (mScan) {
             var mNm = mScan.name || '';
-            if (!isGroupPhotoName(mNm)) {
+            var mCmt = mScan.comments || '';
+            var isGp = isGroupPhotoName(mNm) || (mCmt.indexOf("OT_GP_INSERTED") !== -1) || (/ - (?:GP\s*\d+|Group\s*Photo)/i.test(mNm));
+            if (!isGp) {
                 var mStart = (mScan.start && !isNaN(Number(mScan.start.seconds))) ? Number(mScan.start.seconds) : 0;
                 markerItems.push({ obj: mScan, name: mNm, startSec: mStart });
             }
@@ -1067,7 +1071,8 @@ $.runScript.getTimelineStats = function () {
             var m = markers.getFirstMarker();
             while (m) {
                 var mName = m.name || "";
-                if (isGroupPhotoName(mName)) {
+                var mCmt = m.comments || "";
+                if (isGroupPhotoName(mName) || mCmt.indexOf("OT_GP_INSERTED") !== -1 || (/ - (?:GP\s*\d+|Group\s*Photo)/i.test(mName))) {
                     if (!breakdownMap["GP"]) {
                         breakdownMap["GP"] = { count: 0, code: "GP" };
                         breakdownOrder.push("GP");
@@ -1185,7 +1190,9 @@ $.runScript.legacy_autoMEIO = function (selectedMarkersStr, explicitExtOrPresetP
         var mScan = markers.getFirstMarker();
         while (mScan) {
             var mNm = mScan.name || '';
-            if (!isGroupPhotoName(mNm)) {
+            var mCmt = mScan.comments || '';
+            var isGp = isGroupPhotoName(mNm) || (mCmt.indexOf("OT_GP_INSERTED") !== -1) || (/ - (?:GP\s*\d+|Group\s*Photo)/i.test(mNm));
+            if (!isGp) {
                 var mStart = (mScan.start && !isNaN(Number(mScan.start.seconds))) ? Number(mScan.start.seconds) : 0;
                 markerItems.push({ obj: mScan, name: mNm, startSec: mStart });
             }
@@ -2169,6 +2176,7 @@ function isGroupPhotoName(name) {
     if (/group\s*photo|group\s*video|group\s*pic|nikah\s*group|nikaah\s*group|nikah\s*photo|nikaah\s*photo|nikah\s*video|nikaah\s*video/i.test(s)) return true;
     if (/(?:^|[\s_.-])gp(?:[_\s-]*\d+)?(?:[\s_.-]|$)/i.test(s)) return true;
     if (/^gp\s*\d*$/i.test(s)) return true;
+    if (/\s*-\s*(?:group\s*photo|gp\b)/i.test(s)) return true;
     return false;
 }
 
@@ -4174,6 +4182,14 @@ $.runScript.groupPhotoInserterExecute = function(assignmentsStr) {
                                 isDuplicate = true;
                                 break outer;
                             }
+                            var cStart = (c.start && !isNaN(Number(c.start.seconds))) ? Number(c.start.seconds) : -1;
+                            if (Math.abs(cStart - nk.endSec) < 0.35) {
+                                var cCands = getClipCandidateStrings(c);
+                                if (isClipMatch(cCands, gp.clipName || clipKey)) {
+                                    isDuplicate = true;
+                                    break outer;
+                                }
+                            }
                         }
                     }
                 }
@@ -4280,14 +4296,35 @@ $.runScript.groupPhotoInserterExecute = function(assignmentsStr) {
                     }
                 }
 
-                // Create a marker for the inserted GP
-                var newMk = seq.markers.createMarker(insertSec);
-                if (newMk) {
-                    newMk.name = nk.name + " - " + (gp.clipName || clipKey);
-                    newMk.comments = dupKey;
-                    try { newMk.end = toTime(insertSec + groupDuration); } catch(e) {}
-                    try { newMk.setColorByIndex(4, 0); } catch(e) {} // Yellow = N color
+                // Extend current Nikaah marker's end to cover the inserted Group Photo (if marker has duration)
+                if (nk.markerObj) {
+                    try {
+                        var nkEnd = (nk.markerObj.end && !isNaN(Number(nk.markerObj.end.seconds))) ? Number(nk.markerObj.end.seconds) : 0;
+                        if (nkEnd > (nk.startSec || 0)) {
+                            nk.markerObj.end = toTime(nkEnd + groupDuration);
+                        }
+                    } catch(eNkEnd) {}
                 }
+
+                // Delete any residual / old insertion markers so they are never treated as separate videos
+                try {
+                    var cleanMk = seq.markers.getFirstMarker();
+                    while (cleanMk) {
+                        var cName = cleanMk.name || "";
+                        var cCmt = cleanMk.comments || "";
+                        var cStart = (cleanMk.start && !isNaN(Number(cleanMk.start.seconds))) ? Number(cleanMk.start.seconds) : -1;
+                        if (cCmt.indexOf("OT_GP_INSERTED") !== -1 || (Math.abs(cStart - insertSec) < 0.35 && cName.indexOf(nk.name + " - ") === 0)) {
+                            var toDel = cleanMk;
+                            cleanMk = seq.markers.getNextMarker(cleanMk);
+                            try { seq.markers.deleteMarker(toDel); } catch(eDel) {}
+                        } else {
+                            cleanMk = seq.markers.getNextMarker(cleanMk);
+                        }
+                    }
+                } catch(eClean) {}
+
+                // NOTE: Marker is deliberately NOT created for the inserted Group Photo!
+                // The inserted GP clip is part of the Nikaah video output, avoiding separate video in/out creation.
             } catch(eMkAll) {}
 
             insertedCount++;
