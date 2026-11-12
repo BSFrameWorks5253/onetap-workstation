@@ -2834,6 +2834,18 @@ $.runScript.distributeNikahGroupPhoto = function() {
 // Fully additive — does NOT modify any existing function above.
 // =============================================================================
 
+// ── Shared helper: check if project item is a bin ────────────────────────────
+function isItemBin(item) {
+    if (!item) return false;
+    try {
+        if (item.type === 1) return true;
+        if (typeof ProjectItemType !== "undefined" && item.type === ProjectItemType.BIN) return true;
+        if (item.children && typeof item.children.numItems === "number" && item.type !== 2) return true;
+    } catch(e) {}
+    return false;
+}
+var childIsBin = isItemBin;
+
 // ── Shared helper: sequence frame rate extractor ─────────────────────────────
 function getSequenceFps(seq) {
     if (!seq) return 25.0;
@@ -3070,7 +3082,7 @@ function detectGroupPhotoSources(seq) {
                     for (var bi = 0; bi < bin.children.numItems; bi++) {
                         var child = bin.children[bi];
                         if (!child) continue;
-                        if (childIsBin(child)) searchProjectForClip(child);
+                        if (isItemBin(child)) searchProjectForClip(child);
                         else {
                             var bCandidates = [child.name];
                             try { if (typeof child.getMediaPath === "function") bCandidates.push(child.getMediaPath()); } catch(e) {}
@@ -3206,7 +3218,7 @@ function detectGroupPhotoSources(seq) {
                 var child = bin.children[bi];
                 if (!child) continue;
                 if (child.type === 2 || (child.isSequence && child.isSequence())) continue;
-                if (childIsBin(child)) {
+                if (isItemBin(child)) {
                     scanBinForGps(child);
                 } else {
                     var bNm = child.name || "";
@@ -3575,7 +3587,7 @@ function resolveClipSource(seq, clipId, gpSources) {
                 for (var bi = 0; bi < bin.children.numItems; bi++) {
                     var ch = bin.children[bi];
                     if (!ch) continue;
-                    if (childIsBin(ch)) {
+                    if (isItemBin(ch)) {
                         searchBin(ch);
                     } else {
                         var bCandidates = [ch.name];
