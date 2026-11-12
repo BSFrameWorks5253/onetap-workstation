@@ -1082,7 +1082,22 @@
             border-radius: 7px;
             padding: 6px 8px;
         }
-        .gpi-num-input { width: 34px; text-align: center; }
+        .gpi-num-input {
+            width: 44px;
+            min-width: 44px;
+            text-align: center;
+            font-size: 11px;
+            font-weight: 750;
+            padding: 3px 2px;
+            color: var(--text-primary);
+            -moz-appearance: textfield;
+            appearance: textfield;
+        }
+        .gpi-num-input::-webkit-outer-spin-button,
+        .gpi-num-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
         .gpi-row-label {
             font-size: 9px;
             font-weight: 750;
@@ -1092,7 +1107,7 @@
         .gpi-range-box {
             display: flex;
             align-items: center;
-            gap: 3px;
+            gap: 4px;
             flex-shrink: 0;
         }
         .gpi-rm-btn {
@@ -1539,7 +1554,7 @@
             .btn-label { font-size: 10px; }
             .btn-sub { font-size: 7.5px; }
             .gpi-select { font-size: 9px; padding: 2px 4px; }
-            .gpi-num-input { width: 28px; font-size: 9px; padding: 2px; }
+            .gpi-num-input { width: 38px; min-width: 38px; font-size: 10px; padding: 2px 1px; }
             .gpi-row-label { font-size: 8px; }
             .gpi-action-btn { height: 26px; font-size: 9px; }
             .gpi-add-btn { height: 22px; font-size: 9px; }
@@ -1985,6 +2000,11 @@
                     return;
                 }
                 var parts = res.split('|||');
+                if (parts[2] && clipInp) {
+                    clipInp.value = parts[2];
+                } else if (parts[1] && clipInp) {
+                    clipInp.value = parts[1];
+                }
                 showStatus('✓ Added ' + (parts[1] || 'GP marker') + ' on timeline' + (parts[3] ? ' at ' + parts[3] : ''), 'var(--success)');
                 gpiScan();
             });
@@ -2027,6 +2047,15 @@
                 var mName = parts[1] || ('GROUP_PHOTO_' + gpNum);
                 var cName = parts[2] || clipVal;
                 var tStr = parts[3] ? (' at ' + parts[3]) : '';
+                // Also update any matching assignment card input
+                var cards = document.querySelectorAll('.gpi-assignment-card');
+                cards.forEach(function(c) {
+                    var badge = c.querySelector('.gpi-card-badge');
+                    if (badge && badge.textContent && badge.textContent.indexOf('#' + gpNum) !== -1) {
+                        var cInp = c.querySelector('.gpi-clip-input');
+                        if (cInp) cInp.value = cName;
+                    }
+                });
                 showStatus('✓ Added ' + mName + ' on ' + cName + tStr, 'var(--success)');
                 gpiScan();
             });
