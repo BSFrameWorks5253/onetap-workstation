@@ -9,9 +9,11 @@
         (function() {
             var saved = localStorage.getItem('ot_ext_theme') || localStorage.getItem('ot_parent_ext_theme');
             if (saved === 'light') {
+                document.documentElement.classList.add('light-theme');
                 document.documentElement.classList.remove('dark-theme');
             } else {
                 document.documentElement.classList.add('dark-theme');
+                document.documentElement.classList.remove('light-theme');
             }
         })();
     </script>
@@ -24,12 +26,69 @@
            Compact, Zero-Scroll, Fixed-Height Ergonomics
            ============================================================ */
         :root {
-            /* Light Theme (Clean Studio Light) */
-            --bg: #EEF0F5;
-            --surface: #FFFFFF;
-            --surface-card: #F4F6FA;
-            --surface-hover: #E9ECF3;
-            --border: rgba(15, 23, 42, 0.10);
+            /* Ultra-Sleek Dark Theme (Adobe Dark Aesthetic Default) */
+            --bg: #0C0D14;
+            --surface: #141722;
+            --surface-card: #1C2030;
+            --surface-hover: #262B40;
+            --border: rgba(255, 255, 255, 0.08);
+            --border-highlight: rgba(99, 102, 241, 0.45);
+            --text-primary: #F8FAFC;
+            --text-secondary: #94A3B8;
+            --text-muted: #64748B;
+
+            --accent: #6366F1;
+            --accent-hv: #4F46E5;
+            --accent-soft: rgba(99, 102, 241, 0.14);
+            --accent-markers: #A855F7;
+            --accent-markers-soft: rgba(168, 85, 247, 0.14);
+
+            --success: #10B981;
+            --success-soft: rgba(16, 185, 129, 0.14);
+            --warning: #F59E0B;
+            --warning-soft: rgba(245, 158, 11, 0.14);
+            --danger: #EF4444;
+
+            --chrome-grad: linear-gradient(90deg, #6366F1, #8B5CF6, #EC4899, #10B981, #6366F1);
+            --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.45);
+            --shadow-btn: 0 2px 8px rgba(0, 0, 0, 0.35);
+        }
+
+        html.dark-theme, body.dark-theme {
+            --bg: #0C0D14;
+            --surface: #141722;
+            --surface-card: #1C2030;
+            --surface-hover: #262B40;
+            --border: rgba(255, 255, 255, 0.08);
+            --border-highlight: rgba(99, 102, 241, 0.45);
+            --text-primary: #F8FAFC;
+            --text-secondary: #94A3B8;
+            --text-muted: #64748B;
+
+            --accent: #6366F1;
+            --accent-hv: #4F46E5;
+            --accent-soft: rgba(99, 102, 241, 0.14);
+            --accent-markers: #A855F7;
+            --accent-markers-soft: rgba(168, 85, 247, 0.14);
+
+            --success: #10B981;
+            --success-soft: rgba(16, 185, 129, 0.14);
+            --warning: #F59E0B;
+            --warning-soft: rgba(245, 158, 11, 0.14);
+            --danger: #EF4444;
+
+            --chrome-grad: linear-gradient(90deg, #6366F1, #8B5CF6, #EC4899, #10B981, #6366F1);
+            --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.45);
+            --shadow-btn: 0 2px 8px rgba(0, 0, 0, 0.35);
+        }
+
+        html.light-theme, body.light-theme {
+            /* Clean Neutral Light Studio */
+            --bg: #E8EBF2;
+            --surface: #F5F7FA;
+            --surface-card: #EAEFF6;
+            --surface-hover: #DFE5EF;
+            --border: rgba(15, 23, 42, 0.12);
             --border-highlight: rgba(79, 70, 229, 0.35);
             --text-primary: #0F172A;
             --text-secondary: #334155;
@@ -48,36 +107,8 @@
             --danger: #DC2626;
 
             --chrome-grad: linear-gradient(90deg, #6366F1, #8B5CF6, #EC4899, #10B981, #6366F1);
-            --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.05);
-            --shadow-btn: 0 4px 14px rgba(79, 70, 229, 0.25);
-        }
-
-        html.dark-theme, body.dark-theme {
-            /* Ultra-Glass Dark Theme (Adobe Dark Aesthetic) */
-            --bg: #090A0F;
-            --surface: rgba(16, 18, 28, 0.95);
-            --surface-card: rgba(26, 30, 46, 0.88);
-            --surface-hover: rgba(38, 43, 66, 0.95);
-            --border: rgba(255, 255, 255, 0.09);
-            --border-highlight: rgba(99, 102, 241, 0.45);
-            --text-primary: #F8FAFC;
-            --text-secondary: #94A3B8;
-            --text-muted: #64748B;
-
-            --accent: #6366F1;
-            --accent-hv: #4F46E5;
-            --accent-soft: rgba(99, 102, 241, 0.16);
-            --accent-markers: #A855F7;
-            --accent-markers-soft: rgba(168, 85, 247, 0.16);
-
-            --success: #10B981;
-            --success-soft: rgba(16, 185, 129, 0.16);
-            --warning: #F59E0B;
-            --warning-soft: rgba(245, 158, 11, 0.16);
-            --danger: #EF4444;
-
-            --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.65);
-            --shadow-btn: 0 4px 18px rgba(99, 102, 241, 0.4);
+            --shadow-card: 0 2px 10px rgba(0, 0, 0, 0.05);
+            --shadow-btn: 0 2px 6px rgba(0, 0, 0, 0.08);
         }
 
         /* ── ZERO SCROLL RESET ─────────────────────────── */
@@ -117,19 +148,44 @@
         /* Core Panel Container */
         .panel-container {
             width: 100%;
-            max-width: 360px; /* Keeps cards neat on large monitors */
+            max-width: 100%;
             height: 100%;
             display: flex;
             flex-direction: column;
-            gap: 7px;
+            gap: 6px;
             background: var(--surface);
             border: 1px solid var(--border);
-            border-radius: 14px;
-            padding: 10px;
+            border-radius: 12px;
+            padding: 8px 10px;
             box-shadow: var(--shadow-card);
             position: relative;
             overflow: hidden;
             box-sizing: border-box;
+        }
+
+        /* Scrollable Middle Viewport (Ensures zero clip in small panels) */
+        .panel-scroll-area {
+            flex: 1 1 auto;
+            overflow-y: auto;
+            overflow-x: hidden;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding-right: 2px;
+        }
+        .panel-scroll-area::-webkit-scrollbar {
+            width: 4px;
+        }
+        .panel-scroll-area::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .panel-scroll-area::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+        .panel-scroll-area::-webkit-scrollbar-thumb:hover {
+            background: var(--border-highlight);
         }
 
         /* Ambient Top Rainbow Bar */
@@ -441,14 +497,40 @@
         .timeline-stats-card {
             background: var(--surface-card);
             border: 1px solid var(--border);
-            border-radius: 11px;
-            padding: 8px 10px;
+            border-radius: 10px;
+            padding: 7px 9px;
             display: flex;
             flex-direction: column;
-            gap: 6px;
+            gap: 5px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
             flex-shrink: 0;
             transition: all 0.2s ease;
+        }
+        .timeline-stats-card.is-collapsed {
+            padding: 5px 8px;
+            gap: 0;
+        }
+        .timeline-stats-card.is-collapsed .stats-collapsible-body {
+            display: none !important;
+        }
+        .stats-toggle-chevron {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 11px;
+            font-weight: 800;
+            cursor: pointer;
+            padding: 0 3px;
+            line-height: 1;
+            transition: transform 0.2s ease;
+        }
+        .timeline-stats-card.is-collapsed .stats-toggle-chevron {
+            transform: rotate(-90deg);
+        }
+        .stats-collapsible-body {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
         }
         .stats-top-row {
             display: flex;
@@ -678,23 +760,23 @@
             opacity: 1;
         }
 
-        /* Ergonomic Fixed-Height Button Card */
+        /* Sleek Ergonomic Button Card */
         .btn-card {
             width: 100%;
-            height: 48px; /* Fixed ergonomic button height */
-            min-height: 48px;
-            max-height: 48px;
+            height: 44px; /* Sleek ergonomic button height */
+            min-height: 44px;
+            max-height: 44px;
             border: 1px solid var(--border);
             background: var(--surface-card);
-            padding: 0 12px;
-            border-radius: 11px;
+            padding: 0 10px;
+            border-radius: 8px;
             font-family: inherit;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: flex-start;
-            gap: 10px;
-            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            gap: 9px;
+            transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
             outline: none;
             position: relative;
             overflow: hidden;
@@ -703,17 +785,17 @@
         .btn-card:hover {
             border-color: var(--border-highlight);
             background: var(--surface-hover);
-            transform: translateY(-1px);
-            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+            transform: translateY(-0.5px);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.16);
         }
         .btn-card:active {
-            transform: scale(0.98) translateY(1px);
+            transform: scale(0.985);
         }
 
         .btn-icon {
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -954,56 +1036,77 @@
         .gpi-rm-btn:hover { background: rgba(239, 68, 68, 0.28); }
         .gpi-add-btn {
             width: 100%;
-            height: 28px;
-            border-radius: 7px;
-            border: 1px dashed var(--border-highlight);
-            background: transparent;
-            color: var(--accent);
+            height: 25px;
+            border-radius: 5px;
+            border: 1px solid var(--border);
+            background: var(--surface-card);
+            color: var(--text-secondary);
             font-family: inherit;
             font-size: 10px;
-            font-weight: 750;
+            font-weight: 600;
+            letter-spacing: 0.2px;
             cursor: pointer;
-            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            transition: all 0.15s ease;
             margin-bottom: 4px;
         }
         .gpi-add-btn:hover {
-            background: var(--accent-soft);
-            border-style: solid;
+            background: var(--surface-hover);
+            border-color: var(--border-highlight);
+            color: var(--accent);
+        }
+        .gpi-add-btn:active {
+            transform: scale(0.98);
         }
         .gpi-action-row {
             display: flex;
-            gap: 5px;
+            gap: 6px;
         }
         .gpi-action-btn {
             flex: 1;
-            height: 34px;
-            border-radius: 8px;
-            border: none;
+            height: 28px;
+            border-radius: 5px;
+            border: 1px solid var(--border);
             font-family: inherit;
-            font-size: 10.5px;
-            font-weight: 800;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 0.2px;
             cursor: pointer;
-            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            box-sizing: border-box;
+            transition: all 0.15s ease;
         }
         .gpi-action-btn.preview {
             background: var(--surface-card);
-            border: 1px solid var(--border-highlight);
-            color: var(--accent);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
         }
         .gpi-action-btn.preview:hover {
-            background: var(--accent-soft);
+            background: var(--surface-hover);
+            border-color: var(--border-highlight);
+            color: var(--accent);
+            transform: translateY(-0.5px);
         }
         .gpi-action-btn.execute {
-            background: linear-gradient(135deg, #D97706 0%, #F59E0B 100%);
+            background: linear-gradient(180deg, #E28912 0%, #C8710B 100%);
+            border: 1px solid rgba(255, 255, 255, 0.15);
             color: #FFFFFF;
-            box-shadow: 0 3px 12px rgba(245, 158, 11, 0.35);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
         }
         .gpi-action-btn.execute:hover {
-            background: linear-gradient(135deg, #B45309 0%, #D97706 100%);
-            transform: translateY(-1px);
-            box-shadow: 0 5px 18px rgba(245, 158, 11, 0.45);
+            background: linear-gradient(180deg, #F59E0B 0%, #D97706 100%);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+            transform: translateY(-0.5px);
         }
-        .gpi-action-btn:active { transform: scale(0.97); }
+        .gpi-action-btn:active {
+            transform: translateY(0) scale(0.98);
+        }
         .gpi-warn-box {
             background: var(--warning-soft);
             border: 1px solid rgba(245, 158, 11, 0.35);
@@ -1108,87 +1211,7 @@
             text-overflow: ellipsis;
         }
 
-        /* ============================================================
-           INTELLIGENT DOCK ADAPTATIONS (Zero-Scroll in any dock)
-           ============================================================ */
 
-        /* HORIZONTAL DOCK MODE (Wide and Shallow above Timeline) */
-        body.is-horizontal .panel-outer-wrap {
-            padding: 4px;
-        }
-        body.is-horizontal .panel-container {
-            max-width: none;
-            flex-direction: row;
-            align-items: center;
-            justify-content: space-between;
-            gap: 10px;
-            padding: 6px 12px;
-        }
-        body.is-horizontal .ecosystem-header {
-            border-bottom: none;
-            padding-bottom: 0;
-        }
-        body.is-horizontal .sync-badge {
-            display: none;
-        }
-        body.is-horizontal .settings-bar {
-            padding: 3px 6px;
-        }
-        body.is-horizontal .tab-page.active {
-            flex-direction: row;
-            gap: 8px;
-            align-items: center;
-        }
-        body.is-horizontal .chrome-btn-wrap {
-            width: auto;
-            flex: 1;
-        }
-        body.is-horizontal .btn-card {
-            height: 40px;
-            min-height: 40px;
-            max-height: 40px;
-        }
-        body.is-horizontal .footer-info {
-            display: none;
-        }
-
-        /* COMPACT HEIGHT (< 340px) */
-        body.is-compact-h .panel-container {
-            gap: 5px;
-            padding: 7px;
-        }
-        body.is-compact-h .btn-card {
-            height: 42px;
-            min-height: 42px;
-            max-height: 42px;
-        }
-        body.is-compact-h .btn-icon {
-            width: 28px;
-            height: 28px;
-        }
-        body.is-compact-h .btn-sub {
-            display: none;
-        }
-        body.is-compact-h .subtitle {
-            display: none;
-        }
-
-        /* TINY HEIGHT (< 260px) */
-        body.is-tiny-h .sync-badge {
-            display: none;
-        }
-        body.is-tiny-h .footer-info {
-            display: none;
-        }
-        body.is-tiny-h .btn-card {
-            height: 36px;
-            min-height: 36px;
-            max-height: 36px;
-        }
-        body.is-tiny-h .btn-icon {
-            width: 24px;
-            height: 24px;
-        }
 
         /* ── FULL-SCREEN RESPONSIVE MODALS (EDGE-TO-EDGE) ── */
         .modal-overlay {
@@ -1350,34 +1373,128 @@
             border: none;
             box-shadow: var(--shadow-btn);
         }
-        /* ── RESPONSIVE ADAPTIVE BREAKPOINTS ── */
+        /* ── RESPONSIVE ADAPTIVE BREAKPOINTS (ALL DOCKS: SMALL TO LARGE) ── */
+
+        /* Wide panels (>= 420px) — 2-column action buttons & roomy layout */
+        @media (min-width: 420px) {
+            .panel-container {
+                max-width: 100%;
+                padding: 10px 14px;
+                gap: 8px;
+            }
+            #page-batch.tab-page.active,
+            #page-custom.tab-page.active {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 8px;
+            }
+            #page-gp.tab-page.active {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 6px;
+            }
+            .btn-card {
+                height: 46px;
+                min-height: 46px;
+                max-height: 46px;
+                padding: 0 10px;
+            }
+            .btn-icon {
+                width: 28px;
+                height: 28px;
+            }
+            .btn-label {
+                font-size: 12px;
+            }
+            .btn-sub {
+                font-size: 9px;
+            }
+            .gpi-action-row {
+                gap: 6px;
+            }
+            .gpi-action-btn {
+                height: 30px;
+                font-size: 10px;
+            }
+            .chrome-btn-wrap {
+                width: 100%;
+            }
+        }
+
+        /* Large panels (>= 600px) */
+        @media (min-width: 600px) {
+            .panel-container {
+                max-width: 800px;
+                margin: 0 auto;
+            }
+            .stats-tiles-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            .stats-val {
+                font-size: 15px;
+            }
+            .gpi-action-row {
+                max-width: 460px;
+            }
+        }
+
+        /* Narrow panels (<= 310px) */
         @media (max-width: 310px) {
             .panel-outer-wrap { padding: 2px; }
-            .panel-container { padding: 6px; gap: 5px; }
-            .brand-badge { width: 24px; height: 24px; font-size: 11px; }
-            .title { font-size: 11px; }
-            .version-tag { font-size: 7.5px; padding: 0 3px; }
+            .panel-container { padding: 6px 7px; gap: 4px; border-radius: 9px; }
+            .brand-badge { width: 22px; height: 22px; font-size: 11px; border-radius: 6px; }
+            .title { font-size: 11px; gap: 3px; }
+            .version-tag { font-size: 7px; padding: 0 3px; }
             .subtitle { display: none; }
-            .locate-xml-btn { padding: 2px 5px; font-size: 9px; }
-            .locate-xml-btn span { display: none; }
-            .tab-btn { padding: 5px 2px; font-size: 9.5px; gap: 2px; }
-            .btn-card { height: 42px; min-height: 42px; max-height: 42px; padding: 0 8px; gap: 6px; }
-            .btn-icon-wrap { width: 28px; height: 28px; font-size: 14px; }
-            .btn-title { font-size: 11px; }
-            .btn-desc { font-size: 8.5px; }
+            .header-actions .btn-text { display: none; }
+            .locate-xml-btn, .theme-toggle-btn { padding: 2.5px 6px; font-size: 9px; gap: 2px; }
+            .tab-bar { padding: 2px; gap: 2px; }
+            .tab-btn { padding: 4px 2px; font-size: 9px; gap: 2px; }
+            .sync-badge { padding: 3px 6px; font-size: 8.5px; }
+            .timeline-stats-card { padding: 6px 7px; gap: 4px; }
+            .stats-val { font-size: 11.5px; }
+            .stats-lbl { font-size: 7.5px; }
+            .btn-card { height: 38px; min-height: 38px; max-height: 38px; padding: 0 7px; gap: 6px; }
+            .btn-icon { width: 22px; height: 22px; font-size: 11px; }
+            .btn-icon svg { width: 13px; height: 13px; }
+            .btn-label { font-size: 10px; }
+            .btn-sub { font-size: 7.5px; }
+            .gpi-select { font-size: 9px; padding: 2px 4px; }
+            .gpi-num-input { width: 28px; font-size: 9px; padding: 2px; }
+            .gpi-row-label { font-size: 8px; }
+            .gpi-action-btn { height: 26px; font-size: 9px; }
+            .gpi-add-btn { height: 22px; font-size: 9px; }
         }
 
-        @media (max-height: 540px) {
-            html, body { overflow-y: auto !important; }
-            .panel-container { height: auto; min-height: 100%; overflow-y: visible; max-height: none; }
-            .btn-card { height: 42px; min-height: 42px; max-height: 42px; }
+        /* Ultra narrow panels (<= 240px) */
+        @media (max-width: 240px) {
+            .brand-badge { display: none; }
+            .title { font-size: 10px; }
+            .version-tag { display: none; }
+            .tab-btn { font-size: 8.5px; }
+            .stats-tiles-grid { grid-template-columns: 1fr 1fr; }
+            .stats-tile:nth-child(3) { grid-column: span 2; }
+            .gpi-action-row { flex-direction: column; gap: 4px; }
+            .gpi-action-btn { width: 100%; height: 26px; }
+            .gpi-assignment-row { flex-wrap: wrap; gap: 3px; }
         }
 
-        @media (min-width: 420px) {
-            .panel-container { max-width: 100%; }
-            #page-batch.tab-page.active, #page-custom.tab-page.active { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
-            #page-gp.tab-page.active { display: flex !important; flex-direction: column !important; gap: 6px; }
-            .chrome-btn-wrap { width: 100%; }
+        /* Short height panels (<= 440px) */
+        @media (max-height: 440px) {
+            .panel-container { gap: 4px; padding: 6px 8px; }
+            .sync-badge { padding: 2px 6px; font-size: 8.5px; }
+            .footer-info { display: none; }
+            .btn-card { height: 36px; min-height: 36px; max-height: 36px; }
+            .btn-sub { display: none; }
+            .timeline-stats-card .stats-breakdown-section { display: none; }
+        }
+
+        /* Tiny height panels (<= 320px) */
+        @media (max-height: 320px) {
+            .sync-badge { display: none; }
+            .btn-card { height: 32px; min-height: 32px; max-height: 32px; }
+            .timeline-stats-card .stats-tiles-grid { display: none; }
+            .timeline-stats-card { padding: 4px 6px; }
         }
     </style>
     <script>
@@ -1397,6 +1514,7 @@
             initTheme();
             initSeqPrefixSetting();
             initResponsiveEngine();
+            initStatsCollapse();
             checkAppConnection();
             setInterval(checkAppConnection, 8000);
             setTimeout(fetchTimelineStats, 600);
@@ -1409,15 +1527,30 @@
                 var w = window.innerWidth;
                 var h = window.innerHeight;
                 var b = document.body;
-
-                var isHorizontal = (w >= 440 && h <= 300) || (w / h >= 1.6 && h <= 360);
-                b.classList.toggle('is-horizontal', isHorizontal);
-                b.classList.toggle('is-compact-h', h < 380);
-                b.classList.toggle('is-tiny-h', h < 260);
+                b.classList.toggle('is-narrow', w <= 310);
+                b.classList.toggle('is-ultranarrow', w <= 240);
+                b.classList.toggle('is-wide', w >= 420);
+                b.classList.toggle('is-short', h <= 440);
+                b.classList.toggle('is-tiny-h', h <= 320);
             }
 
             window.addEventListener('resize', updateResponsiveClasses);
             updateResponsiveClasses();
+        }
+
+        function initStatsCollapse() {
+            var card = document.getElementById('timelineStatsCard');
+            if (!card) return;
+            var isCollapsed = localStorage.getItem('ot_stats_collapsed') === 'true';
+            card.classList.toggle('is-collapsed', isCollapsed);
+        }
+
+        function toggleStatsCollapse() {
+            var card = document.getElementById('timelineStatsCard');
+            if (!card) return;
+            var next = !card.classList.contains('is-collapsed');
+            card.classList.toggle('is-collapsed', next);
+            localStorage.setItem('ot_stats_collapsed', next ? 'true' : 'false');
         }
 
         function initSeqPrefixSetting() {
@@ -1435,11 +1568,15 @@
         function initTheme() {
             var saved = localStorage.getItem('ot_ext_theme') || localStorage.getItem('ot_parent_ext_theme');
             if (saved === 'light') {
+                document.documentElement.classList.add('light-theme');
                 document.documentElement.classList.remove('dark-theme');
+                document.body.classList.add('light-theme');
                 document.body.classList.remove('dark-theme');
             } else {
                 document.documentElement.classList.add('dark-theme');
+                document.documentElement.classList.remove('light-theme');
                 document.body.classList.add('dark-theme');
+                document.body.classList.remove('light-theme');
             }
             updateThemeBtnText();
 
@@ -1458,12 +1595,16 @@
                 if (hostEnv && hostEnv.appSkinInfo && hostEnv.appSkinInfo.panelBackgroundColor) {
                     var bg = hostEnv.appSkinInfo.panelBackgroundColor.color;
                     var luminance = (0.299 * bg.red + 0.587 * bg.green + 0.114 * bg.blue) / 255;
-                    if (luminance < 0.5) {
-                        document.documentElement.classList.add('dark-theme');
-                        document.body.classList.add('dark-theme');
-                    } else {
+                    if (luminance >= 0.65) {
+                        document.documentElement.classList.add('light-theme');
                         document.documentElement.classList.remove('dark-theme');
+                        document.body.classList.add('light-theme');
                         document.body.classList.remove('dark-theme');
+                    } else {
+                        document.documentElement.classList.add('dark-theme');
+                        document.documentElement.classList.remove('light-theme');
+                        document.body.classList.add('dark-theme');
+                        document.body.classList.remove('light-theme');
                     }
                     updateThemeBtnText();
                 }
@@ -1471,15 +1612,19 @@
         }
 
         function toggleTheme() {
-            var isDark = document.body.classList.contains('dark-theme') || document.documentElement.classList.contains('dark-theme');
+            var isDark = !document.body.classList.contains('light-theme');
             if (isDark) {
+                document.documentElement.classList.add('light-theme');
                 document.documentElement.classList.remove('dark-theme');
+                document.body.classList.add('light-theme');
                 document.body.classList.remove('dark-theme');
                 localStorage.setItem('ot_ext_theme', 'light');
                 localStorage.setItem('ot_parent_ext_theme', 'light');
             } else {
                 document.documentElement.classList.add('dark-theme');
+                document.documentElement.classList.remove('light-theme');
                 document.body.classList.add('dark-theme');
+                document.body.classList.remove('light-theme');
                 localStorage.setItem('ot_ext_theme', 'dark');
                 localStorage.setItem('ot_parent_ext_theme', 'dark');
             }
@@ -1489,8 +1634,8 @@
         function updateThemeBtnText() {
             var btn = document.getElementById('themeBtn');
             if (btn) {
-                var isDark = document.body.classList.contains('dark-theme') || document.documentElement.classList.contains('dark-theme');
-                btn.innerHTML = isDark ? '<span>☀️</span> Light' : '<span>🌙</span> Dark';
+                var isDark = !document.body.classList.contains('light-theme');
+                btn.innerHTML = isDark ? '<span>☀️</span> <span class="btn-text">Light</span>' : '<span>🌙</span> <span class="btn-text">Dark</span>';
             }
         }
 
@@ -2326,10 +2471,10 @@
                 <div class="header-actions">
                     <button id="locateXmlBtn" class="locate-xml-btn" onclick="runImportMediaXml()" oncontextmenu="browseAndImportXml(); return false;" title="Import XML sequence into Timeline. Click to auto-locate or Right-click to browse XML file.">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                        Import XML
+                        <span class="btn-text">Import XML</span>
                     </button>
                     <button id="themeBtn" class="theme-toggle-btn" onclick="toggleTheme()" title="Toggle Dark/Light Mode">
-                        <span>☀️</span> Light
+                        <span>☀️</span> <span class="btn-text">Light</span>
                     </button>
                 </div>
             </div>
@@ -2345,52 +2490,57 @@
 
             <!-- Segmented Tab Switcher -->
             <div class="tab-bar">
-                <button id="tab-batch" class="tab-btn active" onclick="switchTab('batch')">⚡ Batch</button>
-                <button id="tab-custom" class="tab-btn" onclick="switchTab('custom')">🎯 Custom</button>
-                <button id="tab-gp" class="tab-btn" onclick="switchTab('gp')">📸 Group Photo</button>
+                <button id="tab-batch" class="tab-btn active" onclick="switchTab('batch')">⚡ <span class="tab-label">Batch</span></button>
+                <button id="tab-custom" class="tab-btn" onclick="switchTab('custom')">🎯 <span class="tab-label">Custom</span></button>
+                <button id="tab-gp" class="tab-btn" onclick="switchTab('gp')">📸 <span class="tab-label">Group Photo</span></button>
             </div>
 
-            <!-- TIMELINE STATS & EVENT BREAKDOWN CARD -->
-            <div id="timelineStatsCard" class="timeline-stats-card">
-                <div class="stats-top-row">
-                    <div class="stats-title-group">
-                        <span class="stats-live-dot"></span>
-                        <span class="stats-heading">Timeline Intelligence</span>
-                        <span id="statSequenceName" class="stats-seq-pill">—</span>
+            <!-- Scrollable Middle Viewport (Zero-clip in any panel size) -->
+            <div class="panel-scroll-area">
+                <!-- TIMELINE STATS & EVENT BREAKDOWN CARD -->
+                <div id="timelineStatsCard" class="timeline-stats-card">
+                    <div class="stats-top-row">
+                        <div class="stats-title-group">
+                            <button class="stats-toggle-chevron" onclick="toggleStatsCollapse()" title="Toggle Timeline Intelligence card">▾</button>
+                            <span class="stats-live-dot"></span>
+                            <span class="stats-heading">Timeline Intelligence</span>
+                            <span id="statSequenceName" class="stats-seq-pill">—</span>
+                        </div>
+                        <button class="stats-refresh-btn" onclick="fetchTimelineStats()" title="Refresh timeline markers and duration">
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                            Refresh
+                        </button>
                     </div>
-                    <button class="stats-refresh-btn" onclick="fetchTimelineStats()" title="Refresh timeline markers and duration">
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-                        Refresh
-                    </button>
-                </div>
 
-                <!-- 3 Metric Tiles -->
-                <div class="stats-tiles-grid">
-                    <div class="stats-tile">
-                        <div id="statTotalMarkers" class="stats-val">0</div>
-                        <div class="stats-lbl">Timeline Markers</div>
-                    </div>
-                    <div class="stats-tile">
-                        <div id="statTotalEvents" class="stats-val" style="color:var(--accent);">0</div>
-                        <div class="stats-lbl">Total Events</div>
-                    </div>
-                    <div class="stats-tile">
-                        <div id="statRawDuration" class="stats-val" style="color:var(--warning); font-family:monospace; font-size:12px;">00:00:00</div>
-                        <div class="stats-lbl" title="Sequence media duration before trims or marker cuts">Time Before Edit</div>
-                    </div>
-                </div>
+                    <div id="statsCollapsibleBody" class="stats-collapsible-body">
+                        <!-- 3 Metric Tiles -->
+                        <div class="stats-tiles-grid">
+                            <div class="stats-tile">
+                                <div id="statTotalMarkers" class="stats-val">0</div>
+                                <div class="stats-lbl">Timeline Markers</div>
+                            </div>
+                            <div class="stats-tile">
+                                <div id="statTotalEvents" class="stats-val" style="color:var(--accent);">0</div>
+                                <div class="stats-lbl">Total Events</div>
+                            </div>
+                            <div class="stats-tile">
+                                <div id="statRawDuration" class="stats-val" style="color:var(--warning); font-family:monospace; font-size:12px;">00:00:00</div>
+                                <div class="stats-lbl" title="Sequence media duration before trims or marker cuts">Time Before Edit</div>
+                            </div>
+                        </div>
 
-                <!-- Event Markers Breakdown Chips with Full Event Names -->
-                <div class="stats-breakdown-section">
-                    <div class="stats-breakdown-header">
-                        <span>Event Breakdown</span>
-                        <span id="statEventsSummary" class="stats-summary-tag">0 types</span>
-                    </div>
-                    <div id="statBreakdownBadges" class="stats-chips-container">
-                        <span class="stat-empty-msg">Scan or place markers to view event breakdown</span>
+                        <!-- Event Markers Breakdown Chips with Full Event Names -->
+                        <div class="stats-breakdown-section">
+                            <div class="stats-breakdown-header">
+                                <span>Event Breakdown</span>
+                                <span id="statEventsSummary" class="stats-summary-tag">0 types</span>
+                            </div>
+                            <div id="statBreakdownBadges" class="stats-chips-container">
+                                <span class="stat-empty-msg">Scan or place markers to view event breakdown</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
 
             <!-- TAB 1: BATCH INGEST -->
             <div id="page-batch" class="tab-page active">
@@ -2486,18 +2636,18 @@
 
                 <!-- Action Buttons -->
                 <div class="gpi-action-row" style="flex-shrink:0; margin-top:4px;">
-                    <button class="gpi-action-btn preview" onclick="gpiPreview()">
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" style="vertical-align:middle;margin-right:3px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    <button class="gpi-action-btn preview" onclick="gpiPreview()" title="Preview planned group photo insertions">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="vertical-align:middle;margin-right:3px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                         Preview
                     </button>
-                    <button class="gpi-action-btn execute" onclick="gpiPreviewAndExecute()">
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" style="vertical-align:middle;margin-right:3px;"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                    <button class="gpi-action-btn execute" onclick="gpiPreviewAndExecute()" title="Preview and execute ripple insertions">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="vertical-align:middle;margin-right:3px;"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                         Preview &amp; Execute
                     </button>
                 </div>
             </div>
 
-            </div>
+            </div><!-- /panel-scroll-area -->
 
             <!-- Floating Status Toast Banner -->
             <div id="statusMessage"></div>
