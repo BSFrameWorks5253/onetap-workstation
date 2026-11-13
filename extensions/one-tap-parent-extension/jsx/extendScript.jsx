@@ -2482,6 +2482,105 @@ function extractGpNumber(name) {
     return 1;
 }
 
+// ----------------------
+// Precision Sequence Frame Snapping & Cut-Point Resolution
+// Enforces exact zero-gap mathematical frame alignment (Math.round(sec * fps) / fps)
+// to eliminate 1-2 frame leftover jerk/flash between clips
+// ----------------------
+function getSequenceFps(seq) {
+    var fps = 25.0;
+    try {
+        if (seq && seq.getSettings) {
+            var settings = seq.getSettings();
+            if (settings && settings.videoFrameRate !== undefined && settings.videoFrameRate !== null) {
+                var vr = settings.videoFrameRate;
+                if (typeof vr === "number" && vr > 0) fps = vr;
+                else if (typeof vr === "string") {
+                    var pf = parseFloat(vr);
+                    if (isFinite(pf) && pf > 0) fps = pf;
+                } else if (typeof vr === "object" && vr.numerator && vr.denominator) {
+                    var pf2 = vr.numerator / vr.denominator;
+                    if (isFinite(pf2) && pf2 > 0) fps = pf2;
+                }
+            }
+        }
+    } catch (eFps) { fps = 25.0; }
+    return fps;
+}
+
+function snapToFrameBoundary(sec, fps) {
+    if (!sec || isNaN(Number(sec)) || Number(sec) <= 0) return 0;
+    var fRate = (fps && fps > 0) ? fps : 25.0;
+    var frameNum = Math.round(Number(sec) * fRate);
+    return frameNum / fRate;
+}
+
+function findBestTimelineCutPoint(seq, preferredTrack, targetSec, maxToleranceSec) {
+    if (!seq || targetSec === undefined || targetSec === null) return targetSec;
+    if (isNaN(Number(targetSec))) return targetSec;
+    targetSec = Number(targetSec);
+    var fps = getSequenceFps(seq);
+    if (!maxToleranceSec) maxToleranceSec = 0.45; // ~11-13 frames tolerance
+
+    var candidateCuts = [];
+
+    // Prioritize preferredTrack (targetVideoTrack), then other video tracks
+    var tracks = [];
+    if (preferredTrack && preferredTrack.clips) tracks.push(preferredTrack);
+    if (seq.videoTracks) {
+        for (var vi = 0; vi < seq.videoTracks.numTracks; vi++) {
+            var vt = seq.videoTracks[vi];
+            if (vt && vt !== preferredTrack && vt.clips) tracks.push(vt);
+        }
+    }
+
+    for (var ti = 0; ti < tracks.length; ti++) {
+        var trk = tracks[ti];
+        for (var ci = 0; ci < trk.clips.numItems; ci++) {
+            var clip = trk.clips[ci];
+            if (!clip) continue;
+
+            var cStart = (clip.start && !isNaN(Number(clip.start.seconds))) ? Number(clip.start.seconds) : -1;
+            var cEnd   = (clip.end   && !isNaN(Number(clip.end.seconds)))   ? Number(clip.end.seconds)   : -1;
+
+            if (cStart >= 0) cStart = snapToFrameBoundary(cStart, fps);
+            if (cEnd >= 0) cEnd = snapToFrameBoundary(cEnd, fps);
+
+            // 1. Clip end point: where the previous clip finishes
+            if (cEnd >= 0) {
+                var dEnd = Math.abs(cEnd - targetSec);
+                if (dEnd <= maxToleranceSec) {
+                    var scoreEnd = dEnd;
+                    // Strongly prioritize snapping to cEnd if targetSec is slightly before cEnd (eliminates 1-2 frames leftover jerk)
+                    if (cEnd >= targetSec && (cEnd - targetSec) <= 0.35) {
+                        scoreEnd = dEnd * 0.15;
+                    }
+                    candidateCuts.push({ time: cEnd, diff: dEnd, score: scoreEnd, type: "end" });
+                }
+            }
+
+            // 2. Clip start point: where the next clip begins
+            if (cStart >= 0) {
+                var dStart = Math.abs(cStart - targetSec);
+                if (dStart <= maxToleranceSec) {
+                    var scoreStart = dStart;
+                    if (targetSec >= cStart && (targetSec - cStart) <= 0.35) {
+                        scoreStart = dStart * 0.15;
+                    }
+                    candidateCuts.push({ time: cStart, diff: dStart, score: scoreStart, type: "start" });
+                }
+            }
+        }
+    }
+
+    if (candidateCuts.length === 0) {
+        return snapToFrameBoundary(targetSec, fps);
+    }
+
+    candidateCuts.sort(function(a, b) { return a.score - b.score; });
+    return snapToFrameBoundary(candidateCuts[0].time, fps);
+}
+
 // ============================================================================
 // TIMELINE INSERTION: Ripple Insert Target Clip at Marker End Positions
 // 1. Target clip placed at the exact end of every detected marker
@@ -2502,6 +2601,8 @@ function insertClipAtMarkerEndPoints(targetProjectItem, targetTrackIndex) {
         }
         var targetTrack = seq.videoTracks[targetTrackIndex];
         if (!targetTrack || !targetProjectItem) return false;
+
+        var fps = getSequenceFps(seq);
 
         // Rule 3: Collect & Sort Marker End Times First
         var markerEndTimes = [];
@@ -2531,11 +2632,13 @@ function insertClipAtMarkerEndPoints(targetProjectItem, targetTrackIndex) {
         // Prevents earlier ripple insertions from shifting subsequent marker positions
         var insertedCount = 0;
         for (var i = markerEndTimes.length - 1; i >= 0; i--) {
-            var timeInSeconds = markerEndTimes[i];
+            var rawTime = markerEndTimes[i];
+            var snappedTime = findBestTimelineCutPoint(seq, targetTrack, rawTime, 0.45);
+            snappedTime = snapToFrameBoundary(snappedTime, fps);
 
             // Rule 6: Consistent Time Units
             var insertTime = new Time();
-            insertTime.seconds = timeInSeconds;
+            insertTime.seconds = snappedTime;
 
             // Rule 5: Use Ripple Insert (insertClip) instead of overwriteClip()
             try {
@@ -2543,7 +2646,7 @@ function insertClipAtMarkerEndPoints(targetProjectItem, targetTrackIndex) {
                 insertedCount++;
             } catch (e1) {
                 try {
-                    targetTrack.insertClip(targetProjectItem, timeInSeconds);
+                    targetTrack.insertClip(targetProjectItem, snappedTime);
                     insertedCount++;
                 } catch (e2) {}
             }
@@ -2575,10 +2678,12 @@ $.runScript.distributeNikahGroupPhoto = function() {
             }
         } catch (eQE) {}
 
-        // Helper: Convert seconds to Time object
-        function toTime(sec) {
+        // Helper: Convert seconds to Time object with optional frame snapping
+        function toTime(sec, fpsRate) {
             var t = new Time();
-            t.seconds = Math.max(0, Number(sec));
+            var s = Math.max(0, Number(sec));
+            if (fpsRate && fpsRate > 0) s = snapToFrameBoundary(s, fpsRate);
+            t.seconds = s;
             return t;
         }
 
@@ -3027,33 +3132,40 @@ $.runScript.distributeNikahGroupPhoto = function() {
         var timeSummary = [];
         var totalExtensionSec = 0;
 
+        var fps = getSequenceFps(seq);
+
         // Rule 4: Loop Backward (Reverse Order) from the last marker to the first (i = length - 1; i >= 0; i--)
         // This prevents earlier ripple insertions from shifting subsequent marker coordinates
         for (var wi = insertionWorkList.length - 1; wi >= 0; wi--) {
             var workItem = insertionWorkList[wi];
             var seg = workItem.seg;
             var clip = workItem.clip;
-            var insertSec = Number(seg.endSec);
-            if (isNaN(insertSec) || insertSec < 0) continue;
+            var rawInsertSec = Number(seg.endSec);
+            if (isNaN(rawInsertSec) || rawInsertSec < 0) continue;
+
+            // Zero-Gap Precision Snapping: Snap to exact timeline cut boundary and sequence frame boundary
+            var insertSec = findBestTimelineCutPoint(seq, targetVideoTrack, rawInsertSec, 0.45);
+            insertSec = snapToFrameBoundary(insertSec, fps);
 
             var gpProjectItem = clip.projectItem;
             var groupDuration = clip.duration;
-            var sourceInPoint = clip.inPoint;
+            var sourceInPoint = snapToFrameBoundary(clip.inPoint || 0, fps);
+            var sourceOutPoint = snapToFrameBoundary(sourceInPoint + groupDuration, fps);
 
             // Configure projectItem in/out duration so insertClip takes exactly groupDuration
             try {
-                if (typeof gpProjectItem.setInPoint === "function" && sourceInPoint >= 0) {
-                    gpProjectItem.setInPoint(toTime(sourceInPoint));
+                if (typeof gpProjectItem.setInPoint === "function") {
+                    gpProjectItem.setInPoint(toTime(sourceInPoint, fps));
                 }
                 if (typeof gpProjectItem.setOutPoint === "function" && groupDuration > 0) {
-                    gpProjectItem.setOutPoint(toTime(sourceInPoint + groupDuration));
+                    gpProjectItem.setOutPoint(toTime(sourceOutPoint, fps));
                 }
             } catch (eIO) {}
 
             // Rule 5: Use Ripple Insert (insertClip) instead of overwriteClip()
             // Rule 6: Consistent Time Units
             try {
-                var insertTime = toTime(insertSec);
+                var insertTime = toTime(insertSec, fps);
                 var insertOk = false;
                 try {
                     targetVideoTrack.insertClip(gpProjectItem, insertTime);
@@ -4266,71 +4378,7 @@ $.runScript.createProjectSnapshot = function() {
     }
 };
 
-// ── Precision Timeline Cut-Point Snapping Helper ─────────────────────────────
-// Prevents the 1-2 frame cut offset / jerk effect by snapping insertSec to the
-// exact cut point (clip end / next clip start) on the timeline.
-function findBestTimelineCutPoint(seq, preferredTrack, targetSec, maxToleranceSec) {
-    if (!seq || targetSec === undefined || targetSec === null) return targetSec;
-    if (isNaN(Number(targetSec))) return targetSec;
-    targetSec = Number(targetSec);
-    if (!maxToleranceSec) maxToleranceSec = 0.45; // ~11-13 frames tolerance
-
-    var candidateCuts = [];
-
-    // Prioritize preferredTrack (targetVideoTrack), then other video tracks
-    var tracks = [];
-    if (preferredTrack && preferredTrack.clips) tracks.push(preferredTrack);
-    if (seq.videoTracks) {
-        for (var vi = 0; vi < seq.videoTracks.numTracks; vi++) {
-            var vt = seq.videoTracks[vi];
-            if (vt && vt !== preferredTrack && vt.clips) tracks.push(vt);
-        }
-    }
-
-    for (var ti = 0; ti < tracks.length; ti++) {
-        var trk = tracks[ti];
-        for (var ci = 0; ci < trk.clips.numItems; ci++) {
-            var clip = trk.clips[ci];
-            if (!clip) continue;
-
-            var cStart = (clip.start && !isNaN(Number(clip.start.seconds))) ? Number(clip.start.seconds) : -1;
-            var cEnd   = (clip.end   && !isNaN(Number(clip.end.seconds)))   ? Number(clip.end.seconds)   : -1;
-
-            // 1. Clip end point: where the previous clip finishes
-            if (cEnd >= 0) {
-                var dEnd = Math.abs(cEnd - targetSec);
-                if (dEnd <= maxToleranceSec) {
-                    // Prioritize cEnd if targetSec is slightly before cEnd (the classic 1-2 frames before cut)
-                    var scoreEnd = dEnd;
-                    if (cEnd >= targetSec && (cEnd - targetSec) <= 0.28) {
-                        scoreEnd = dEnd * 0.4; // strongly prioritize moving forward to complete the clip
-                    }
-                    candidateCuts.push({ time: cEnd, diff: dEnd, score: scoreEnd, type: "end" });
-                }
-            }
-
-            // 2. Clip start point: where the next clip begins
-            if (cStart >= 0) {
-                var dStart = Math.abs(cStart - targetSec);
-                if (dStart <= maxToleranceSec) {
-                    var scoreStart = dStart;
-                    if (targetSec >= cStart && (targetSec - cStart) <= 0.28) {
-                        scoreStart = dStart * 0.4;
-                    }
-                    candidateCuts.push({ time: cStart, diff: dStart, score: scoreStart, type: "start" });
-                }
-            }
-        }
-    }
-
-    if (candidateCuts.length === 0) {
-        return targetSec;
-    }
-
-    // Sort by lowest score (closest and properly oriented cut point)
-    candidateCuts.sort(function(a, b) { return a.score - b.score; });
-    return candidateCuts[0].time;
-}
+// (findBestTimelineCutPoint, getSequenceFps, and snapToFrameBoundary are defined above for global precision alignment)
 
 // ── Execute: ripple-insert with duplicate prevention ─────────────────────────
 // assignmentsStr same format as preview
@@ -4361,9 +4409,11 @@ $.runScript.groupPhotoInserterExecute = function(assignmentsStr) {
             }
         } catch(eUndo) {}
 
-        function toTime(sec) {
+        function toTime(sec, fpsRate) {
             var t = new Time();
-            t.seconds = Math.max(0, Number(sec));
+            var s = Math.max(0, Number(sec));
+            if (fpsRate && fpsRate > 0) s = snapToFrameBoundary(s, fpsRate);
+            t.seconds = s;
             return t;
         }
 
@@ -4580,21 +4630,23 @@ $.runScript.groupPhotoInserterExecute = function(assignmentsStr) {
                 continue;
             }
 
-            // Snap insertion point to the exact timeline clip boundary / cut point
+            // Snap insertion point to the exact timeline clip boundary / cut point with mathematical frame snapping
             // This prevents cutting 1-2 frames before the natural edit point, eliminating any jerk/flash
             var rawInsertSec = nk.endSec;
+            var fps = getSequenceFps(seq);
             var insertSec = findBestTimelineCutPoint(seq, targetVideoTrack, rawInsertSec, 0.45);
+            insertSec = snapToFrameBoundary(insertSec, fps);
             var gpProjectItem = gp.projectItem;
-            var sourceIn = gp.inPoint;
-            var sourceOut = gp.outPoint;
+            var sourceIn = snapToFrameBoundary(gp.inPoint || 0, fps);
+            var sourceOut = snapToFrameBoundary(sourceIn + groupDuration, fps);
 
-            // Set In/Out on projectItem so insertClip takes groupDuration
+            // Set In/Out on projectItem so insertClip takes groupDuration with exact zero-gap frame alignment
             try {
-                if (typeof gpProjectItem.setInPoint === "function" && sourceIn >= 0) {
-                    gpProjectItem.setInPoint(toTime(sourceIn));
+                if (typeof gpProjectItem.setInPoint === "function") {
+                    gpProjectItem.setInPoint(toTime(sourceIn, fps));
                 }
                 if (typeof gpProjectItem.setOutPoint === "function" && groupDuration > 0) {
-                    gpProjectItem.setOutPoint(toTime(sourceIn + groupDuration));
+                    gpProjectItem.setOutPoint(toTime(sourceOut, fps));
                 }
             } catch(eSetIO) {}
 
@@ -4603,7 +4655,7 @@ $.runScript.groupPhotoInserterExecute = function(assignmentsStr) {
             // Rule 6: Consistent Time Units
             var insertOk = false;
             try {
-                var insertTime = toTime(insertSec);
+                var insertTime = toTime(insertSec, fps);
                 try {
                     targetVideoTrack.insertClip(gpProjectItem, insertTime);
                     insertOk = true;

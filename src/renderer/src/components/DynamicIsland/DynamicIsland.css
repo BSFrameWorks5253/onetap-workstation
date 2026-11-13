@@ -71,6 +71,7 @@ body, html, #root {
 
 /* ── Compact Apple VisionOS Island Pill ─────────────────────────── */
 .dynamic-island-pill {
+  position: relative;
   width: 430px;
   height: 44px;
   border-radius: 9999px;
@@ -183,8 +184,10 @@ body, html, #root {
 /* Inline Minimal Progress Bar */
 .pill-center-progress {
   width: 58px;
-  margin: 0 10px;
+  margin: 0 8px;
   flex-shrink: 0;
+  cursor: ew-resize;
+  padding: 4px 0;
 }
 
 .pill-progress-bar-track {
@@ -199,7 +202,7 @@ body, html, #root {
   height: 100%;
   background: #10B981;
   border-radius: 2px;
-  transition: width 0.28s ease;
+  transition: width 0.18s ease;
 }
 
 /* Right Status & Controls */
@@ -208,6 +211,24 @@ body, html, #root {
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
+}
+
+.pill-stats-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pill-speed-tag {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #10B981;
+  background: rgba(16, 185, 129, 0.16);
+  padding: 1px 5px;
+  border-radius: 4px;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  animation: fadeIn 0.15s ease-out;
 }
 
 .pill-percent {
@@ -221,6 +242,112 @@ body, html, #root {
   font-size: 11px;
   font-weight: 600;
   color: #38BDF8;
+}
+
+/* Quick Preview Tooltip Popover on Hover */
+.pill-hover-preview-card {
+  position: absolute;
+  top: calc(100% + 7px);
+  left: 6px;
+  right: 6px;
+  background: rgba(15, 17, 23, 0.96);
+  backdrop-filter: blur(14px) saturate(180%);
+  -webkit-backdrop-filter: blur(14px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 12px;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.70), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 9999;
+  animation: popoverFadeIn 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+}
+
+.preview-thumb-box {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: #000000;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.preview-thumb-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.preview-thumb-fallback {
+  font-size: 14px;
+  color: #94A3B8;
+  font-weight: 700;
+}
+
+.preview-details {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+  gap: 3px;
+}
+
+.preview-video-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: #FFFFFF;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.preview-metrics {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.preview-badge {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.badge-speed {
+  background: rgba(16, 185, 129, 0.18);
+  color: #34D399;
+}
+
+.badge-eta {
+  background: rgba(56, 189, 248, 0.18);
+  color: #38BDF8;
+}
+
+.badge-pct {
+  background: rgba(255, 255, 255, 0.10);
+  color: #F1F5F9;
+}
+
+@keyframes popoverFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .pill-close-btn {

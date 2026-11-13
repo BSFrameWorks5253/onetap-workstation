@@ -48,6 +48,8 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
   })
 
   const [isExpanded, setIsExpanded] = useState<boolean>(false)
+  const [isHovered, setIsHovered] = useState<boolean>(false)
+  const [scrubPercent, setScrubPercent] = useState<number | null>(null)
   const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState<boolean>(false)
   const [isDissolving, setIsDissolving] = useState<boolean>(false)
   const [isDismissed, setIsDismissed] = useState<boolean>(false)
@@ -158,35 +160,41 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
       }, 500)
     })
 
+    const unsubGc = api.on?.('island:gc', () => {
+      setThumbBase64(null)
+    })
+
     return () => {
       if (typeof unsub === 'function') unsub()
       if (typeof unsubDissolve === 'function') unsubDissolve()
+      if (typeof unsubGc === 'function') unsubGc()
       if (dissolveTimerRef.current) clearTimeout(dissolveTimerRef.current)
       if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
     }
   }, [floating])
 
-  // Sync window size with Electron when toggling compact vs expanded card
+  // Sync window size with Electron when toggling compact vs hover vs expanded card
   useEffect(() => {
     if (floating) return
     const api = (window as any).api?.island
     if (!api?.setSize) return
 
     if (isExpanded) {
-      api.setSize(470, 226)
+      api.setSize(470, 230)
+    } else if (isHovered && !state.done) {
+      api.setSize(440, 126)
     } else {
-      api.setSize(440, 72)
+      api.setSize(440, 68)
     }
-  }, [isExpanded, floating])
+  }, [isExpanded, isHovered, state.done, floating])
 
   const handleMouseEnter = () => {
-    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current)
-    hoverTimeoutRef.current = setTimeout(() => {
-      setIsExpanded(true)
-    }, 200)
+    setIsHovered(true)
   }
 
   const handleMouseLeave = () => {
+    setIsHovered(false)
+    setScrubPercent(null)
     if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current)
     hoverTimeoutRef.current = setTimeout(() => {
       if (!isCancelConfirmOpen) {
@@ -258,14 +266,14 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
         {/* ── Compact Apple VisionOS Island Pill ─────────────────────────── */}
         {!isExpanded ? (
           <div
-            className="dynamic-island-pill"
-            onClick={() => setIsExpanded(prev => !prev)}
-            title="Click or hover to view render details"
+            className={`dynamic-island-pill ${isHovered ? 'pill-is-hovered' : ''}`}
+            onClick={() => setIsExpanded(true)}
+            title="Click to expand controls, hover for live preview"
           >
             <div className="pill-left">
               {/* Mini Title Artwork Thumbnail Preview */}
               {thumbUrl && !thumbFailed ? (
-                <div className="pill-mini-thumb">
+                <div className="pill-mini-thumb" title={state.videoName}>
                   <img
                     src={thumbUrl}
                     alt="Thumbnail"
@@ -291,20 +299,30 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
                 <span className="pill-sub">
                   {state.done
                     ? `${state.totalVideos} videos processed`
-                    : state.nextVideoName && remainingCount > 0
-                      ? `Next: ${state.nextVideoName}`
-                      : `Video ${state.currentIdx || 1} of ${state.totalVideos || 1}`}
+                    : isHovered && !state.done
+                      ? `${state.speed || '1.0x'} • ${state.eta || 'Calculating...'}`
+                      : state.nextVideoName && remainingCount > 0
+                        ? `Next: ${state.nextVideoName}`
+                        : `Video ${state.currentIdx || 1} of ${state.totalVideos || 1}`}
                 </span>
               </div>
             </div>
 
-            {/* Minimal Inline Progress Bar */}
+            {/* Interactive Progress Bar with Quick Hover Scrubbing */}
             {!state.done && (
-              <div className="pill-center-progress">
+              <div
+                className="pill-center-progress"
+                onMouseMove={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect()
+                  const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
+                  setScrubPercent(Math.round(pos * 100))
+                }}
+                onMouseLeave={() => setScrubPercent(null)}
+              >
                 <div className="pill-progress-bar-track">
                   <div
                     className="pill-progress-bar-fill"
-                    style={{ width: `${Math.min(100, Math.max(0, state.percent))}%` }}
+                    style={{ width: `${Math.min(100, Math.max(0, scrubPercent !== null ? scrubPercent : state.percent))}%` }}
                   />
                 </div>
               </div>
@@ -312,9 +330,14 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
 
             <div className="pill-right">
               {!state.done ? (
-                <span className="pill-percent">
-                  {Math.round(state.percent)}%
-                </span>
+                <div className="pill-stats-pill">
+                  {isHovered && state.speed && (
+                    <span className="pill-speed-tag">{state.speed}</span>
+                  )}
+                  <span className="pill-percent">
+                    {scrubPercent !== null ? `${scrubPercent}%` : `${Math.round(state.percent)}%`}
+                  </span>
+                </div>
               ) : (
                 <span className="pill-all-done">Done</span>
               )}
@@ -328,6 +351,31 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
                 ✕
               </button>
             </div>
+
+            {/* Quick Preview Tooltip Card on Hover */}
+            {isHovered && !state.done && (
+              <div className="pill-hover-preview-card" onClick={(e) => { e.stopPropagation(); setIsExpanded(true); }}>
+                <div className="preview-thumb-box">
+                  {thumbUrl && !thumbFailed ? (
+                    <img src={thumbUrl} alt="Title Artwork" onError={() => setThumbFailed(true)} />
+                  ) : (
+                    <div className="preview-thumb-fallback">
+                      <span>{state.videoName ? state.videoName.charAt(0).toUpperCase() : '🎬'}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="preview-details">
+                  <div className="preview-video-name">{state.videoName || 'Processing Video'}</div>
+                  <div className="preview-metrics">
+                    <span className="preview-badge badge-speed">⚡ {state.speed || '1.0x'}</span>
+                    <span className="preview-badge badge-eta">⏱ {state.eta || 'Calculating...'}</span>
+                    <span className="preview-badge badge-pct">
+                      {scrubPercent !== null ? `Scrub: ${scrubPercent}%` : `${Math.round(state.percent)}%`}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           /* ── Expanded Island Panel ───────────────────────────────── */

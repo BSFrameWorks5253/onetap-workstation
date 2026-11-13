@@ -1973,6 +1973,7 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
               nextVideoName: currentNextVideoName,
               currentIdx: done + 1,
               totalVideos: videos.length,
+              thumbnailPath: activeThumbnail,
               outputFolder: targetOut,
               lastOutputPath: outputPath,
               task: `Rendering subtitle typography for ${path.basename(videoPath)}`

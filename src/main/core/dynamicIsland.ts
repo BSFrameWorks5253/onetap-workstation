@@ -78,12 +78,65 @@ function toDataUrl(filePath: string): string {
       const ext = path.extname(filePath).toLowerCase()
       const mime = ext === '.png' ? 'image/png' : ext === '.webp' ? 'image/webp' : ext === '.svg' ? 'image/svg+xml' : 'image/jpeg'
       const buf = fs.readFileSync(filePath)
-      if (buf.length < 2 * 1024 * 1024) {
+      if (buf.length < 6 * 1024 * 1024) {
         return `data:${mime};base64,${buf.toString('base64')}`
       }
     }
   } catch {}
   return ''
+}
+
+// Strict LRU Cache for base64 thumbnails (max 4 entries to stay well below 150MB heap budget)
+const MAX_LRU_THUMBS = 4
+const thumbLruCache = new Map<string, string>()
+
+function getCachedThumbDataUrl(filePath: string): string {
+  if (!filePath) return ''
+  if (thumbLruCache.has(filePath)) {
+    const val = thumbLruCache.get(filePath)!
+    thumbLruCache.delete(filePath)
+    thumbLruCache.set(filePath, val)
+    return val
+  }
+  const dataUrl = toDataUrl(filePath)
+  if (dataUrl) {
+    if (thumbLruCache.size >= MAX_LRU_THUMBS) {
+      const oldestKey = thumbLruCache.keys().next().value
+      if (oldestKey) thumbLruCache.delete(oldestKey)
+    }
+    thumbLruCache.set(filePath, dataUrl)
+  }
+  return dataUrl
+}
+
+export function performIslandMemoryCleanup(): void {
+  // Prune LRU thumbnail cache down to current active thumbnail only
+  if (state.thumbnailPath && thumbLruCache.has(state.thumbnailPath)) {
+    const activeVal = thumbLruCache.get(state.thumbnailPath)!
+    thumbLruCache.clear()
+    thumbLruCache.set(state.thumbnailPath, activeVal)
+  } else {
+    thumbLruCache.clear()
+  }
+
+  // Silent garbage collection trigger and renderer cache release
+  try {
+    if (islandWindow && !islandWindow.isDestroyed()) {
+      islandWindow.webContents.session?.clearImageCache?.().catch(() => {})
+      islandWindow.webContents.send('island:gc')
+    }
+    const mainWin = mainWindowRef ? mainWindowRef() : null
+    if (mainWin && !mainWin.isDestroyed()) {
+      mainWin.webContents.send('island:gc')
+    }
+  } catch {}
+
+  // Trigger V8 heap compaction if available
+  try {
+    if (typeof (global as any).gc === 'function') {
+      ;(global as any).gc()
+    }
+  } catch {}
 }
 
 function getAppIconPath(): string {
@@ -93,17 +146,27 @@ function getAppIconPath(): string {
 }
 
 /**
- * Calculate dynamic ETA from current progress, duration and speed
+ * Calculate dynamic human-readable ETA from current progress, duration and speed (e.g. "1m 24s left")
  */
 function calculateEta(percent: number, speedStr: string): string {
-  if (percent <= 0 || percent >= 100) return '--:--'
+  if (percent <= 0) return 'Calculating...'
+  if (percent >= 100) return '0s left'
   const speed = parseFloat(speedStr?.replace(/[^\d.]/g, '') || '1.0') || 1.0
   const remainingPercent = 100 - percent
   // Estimate ~60s typical unit time scaled
   const estSeconds = Math.max(1, Math.round((remainingPercent / 100) * (90 / speed)))
   const m = Math.floor(estSeconds / 60)
   const s = estSeconds % 60
-  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+  if (m > 0) return `${m}m ${s}s left`
+  return `${s}s left`
+}
+
+let gcInterval: NodeJS.Timeout | null = null
+function startSilentGcTimer(): void {
+  if (gcInterval) clearInterval(gcInterval)
+  gcInterval = setInterval(() => {
+    performIslandMemoryCleanup()
+  }, 45000)
 }
 
 export function initDynamicIsland(mainWinGetter: () => BrowserWindow | null): void {
@@ -113,6 +176,7 @@ export function initDynamicIsland(mainWinGetter: () => BrowserWindow | null): vo
     state.encoder = enc.label
   } catch {}
 
+  startSilentGcTimer()
   registerIslandIPC()
 }
 
@@ -202,13 +266,12 @@ export function updateIslandState(partial: Partial<IslandState>): void {
     userDismissed = false
   }
 
-  // Pre-generate base64 data URL for local thumbnails so renderer can display immediately without protocol hurdles
-  // Re-use cached data URL if thumbnail path has not changed to avoid repeated disk reads and heavy base64 serialization
+  // Pre-generate base64 data URL for local thumbnails with strict LRU caching to eliminate memory leaks
   if (partial.thumbnailPath) {
     if (partial.thumbnailPath === state.thumbnailPath && state.thumbnailDataUrl) {
       partial.thumbnailDataUrl = state.thumbnailDataUrl
     } else if (!partial.thumbnailDataUrl) {
-      const dataUrl = toDataUrl(partial.thumbnailPath)
+      const dataUrl = getCachedThumbDataUrl(partial.thumbnailPath)
       if (dataUrl) {
         partial.thumbnailDataUrl = dataUrl
       }
@@ -299,6 +362,8 @@ function handleQueueCompletion(): void {
       if (mainWin && !mainWin.isDestroyed()) {
         mainWin.webContents.send('island:update', state)
       }
+      // Silent memory cleanup upon batch completion
+      performIslandMemoryCleanup()
     }, 650)
   }, waitMs)
 }
@@ -481,8 +546,9 @@ export function onTitleAdderProgressBridge(evt: any, meta?: {
   lastBridgeTick = now
 
   const fps = evt.fps ? `${evt.fps} fps` : ''
-  const speed = evt.speed ? `${evt.speed}x` : ''
-  const eta = calculateEta(percent, evt.speed || '1.0')
+  const speedVal = evt.speed ? (typeof evt.speed === 'number' ? evt.speed.toFixed(1) : String(evt.speed).replace(/x$/i, '')) : ''
+  const speed = speedVal ? `${speedVal}x` : (state.speed || '1.0x')
+  const eta = calculateEta(percent, speedVal || '1.0')
 
   updateIslandState({
     active: true,
