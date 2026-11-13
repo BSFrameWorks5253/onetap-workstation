@@ -490,7 +490,14 @@ function resolveVideoThumbnail(
     null
   if (!explicit && titleImageAssignments) {
     for (const [k, v] of Object.entries(titleImageAssignments)) {
-      if (getCanonicalStem(k) === canonicalStem) {
+      const kStem = path.basename(k, path.extname(k)).toLowerCase()
+      const kBase = path.basename(k).toLowerCase()
+      if (
+        getCanonicalStem(k) === canonicalStem ||
+        kBase === cleanBase.toLowerCase() ||
+        kStem === stem.toLowerCase() ||
+        k.toLowerCase() === videoPath.toLowerCase()
+      ) {
         explicit = v
         break
       }
@@ -1510,6 +1517,9 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
       }
     }
 
+    const firstPlayableVideo = videos.find(v => !isGroupPhotoVideo(v)) || videos[0] || ''
+    const initialThumb = resolveVideoThumbnail(firstPlayableVideo, titlesFolder, availableTitleImages, params.titleImageAssignments)
+
     updateIslandState({
       active: true,
       done: false,
@@ -1517,9 +1527,9 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
       totalVideos: videos.length,
       currentIdx: 1,
       percent: 0,
-      videoName: firstVideoName,
+      videoName: path.basename(firstPlayableVideo),
       nextVideoName: initialNextName,
-      thumbnailPath: resolveVideoThumbnail(videos[0] || '', titlesFolder, availableTitleImages, params.titleImageAssignments),
+      thumbnailPath: initialThumb,
       outputFolder: targetOut,
       task: 'Preparing video render queue...'
     })
@@ -1568,32 +1578,6 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
       send('titleAdder:log', { jobId: params.jobId, message: `\n━━━ [${done + 1}/${videos.length}] ${path.basename(videoPath)} ━━━`, level: 'info' })
       send('titleAdder:log', { jobId: params.jobId, message: `  Prefix detected: "${prefix}"`, level: 'info' })
 
-      // Find next video in queue
-      let currentNextVideoName = ''
-      const curIdx = videos.indexOf(rawVideoPath)
-      if (curIdx !== -1) {
-        for (let ni = curIdx + 1; ni < videos.length; ni++) {
-          if (!isGroupPhotoVideo(videos[ni])) {
-            currentNextVideoName = path.basename(videos[ni]).replace(/\.(tmp|temp)$/i, '')
-            break
-          }
-        }
-      }
-
-      updateIslandState({
-        active: true,
-        done: false,
-        jobId: params.jobId,
-        totalVideos: videos.length,
-        currentIdx: done + 1,
-        videoName: path.basename(videoPath),
-        nextVideoName: currentNextVideoName,
-
-        task: `Rendering ${path.basename(videoPath)}`,
-        thumbnailPath: resolveVideoThumbnail(videoPath, titlesFolder, availableTitleImages, params.titleImageAssignments),
-        outputFolder: targetOut
-      })
-
       // Per-video thumbnail placement mode override (computed upfront so Pure Video mode can skip title image requirement)
       const perVideoThumbMode =
         params.thumbnailModeSelections?.[videoPath] ||
@@ -1608,7 +1592,6 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
 
       const skipFront = perVideoThumbMode === 'front_only' || perVideoThumbMode === 'both'
       const skipBack = perVideoThumbMode === 'back_only' || perVideoThumbMode === 'both'
-
 
       // Check user-selected title image assignment first (direct, stem, or canonical match)
       let explicitImgPath =
@@ -1651,13 +1634,37 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
           send('titleAdder:log', { jobId: params.jobId, message: `  ✖ SKIP — No title image found for prefix "${prefix}" in: ${titlesFolder}`, level: 'warn' })
           send('titleAdder:log', { jobId: params.jobId, message: `       Expected "${prefix}.jpg", "ID.jpg", or "Title.jpg" in: ${titlesFolder}`, level: 'warn' })
           continue
+        } else {
+          send('titleAdder:log', { jobId: params.jobId, message: `  🖼 Title image: ${path.basename(titleImg)}`, level: 'info' })
         }
-        send('titleAdder:log', { jobId: params.jobId, message: `  🖼 Title image: ${path.basename(titleImg)}`, level: 'info' })
       }
 
-      if (titleImg) {
-        updateIslandState({ thumbnailPath: titleImg })
+      // Find next video in queue
+      let currentNextVideoName = ''
+      const curIdx = videos.indexOf(rawVideoPath)
+      if (curIdx !== -1) {
+        for (let ni = curIdx + 1; ni < videos.length; ni++) {
+          if (!isGroupPhotoVideo(videos[ni])) {
+            currentNextVideoName = path.basename(videos[ni]).replace(/\.(tmp|temp)$/i, '')
+            break
+          }
+        }
       }
+
+      const activeThumbnail = titleImg || resolveVideoThumbnail(videoPath, titlesFolder, availableTitleImages, params.titleImageAssignments)
+
+      updateIslandState({
+        active: true,
+        done: false,
+        jobId: params.jobId,
+        totalVideos: videos.length,
+        currentIdx: done + 1,
+        videoName: path.basename(videoPath),
+        nextVideoName: currentNextVideoName,
+        task: `Rendering ${path.basename(videoPath)}`,
+        thumbnailPath: activeThumbnail,
+        outputFolder: targetOut
+      })
 
       // If prefix was not detected from filename but titleImg has a specific category name, use it
       if (titleImg && !prefix) {
@@ -1967,7 +1974,7 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
 
               currentIdx: done + 1,
               totalVideos: videos.length,
-              thumbnailPath: titleImg || '',
+              thumbnailPath: titleImg || activeThumbnail || '',
               outputFolder: targetOut,
               lastOutputPath: outputPath,
               task: `Rendering subtitle typography for ${path.basename(videoPath)}`

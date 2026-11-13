@@ -32,6 +32,7 @@ export interface IslandState {
   speed: string
   eta: string
   thumbnailPath: string
+  thumbnailDataUrl?: string
   task: string
   outputFolder: string
   lastOutputPath?: string
@@ -60,6 +61,7 @@ const state: IslandState = {
   speed: '',
   eta: '',
   thumbnailPath: '',
+  thumbnailDataUrl: '',
   task: 'Idle',
   outputFolder: '',
   lastOutputPath: '',
@@ -67,6 +69,21 @@ const state: IslandState = {
   done: false,
   success: true,
   isPaused: false
+}
+
+function toDataUrl(filePath: string): string {
+  if (!filePath) return ''
+  try {
+    if (fs.existsSync(filePath)) {
+      const ext = path.extname(filePath).toLowerCase()
+      const mime = ext === '.png' ? 'image/png' : ext === '.webp' ? 'image/webp' : ext === '.svg' ? 'image/svg+xml' : 'image/jpeg'
+      const buf = fs.readFileSync(filePath)
+      if (buf.length < 8 * 1024 * 1024) {
+        return `data:${mime};base64,${buf.toString('base64')}`
+      }
+    }
+  } catch {}
+  return ''
 }
 
 function getAppIconPath(): string {
@@ -148,6 +165,12 @@ function createIslandWindow(): BrowserWindow {
   islandWindow.setAlwaysOnTop(true, 'screen-saver')
   islandWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
 
+  islandWindow.webContents.on('did-finish-load', () => {
+    if (islandWindow && !islandWindow.isDestroyed()) {
+      islandWindow.webContents.send('island:update', state)
+    }
+  })
+
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     islandWindow.loadURL(`${process.env['ELECTRON_RENDERER_URL']}#dynamic-island`)
   } else {
@@ -177,6 +200,14 @@ export function updateIslandState(partial: Partial<IslandState>): void {
   if (partial.jobId && partial.jobId !== currentJobId) {
     currentJobId = partial.jobId
     userDismissed = false
+  }
+
+  // Pre-generate base64 data URL for local thumbnails so renderer can display immediately without protocol hurdles
+  if (partial.thumbnailPath && !partial.thumbnailDataUrl) {
+    const dataUrl = toDataUrl(partial.thumbnailPath)
+    if (dataUrl) {
+      partial.thumbnailDataUrl = dataUrl
+    }
   }
 
   Object.assign(state, partial)
@@ -426,6 +457,7 @@ export function onTitleAdderProgressBridge(evt: any, meta?: {
   currentIdx?: number
   totalVideos?: number
   thumbnailPath?: string
+  thumbnailDataUrl?: string
   outputFolder?: string
   lastOutputPath?: string
   task?: string

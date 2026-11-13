@@ -14,6 +14,7 @@ export interface IslandState {
   speed: string
   eta: string
   thumbnailPath: string
+  thumbnailDataUrl?: string
   task: string
   outputFolder: string
   lastOutputPath?: string
@@ -36,6 +37,7 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
     speed: '1.5x',
     eta: '--:--',
     thumbnailPath: '',
+    thumbnailDataUrl: '',
     task: 'Initializing render pipeline...',
     outputFolder: '',
     lastOutputPath: '',
@@ -47,19 +49,29 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
 
   const [isExpanded, setIsExpanded] = useState<boolean>(false)
   const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState<boolean>(false)
-  const [isHoveringProgress, setIsHoveringProgress] = useState<boolean>(false)
   const [isDissolving, setIsDissolving] = useState<boolean>(false)
   const [isDismissed, setIsDismissed] = useState<boolean>(false)
-  const [scrubPercent, setScrubPercent] = useState<number | null>(null)
   const [thumbFailed, setThumbFailed] = useState<boolean>(false)
+  const [thumbBase64, setThumbBase64] = useState<string | null>(null)
 
-  useEffect(() => {
-    setThumbFailed(false)
-  }, [state.thumbnailPath])
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const dissolveTimerRef = useRef<NodeJS.Timeout | null>(null)
   const closeTimerRef = useRef<NodeJS.Timeout | null>(null)
-  const isHoveringProgressRef = useRef<boolean>(false)
+
+  useEffect(() => {
+    setThumbFailed(false)
+    setThumbBase64(null)
+
+    if (state.thumbnailDataUrl) return
+
+    if (state.thumbnailPath && (window as any).api?.viewer?.readImageBase64) {
+      (window as any).api.viewer.readImageBase64(state.thumbnailPath).then((res: any) => {
+        if (res && res.ok && res.dataUrl) {
+          setThumbBase64(res.dataUrl)
+        }
+      }).catch(() => {})
+    }
+  }, [state.thumbnailPath, state.thumbnailDataUrl])
 
   useEffect(() => {
     if (!floating) {
@@ -95,15 +107,15 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
         setIsDismissed(false)
         setIsDissolving(false)
       } else if (data.done) {
-        // Play subtle celebratory audio chime
+        // Subtle celebratory chime
         try {
           const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
           const osc = ctx.createOscillator()
           const gain = ctx.createGain()
           osc.type = 'sine'
-          osc.frequency.setValueAtTime(587.33, ctx.currentTime) // D5
-          osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.12) // A5
-          gain.gain.setValueAtTime(0.06, ctx.currentTime)
+          osc.frequency.setValueAtTime(587.33, ctx.currentTime)
+          osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.12)
+          gain.gain.setValueAtTime(0.05, ctx.currentTime)
           gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35)
           osc.connect(gain)
           gain.connect(ctx.destination)
@@ -111,8 +123,7 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
           osc.stop(ctx.currentTime + 0.35)
         } catch {}
 
-        // When batch completes or ends, display celebratory capsule briefly, then smoothly dissolve
-        const displayDuration = data.success ? 12000 : 3500
+        const displayDuration = data.success ? 10000 : 3500
         if (dissolveTimerRef.current) clearTimeout(dissolveTimerRef.current)
         if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
 
@@ -126,16 +137,15 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
               if (apiInst?.close) apiInst.close()
               else if (apiInst?.hide) apiInst.hide()
             }
-          }, 600)
+          }, 500)
         }, displayDuration)
       } else if (!data.active && !data.done) {
-        // Idle state broadcast from main process
         setIsDissolving(true)
         if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
         closeTimerRef.current = setTimeout(() => {
           setIsDismissed(true)
           setIsDissolving(false)
-        }, 500)
+        }, 400)
       }
     })
 
@@ -145,7 +155,7 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
       closeTimerRef.current = setTimeout(() => {
         setIsDismissed(true)
         setIsDissolving(false)
-      }, 600)
+      }, 500)
     })
 
     return () => {
@@ -163,20 +173,17 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
     if (!api?.setSize) return
 
     if (isExpanded) {
-      api.setSize(480, 260)
+      api.setSize(470, 226)
     } else {
-      api.setSize(450, 80)
+      api.setSize(440, 72)
     }
   }, [isExpanded, floating])
 
   const handleMouseEnter = () => {
-    if (isHoveringProgressRef.current) return
     if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current)
     hoverTimeoutRef.current = setTimeout(() => {
-      if (!isHoveringProgressRef.current) {
-        setIsExpanded(true)
-      }
-    }, 450)
+      setIsExpanded(true)
+    }, 200)
   }
 
   const handleMouseLeave = () => {
@@ -185,34 +192,7 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
       if (!isCancelConfirmOpen) {
         setIsExpanded(false)
       }
-    }, 320)
-  }
-
-  const handleProgressMouseEnter = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    isHoveringProgressRef.current = true
-    setIsHoveringProgress(true)
-    if (hoverTimeoutRef.current) {
-      clearTimeout(hoverTimeoutRef.current)
-      hoverTimeoutRef.current = null
-    }
-  }
-
-  const handleProgressMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    e.stopPropagation()
-    const rect = e.currentTarget.getBoundingClientRect()
-    if (rect.width > 0) {
-      const relativeX = Math.max(0, Math.min(e.clientX - rect.left, rect.width))
-      const pct = Math.round((relativeX / rect.width) * 100)
-      setScrubPercent(pct)
-    }
-  }
-
-  const handleProgressMouseLeave = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    isHoveringProgressRef.current = false
-    setIsHoveringProgress(false)
-    setScrubPercent(null)
+    }, 260)
   }
 
   const triggerAction = (action: string) => {
@@ -240,7 +220,7 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
       } else if (api?.hide) {
         api.hide()
       }
-    }, 500)
+    }, 400)
   }
 
   const handleConfirmCancel = () => {
@@ -249,6 +229,8 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
   }
 
   const getThumbnailSrc = () => {
+    if (state.thumbnailDataUrl) return state.thumbnailDataUrl
+    if (thumbBase64) return thumbBase64
     if (!state.thumbnailPath) return null
     if (state.thumbnailPath.startsWith('http') || state.thumbnailPath.startsWith('data:')) return state.thumbnailPath
     if (state.thumbnailPath.startsWith('local-resource://')) return state.thumbnailPath
@@ -258,10 +240,9 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
     return `local-resource:///${encoded.replace(/^\//, '')}`
   }
 
-  const thumbUrl = getThumbnailSrc()
+  const thumbUrl = state.thumbnailDataUrl || thumbBase64 || getThumbnailSrc()
   const remainingCount = Math.max(0, (state.totalVideos || 1) - (state.currentIdx || 1))
 
-  // When idle, dismissed, or removed from view, unmount completely
   if (isDismissed || (floating && !state.active && !state.done)) {
     return null
   }
@@ -274,39 +255,28 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
         onMouseLeave={handleMouseLeave}
         onContextMenu={handleClose}
       >
-        {/* ── Compact VisionOS/Apple Pill ─────────────────────────── */}
+        {/* ── Compact Apple VisionOS Island Pill ─────────────────────────── */}
         {!isExpanded ? (
           <div
             className="dynamic-island-pill"
-            onClick={() => setIsExpanded(true)}
-            title="Click to view detailed render progress"
+            onClick={() => setIsExpanded(prev => !prev)}
+            title="Click or hover to view render details"
           >
             <div className="pill-left">
-              {/* Glowing Pulse Dot */}
-              <div
-                className={`pill-beacon-dot ${state.done ? 'beacon-done' : state.isPaused ? 'beacon-paused' : 'beacon-active'}`}
-              />
-
-              {/* Apple Equalizer Audio/Render Waves or Mini Thumbnail */}
+              {/* Mini Title Artwork Thumbnail Preview */}
               {thumbUrl && !thumbFailed ? (
-                <div className="pill-mini-thumb" style={{ width: 18, height: 18, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, border: '1px solid rgba(255,255,255,0.25)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div className="pill-mini-thumb">
                   <img
                     src={thumbUrl}
-                    alt=""
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    alt="Thumbnail"
                     onError={() => setThumbFailed(true)}
                   />
                 </div>
-              ) : (!state.done && !state.isPaused && (
-                <div className="pill-soundwave" aria-hidden="true">
-                  <span className="wave-bar wave-1" />
-                  <span className="wave-bar wave-2" />
-                  <span className="wave-bar wave-3" />
-                  <span className="wave-bar wave-4" />
-                </div>
-              ))}
+              ) : (
+                <div className={`pill-status-dot ${state.done ? 'dot-done' : state.isPaused ? 'dot-paused' : 'dot-active'}`} />
+              )}
 
-              {/* Active Video Title & "Next Up" Queue Subtitle */}
+              {/* Video Title & Queue Counter */}
               <div className="pill-title-container">
                 <span
                   className="pill-title"
@@ -318,111 +288,36 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
                       ? 'Paused'
                       : (state.videoName || 'Rendering Video')}
                 </span>
-                {state.nextVideoName && !state.done && remainingCount > 0 && (
-                  <span
-                    className="pill-next-subtitle"
-                    title={`Next: ${state.nextVideoName}`}
-                  >
-                    Next: {state.nextVideoName}
-                  </span>
-                )}
+                <span className="pill-sub">
+                  {state.done
+                    ? `${state.totalVideos} videos processed`
+                    : state.nextVideoName && remainingCount > 0
+                      ? `Next: ${state.nextVideoName}`
+                      : `Video ${state.currentIdx || 1} of ${state.totalVideos || 1}`}
+                </span>
               </div>
             </div>
 
-            {/* Micro Progress Bar & Interactive Hover Scrub / Micro-HUD */}
+            {/* Minimal Inline Progress Bar */}
             {!state.done && (
-              <div
-                className="pill-micro-progress-track"
-                onMouseEnter={handleProgressMouseEnter}
-                onMouseMove={handleProgressMouseMove}
-                onMouseLeave={handleProgressMouseLeave}
-                onClick={(e) => e.stopPropagation()}
-                title=""
-              >
-                <div
-                  className="pill-micro-progress-fill"
-                  style={{ width: `${Math.min(100, Math.max(0, state.percent))}%` }}
-                />
-
-                {/* Floating Micro-HUD Tooltip (ETA & Queue countdown) */}
-                {isHoveringProgress && (
-                  <div className="pill-micro-hud" role="tooltip">
-                    <div className="pill-micro-hud-content">
-                      <span className="micro-hud-eta">
-                        ETA {state.eta && state.eta !== '--:--' ? state.eta : '01:24'}
-                      </span>
-                      <span className="micro-hud-sep">·</span>
-                      <span className="micro-hud-count">
-                        {remainingCount > 0
-                          ? `${remainingCount} of ${state.totalVideos} left`
-                          : `${Math.round(state.percent)}% done`}
-                      </span>
-                      {scrubPercent !== null && (
-                        <>
-                          <span className="micro-hud-sep">·</span>
-                          <span className="micro-hud-scrub">Scrub {scrubPercent}%</span>
-                        </>
-                      )}
-                    </div>
-                    <div className="pill-micro-hud-caret" />
-                  </div>
-                )}
+              <div className="pill-center-progress">
+                <div className="pill-progress-bar-track">
+                  <div
+                    className="pill-progress-bar-fill"
+                    style={{ width: `${Math.min(100, Math.max(0, state.percent))}%` }}
+                  />
+                </div>
               </div>
             )}
 
             <div className="pill-right">
-              {/* Apple Mini Circular Progress Ring */}
-              {!state.done && (
-                <div className="pill-ring-wrapper" title={`${Math.round(state.percent)}% rendered`}>
-                  <svg className="pill-ring-svg" width="22" height="22" viewBox="0 0 24 24">
-                    <circle
-                      className="pill-ring-bg"
-                      cx="12"
-                      cy="12"
-                      r="9"
-                      fill="none"
-                      stroke="rgba(255, 255, 255, 0.15)"
-                      strokeWidth="2.5"
-                    />
-                    <circle
-                      className="pill-ring-indicator"
-                      cx="12"
-                      cy="12"
-                      r="9"
-                      fill="none"
-                      stroke="#10B981"
-                      strokeWidth="2.5"
-                      strokeDasharray={56.54}
-                      strokeDashoffset={56.54 - (56.54 * Math.min(100, Math.max(0, state.percent))) / 100}
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                </div>
-              )}
-
-              {state.encoder && (
-                <span className={`pill-encoder-badge ${state.encoder.includes('GPU') || state.encoder.includes('NVENC') || state.encoder.includes('QSV') ? 'is-gpu' : 'is-cpu'}`} title={`Encoder: ${state.encoder}`}>
-                  {state.encoder.includes('NVENC') ? '⚡ NVENC' : state.encoder.includes('QSV') ? '⚡ QSV' : state.encoder.includes('AMF') ? '⚡ AMF' : '💻 CPU'}
-                </span>
-              )}
               {!state.done ? (
-                <>
-                  <span className="pill-percent">
-                    {Math.round(state.percent)}%
-                  </span>
-                  {remainingCount > 0 && (
-                    <span className="pill-count">
-                      ({remainingCount} left)
-                    </span>
-                  )}
-                </>
+                <span className="pill-percent">
+                  {Math.round(state.percent)}%
+                </span>
               ) : (
                 <span className="pill-all-done">Done</span>
               )}
-
-              <svg className="pill-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
 
               <button
                 className="pill-close-btn"
@@ -440,21 +335,14 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
             {/* Card Header */}
             <div className="card-header">
               <div className="card-header-left">
-                <div className={`card-activity-dot ${state.done ? 'beacon-done' : state.isPaused ? 'beacon-paused' : 'beacon-active'}`} />
+                <div className={`card-status-dot ${state.done ? 'dot-done' : state.isPaused ? 'dot-paused' : 'dot-active'}`} />
                 <div className="card-title-group">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <h4 className="card-title">
-                      {state.done ? 'Render Queue Completed' : state.task || 'Title Adder Studio'}
-                    </h4>
-                    {state.encoder && (
-                      <span className={`card-encoder-badge ${state.encoder.includes('GPU') || state.encoder.includes('NVENC') || state.encoder.includes('QSV') ? 'is-gpu' : 'is-cpu'}`} title={`Active Encoder: ${state.encoder}`}>
-                        {state.encoder.includes('NVENC') ? '⚡ NVENC GPU' : state.encoder.includes('QSV') ? '⚡ QSV GPU' : state.encoder.includes('AMF') ? '⚡ AMF GPU' : '💻 CPU'}
-                      </span>
-                    )}
-                  </div>
+                  <h4 className="card-title">
+                    {state.done ? 'Render Queue Completed' : 'Title Adder Studio'}
+                  </h4>
                   <span className="card-sub">
                     Video {state.currentIdx || 1} of {state.totalVideos || 1}
-                    {remainingCount > 0 && ` (${remainingCount} left)`}
+                    {remainingCount > 0 && ` (${remainingCount} remaining)`}
                   </span>
                 </div>
               </div>
@@ -469,7 +357,7 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
                   title="Collapse to Pill"
                   type="button"
                 >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="18 15 12 9 6 15" />
                   </svg>
                 </button>
@@ -484,168 +372,127 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
               </div>
             </div>
 
-            {/* Card Body: Thumbnail & Details */}
+            {/* Card Body: Title Thumbnail Preview & Metadata */}
             <div className="card-body">
-              <div className="card-thumb-preview">
-                {thumbUrl && !thumbFailed ? (
+              <div className="card-thumb-preview" title={state.thumbnailPath ? `Title Image: ${state.thumbnailPath.split(/[/\\]/).pop()}` : 'Title Image'}>
+                {thumbUrl ? (
                   <img
                     src={thumbUrl}
-                    alt="Thumbnail preview"
+                    alt="Title Thumbnail Preview"
                     onError={() => setThumbFailed(true)}
                   />
                 ) : (
                   <div className="card-thumb-placeholder">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polygon points="5 3 19 12 5 21 5 3" />
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
+                      <circle cx="9" cy="9" r="2"/>
+                      <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
                     </svg>
                   </div>
                 )}
               </div>
 
               <div className="card-info">
-                <div className="card-task-line" title={state.videoName}>
-                  {state.videoName || 'Staged item'}
+                <div className="card-video-name" title={state.videoName}>
+                  {state.videoName || 'Processing video'}
                 </div>
 
-                {/* Next Up Row in Expanded Card */}
+                <div className="card-meta-row">
+                  {state.speed && (
+                    <span className="meta-badge">Speed <strong>{state.speed}</strong></span>
+                  )}
+                  <span className="meta-badge">ETA <strong>{state.eta && state.eta !== '--:--' ? state.eta : 'Calculating...'}</strong></span>
+                  {state.fps && (
+                    <span className="meta-badge">FPS <strong>{state.fps}</strong></span>
+                  )}
+                </div>
+
                 {state.nextVideoName && !state.done && remainingCount > 0 && (
-                  <div className="card-next-queue-row" title={`Next in queue: ${state.nextVideoName}`}>
-                    <span className="card-next-pill-tag">NEXT UP</span>
-                    <span className="card-next-filename">{state.nextVideoName}</span>
+                  <div className="card-next-row" title={`Next in queue: ${state.nextVideoName}`}>
+                    <span className="card-next-tag">NEXT</span>
+                    <span className="card-next-name">{state.nextVideoName}</span>
                   </div>
                 )}
-
-                {/* Meta Row: Speed, ETA, Remaining */}
-                <div className="card-meta-row">
-                  <span className="meta-badge">
-                    Speed: <strong>{state.speed || '1.2x'}</strong>
-                  </span>
-                  <span className="meta-badge">
-                    ETA: <strong>{state.eta && state.eta !== '--:--' ? state.eta : 'Calculating...'}</strong>
-                  </span>
-                  <span className="meta-badge">
-                    Queue: <strong>{state.currentIdx}/{state.totalVideos}</strong>
-                  </span>
-                </div>
-
-                {/* High Resolution Progress Track */}
-                <div className="card-progress-section">
-                  <div className="card-progress-labels">
-                    <span>Encoding progress</span>
-                    <span className="card-progress-value">{state.percent.toFixed(1)}%</span>
-                  </div>
-                  <div className="card-progress-bar-track">
-                    <div
-                      className="card-progress-bar-fill"
-                      style={{ width: `${Math.min(100, Math.max(0, state.percent))}%` }}
-                    />
-                  </div>
-                </div>
               </div>
             </div>
 
-            {/* Card Footer: Quick Actions */}
+            {/* High Resolution Progress Track */}
+            <div className="card-progress-section">
+              <div className="card-progress-labels">
+                <span>Encoding</span>
+                <span className="card-progress-value">{state.percent.toFixed(1)}%</span>
+              </div>
+              <div className="card-progress-bar-track">
+                <div
+                  className="card-progress-bar-fill"
+                  style={{ width: `${Math.min(100, Math.max(0, state.percent))}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Actions Footer */}
             <div className="card-footer">
               <div className="card-actions-left">
-                {!state.done && (
+                {!state.done ? (
                   <>
                     <button
                       className={`card-action-btn ${state.isPaused ? 'btn-resume' : 'btn-pause'}`}
                       onClick={() => triggerAction(state.isPaused ? 'resume' : 'pause')}
-                      title={state.isPaused ? 'Resume Rendering' : 'Pause Rendering'}
+                      title={state.isPaused ? 'Resume' : 'Pause'}
                       type="button"
                     >
-                      {state.isPaused ? (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                          <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3" /></svg>
-                          Resume
-                        </span>
-                      ) : (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                          <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" /></svg>
-                          Pause
-                        </span>
-                      )}
+                      {state.isPaused ? '▶ Resume' : '⏸ Pause'}
                     </button>
-
                     <button
                       className="card-action-btn btn-danger-cancel"
                       onClick={() => setIsCancelConfirmOpen(true)}
                       title="Cancel Rendering"
                       type="button"
                     >
-                      Cancel Render
+                      Cancel
                     </button>
                   </>
-                )}
-
-                {state.done ? (
-                  <>
-                    <button
-                      className="card-action-btn btn-success-play"
-                      onClick={() => triggerAction('play-video')}
-                      title="Play rendered video in default media player"
-                      type="button"
-                    >
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                          <polygon points="5 3 19 12 5 21 5 3" />
-                        </svg>
-                        Play Video
-                      </span>
-                    </button>
-
-                    <button
-                      className="card-action-btn btn-folder"
-                      onClick={() => triggerAction('open-folder')}
-                      title="Open Output Folder in Explorer"
-                      type="button"
-                    >
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z" />
-                        </svg>
-                        Open Folder
-                      </span>
-                    </button>
-                  </>
-                ) : state.outputFolder && (
+                ) : (
                   <button
-                    className="card-action-btn btn-folder"
-                    onClick={() => triggerAction('open-folder')}
-                    title="Open Output Folder in Explorer"
+                    className="card-action-btn btn-primary"
+                    onClick={() => triggerAction('play-video')}
                     type="button"
                   >
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z" />
-                      </svg>
-                      Output
-                    </span>
+                    Play Video
+                  </button>
+                )}
+                {state.outputFolder && (
+                  <button
+                    className="card-action-btn btn-secondary"
+                    onClick={() => triggerAction('open-folder')}
+                    title="Open Output Folder"
+                    type="button"
+                  >
+                    Open Folder
                   </button>
                 )}
               </div>
 
               <button
-                className="card-action-btn btn-focus"
+                className="card-action-btn btn-secondary"
                 onClick={() => triggerAction('focus-app')}
                 title="View in UniDesk App"
                 type="button"
               >
-                ↗ View in App
+                ↗ UniDesk
               </button>
             </div>
           </div>
         )}
       </div>
 
-      {/* ── Cancel Confirmation Modal (Inspired by Tap Studio) ───────── */}
+      {/* ── Cancel Confirmation Modal ───────────────────────────────── */}
       {isCancelConfirmOpen && createPortal(
         <div className="island-modal-backdrop" onClick={() => setIsCancelConfirmOpen(false)}>
           <div className="island-modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="island-modal-header">
               <div className="island-modal-warning-icon">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
                   <line x1="12" y1="9" x2="12" y2="13" />
                   <line x1="12" y1="17" x2="12.01" y2="17" />
@@ -653,12 +500,12 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
               </div>
               <div>
                 <h3 className="island-modal-title">Cancel Rendering?</h3>
-                <p className="island-modal-sub">This will immediately terminate the active video export.</p>
+                <p className="island-modal-sub">This will terminate the active video export.</p>
               </div>
             </div>
 
             <p className="island-modal-body">
-              Any partially rendered file will be halted and the queue will be paused. Do you want to cancel now?
+              Any partially rendered file will be halted and the queue will be stopped.
             </p>
 
             <div className="island-modal-actions">
@@ -667,14 +514,14 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
                 className="island-modal-btn island-btn-secondary"
                 onClick={() => setIsCancelConfirmOpen(false)}
               >
-                Continue Rendering
+                Continue
               </button>
               <button
                 type="button"
                 className="island-modal-btn island-btn-danger"
                 onClick={handleConfirmCancel}
               >
-                Yes, Cancel Now
+                Cancel Now
               </button>
             </div>
           </div>
