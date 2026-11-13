@@ -1015,6 +1015,287 @@ $.runScript.autoMEIO = function (selectedMarkersStr, explicitExtOrPresetPath) {
 };
 
 // ----------------------
+// Helpers for Raw Imported Media Calculation ("Time Before Edit")
+// ----------------------
+function parseTimecodeStringToSeconds(tcStr, fps) {
+    if (!tcStr) return 0;
+    try {
+        var str = String(tcStr).replace(/^\s+|\s+$/g, "");
+        var parts = str.split(/[:;]/);
+        if (parts.length >= 3) {
+            var h = parseFloat(parts[0]) || 0;
+            var m = parseFloat(parts[1]) || 0;
+            var s = parseFloat(parts[2]) || 0;
+            var f = parts.length > 3 ? (parseFloat(parts[3]) || 0) : 0;
+            var frameRate = (fps && fps > 0) ? fps : 25.0;
+            return (h * 3600) + (m * 60) + s + (f / frameRate);
+        }
+        var num = parseFloat(str);
+        return isFinite(num) ? num : 0;
+    } catch (e) {
+        return 0;
+    }
+}
+
+function getRawProjectItemDuration(pItem) {
+    if (!pItem) return 0;
+    var dur = 0;
+
+    // 1. Check Project Metadata (Column.Intrinsic.MediaDuration) - intrinsic unedited file length
+    try {
+        if (typeof pItem.getProjectMetadata === "function") {
+            var meta = pItem.getProjectMetadata();
+            if (meta) {
+                var match = meta.match(/<Column\.Intrinsic\.MediaDuration>([^<]+)<\/Column\.Intrinsic\.MediaDuration>/i) ||
+                            meta.match(/Column\.Intrinsic\.MediaDuration[^\>]*\>([^\<]+)\</i);
+                if (match && match[1]) {
+                    var fps = 25.0;
+                    try {
+                        var fpsMatch = meta.match(/<Column\.Intrinsic\.MediaTimebase>([^<]+)<\/Column\.Intrinsic\.MediaTimebase>/i) ||
+                                       meta.match(/Column\.Intrinsic\.MediaTimebase[^\>]*\>([^\<]+)\</i);
+                        if (fpsMatch && fpsMatch[1]) {
+                            var pFps = parseFloat(fpsMatch[1]);
+                            if (pFps > 0) fps = pFps;
+                        }
+                    } catch (eFps) {}
+                    var tcSec = parseTimecodeStringToSeconds(match[1], fps);
+                    if (tcSec > 0) return tcSec;
+                }
+            }
+        }
+    } catch (eMeta) {}
+
+    // 2. Check master clip getOutPoint() - getInPoint()
+    try {
+        if (typeof pItem.getOutPoint === "function") {
+            var outp = pItem.getOutPoint();
+            var inp = typeof pItem.getInPoint === "function" ? pItem.getInPoint() : null;
+            var outSec = (outp && isFinite(outp.seconds)) ? outp.seconds : 0;
+            var inSec = (inp && isFinite(inp.seconds)) ? inp.seconds : 0;
+            if (outSec > inSec) {
+                dur = outSec - inSec;
+                if (dur > 0) return dur;
+            }
+        }
+    } catch (eInOut) {}
+
+    // 3. Check XMP Metadata (xmpDM:duration)
+    try {
+        if (typeof pItem.getXMPMetadata === "function") {
+            var xmp = pItem.getXMPMetadata();
+            if (xmp) {
+                var valM = xmp.match(/xmpDM:value=["']?([0-9.]+)["']?/i) || xmp.match(/<xmpDM:value>([0-9.]+)<\/xmpDM:value>/i);
+                var scaleM = xmp.match(/xmpDM:scale=["']?([^"'><\s]+)["']?/i) || xmp.match(/<xmpDM:scale>([^"'><\s]+)<\/xmpDM:scale>/i);
+                if (valM) {
+                    var val = parseFloat(valM[1]);
+                    var scale = 1;
+                    if (scaleM) {
+                        var sStr = scaleM[1];
+                        if (sStr.indexOf("/") !== -1) {
+                            var sp = sStr.split("/");
+                            scale = (parseFloat(sp[0]) || 1) / (parseFloat(sp[1]) || 1);
+                        } else {
+                            scale = parseFloat(sStr) || 1;
+                        }
+                    }
+                    var xmpSec = val * scale;
+                    if (xmpSec > 0) return xmpSec;
+                }
+            }
+        }
+    } catch (eXmp) {}
+
+    return dur;
+}
+
+function isVideoProjectItem(pItem) {
+    if (!pItem) return false;
+    try {
+        if (typeof pItem.isSequence === "function" && pItem.isSequence()) return false;
+        if (typeof pItem.canChangeMediaPath === "function" && !pItem.canChangeMediaPath()) return false;
+
+        var name = (pItem.name || "").toLowerCase();
+        var mPath = "";
+        try { if (typeof pItem.getMediaPath === "function") mPath = (pItem.getMediaPath() || "").toLowerCase(); } catch (eMp) {}
+
+        // Exclude group photo markers/stills
+        if (typeof isGroupPhotoName === "function" && isGroupPhotoName(name)) return false;
+        if (/group[_\s-]*photo/i.test(name) || /(?:^|[\s_.-])gp(?:[_\s-]*\d+)?(?:[\s_.-]|$)/i.test(name)) return false;
+        if (/group[_\s-]*photo/i.test(mPath) || /(?:^|[\s_.-])gp(?:[_\s-]*\d+)?(?:[\s_.-]|$)/i.test(mPath)) return false;
+
+        // Exclude still photos and design assets
+        if (/\.(jpe?g|png|gif|bmp|tiff?|webp|psd|ai|prtl|mogrt|svg|eps)$/i.test(name) ||
+            /\.(jpe?g|png|gif|bmp|tiff?|webp|psd|ai|prtl|mogrt|svg|eps)$/i.test(mPath)) {
+            return false;
+        }
+
+        // Exclude standalone audio / music / SFX
+        if (/\.(wav|mp3|aac|m4a|aiff?|flac|ogg|wma|ac3)$/i.test(name) ||
+            /\.(wav|mp3|aac|m4a|aiff?|flac|ogg|wma|ac3)$/i.test(mPath)) {
+            return false;
+        }
+
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
+function getRawImportedMediaDuration(seq) {
+    if (!seq) return 0;
+    var totalRawSec = 0;
+    var seenMediaIds = {};
+    var parentBins = [];
+    var seenBinIds = {};
+
+    function registerParentBin(bin) {
+        if (!bin || bin === app.project.rootItem) return;
+        var bId = "";
+        try { bId = bin.nodeId || bin.treePath || bin.name; } catch (e) { bId = bin.name; }
+        if (bId && !seenBinIds[bId]) {
+            seenBinIds[bId] = true;
+            parentBins.push(bin);
+        }
+    }
+
+    // 1. Scan active sequence video tracks for unique source video files
+    try {
+        var vt = seq.videoTracks;
+        if (vt) {
+            for (var vi = 0; vi < vt.numTracks; vi++) {
+                var vtrack = vt[vi];
+                if (!vtrack || !vtrack.clips) continue;
+                for (var vci = 0; vci < vtrack.clips.numItems; vci++) {
+                    var vclip = vtrack.clips[vci];
+                    if (!vclip) continue;
+
+                    var clipName = vclip.name || "";
+                    var clipCmt = "";
+                    try { clipCmt = vclip.comments || ""; } catch (eCmt) {}
+                    if (typeof isGroupPhotoName === "function" && isGroupPhotoName(clipName)) continue;
+                    if (clipCmt.indexOf("OT_GP_INSERTED") !== -1 || /group[_\s-]*photo/i.test(clipName)) continue;
+
+                    var pItem = vclip.projectItem;
+                    if (!pItem || !isVideoProjectItem(pItem)) continue;
+
+                    var itemId = "";
+                    try {
+                        var mp = (typeof pItem.getMediaPath === "function") ? pItem.getMediaPath() : "";
+                        itemId = pItem.nodeId || pItem.treePath || (pItem.name + "_" + mp);
+                    } catch (eId) {
+                        itemId = pItem.name || "";
+                    }
+
+                    if (itemId && !seenMediaIds[itemId]) {
+                        seenMediaIds[itemId] = true;
+                        var dur = getRawProjectItemDuration(pItem);
+                        if (dur > 0) {
+                            totalRawSec += dur;
+                        }
+                    }
+
+                    try {
+                        if (pItem.parent) registerParentBin(pItem.parent);
+                    } catch (ePar) {}
+                }
+            }
+        }
+    } catch (eScanTracks) {}
+
+    // 2. Scan parent bins for sibling video clips imported in the same session but cut/deleted from sequence
+    try {
+        for (var bi = 0; bi < parentBins.length; bi++) {
+            var bin = parentBins[bi];
+            if (!bin || !bin.children) continue;
+            for (var ci = 0; ci < bin.children.numItems; ci++) {
+                var child = bin.children[ci];
+                if (!child || !isVideoProjectItem(child)) continue;
+
+                var childId = "";
+                try {
+                    var cmp = (typeof child.getMediaPath === "function") ? child.getMediaPath() : "";
+                    childId = child.nodeId || child.treePath || (child.name + "_" + cmp);
+                } catch (eCId) {
+                    childId = child.name || "";
+                }
+
+                if (childId && !seenMediaIds[childId]) {
+                    seenMediaIds[childId] = true;
+                    var cDur = getRawProjectItemDuration(child);
+                    if (cDur > 0) {
+                        totalRawSec += cDur;
+                    }
+                }
+            }
+        }
+    } catch (eScanBins) {}
+
+    // 3. Check if there is a rootItem bin matching sequence name (e.g. session / date folder)
+    try {
+        if (app.project && app.project.rootItem && app.project.rootItem.children && seq.name) {
+            var sNameLower = seq.name.toLowerCase().replace(/^\s+|\s+$/g, "");
+            for (var ri = 0; ri < app.project.rootItem.children.numItems; ri++) {
+                var rChild = app.project.rootItem.children[ri];
+                if (!rChild || !rChild.children) continue;
+                var rNameLower = (rChild.name || "").toLowerCase().replace(/^\s+|\s+$/g, "");
+                if (rNameLower === sNameLower || (sNameLower.indexOf(rNameLower) !== -1 && rNameLower.length >= 4)) {
+                    for (var rci = 0; rci < rChild.children.numItems; rci++) {
+                        var rcItem = rChild.children[rci];
+                        if (!rcItem || !isVideoProjectItem(rcItem)) continue;
+
+                        var rcId = "";
+                        try {
+                            var rcmp = (typeof rcItem.getMediaPath === "function") ? rcItem.getMediaPath() : "";
+                            rcId = rcItem.nodeId || rcItem.treePath || (rcItem.name + "_" + rcmp);
+                        } catch (eRcId) {
+                            rcId = rcItem.name || "";
+                        }
+
+                        if (rcId && !seenMediaIds[rcId]) {
+                            seenMediaIds[rcId] = true;
+                            var rcDur = getRawProjectItemDuration(rcItem);
+                            if (rcDur > 0) {
+                                totalRawSec += rcDur;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    } catch (eRootScan) {}
+
+    // 4. Fallback: if audio-only project with no video tracks
+    if (totalRawSec <= 0) {
+        try {
+            var at = seq.audioTracks;
+            if (at) {
+                for (var ai = 0; ai < at.numTracks; ai++) {
+                    var atrack = at[ai];
+                    if (!atrack || !atrack.clips) continue;
+                    for (var aci = 0; aci < atrack.clips.numItems; aci++) {
+                        var aclip = atrack.clips[aci];
+                        if (!aclip || !aclip.projectItem) continue;
+                        var aItem = aclip.projectItem;
+                        var aId = "";
+                        try {
+                            var amp = (typeof aItem.getMediaPath === "function") ? aItem.getMediaPath() : "";
+                            aId = aItem.nodeId || aItem.treePath || (aItem.name + "_" + amp);
+                        } catch (eAId) { aId = aItem.name || ""; }
+                        if (aId && !seenMediaIds[aId]) {
+                            seenMediaIds[aId] = true;
+                            var aDur = getRawProjectItemDuration(aItem);
+                            if (aDur > 0) totalRawSec += aDur;
+                        }
+                    }
+                }
+            }
+        } catch (eAudioScan) {}
+    }
+
+    return totalRawSec;
+}
+
+// ----------------------
 // Timeline Stats: Marker Count, Full Event Breakdown & Raw Duration ("Time Before Editing")
 // ----------------------
 $.runScript.getTimelineStats = function () {
@@ -1024,39 +1305,16 @@ $.runScript.getTimelineStats = function () {
             return "ERROR|||No active sequence found in Premiere Pro.";
         }
 
-        // 1. Calculate raw imported sequence duration ("Time Before Editing")
-        var rawSec = 0;
-        try {
-            var sEnd = Number(seq.end && seq.end.seconds);
-            if (isFinite(sEnd) && sEnd > 0) rawSec = sEnd;
-        } catch (e1) {}
+        // 1. Calculate true raw imported media duration ("Time Before Editing")
+        var rawSec = getRawImportedMediaDuration(seq);
 
-        try {
-            var vt = seq.videoTracks;
-            if (vt) {
-                for (var vi = 0; vi < vt.numTracks; vi++) {
-                    var vtrack = vt[vi];
-                    if (!vtrack || !vtrack.clips) continue;
-                    for (var vci = 0; vci < vtrack.clips.numItems; vci++) {
-                        var vclip = vtrack.clips[vci];
-                        var vce = Number(vclip.end && vclip.end.seconds);
-                        if (isFinite(vce) && vce > rawSec) rawSec = vce;
-                    }
-                }
-            }
-            var at = seq.audioTracks;
-            if (at) {
-                for (var ai = 0; ai < at.numTracks; ai++) {
-                    var atrack = at[ai];
-                    if (!atrack || !atrack.clips) continue;
-                    for (var aci = 0; aci < atrack.clips.numItems; aci++) {
-                        var aclip = atrack.clips[aci];
-                        var ace = Number(aclip.end && aclip.end.seconds);
-                        if (isFinite(ace) && ace > rawSec) rawSec = ace;
-                    }
-                }
-            }
-        } catch (eClips) {}
+        // Fallback: If no media items found or duration is 0, fallback to sequence timeline duration
+        if (!isFinite(rawSec) || rawSec <= 0) {
+            try {
+                var sEnd = Number(seq.end && seq.end.seconds);
+                if (isFinite(sEnd) && sEnd > 0) rawSec = sEnd;
+            } catch (e1) {}
+        }
 
         var totalS = Math.round(rawSec);
         var hrs = Math.floor(totalS / 3600);
