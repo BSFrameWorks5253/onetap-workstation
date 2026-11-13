@@ -24,8 +24,7 @@ body, html, #root {
   justify-content: center;
   background: transparent;
   transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.28s ease;
-  -webkit-app-region: drag;
-  pointer-events: auto;
+  pointer-events: none;
   padding-top: 14px;
 }
 
@@ -75,10 +74,8 @@ body, html, #root {
   width: 430px;
   height: 44px;
   border-radius: 9999px;
-  background: rgba(12, 12, 16, 0.95);
-  backdrop-filter: blur(12px) saturate(180%);
-  -webkit-backdrop-filter: blur(12px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(12, 12, 16, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   box-shadow:
     0 12px 30px rgba(0, 0, 0, 0.55),
     inset 0 1px 0 rgba(255, 255, 255, 0.16),
@@ -250,29 +247,28 @@ body, html, #root {
   top: calc(100% + 7px);
   left: 6px;
   right: 6px;
-  background: rgba(15, 17, 23, 0.96);
-  backdrop-filter: blur(14px) saturate(180%);
-  -webkit-backdrop-filter: blur(14px) saturate(180%);
+  background: rgba(15, 17, 23, 0.98);
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 12px;
   box-shadow: 0 14px 32px rgba(0, 0, 0, 0.70), inset 0 1px 0 rgba(255, 255, 255, 0.15);
-  padding: 8px 10px;
+  padding: 8px 12px;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   z-index: 9999;
   animation: popoverFadeIn 0.16s cubic-bezier(0.16, 1, 0.3, 1);
   cursor: pointer;
+  pointer-events: auto;
 }
 
 .preview-thumb-box {
-  width: 36px;
-  height: 36px;
-  border-radius: 6px;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
   overflow: hidden;
   flex-shrink: 0;
   background: #000000;
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -285,7 +281,7 @@ body, html, #root {
 }
 
 .preview-thumb-fallback {
-  font-size: 14px;
+  font-size: 16px;
   color: #94A3B8;
   font-weight: 700;
 }
@@ -299,44 +295,42 @@ body, html, #root {
 }
 
 .preview-video-name {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   color: #FFFFFF;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  letter-spacing: -0.01em;
 }
 
-.preview-metrics {
+.preview-sub-row {
   display: flex;
   align-items: center;
   gap: 6px;
-  flex-wrap: wrap;
+  font-size: 10.5px;
+  color: #94A3B8;
+  font-variant-numeric: tabular-nums;
 }
 
-.preview-badge {
-  font-size: 9px;
-  font-weight: 600;
-  padding: 1px 5px;
-  border-radius: 4px;
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-}
-
-.badge-speed {
-  background: rgba(16, 185, 129, 0.18);
-  color: #34D399;
-}
-
-.badge-eta {
-  background: rgba(56, 189, 248, 0.18);
+.preview-eta-tag {
   color: #38BDF8;
+  font-weight: 600;
 }
 
-.badge-pct {
-  background: rgba(255, 255, 255, 0.10);
+.preview-speed-text {
+  color: #34D399;
+  font-weight: 600;
+}
+
+.preview-pct-text {
   color: #F1F5F9;
+  font-weight: 600;
+}
+
+.preview-dot-sep {
+  color: rgba(255, 255, 255, 0.25);
+  font-size: 11px;
 }
 
 @keyframes popoverFadeIn {
@@ -373,9 +367,7 @@ body, html, #root {
 /* ── Expanded Island Panel ──────────────────────────────────────── */
 .dynamic-island-card {
   background: rgba(14, 14, 18, 0.98);
-  backdrop-filter: blur(16px) saturate(180%);
-  -webkit-backdrop-filter: blur(16px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 18px;
   padding: 16px 18px;
   width: 456px;
@@ -685,8 +677,7 @@ body, html, #root {
 .island-modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.65);
-  backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.75);
   display: flex;
   align-items: center;
   justify-content: center;

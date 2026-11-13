@@ -3,6 +3,7 @@ import {
   reconcileWorkingAndBackupDrives,
   BackupReconcileResult
 } from './backupReconciler'
+import { hasActiveFFmpegJobs } from './ffmpegRunner'
 
 export interface DaemonStatus {
   active: boolean
@@ -19,7 +20,7 @@ export interface DaemonStatus {
 }
 
 let _timer: NodeJS.Timeout | null = null
-let _intervalMs = 25000 // 25 seconds
+let _intervalMs = 300000 // 5 minutes default (prevents physical disk I/O thrashing and UI lag)
 let _isActive = true
 let _isScanning = false
 let _lastNotificationTime = 0
@@ -77,6 +78,8 @@ function broadcastStatus(): void {
 
 async function runScanTick(): Promise<void> {
   if (!_isActive || _isScanning) return
+  // If video rendering is actively running, defer disk scanning so physical drives don't lag or freeze
+  if (hasActiveFFmpegJobs()) return
   _isScanning = true
 
   try {
@@ -161,10 +164,10 @@ export function startDriveWatcherDaemon(getWin: () => BrowserWindow | null): voi
     _timer = null
   }
 
-  // Initial immediate scan after a short 3-second startup grace period
+  // Initial scan after a polite 15-second startup grace period
   setTimeout(() => {
     runScanTick()
-  }, 3000)
+  }, 15000)
 
   // Recurring background interval
   _timer = setInterval(runScanTick, _intervalMs)

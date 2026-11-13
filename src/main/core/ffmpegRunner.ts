@@ -69,6 +69,10 @@ type EventCallback = (event: FFmpegEvent) => void
 
 const _activeJobs = new Map<string, ChildProcess>()
 
+export function hasActiveFFmpegJobs(): boolean {
+  return _activeJobs.size > 0
+}
+
 function timeToSeconds(t: string): number {
   const [h, m, s] = t.split(':').map(Number)
   return h * 3600 + m * 60 + s

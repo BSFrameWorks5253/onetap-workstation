@@ -63,17 +63,7 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
   useEffect(() => {
     setThumbFailed(false)
     setThumbBase64(null)
-
-    if (state.thumbnailDataUrl) return
-
-    if (state.thumbnailPath && (window as any).api?.viewer?.readImageBase64) {
-      (window as any).api.viewer.readImageBase64(state.thumbnailPath).then((res: any) => {
-        if (res && res.ok && res.dataUrl) {
-          setThumbBase64(res.dataUrl)
-        }
-      }).catch(() => {})
-    }
-  }, [state.thumbnailPath, state.thumbnailDataUrl])
+  }, [state.thumbnailPath])
 
   useEffect(() => {
     if (!floating) {
@@ -173,21 +163,7 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
     }
   }, [floating])
 
-  // Sync window size with Electron when toggling compact vs hover vs expanded card
-  useEffect(() => {
-    if (floating) return
-    const api = (window as any).api?.island
-    if (!api?.setSize) return
-
-    if (isExpanded) {
-      api.setSize(470, 230)
-    } else if (isHovered && !state.done) {
-      api.setSize(440, 126)
-    } else {
-      api.setSize(440, 68)
-    }
-  }, [isExpanded, isHovered, state.done, floating])
-
+  // Native window size is fixed at 470x230 to prevent DWM composition stutter
   const handleMouseEnter = () => {
     setIsHovered(true)
   }
@@ -236,6 +212,24 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
     triggerAction('cancel')
   }
 
+  const handleImageError = () => {
+    if (state.thumbnailPath && !thumbBase64) {
+      const api = (window as any).api
+      if (api?.viewer?.readImageBase64) {
+        api.viewer.readImageBase64(state.thumbnailPath).then((b64: string) => {
+          if (b64) {
+            setThumbBase64(b64.startsWith('data:') ? b64 : `data:image/jpeg;base64,${b64}`)
+            setThumbFailed(false)
+          } else {
+            setThumbFailed(true)
+          }
+        }).catch(() => setThumbFailed(true))
+        return
+      }
+    }
+    setThumbFailed(true)
+  }
+
   const getThumbnailSrc = () => {
     if (state.thumbnailDataUrl) return state.thumbnailDataUrl
     if (thumbBase64) return thumbBase64
@@ -277,7 +271,7 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
                   <img
                     src={thumbUrl}
                     alt="Thumbnail"
-                    onError={() => setThumbFailed(true)}
+                    onError={handleImageError}
                   />
                 </div>
               ) : (
@@ -357,7 +351,7 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
               <div className="pill-hover-preview-card" onClick={(e) => { e.stopPropagation(); setIsExpanded(true); }}>
                 <div className="preview-thumb-box">
                   {thumbUrl && !thumbFailed ? (
-                    <img src={thumbUrl} alt="Title Artwork" onError={() => setThumbFailed(true)} />
+                    <img src={thumbUrl} alt="Title Artwork" onError={handleImageError} />
                   ) : (
                     <div className="preview-thumb-fallback">
                       <span>{state.videoName ? state.videoName.charAt(0).toUpperCase() : '🎬'}</span>
@@ -366,10 +360,12 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
                 </div>
                 <div className="preview-details">
                   <div className="preview-video-name">{state.videoName || 'Processing Video'}</div>
-                  <div className="preview-metrics">
-                    <span className="preview-badge badge-speed">⚡ {state.speed || '1.0x'}</span>
-                    <span className="preview-badge badge-eta">⏱ {state.eta || 'Calculating...'}</span>
-                    <span className="preview-badge badge-pct">
+                  <div className="preview-sub-row">
+                    <span className="preview-eta-tag">{state.eta && state.eta !== '--:--' ? state.eta : 'Calculating...'}</span>
+                    <span className="preview-dot-sep">·</span>
+                    <span className="preview-speed-text">{state.speed || '1.0x'}</span>
+                    <span className="preview-dot-sep">·</span>
+                    <span className="preview-pct-text">
                       {scrubPercent !== null ? `Scrub: ${scrubPercent}%` : `${Math.round(state.percent)}%`}
                     </span>
                   </div>
@@ -423,11 +419,11 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
             {/* Card Body: Title Thumbnail Preview & Metadata */}
             <div className="card-body">
               <div className="card-thumb-preview" title={state.thumbnailPath ? `Title Image: ${state.thumbnailPath.split(/[/\\]/).pop()}` : 'Title Image'}>
-                {thumbUrl ? (
+                {thumbUrl && !thumbFailed ? (
                   <img
                     src={thumbUrl}
                     alt="Title Thumbnail Preview"
-                    onError={() => setThumbFailed(true)}
+                    onError={handleImageError}
                   />
                 ) : (
                   <div className="card-thumb-placeholder">

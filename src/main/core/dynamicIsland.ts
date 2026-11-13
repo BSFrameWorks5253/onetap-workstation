@@ -71,63 +71,12 @@ const state: IslandState = {
   isPaused: false
 }
 
-function toDataUrl(filePath: string): string {
-  if (!filePath) return ''
-  try {
-    if (fs.existsSync(filePath)) {
-      const ext = path.extname(filePath).toLowerCase()
-      const mime = ext === '.png' ? 'image/png' : ext === '.webp' ? 'image/webp' : ext === '.svg' ? 'image/svg+xml' : 'image/jpeg'
-      const buf = fs.readFileSync(filePath)
-      if (buf.length < 6 * 1024 * 1024) {
-        return `data:${mime};base64,${buf.toString('base64')}`
-      }
-    }
-  } catch {}
-  return ''
-}
-
-// Strict LRU Cache for base64 thumbnails (max 4 entries to stay well below 150MB heap budget)
-const MAX_LRU_THUMBS = 4
-const thumbLruCache = new Map<string, string>()
-
-function getCachedThumbDataUrl(filePath: string): string {
-  if (!filePath) return ''
-  if (thumbLruCache.has(filePath)) {
-    const val = thumbLruCache.get(filePath)!
-    thumbLruCache.delete(filePath)
-    thumbLruCache.set(filePath, val)
-    return val
-  }
-  const dataUrl = toDataUrl(filePath)
-  if (dataUrl) {
-    if (thumbLruCache.size >= MAX_LRU_THUMBS) {
-      const oldestKey = thumbLruCache.keys().next().value
-      if (oldestKey) thumbLruCache.delete(oldestKey)
-    }
-    thumbLruCache.set(filePath, dataUrl)
-  }
-  return dataUrl
-}
-
 export function performIslandMemoryCleanup(): void {
-  // Prune LRU thumbnail cache down to current active thumbnail only
-  if (state.thumbnailPath && thumbLruCache.has(state.thumbnailPath)) {
-    const activeVal = thumbLruCache.get(state.thumbnailPath)!
-    thumbLruCache.clear()
-    thumbLruCache.set(state.thumbnailPath, activeVal)
-  } else {
-    thumbLruCache.clear()
-  }
-
   // Silent garbage collection trigger and renderer cache release
   try {
     if (islandWindow && !islandWindow.isDestroyed()) {
       islandWindow.webContents.session?.clearImageCache?.().catch(() => {})
       islandWindow.webContents.send('island:gc')
-    }
-    const mainWin = mainWindowRef ? mainWindowRef() : null
-    if (mainWin && !mainWin.isDestroyed()) {
-      mainWin.webContents.send('island:gc')
     }
   } catch {}
 
@@ -188,8 +137,8 @@ function createIslandWindow(): BrowserWindow {
   const primaryDisplay = screen.getPrimaryDisplay()
   const { width: screenWidth } = primaryDisplay.workAreaSize
 
-  const defaultWidth = 450
-  const defaultHeight = 80
+  const defaultWidth = 470
+  const defaultHeight = 230
 
   // Check saved position
   const savedX = get('island_pos_x') as number | null
@@ -266,18 +215,6 @@ export function updateIslandState(partial: Partial<IslandState>): void {
     userDismissed = false
   }
 
-  // Pre-generate base64 data URL for local thumbnails with strict LRU caching to eliminate memory leaks
-  if (partial.thumbnailPath) {
-    if (partial.thumbnailPath === state.thumbnailPath && state.thumbnailDataUrl) {
-      partial.thumbnailDataUrl = state.thumbnailDataUrl
-    } else if (!partial.thumbnailDataUrl) {
-      const dataUrl = getCachedThumbDataUrl(partial.thumbnailPath)
-      if (dataUrl) {
-        partial.thumbnailDataUrl = dataUrl
-      }
-    }
-  }
-
   Object.assign(state, partial)
 
   const isEnabled = get('island_enabled') !== false
@@ -291,14 +228,9 @@ export function updateIslandState(partial: Partial<IslandState>): void {
     }
   }
 
-  // Broadcast state to Island window and main window
+  // Broadcast lightweight state to Island window only (keeps main thread completely stutter-free)
   if (islandWindow && !islandWindow.isDestroyed()) {
     islandWindow.webContents.send('island:update', state)
-  }
-
-  const mainWin = mainWindowRef ? mainWindowRef() : null
-  if (mainWin && !mainWin.isDestroyed()) {
-    mainWin.webContents.send('island:update', state)
   }
 
   // Handle completion actions

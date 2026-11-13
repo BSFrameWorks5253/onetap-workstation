@@ -16,7 +16,9 @@
 
 import { ipcMain, BrowserWindow, shell } from 'electron'
 import { openInEcosystemExplorer } from '../core/ecosystemExplorer'
-import { spawn, spawnSync, execFileSync } from 'child_process'
+import { spawn, spawnSync, execFileSync, execFile } from 'child_process'
+import { promisify } from 'util'
+const execFileAsync = promisify(execFile)
 import fs from 'fs'
 import path from 'path'
 import os from 'os'
@@ -519,17 +521,17 @@ function resolveVideoThumbnail(
   return ''
 }
 
-function getVideoInfo(filePath: string): {
+async function getVideoInfo(filePath: string): Promise<{
   width: number; height: number; duration: number; fps: string
-} | null {
+} | null> {
   try {
     const ffprobeExe = getFfprobeExePath()
-    const out = execFileSync(ffprobeExe, [
+    const { stdout } = await execFileAsync(ffprobeExe, [
       '-v', 'error', '-select_streams', 'v:0',
       '-show_entries', 'stream=width,height,duration,r_frame_rate',
       '-of', 'json', filePath
-    ], { windowsHide: true, env: process.env, timeout: 10000 }).toString()
-    const s = JSON.parse(out).streams[0]
+    ], { windowsHide: true, env: process.env, timeout: 10000 })
+    const s = JSON.parse(stdout.toString()).streams[0]
     return {
       width: parseInt(s.width),
       height: parseInt(s.height),
@@ -539,15 +541,15 @@ function getVideoInfo(filePath: string): {
   } catch { return null }
 }
 
-function hasAudioStream(filePath: string): boolean {
+async function hasAudioStream(filePath: string): Promise<boolean> {
   try {
     const ffprobeExe = getFfprobeExePath()
-    const out = execFileSync(ffprobeExe, [
+    const { stdout } = await execFileAsync(ffprobeExe, [
       '-v', 'error', '-select_streams', 'a:0',
       '-show_entries', 'stream=index',
       '-of', 'json', filePath
-    ], { windowsHide: true, env: process.env, timeout: 10000 }).toString()
-    const parsed = JSON.parse(out)
+    ], { windowsHide: true, env: process.env, timeout: 10000 })
+    const parsed = JSON.parse(stdout.toString())
     return !!(parsed.streams && parsed.streams.length > 0)
   } catch { return false }
 }
@@ -1674,7 +1676,7 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
         }
       }
 
-      const info = getVideoInfo(videoPath)
+      const info = await getVideoInfo(videoPath)
       if (!info) {
         send('titleAdder:log', { jobId: params.jobId, message: `  ✖ SKIP — Could not read video metadata (ffprobe failed). File may be corrupt or unsupported.`, level: 'error' })
         continue
@@ -1739,7 +1741,7 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
         return lowerEx === videoFilename || exStem === videoStem || exCanonical === canonicalStem
       }) ?? false
       const shouldAddWatermark = !isWatermarkExcluded
-      const hasAudio = hasAudioStream(videoPath)
+      const hasAudio = await hasAudioStream(videoPath)
 
       let primary: string | null = null
       let isUserSelectedAudio = false
@@ -2130,7 +2132,7 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
       for (const item of videoItems) {
         const filePath = item.fullPath
         const stem = path.basename(filePath, path.extname(filePath))
-        const info = getVideoInfo(filePath)
+        const info = await getVideoInfo(filePath)
         const safarInfo = parseSafarFromPath(filePath)
         const prefix = safarInfo.eventCode || getPrefix(stem) || extractEventCodeFromPath(filePath, stem) || 'OTHER'
         let fileDate = Date.now()
