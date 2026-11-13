@@ -438,6 +438,7 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
   })
   _activeJobs.set(jobId, proc)
 
+  let lastProgressEmit = 0
   const handleOutput = (data: Buffer): void => {
     const text = data.toString('utf8', 0, data.length)
     
@@ -448,6 +449,13 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
     if (matchTime) {
       const cur = timeToSeconds(matchTime[1])
       const percent = Math.min((cur / Math.max(totalLength, 1)) * 100, 100)
+      const now = Date.now()
+
+      // Throttle progress events to at most once every 200ms unless complete (prevents IPC & render flooding)
+      if (percent < 100 && now - lastProgressEmit < 200) {
+        return
+      }
+      lastProgressEmit = now
       
       onEvent({ 
         type: 'progress', 

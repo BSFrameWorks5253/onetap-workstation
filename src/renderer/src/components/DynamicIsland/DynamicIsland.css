@@ -74,9 +74,9 @@ body, html, #root {
   width: 430px;
   height: 44px;
   border-radius: 9999px;
-  background: rgba(12, 12, 16, 0.92);
-  backdrop-filter: blur(32px) saturate(190%);
-  -webkit-backdrop-filter: blur(32px) saturate(190%);
+  background: rgba(12, 12, 16, 0.95);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
   border: 1px solid rgba(255, 255, 255, 0.14);
   box-shadow:
     0 12px 30px rgba(0, 0, 0, 0.55),
@@ -245,9 +245,9 @@ body, html, #root {
 
 /* ── Expanded Island Panel ──────────────────────────────────────── */
 .dynamic-island-card {
-  background: rgba(14, 14, 18, 0.95);
-  backdrop-filter: blur(44px) saturate(200%);
-  -webkit-backdrop-filter: blur(44px) saturate(200%);
+  background: rgba(14, 14, 18, 0.98);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 18px;
   padding: 16px 18px;

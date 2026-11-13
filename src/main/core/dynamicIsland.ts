@@ -78,7 +78,7 @@ function toDataUrl(filePath: string): string {
       const ext = path.extname(filePath).toLowerCase()
       const mime = ext === '.png' ? 'image/png' : ext === '.webp' ? 'image/webp' : ext === '.svg' ? 'image/svg+xml' : 'image/jpeg'
       const buf = fs.readFileSync(filePath)
-      if (buf.length < 8 * 1024 * 1024) {
+      if (buf.length < 2 * 1024 * 1024) {
         return `data:${mime};base64,${buf.toString('base64')}`
       }
     }
@@ -203,10 +203,15 @@ export function updateIslandState(partial: Partial<IslandState>): void {
   }
 
   // Pre-generate base64 data URL for local thumbnails so renderer can display immediately without protocol hurdles
-  if (partial.thumbnailPath && !partial.thumbnailDataUrl) {
-    const dataUrl = toDataUrl(partial.thumbnailPath)
-    if (dataUrl) {
-      partial.thumbnailDataUrl = dataUrl
+  // Re-use cached data URL if thumbnail path has not changed to avoid repeated disk reads and heavy base64 serialization
+  if (partial.thumbnailPath) {
+    if (partial.thumbnailPath === state.thumbnailPath && state.thumbnailDataUrl) {
+      partial.thumbnailDataUrl = state.thumbnailDataUrl
+    } else if (!partial.thumbnailDataUrl) {
+      const dataUrl = toDataUrl(partial.thumbnailPath)
+      if (dataUrl) {
+        partial.thumbnailDataUrl = dataUrl
+      }
     }
   }
 
@@ -447,6 +452,9 @@ function registerIslandIPC(): void {
   })
 }
 
+// Throttle tracker to prevent IPC event flooding on high-FPS renders
+let lastBridgeTick = 0
+
 /**
  * Bridge Title Adder Progress events to Dynamic Island
  */
@@ -463,6 +471,15 @@ export function onTitleAdderProgressBridge(evt: any, meta?: {
   task?: string
 }): void {
   const percent = Math.round(evt.percent ?? 0)
+  const now = Date.now()
+  const isBoundary = percent <= 0 || percent >= 100 || (meta?.jobId && meta.jobId !== state.jobId)
+
+  // Throttle updates to at most once every 250ms unless starting, completing, or switching jobs
+  if (!isBoundary && now - lastBridgeTick < 250) {
+    return
+  }
+  lastBridgeTick = now
+
   const fps = evt.fps ? `${evt.fps} fps` : ''
   const speed = evt.speed ? `${evt.speed}x` : ''
   const eta = calculateEta(percent, evt.speed || '1.0')
