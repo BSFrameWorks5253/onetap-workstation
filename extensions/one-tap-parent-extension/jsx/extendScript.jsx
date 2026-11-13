@@ -718,8 +718,10 @@ $.runScript.autoInOutMarkers = function (userChoice, addSeqPrefix) {
 
                 // Track prefix count
                 var cName = seg.cleanName || "";
-                var pMatch = cName.match(/^([A-Za-z]+)/);
-                var pfx = pMatch ? pMatch[1].toUpperCase() : "Other";
+                var pfx = (seg.prefix && seg.prefix !== "OTHER")
+                    ? seg.prefix.toUpperCase()
+                    : (getPrefixFromMarkerName(cName || seg.name || "").prefix || "Other");
+                if (pfx === "OTHER") pfx = "Other";
                 if (!prefixCounts.hasOwnProperty(pfx)) {
                     prefixCounts[pfx] = 0;
                     prefixOrder.push(pfx);
@@ -1430,44 +1432,90 @@ function getPrefixFromMarkerName(name) {
         return { prefix: "NAMAZ", numVal: null, numDigits: 2, hasNum: false };
     }
 
+    function normCode(codeStr) {
+        if (!codeStr) return null;
+        var u = String(codeStr).toUpperCase().replace(/^[^A-Z]+|[^A-Z]+$/g, "");
+        if (u === "NAMAZ") return "NAMAZ";
+        if (u === "NIKAH" || u === "NIKAAH") return "N";
+        if (u === "BETHAK") return "AQ";
+        if (u === "ZIYARAT" || u === "ZIARAT" || u === "ZIYAFAT") return "Z";
+        if (u === "MAJLIS") return "M";
+        if (u === "QADAM") return "Q";
+        if (typeof EVENT_DEFS !== "undefined" && EVENT_DEFS[u]) return u;
+
+        // Check if sub-letter precedes a single-letter or known event code (e.g. '11aN', 'AN', 'BN' -> 'N')
+        if (u.length >= 2) {
+            var tail = u.substring(1);
+            if (tail === "N" || tail === "NIKAH" || tail === "NIKAAH") return "N";
+            if (typeof EVENT_DEFS !== "undefined" && EVENT_DEFS[tail]) return tail;
+        }
+        return null;
+    }
+
     // 1. High-priority Miqaat item folder / clip / marker pattern:
-    // e.g. "1448-04-05 _02E-43-27N-60446783", "1448-04-05 _02E-43-11aN-", "1448-02-29 _01M-01-01N-40905764"
+    // e.g. "1448-04-05 _02E-43-27N-60446783", "1448-04-05 _02E-43-11aN-", "1448-02-29 _01M-01-01N-40905764", "1448-03-12_02E-16-01MZ-30310666"
     // Structure: -[seqIndex]-([eventNum])?([EventCode])(-[fileId])?
-    // Correctly captures 11aN, 11N, 01N, 27N where N is the event!
-    var seqMatch = upper.match(/[-_]\d{1,4}[A-Za-z]?[-_](\d+[a-zA-Z]?)?([A-Za-z]+)(?:[-_]\d+)?$/i) ||
-                   upper.match(/[-_]\d{1,4}[A-Za-z]?[-_](\d+[a-zA-Z]?)?([A-Za-z]+)[-_]/i) ||
-                   upper.match(/[-_](\d+[a-zA-Z]?)?(N)[-_]/i) ||
-                   upper.match(/[-_](\d+[a-zA-Z]?)?([A-Za-z]+)(?:[-_]\d+)?$/i);
+    // NOTE: (\d+)? must ONLY capture pure digits so multi-letter codes like MZ, AQ, BM, BZ, QMZ are NEVER truncated!
+    var seqMatch = upper.match(/[-_]\d{1,4}[A-Za-z]?[-_](\d+)?([A-Za-z]+)(?:[-_]\d+)?$/i) ||
+                   upper.match(/[-_]\d{1,4}[A-Za-z]?[-_](\d+)?([A-Za-z]+)[-_]/i) ||
+                   upper.match(/[-_](\d+)?(N)[-_]/i) ||
+                   upper.match(/[-_](\d+)?([A-Za-z]+)(?:[-_]\d+)?$/i);
 
     if (seqMatch && seqMatch[2]) {
-        var pfx = seqMatch[2];
-        var numStr = seqMatch[1];
-        if (pfx === "NAMAZ") pfx = "NAMAZ";
-        else if (pfx === "NIKAAH" || pfx === "NIKAH") pfx = "N";
-        else if (pfx === "BETHAK") pfx = "AQ";
-        else if (pfx === "ZIYARAT" || pfx === "ZIARAT") pfx = "Z";
-        else if (pfx === "MAJLIS") pfx = "M";
-        else if (pfx === "QADAM") pfx = "Q";
-
-        var parsedSeqNum = numStr ? parseInt(numStr, 10) : null;
-        var seqDigits = numStr ? numStr.length : 2;
-        return {
-            prefix: pfx,
-            numVal: (!isNaN(parsedSeqNum) && parsedSeqNum !== null) ? parsedSeqNum : null,
-            numDigits: seqDigits,
-            hasNum: (!isNaN(parsedSeqNum) && parsedSeqNum !== null)
-        };
+        var resolvedSeqPfx = normCode(seqMatch[2]);
+        if (resolvedSeqPfx) {
+            var numStr = seqMatch[1];
+            var parsedSeqNum = numStr ? parseInt(numStr, 10) : null;
+            return {
+                prefix: resolvedSeqPfx,
+                numVal: (!isNaN(parsedSeqNum) && parsedSeqNum !== null) ? parsedSeqNum : null,
+                numDigits: numStr ? numStr.length : 2,
+                hasNum: (!isNaN(parsedSeqNum) && parsedSeqNum !== null)
+            };
+        }
     }
 
     // 2. Strip date (e.g. 1448-02-29, 02-29) and session tag (e.g. _01M, 01M, _02E, 02E) cleanly
+    // A session tag MUST either have a leading underscore (e.g. _01M) or be followed by a separator / end of string
     var cleaned = upper
         .replace(/^(?:\d{4}[-_.]\d{1,2}[-_.]\d{1,2}|\d{1,2}[-_.]\d{1,2})[\s_.-]*/, "")
-        .replace(/^(?:_\s*)?\d{1,2}[ME][\s_.-]*/, "")
-        .replace(/_\d{1,2}[ME][\s_.-]*/g, "")
+        .replace(/^(?:_\s*\d{1,2}[ME][\s_.-]*|\d{1,2}[ME](?:[\s_.-]+|$))/, "")
+        .replace(/_\d{1,2}[ME](?:[\s_.-]+|$)/g, "")
         .replace(/^\d{3,}[\s_.-]*/, "")
         .replace(/^\s+|\s+$/g, "");
 
-    // 3. Match against known official codes sorted by length descending
+    // 3. Match leading/trailing numbers with event codes
+    // Pattern A: [number] [letters] e.g. "16MZ", "01MZ", "16 MZ", "11aN", "01-MZ", "17Z", "01Z"
+    var mNumFirst = cleaned.match(/(?:^|[\s_.-])(\d+)\s*[-_]?\s*([A-Za-z]{1,8})(?:[\s_.-]|$)/);
+    if (mNumFirst && mNumFirst[2]) {
+        var pfxA = normCode(mNumFirst[2]);
+        if (pfxA) {
+            var pNumA = parseInt(mNumFirst[1], 10);
+            return {
+                prefix: pfxA,
+                numVal: !isNaN(pNumA) ? pNumA : null,
+                numDigits: mNumFirst[1].length,
+                hasNum: !isNaN(pNumA)
+            };
+        }
+    }
+
+    // Pattern B: [letters] [number] e.g. "MZ16", "MZ 16", "MZ-16", "Z01", "Z 17", "N-1"
+    var mCodeFirst = cleaned.match(/(?:^|[\s_.-])([A-Za-z]{1,8})\s*[-_]?\s*(\d+)(?:[\s_.-]|$)/);
+    if (mCodeFirst && mCodeFirst[1]) {
+        var pfxB = normCode(mCodeFirst[1]);
+        if (pfxB) {
+            var pNumB = parseInt(mCodeFirst[2], 10);
+            return {
+                prefix: pfxB,
+                numVal: !isNaN(pNumB) ? pNumB : null,
+                numDigits: mCodeFirst[2].length,
+                hasNum: !isNaN(pNumB)
+            };
+        }
+    }
+
+    // 4. Match against known official codes sorted by length descending (longest codes match first!)
     var officialCodes = [
         "MISBAH", "ONLINE", "IFTETTAH", "ISTEQBAL", "BETHAK", "MAJLIS", "ZIYARAT", "ZIARAT", "NAMAZ",
         "NIKAAH", "NIKAH", "WAAZ", "QMZ", "TQN", "TNQ", "TJR", "IFS", "KGS", "MKB", "MUL", "MYN",
@@ -1475,68 +1523,24 @@ function getPrefixFromMarkerName(name) {
         "M", "N", "Q", "Z", "H"
     ];
 
-    var matchedPfx = null;
-    var matchedNumVal = null;
-    var matchedNumDigits = 2;
-
-    // Check specific trailing patterns: e.g. 11aN, 11N, N01, TNQ
-    var endCodeMatch = cleaned.match(/(?:^|[\s_.-])(?:(\d+)[a-zA-Z]?)?([A-Z]{1,6})(?:[\s_.-]|$)/);
-    if (endCodeMatch && endCodeMatch[2]) {
-        var cand = endCodeMatch[2];
-        if (cand === "NIKAH" || cand === "NIKAAH") cand = "N";
-        else if (cand === "BETHAK") cand = "AQ";
-        else if (cand === "ZIYARAT" || cand === "ZIARAT") cand = "Z";
-        else if (cand === "MAJLIS") cand = "M";
-        else if (cand === "QADAM") cand = "Q";
-        
-        if (typeof EVENT_DEFS !== "undefined" && EVENT_DEFS[cand]) {
-            matchedPfx = cand;
-            if (endCodeMatch[1]) {
-                var pNum0 = parseInt(endCodeMatch[1], 10);
-                if (!isNaN(pNum0)) {
-                    matchedNumVal = pNum0;
-                    matchedNumDigits = endCodeMatch[1].length;
-                }
-            }
+    for (var i = 0; i < officialCodes.length; i++) {
+        var p = officialCodes[i];
+        var regSuffix = new RegExp("(?:^|[\\s_.-])(?:(\\d+)\\s*[-_]?\\s*)?(" + p + ")(?:\\s*[-_]?\\s*(\\d+))?(?:[\\s_.-]|$)", "i");
+        var m = regSuffix.exec(cleaned);
+        if (m) {
+            var resolved = normCode(p);
+            var numCandidate = m[1] || m[3];
+            var pNum = numCandidate ? parseInt(numCandidate, 10) : null;
+            return {
+                prefix: resolved,
+                numVal: (!isNaN(pNum) && pNum !== null) ? pNum : null,
+                numDigits: numCandidate ? numCandidate.length : 2,
+                hasNum: (!isNaN(pNum) && pNum !== null)
+            };
         }
     }
 
-    if (!matchedPfx) {
-        for (var i = 0; i < officialCodes.length; i++) {
-            var p = officialCodes[i];
-            var regSuffix = new RegExp("(?:^|[\\s_.-])(?:(\\d+)\\s*)?(" + p + ")(?:\\s*[-_]?\\s*(\\d+))?(?:[\\s_.-]|$)", "i");
-            var m = regSuffix.exec(cleaned);
-            if (m) {
-                var resolved = p;
-                if (resolved === "NIKAH" || resolved === "NIKAAH") resolved = "N";
-                else if (resolved === "BETHAK") resolved = "AQ";
-                else if (resolved === "ZIYARAT" || resolved === "ZIARAT") resolved = "Z";
-                else if (resolved === "MAJLIS") resolved = "M";
-                else if (resolved === "QADAM") resolved = "Q";
-                matchedPfx = resolved;
-                var numCandidate = m[1] || m[3];
-                if (numCandidate) {
-                    var pNum = parseInt(numCandidate, 10);
-                    if (!isNaN(pNum)) {
-                        matchedNumVal = pNum;
-                        matchedNumDigits = numCandidate.length;
-                    }
-                }
-                break;
-            }
-        }
-    }
-
-    if (!matchedPfx) {
-        return { prefix: "OTHER", numVal: null, numDigits: 2, hasNum: false };
-    }
-
-    return {
-        prefix: matchedPfx,
-        numVal: matchedNumVal,
-        numDigits: matchedNumDigits,
-        hasNum: (matchedNumVal !== null)
-    };
+    return { prefix: "OTHER", numVal: null, numDigits: 2, hasNum: false };
 }
 
 function legacy_getPrefixFromMarkerName(name) {
