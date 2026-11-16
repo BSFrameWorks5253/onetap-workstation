@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell, protocol, session, Tray, Menu, globalShortcut, Notification, dialog, screen } from 'electron'
+import { app, BrowserWindow, shell, protocol, session, Tray, Menu, globalShortcut, Notification, dialog, screen, net } from 'electron'
 import './core/preflightGuards'
 import path, { join } from 'path'
 import { is } from '@electron-toolkit/utils'
@@ -884,15 +884,27 @@ app.whenReady().then(() => {
 
       // Security hardening: disallow access to system directory / sensitive files
       const isSystemRoot = /^[a-zA-Z]:\\(windows|system32|recovery|\$recycle\.bin|system volume information)\b/i.test(rawPath);
-      const isSensitiveFile = /\\(\.ssh|\.gnupg|\.aws|\.env|sam|ntuser\.dat)\b/i.test(rawPath);
-      const sensitivePattern = { test: () => isSystemRoot || isSensitiveFile };
-      if (sensitivePattern.test(rawPath)) {
+      const isSensitiveFile = /\\(\.ssh|\.gnupg|\.aws|\.env|system32\\config\\sam|ntuser\.dat)\b/i.test(rawPath);
+      if (isSystemRoot || isSensitiveFile) {
         return new Response('Access Denied', { status: 403 });
       }
 
       // Security: Only log in development mode to avoid leaking filesystem layout in production
       if (is.dev) {
         console.log('[local-resource] Request URL:', request.url, '→ Resolved path:', rawPath);
+      }
+
+      const { existsSync } = await import('fs')
+      if (!existsSync(rawPath)) {
+        return new Response('File not found', { status: 404 })
+      }
+
+      // Fast native Chromium file fetch (zero-copy, byte ranges, instant rendering)
+      try {
+        return await net.fetch(pathToFileURL(rawPath).toString())
+      } catch (netErr: any) {
+        // Fallback to manual file response if net.fetch fails
+        console.warn('[local-resource] net.fetch fallback:', netErr?.message)
       }
 
       // Determine MIME type from extension
@@ -905,6 +917,10 @@ app.whenReady().then(() => {
         '.gif': 'image/gif', '.webp': 'image/webp', '.bmp': 'image/bmp',
         '.svg': 'image/svg+xml', '.tiff': 'image/tiff', '.tif': 'image/tiff',
         '.ico': 'image/x-icon', '.avif': 'image/avif', '.heic': 'image/heif',
+        '.cr2': 'image/x-canon-cr2', '.cr3': 'image/x-canon-cr3',
+        '.nef': 'image/x-nikon-nef', '.arw': 'image/x-sony-arw',
+        '.dng': 'image/x-adobe-dng', '.orf': 'image/x-olympus-orf',
+        '.rw2': 'image/x-panasonic-rw2', '.raf': 'image/x-fuji-raf',
         '.mp4': 'video/mp4', '.mkv': 'video/x-matroska', '.avi': 'video/x-msvideo',
         '.mov': 'video/quicktime', '.webm': 'video/webm', '.wmv': 'video/x-ms-wmv',
         '.flv': 'video/x-flv', '.m4v': 'video/x-m4v', '.ts': 'video/mp2t',
@@ -914,14 +930,10 @@ app.whenReady().then(() => {
         '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         '.md': 'text/plain', '.txt': 'text/plain',
       }
-      const contentType = MIME[extname]
-      if (!contentType) {
-        return new Response('Forbidden resource type', { status: 403 })
-      }
+      const contentType = MIME[extname] || 'application/octet-stream'
 
       // Read file from disk and return as Response
       const { readFile, stat } = await import('fs/promises')
-      const { existsSync } = await import('fs')
 
       if (!existsSync(rawPath)) {
         return new Response('File not found', { status: 404 })

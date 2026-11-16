@@ -116,27 +116,49 @@ export function toLocalResourceUrl(absolutePath: string): string {
 const api = (): any => (window as any).api
 
 // ── Image Viewer Stage ───────────────────────────────────────────
-function ImagePane({ src, info }: { src: string; info: FileInfo | null }) {
+interface ImagePaneProps {
+  src: string
+  info: FileInfo | null
+  zoom: number
+  setZoom: React.Dispatch<React.SetStateAction<number>>
+  rotate: number
+  setRotate: React.Dispatch<React.SetStateAction<number>>
+  onFallback?: () => void
+}
+
+function ImagePane({
+  src,
+  info,
+  zoom,
+  setZoom,
+  rotate,
+  setRotate: _setRotate,
+  onFallback
+}: ImagePaneProps) {
   const stageRef = useRef<HTMLDivElement>(null)
-  const [zoom, setZoom] = useState(1)
-  const [rotate, setRotate] = useState(0)
+  const imgRef = useRef<HTMLImageElement>(null)
   const [offset, setOffset] = useState({ x: 0, y: 0 })
   const [imgLoaded, setImgLoaded] = useState(false)
   const dragStart = useRef<{ mx: number; my: number; ox: number; oy: number } | null>(null)
 
-  function resetView(): void {
-    setZoom(1)
-    setRotate(0)
+  // Reset offset and sync loaded state on src change
+  useEffect(() => {
     setOffset({ x: 0, y: 0 })
-    setImgLoaded(false)
-  }
-  useEffect(resetView, [src])
+    if (imgRef.current && imgRef.current.complete && imgRef.current.naturalWidth > 0) {
+      setImgLoaded(true)
+    } else {
+      setImgLoaded(false)
+    }
+  }, [src])
 
-  const handleWheel = useCallback((e: WheelEvent) => {
-    e.preventDefault()
-    const delta = e.deltaY > 0 ? -0.12 : 0.12
-    setZoom((z) => Math.min(Math.max(0.1, z + delta * z), 12))
-  }, [])
+  const handleWheel = useCallback(
+    (e: WheelEvent) => {
+      e.preventDefault()
+      const delta = e.deltaY > 0 ? -0.15 : 0.15
+      setZoom((z) => Math.min(Math.max(0.1, Math.round((z + delta * z) * 100) / 100), 12))
+    },
+    [setZoom]
+  )
 
   useEffect(() => {
     const el = stageRef.current
@@ -146,6 +168,7 @@ function ImagePane({ src, info }: { src: string; info: FileInfo | null }) {
   }, [handleWheel])
 
   function onMouseDown(e: React.MouseEvent): void {
+    if (e.button !== 0) return
     dragStart.current = { mx: e.clientX, my: e.clientY, ox: offset.x, oy: offset.y }
     stageRef.current?.classList.add('dragging')
   }
@@ -184,13 +207,26 @@ function ImagePane({ src, info }: { src: string; info: FileInfo | null }) {
         </div>
       )}
       <img
+        ref={imgRef}
         className="fv-img"
         src={src}
         alt="preview"
-        style={{ transform, opacity: imgLoaded ? 1 : 0, transition: 'opacity 0.3s ease' }}
+        style={{
+          transform,
+          opacity: imgLoaded ? 1 : 0,
+          transition: dragStart.current ? 'none' : 'opacity 0.25s ease'
+        }}
         draggable={false}
-        onLoad={() => setImgLoaded(true)}
-        onError={() => setImgLoaded(true)}
+        onLoad={() => {
+          setImgLoaded(true)
+        }}
+        onError={() => {
+          if (onFallback) {
+            onFallback()
+          } else {
+            setImgLoaded(true)
+          }
+        }}
       />
       {infoText && <div className="fv-img-info">{infoText}</div>}
     </div>

@@ -31,6 +31,8 @@
     "release": "node scripts/publish_release.js",
     "release:publish": "node scripts/publish_release.js --publish",
     "release:full": "npm run build && node scripts/build-win.js nsis",
+    "make-exe": "python scripts/make_exe_cross.py",
+    "make-exe:cross": "python scripts/make_exe_cross.py",
     "dist": "npm run build:win:nsis"
   },
   "dependencies": {
