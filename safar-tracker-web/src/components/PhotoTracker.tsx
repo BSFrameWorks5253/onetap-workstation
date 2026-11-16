@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Camera,
   RefreshCw,
@@ -170,6 +170,19 @@ export default function PhotoTracker({
   const [quickChip, setQuickChip] = useState<'all' | 'needs_review' | 'ready_deliver' | 'my_edits'>('all');
   const [isBatchMode, setIsBatchMode] = useState<boolean>(false);
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
+  const photoGridRef = useRef<HTMLDivElement>(null);
+
+  const handlePhotoGridScroll = () => {
+    const grid = photoGridRef.current;
+    if (!grid || window.innerWidth > 768) return;
+    const scrollLeft = grid.scrollLeft;
+    const colWidth = grid.offsetWidth;
+    if (colWidth <= 0) return;
+    const activeIdx = Math.min(PHOTO_COLUMNS.length - 1, Math.max(0, Math.round(scrollLeft / (colWidth * 0.9))));
+    if (PHOTO_COLUMNS[activeIdx] && PHOTO_COLUMNS[activeIdx].id !== activeMobileStage) {
+      setActiveMobileStage(PHOTO_COLUMNS[activeIdx].id);
+    }
+  };
 
   // Sync photo folders with Google Drive & Sheet
   const loadPhotoStatus = async () => {
@@ -750,7 +763,7 @@ export default function PhotoTracker({
             })}
           </div>
 
-          <div className="kanban-board-grid photo-kanban-board-grid">
+          <div ref={photoGridRef} onScroll={handlePhotoGridScroll} className="kanban-board-grid photo-kanban-board-grid">
             {PHOTO_COLUMNS.map(col => {
               const list = filteredColumnTasks[col.id] || [];
               return (

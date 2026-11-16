@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
   Kanban,
   RotateCw,
@@ -180,6 +180,19 @@ export default function OngoingSafarKanban({
   const [filterChip, setFilterChip] = useState<'all' | 'my_pending' | 'ready_deliver' | 'needs_photo_review'>('all');
   const [isBatchMode, setIsBatchMode] = useState<boolean>(false);
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
+  const kanbanGridRef = useRef<HTMLDivElement>(null);
+
+  const handleGridScroll = () => {
+    const grid = kanbanGridRef.current;
+    if (!grid || window.innerWidth > 768) return;
+    const scrollLeft = grid.scrollLeft;
+    const colWidth = grid.offsetWidth;
+    if (colWidth <= 0) return;
+    const activeIdx = Math.min(COLUMNS.length - 1, Math.max(0, Math.round(scrollLeft / (colWidth * 0.9))));
+    if (COLUMNS[activeIdx] && COLUMNS[activeIdx].id !== activeMobileStage) {
+      setActiveMobileStage(COLUMNS[activeIdx].id);
+    }
+  };
 
   const showToast = (msg: string) => {
     setActionNotice(msg);
@@ -711,7 +724,7 @@ export default function OngoingSafarKanban({
       </div>
 
       {/* 5-Column Kanban Board */}
-      <div className="kanban-board-grid">
+      <div ref={kanbanGridRef} onScroll={handleGridScroll} className="kanban-board-grid">
         {COLUMNS.map((col, colIdx) => {
           const list = columnTasks[col.id] || [];
           return (

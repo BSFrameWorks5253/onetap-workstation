@@ -1,4 +1,4 @@
-const CACHE = 'one-tap-safar-v12-20261116-apple-glass'
+const CACHE = 'one-tap-safar-v15-mobile-responsive-final'
 
 self.addEventListener('install', event => {
   event.waitUntil(
@@ -48,7 +48,23 @@ self.addEventListener('fetch', event => {
     return
   }
 
-  // Stale-while-revalidate for static assets
+  // Network-first for CSS/JS scripts to guarantee immediate mobile styling updates
+  if (url.pathname.endsWith('.css') || url.pathname.endsWith('.js') || url.pathname.includes('/assets/')) {
+    event.respondWith(
+      fetch(event.request)
+        .then(networkResponse => {
+          if (networkResponse.status === 200) {
+            const copy = networkResponse.clone()
+            caches.open(CACHE).then(cache => cache.put(event.request, copy))
+          }
+          return networkResponse
+        })
+        .catch(() => caches.match(event.request))
+    )
+    return
+  }
+
+  // Cache-first for images, fonts, and media
   event.respondWith(
     caches.match(event.request).then(cachedResponse => {
       const fetchPromise = fetch(event.request).then(networkResponse => {
