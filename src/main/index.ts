@@ -879,6 +879,8 @@ app.whenReady().then(() => {
       let rawPath = decodeURIComponent(cleanUrl);
       if (/^\/?[a-zA-Z]:[\\\/]/.test(rawPath)) {
         rawPath = rawPath.replace(/^\//, '');
+      } else if (/^[a-zA-Z][\\\/]/.test(rawPath)) {
+        rawPath = rawPath[0] + ':' + rawPath.slice(1);
       }
       rawPath = path.resolve(rawPath.replace(/\//g, '\\'));
 
