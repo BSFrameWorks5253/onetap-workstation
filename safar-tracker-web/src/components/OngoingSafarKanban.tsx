@@ -431,78 +431,76 @@ export default function OngoingSafarKanban({
       {/* Top Banner / Actions Bar */}
       <div className="kanban-top-banner">
         <div className="kanban-banner-hero-section">
-          <div>
-            <span className="kanban-banner-badge">
-              Active Safar Pipeline
-            </span>
-            <div className="kanban-banner-selector-row">
-              <select
-                aria-label="Select Ongoing Safar"
-                value={selectedSafar}
-                onChange={e => {
-                  const val = e.target.value;
-                  setSelectedSafar(val);
-                  onSelectSafar?.(val);
-                }}
-                className="kanban-safar-select"
-              >
-                {ongoingSafars.map(s => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
+          <span className="kanban-banner-badge">
+            Active Safar Pipeline
+          </span>
+          <div className="kanban-banner-selector-row">
+            <select
+              aria-label="Select Ongoing Safar"
+              value={selectedSafar}
+              onChange={e => {
+                const val = e.target.value;
+                setSelectedSafar(val);
+                onSelectSafar?.(val);
+              }}
+              className="kanban-safar-select"
+            >
+              {ongoingSafars.map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
 
+            <button
+              type="button"
+              className="kanban-banner-whatsapp-btn"
+              onClick={() => {
+                const base = getPublicWebsiteOrigin();
+                const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(
+                  `📢 *Ongoing Safar Update (${selectedSafar})*\n` +
+                  `📍 Progress: ${uploadedCount} of ${totalCount} dates delivered (${totalCount > 0 ? Math.round((uploadedCount / totalCount) * 100) : 0}%)\n` +
+                  `🔗 ${base}/kanban?safar=${encodeURIComponent(selectedSafar)}`
+                )}`;
+                window.open(url, '_blank');
+              }}
+              title={`Share WhatsApp update for ${selectedSafar}`}
+            >
+              <MessageCircle size={14} />
+              <span>WhatsApp Briefing</span>
+            </button>
+
+            {onDeleteSafar && selectedSafar && selectedSafar !== 'Active Safar' && (
               <button
                 type="button"
-                className="kanban-banner-whatsapp-btn"
-                onClick={() => {
-                  const base = getPublicWebsiteOrigin();
-                  const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(
-                    `📢 *Ongoing Safar Update (${selectedSafar})*\n` +
-                    `📍 Progress: ${uploadedCount} of ${totalCount} dates delivered (${totalCount > 0 ? Math.round((uploadedCount / totalCount) * 100) : 0}%)\n` +
-                    `🔗 ${base}/kanban?safar=${encodeURIComponent(selectedSafar)}`
-                  )}`;
-                  window.open(url, '_blank');
-                }}
-                title={`Share WhatsApp update for ${selectedSafar}`}
+                title={`Permanently delete ${selectedSafar} from all views`}
+                onClick={() => onDeleteSafar(selectedSafar)}
+                className="kanban-banner-delete-btn"
               >
-                <MessageCircle size={14} />
-                <span>WhatsApp Briefing</span>
+                <Trash2 size={12} />
+                <span>Remove Safar</span>
               </button>
-
-              {onDeleteSafar && selectedSafar && selectedSafar !== 'Active Safar' && (
-                <button
-                  type="button"
-                  title={`Permanently delete ${selectedSafar} from all views`}
-                  onClick={() => onDeleteSafar(selectedSafar)}
-                  className="kanban-banner-delete-btn"
-                >
-                  <Trash2 size={12} />
-                  <span>Remove Safar</span>
-                </button>
-              )}
-            </div>
-
-            <div className="kanban-banner-stats-pill">
-              <AnimatedNumber value={totalCount} /> dates · <strong style={{ color: '#059669' }}><AnimatedNumber value={uploadedCount} /> uploaded</strong> · <strong style={{ color: '#d97706' }}><AnimatedNumber value={pendingCount} /> pending</strong>
-            </div>
-
-            {/* Mini Multi-Color Stage Pipeline Bar in Kanban Topbar */}
-            {totalCount > 0 && (
-              <div className="kanban-banner-pipeline-wrap">
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', fontWeight: 700, marginBottom: '4px' }}>
-                  <span style={{ color: '#4f46e5' }}><AnimatedNumber value={Math.round(((columnTasks.editing_pending.length * 10 + columnTasks.editing.length * 35 + columnTasks.upload_pending.length * 65 + columnTasks.uploaded.length * 90 + columnTasks.jameya.length * 100) / (totalCount || 1)) / 100 * 100)} />% Pipeline</span>
-                  <span style={{ color: '#059669' }}><AnimatedNumber value={Math.round((uploadedCount / (totalCount || 1)) * 100)} />% Delivered (<AnimatedNumber value={uploadedCount} />/{totalCount})</span>
-                </div>
-                <div className="multicolor-progress-bar mini" role="progressbar" aria-label={`${selectedSafar} stage progress`}>
-                  {columnTasks.editing_pending.length > 0 && <span className="stage-segment stage-editing_pending" style={{ width: `${(columnTasks.editing_pending.length / (totalCount || 1)) * 100}%` }} title={`Editing Pending: ${columnTasks.editing_pending.length}`} />}
-                  {columnTasks.editing.length > 0 && <span className="stage-segment stage-editing" style={{ width: `${(columnTasks.editing.length / (totalCount || 1)) * 100}%` }} title={`In Progress: ${columnTasks.editing.length}`} />}
-                  {columnTasks.upload_pending.length > 0 && <span className="stage-segment stage-upload_pending" style={{ width: `${(columnTasks.upload_pending.length / (totalCount || 1)) * 100}%` }} title={`Upload Pending: ${columnTasks.upload_pending.length}`} />}
-                  {columnTasks.uploaded.length > 0 && <span className="stage-segment stage-uploaded" style={{ width: `${(columnTasks.uploaded.length / (totalCount || 1)) * 100}%` }} title={`Uploaded: ${columnTasks.uploaded.length}`} />}
-                  {columnTasks.jameya.length > 0 && <span className="stage-segment stage-jameya" style={{ width: `${(columnTasks.jameya.length / (totalCount || 1)) * 100}%` }} title={`AlJamea Done: ${columnTasks.jameya.length}`} />}
-                </div>
-              </div>
             )}
           </div>
+
+          <div className="kanban-banner-stats-pill">
+            <AnimatedNumber value={totalCount} /> dates · <strong style={{ color: '#059669' }}><AnimatedNumber value={uploadedCount} /> uploaded</strong> · <strong style={{ color: '#d97706' }}><AnimatedNumber value={pendingCount} /> pending</strong>
+          </div>
+
+          {/* Mini Multi-Color Stage Pipeline Bar in Kanban Topbar */}
+          {totalCount > 0 && (
+            <div className="kanban-banner-pipeline-wrap">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', fontWeight: 700, marginBottom: '4px' }}>
+                <span style={{ color: '#4f46e5' }}><AnimatedNumber value={Math.round(((columnTasks.editing_pending.length * 10 + columnTasks.editing.length * 35 + columnTasks.upload_pending.length * 65 + columnTasks.uploaded.length * 90 + columnTasks.jameya.length * 100) / (totalCount || 1)) / 100 * 100)} />% Pipeline</span>
+                <span style={{ color: '#059669' }}><AnimatedNumber value={Math.round((uploadedCount / (totalCount || 1)) * 100)} />% Delivered (<AnimatedNumber value={uploadedCount} />/{totalCount})</span>
+              </div>
+              <div className="multicolor-progress-bar mini" role="progressbar" aria-label={`${selectedSafar} stage progress`}>
+                {columnTasks.editing_pending.length > 0 && <span className="stage-segment stage-editing_pending" style={{ width: `${(columnTasks.editing_pending.length / (totalCount || 1)) * 100}%` }} title={`Editing Pending: ${columnTasks.editing_pending.length}`} />}
+                {columnTasks.editing.length > 0 && <span className="stage-segment stage-editing" style={{ width: `${(columnTasks.editing.length / (totalCount || 1)) * 100}%` }} title={`In Progress: ${columnTasks.editing.length}`} />}
+                {columnTasks.upload_pending.length > 0 && <span className="stage-segment stage-upload_pending" style={{ width: `${(columnTasks.upload_pending.length / (totalCount || 1)) * 100}%` }} title={`Upload Pending: ${columnTasks.upload_pending.length}`} />}
+                {columnTasks.uploaded.length > 0 && <span className="stage-segment stage-uploaded" style={{ width: `${(columnTasks.uploaded.length / (totalCount || 1)) * 100}%` }} title={`Uploaded: ${columnTasks.uploaded.length}`} />}
+                {columnTasks.jameya.length > 0 && <span className="stage-segment stage-jameya" style={{ width: `${(columnTasks.jameya.length / (totalCount || 1)) * 100}%` }} title={`AlJamea Done: ${columnTasks.jameya.length}`} />}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Search, Rescan, Add Date Controls */}
@@ -522,7 +520,7 @@ export default function OngoingSafarKanban({
             type="button"
             onClick={handleTriggerRescan}
             title="Reset cache and rescan workstation for present folders only"
-            className="kanban-rescan-btn"
+            className="kanban-rescan-btn apple-secondary-btn"
           >
             <RotateCw size={14} className={rescanTriggered ? 'animate-spin' : ''} />
             <span>Rescan Disk</span>
@@ -531,7 +529,7 @@ export default function OngoingSafarKanban({
           <button
             type="button"
             onClick={() => setIsAddOpen(!isAddOpen)}
-            className="kanban-add-btn"
+            className="kanban-add-btn apple-primary-btn"
           >
             <Plus size={15} />
             <span>Add Date</span>

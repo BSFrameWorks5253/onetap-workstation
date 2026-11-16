@@ -1,4 +1,4 @@
-const CACHE = 'one-tap-safar-v16-telemetry-buttons-fixed'
+const CACHE = 'one-tap-safar-v17-kanban-banner-proper'
 
 self.addEventListener('install', event => {
   event.waitUntil(

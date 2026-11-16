@@ -1613,22 +1613,31 @@ body {
 
 /* Kanban Top Banner Modern Styling */
 .kanban-top-banner {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  background: var(--surface, #ffffff);
-  border: 1px solid var(--border, #e2e8f0);
-  border-radius: 18px;
-  padding: 16px 20px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 14px 20px !important;
+  background: var(--surface, #ffffff) !important;
+  border: 1px solid var(--border, #e2e8f0) !important;
+  border-radius: 18px !important;
+  padding: 14px 20px !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03) !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  height: auto !important;
 }
 
 .kanban-banner-hero-section {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 14px;
-  flex-wrap: wrap;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  text-align: left !important;
+  gap: 4px !important;
+  flex: 1 1 auto !important;
+  min-width: 280px !important;
+  height: auto !important;
 }
 
 .kanban-banner-badge {
@@ -1711,12 +1720,14 @@ body {
 }
 
 .kanban-banner-controls-wrap {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  padding-top: 10px;
-  border-top: 1px solid var(--border, #e2e8f0);
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 8px !important;
+  flex-wrap: wrap !important;
+  margin-left: auto !important;
+  border-top: none !important;
+  padding-top: 0 !important;
 }
 
 .kanban-search-box-wrap {
@@ -5453,20 +5464,29 @@ input[type="text"]:focus, input[type="search"]:focus, select:focus {
   border-radius: var(--radius-interactive, 18px) !important;
   padding: 14px 20px !important;
   display: flex !important;
+  flex-direction: row !important;
   flex-wrap: wrap !important;
   align-items: center !important;
   justify-content: space-between !important;
-  gap: 12px 20px !important;
+  gap: 14px 20px !important;
   box-shadow: var(--shadow-craft-floating) !important;
-  margin-bottom: 4px !important;
+  margin-bottom: 6px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  height: auto !important;
+  min-height: unset !important;
 }
 
 .kanban-banner-hero-section {
   display: flex !important;
   flex-direction: column !important;
+  align-items: flex-start !important;
+  text-align: left !important;
   gap: 4px !important;
-  flex: 1 1 360px !important;
-  min-width: 0 !important;
+  flex: 1 1 auto !important;
+  min-width: 280px !important;
+  max-width: 100% !important;
+  height: auto !important;
 }
 
 .kanban-banner-badge {
@@ -5561,8 +5581,11 @@ input[type="text"]:focus, input[type="search"]:focus, select:focus {
 .kanban-banner-controls-wrap {
   display: flex !important;
   align-items: center !important;
+  justify-content: flex-end !important;
   flex-wrap: wrap !important;
   gap: 8px !important;
+  flex: 0 0 auto !important;
+  margin-left: auto !important;
   border-top: none !important;
   padding-top: 0 !important;
 }
@@ -5782,8 +5805,11 @@ input[type="text"]:focus, input[type="search"]:focus, select:focus {
   }
 
   .kanban-banner-hero-section {
-    flex: 1 1 100% !important;
+    flex: 0 0 auto !important;
     width: 100% !important;
+    height: auto !important;
+    align-items: flex-start !important;
+    text-align: left !important;
   }
 
   .kanban-safar-select {
@@ -5806,6 +5832,7 @@ input[type="text"]:focus, input[type="search"]:focus, select:focus {
     flex-wrap: wrap !important;
     gap: 8px !important;
     width: 100% !important;
+    margin-left: 0 !important;
     border-top: 1px dashed var(--color-hairline, #e8e5df) !important;
     padding-top: 10px !important;
   }
