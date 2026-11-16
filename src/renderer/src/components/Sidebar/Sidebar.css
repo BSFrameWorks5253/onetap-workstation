@@ -257,8 +257,8 @@
 }
 
 .nav-subitem--active {
-  background: color-mix(in srgb, var(--item-accent, var(--theme-accent)) 18%, var(--surface-2)) !important;
-  border-color: color-mix(in srgb, var(--item-accent, var(--theme-accent)) 50%, var(--border)) !important;
+  background: color-mix(in srgb, var(--item-accent, var(--theme-accent)) 16%, var(--surface-2)) !important;
+  border-color: color-mix(in srgb, var(--item-accent, var(--theme-accent)) 48%, var(--border)) !important;
   box-shadow:
     0 3px 12px color-mix(in srgb, var(--item-accent, var(--theme-accent)) 22%, transparent),
     inset 0 1px 0 var(--specular-highlight) !important;
@@ -266,17 +266,20 @@
 
 /* Left accent sliding active bar */
 .nav-subitem--active::before {
-  content: '';
+  content: '' !important;
+  display: block !important;
   position: absolute;
   left: 0;
-  top: 4px;
-  bottom: 4px;
-  width: 3.5px;
+  top: 5px;
+  bottom: 5px;
+  width: 4px;
   border-radius: 0 4px 4px 0;
   background: var(--item-accent, var(--theme-accent)) !important;
   box-shadow:
     0 0 10px color-mix(in srgb, var(--item-accent, var(--theme-accent)) 85%, transparent),
-    0 0 3px color-mix(in srgb, var(--item-accent, var(--theme-accent)) 60%, transparent) !important;
+    0 0 4px color-mix(in srgb, var(--item-accent, var(--theme-accent)) 60%, transparent) !important;
+  z-index: 2;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .nav-subitem-main {
@@ -340,6 +343,12 @@
   letter-spacing: 0.02em;
   white-space: nowrap;
   flex-shrink: 0;
+}
+
+.nav-subitem--active .nav-subitem-badge {
+  background: color-mix(in srgb, var(--item-accent, var(--theme-accent)) 26%, transparent) !important;
+  border-color: color-mix(in srgb, var(--item-accent, var(--theme-accent)) 55%, transparent) !important;
+  box-shadow: 0 0 8px color-mix(in srgb, var(--item-accent, var(--theme-accent)) 25%, transparent) !important;
 }
 
 .nav-subitem-sublabel {

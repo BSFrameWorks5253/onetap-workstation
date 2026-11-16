@@ -170,17 +170,20 @@
 
 /* Left accent sliding active bar */
 .sidebar-flyout-item--active::before {
-  content: '';
+  content: '' !important;
+  display: block !important;
   position: absolute;
   left: 0;
   top: 5px;
   bottom: 5px;
-  width: 3.5px;
+  width: 4px;
   border-radius: 0 4px 4px 0;
-  background: var(--item-accent);
+  background: var(--item-accent) !important;
   box-shadow:
     0 0 10px color-mix(in srgb, var(--item-accent) 85%, transparent),
-    0 0 3px color-mix(in srgb, var(--item-accent) 60%, transparent);
+    0 0 4px color-mix(in srgb, var(--item-accent) 60%, transparent) !important;
+  z-index: 2;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .sidebar-flyout-bullet {
