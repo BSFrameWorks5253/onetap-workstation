@@ -22,7 +22,20 @@ $cerPath = Join-Path (Split-Path -Parent $PSScriptRoot) "build\unidesk_dev.cer"
 
 if (-not (Test-Path $pfxPath)) {
     Write-Host "Creating developer certificate first..."
-    & "$PSScriptRoot\create_dev_cert.ps1"
+    $buildDir = Split-Path -Parent $pfxPath
+    if (-not (Test-Path $buildDir)) { New-Item -ItemType Directory -Path $buildDir -Force | Out-Null }
+    $Subject = "CN=BSFramework.UniDesk"
+    $existing = Get-ChildItem Cert:\CurrentUser\My -CodeSigningCert -ErrorAction SilentlyContinue | Where-Object { $_.Subject -eq $Subject } | Select-Object -First 1
+    if (-not $existing) {
+        $existing = New-SelfSignedCertificate -Type CodeSigningCert -Subject $Subject -CertStoreLocation "Cert:\CurrentUser\My" -KeyUsage DigitalSignature -FriendlyName "Uni Desk Developer Certificate" -NotAfter (Get-Date).AddYears(5)
+    }
+    $secPwd = ConvertTo-SecureString -String $Password -Force -AsPlainText
+    Export-PfxCertificate -Cert $existing -FilePath $pfxPath -Password $secPwd | Out-Null
+    Export-Certificate -Cert $existing -FilePath $cerPath | Out-Null
+    $store = New-Object System.Security.Cryptography.X509Certificates.X509Store("TrustedPeople", "CurrentUser")
+    $store.Open("ReadWrite")
+    $store.Add($existing)
+    $store.Close()
 }
 
 if (-not $AppxPath) {

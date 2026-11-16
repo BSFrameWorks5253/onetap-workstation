@@ -31,16 +31,6 @@
     "release": "node scripts/publish_release.js",
     "release:publish": "node scripts/publish_release.js --publish",
     "release:full": "npm run build && node scripts/build-win.js nsis",
-    "make-exe": "python3 scripts/make_exe_cross.py",
-    "make-exe:gui": "python3 scripts/make_exe_cross.py",
-    "make-exe:full": "python3 scripts/make_exe_cross.py",
-    "make-exe:cross": "python3 scripts/make_exe_cross.py",
-    "fm:install": "npm --prefix packages/file-manager install",
-    "fm:dev": "npm --prefix packages/file-manager run dev",
-    "fm:build": "npm --prefix packages/file-manager run build",
-    "test:fade": "node scripts/test_fade_logic.js",
-    "analyze:cache": "python scripts/codebase_analyzer.py",
-    "analyze:force": "python scripts/codebase_analyzer.py --force",
     "dist": "npm run build:win:nsis"
   },
   "dependencies": {
