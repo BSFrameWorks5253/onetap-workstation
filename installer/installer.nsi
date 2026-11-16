@@ -8,7 +8,7 @@
 Unicode true
 
 !ifndef VERSION
-  !define VERSION "26.11.24"
+  !define VERSION "26.11.26"
 !endif
 
 !ifndef OUTDIR
