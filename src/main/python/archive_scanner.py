@@ -291,7 +291,7 @@ def normalize_event_code(code: str) -> str:
 def is_date_folder_name(name: str) -> bool:
     """Accurately detects if a folder represents a session date folder."""
     clean = name.strip().lower()
-    if clean in ('final', 'final titles', 'output', 'export', 'exports', 'dvd', 'raw', 'projects'):
+    if clean in ('final', 'final titles', 'output', 'export', 'exports', 'dvd', 'raw', 'projects') or re.match(r'^(?:cam|camera|cams|audio|mic|card|b-roll|footage|raw|dump)\b', clean):
         return False
     # Standard Date Folder Patterns:
     # 1. 4-digit year + month + day: "1448-08-15 _01M", "1448-03-13", "2026-09-05"

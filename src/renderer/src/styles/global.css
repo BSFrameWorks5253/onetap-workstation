@@ -11,7 +11,7 @@
   --theme-accent-hv: var(--accent-dashboard-hv);
   --theme-accent-soft: var(--accent-dashboard-soft);
   --theme-glow: var(--shadow-glow);
-  --page-bg-light: #F4F7FC;
+  --page-bg-light: #FAF9F4;
   position: relative;
   transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
 }
@@ -21,21 +21,28 @@
   --theme-accent-hv: var(--accent-dashboard-hv);
   --theme-accent-soft: var(--accent-dashboard-soft);
   --theme-glow: var(--shadow-glow);
-  --page-bg-light: #F4F7FC;
+  --page-bg-light: #FAF9F4;
 }
 .app-shell[data-page="adder"] {
   --theme-accent: var(--accent-adder);
   --theme-accent-hv: var(--accent-adder-hv);
   --theme-accent-soft: var(--accent-adder-soft);
-  --theme-glow: var(--shadow-glow-pink);
-  --page-bg-light: #FFF5F7;
+  --theme-glow: var(--shadow-glow-purple);
+  --page-bg-light: #F7F6FD;
 }
 .app-shell[data-page="converter"] {
   --theme-accent: var(--accent-converter);
   --theme-accent-hv: var(--accent-converter-hv);
   --theme-accent-soft: var(--accent-converter-soft);
   --theme-glow: var(--shadow-glow-emerald);
-  --page-bg-light: #F2FBF8;
+  --page-bg-light: #F2FBF6;
+}
+.app-shell[data-page="prproj"] {
+  --theme-accent: var(--accent-prproj);
+  --theme-accent-hv: var(--accent-prproj-hv);
+  --theme-accent-soft: var(--accent-prproj-soft);
+  --theme-glow: var(--shadow-glow-purple);
+  --page-bg-light: #F7F5FE;
 }
 .app-shell[data-page="drivesync"] {
   --theme-accent: var(--accent-drivesync);
@@ -48,43 +55,43 @@
   --theme-accent: var(--accent-folder);
   --theme-accent-hv: var(--accent-folder-hv);
   --theme-accent-soft: var(--accent-folder-soft);
-  --theme-glow: var(--shadow-glow-purple);
-  --page-bg-light: #F8F5FE;
+  --theme-glow: var(--shadow-glow-pink);
+  --page-bg-light: #FDF4FC;
 }
 .app-shell[data-page="stats"] {
   --theme-accent: var(--accent-stats);
   --theme-accent-hv: var(--accent-stats-hv);
   --theme-accent-soft: var(--accent-stats-soft);
-  --theme-glow: var(--shadow-glow-cyan);
-  --page-bg-light: #F2FAFE;
+  --theme-glow: var(--shadow-glow-pink);
+  --page-bg-light: #FCF4F6;
 }
 .app-shell[data-page="notes"] {
   --theme-accent: var(--accent-notes);
   --theme-accent-hv: var(--accent-notes-hv);
   --theme-accent-soft: var(--accent-notes-soft);
-  --theme-glow: var(--shadow-glow-pink);
-  --page-bg-light: #FEF4FC;
+  --theme-glow: var(--shadow-glow-amber);
+  --page-bg-light: #FEF7F0;
 }
 .app-shell[data-page="cloud"] {
   --theme-accent: var(--accent-cloud);
   --theme-accent-hv: var(--accent-cloud-hv);
   --theme-accent-soft: var(--accent-cloud-soft);
-  --theme-glow: var(--shadow-glow);
-  --page-bg-light: #F2F7FE;
+  --theme-glow: var(--shadow-glow-cyan);
+  --page-bg-light: #F2F8FD;
 }
 .app-shell[data-page="gdrive"] {
-  --theme-accent: #4285F4;
-  --theme-accent-hv: #2563EB;
-  --theme-accent-soft: rgba(66, 133, 244, 0.12);
-  --theme-glow: rgba(66, 133, 244, 0.35);
-  --page-bg-light: #F4F8FF;
+  --theme-accent: #0284C7;
+  --theme-accent-hv: #0369A1;
+  --theme-accent-soft: rgba(2, 132, 199, 0.12);
+  --theme-glow: var(--shadow-glow-cyan);
+  --page-bg-light: #F4F8FD;
 }
 .app-shell[data-page="settings"] {
   --theme-accent: var(--accent-settings);
   --theme-accent-hv: var(--accent-settings-hv);
   --theme-accent-soft: var(--accent-settings-soft);
   --theme-glow: var(--shadow-glow);
-  --page-bg-light: #F5F6FA;
+  --page-bg-light: #F5F6F8;
 }
 .app-shell[data-page="reedit"] {
   --theme-accent: var(--accent-reedit);
@@ -97,7 +104,7 @@
   --theme-accent: #6366F1;
   --theme-accent-hv: #4F46E5;
   --theme-accent-soft: rgba(99, 102, 241, 0.12);
-  --theme-glow: var(--shadow-glow);
+  --theme-glow: var(--shadow-glow-purple);
   --page-bg-light: #F4F6FD;
 }
 .app-shell[data-page="cameratransfer"] {
@@ -111,8 +118,8 @@
   --theme-accent: var(--accent-videotransfer);
   --theme-accent-hv: var(--accent-videotransfer-hv);
   --theme-accent-soft: var(--accent-videotransfer-soft);
-  --theme-glow: var(--shadow-glow);
-  --page-bg-light: #F4F7FE;
+  --theme-glow: var(--shadow-glow-purple);
+  --page-bg-light: #F5F3FF;
 }
 .app-shell[data-page="cleaner"] {
   --theme-accent: var(--accent-cleaner);
@@ -128,26 +135,27 @@
   --theme-glow: var(--shadow-glow-emerald);
   --page-bg-light: #F2FDF9;
 }
+.app-shell[data-page="tracker"],
 .app-shell[data-page="tasktracker"] {
-  --theme-accent: #0284C7;
-  --theme-accent-hv: #0369A1;
-  --theme-accent-soft: rgba(2, 132, 199, 0.12);
-  --theme-glow: var(--shadow-glow);
-  --page-bg-light: #F8FAFC;
+  --theme-accent: var(--accent-tracker);
+  --theme-accent-hv: var(--accent-tracker-hv);
+  --theme-accent-soft: var(--accent-tracker-soft);
+  --theme-glow: var(--shadow-glow-cyan);
+  --page-bg-light: #F2F8FD;
 }
 .app-shell[data-page="archivevault"] {
-  --theme-accent: #0284C7;
-  --theme-accent-hv: #0369A1;
-  --theme-accent-soft: rgba(2, 132, 199, 0.12);
-  --theme-glow: var(--shadow-glow);
-  --page-bg-light: #F8FAFC;
+  --theme-accent: var(--accent-archivevault);
+  --theme-accent-hv: var(--accent-archivevault-hv);
+  --theme-accent-soft: var(--accent-archivevault-soft);
+  --theme-glow: var(--shadow-glow-emerald);
+  --page-bg-light: #F2FBF9;
 }
 .app-shell[data-page="admin"] {
   --theme-accent: #6366F1;
   --theme-accent-hv: #4F46E5;
   --theme-accent-soft: rgba(99, 102, 241, 0.15);
   --theme-glow: rgba(99, 102, 241, 0.4);
-  --page-bg-light: #00c69b;
+  --page-bg-light: #F5F6FA;
 }
 
 *, *::before, *::after {
@@ -198,7 +206,7 @@ input, select, option, textarea, button {
   background-image: url('../assets/islamic_pattern_enhanced.png');
   background-repeat: repeat;
   background-size: 260px 260px;
-  opacity: 0.05;
+  opacity: 0.14;
   z-index: 0;
   pointer-events: none;
 }
@@ -230,7 +238,7 @@ input, select, option, textarea, button {
   background-image: url('../assets/islamic_pattern_enhanced.png');
   background-repeat: repeat;
   background-size: 240px 240px;
-  opacity: 0.04;
+  opacity: 0.12;
   pointer-events: none;
   z-index: 0;
 }

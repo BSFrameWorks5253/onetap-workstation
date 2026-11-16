@@ -244,7 +244,7 @@ contextBridge.exposeInMainWorld('api', {
   update: {
     check:              (preferredSource?: 'anything' | 'github' | 'all') => ipcRenderer.invoke('update:check', preferredSource),
     download:           (url?: string) => ipcRenderer.invoke('update:download', url),
-    install:            () => ipcRenderer.invoke('update:install'),
+    install:            (options?: { silent?: boolean }) => ipcRenderer.invoke('update:install', options),
     getCurrentVersion:  () => ipcRenderer.invoke('update:getCurrentVersion'),
     getUpdateConfig:    () => ipcRenderer.invoke('update:getUpdateConfig'),
     onProgress:         (cb: (d: any) => void) => {
@@ -364,6 +364,11 @@ contextBridge.exposeInMainWorld('api', {
       ipcRenderer.invoke('viewer:getVideoThumbnail', filePath, ffmpegPath, size, seekPercent),
     getSiblingFiles:        (filePath: string) => ipcRenderer.invoke('viewer:getSiblingFiles', filePath),
     registerFileAssociation:(categories: string[]) => ipcRenderer.invoke('viewer:registerFileAssociation', categories),
+    openWindow:             (filePath: string) => ipcRenderer.invoke('viewer:openWindow', filePath),
+    showItemInFolder:       (filePath: string) => ipcRenderer.invoke('viewer:showItemInFolder', filePath),
+    openExternal:           (filePath: string) => ipcRenderer.invoke('viewer:openExternal', filePath),
+    readDoc:                (filePath: string) => ipcRenderer.invoke('viewer:readDoc', filePath),
+    readHexDump:            (filePath: string, maxBytes?: number) => ipcRenderer.invoke('viewer:readHexDump', filePath, maxBytes),
     getDefaultApps:         (exts: string[]) => ipcRenderer.invoke('viewer:getDefaultApps', exts),
     onOpenFile: (cb: (filePath: string) => void) => {
       const sub = (_e: any, filePath: string): void => cb(filePath)

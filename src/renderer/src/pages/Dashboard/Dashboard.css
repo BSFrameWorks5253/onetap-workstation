@@ -35,9 +35,13 @@
 
 .db-quick-stats-col {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 12px;
-  justify-content: space-between;
+  align-items: stretch;
+}
+
+.db-quick-stats-col .db-quick-stat-card {
+  flex: 1;
 }
 
 /* ── Deluxe Quick Stat Cards ── */

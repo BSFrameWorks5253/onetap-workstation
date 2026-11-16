@@ -3348,7 +3348,21 @@
 }
 
 .ta-dur-field {
-  flex: 0 0 220px;
+  flex: 0 0 200px;
+  height: 44px;
+  background: var(--surface);
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  border-radius: var(--radius-md, 12px);
+  padding: 4px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  box-sizing: border-box;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.ta-dur-field-hidden-dummy { display: none; }
   height: 56px;
   background: var(--surface);
   border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
@@ -3414,6 +3428,7 @@
 }
 
 .ta-hero-start-btn {
+  height: 44px !important;
   width: 100%;
   height: 56px;
   display: flex;
@@ -3452,6 +3467,7 @@
 }
 
 .ta-hero-cancel-btn {
+  height: 44px !important;
   width: 100%;
   height: 56px;
   display: flex;
@@ -3498,6 +3514,12 @@
 }
 
 .ta-option-card {
+  display: flex;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between;
+  min-height: 44px !important;
+  padding: 8px 14px !important;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -3659,6 +3681,72 @@
 
 .ta-switch.on .ta-switch-handle {
   transform: translateX(16px);
+}
+
+/* ── Tactile Micro-Interactions & Figma Polish ────────────── */
+.ta-hero-start-btn:active,
+.ta-hero-cancel-btn:active,
+.ta-mode-segment-btn:active,
+.ta-add-queue-folder-btn:active,
+.ta-queue-action-btn:active,
+.ta-reorder-btn:active,
+.ta-option-card:active {
+  transform: scale(0.985);
+  transition: transform 0.08s ease;
+}
+
+.ta-workstation-card {
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.ta-dur-input:focus-visible {
+  outline: 2px solid var(--theme-accent, #4F46E5);
+  outline-offset: 1px;
+}
+
+/* ── Status Pill High-Contrast Telemetry (Figma Polish) ───── */
+.ta-pill-val {
+  font-size: 13.5px !important;
+  font-weight: 850 !important;
+  color: var(--text-primary) !important;
+  font-family: var(--font-mono) !important;
+  background: color-mix(in srgb, var(--surface-3, #e2e8f0) 80%, transparent) !important;
+  padding: 1px 7px !important;
+  border-radius: 6px !important;
+  min-width: 20px !important;
+  text-align: center !important;
+  line-height: 1.25 !important;
+}
+
+.ta-pill-found .ta-pill-val {
+  color: #6366f1 !important;
+  background: rgba(99, 102, 241, 0.12) !important;
+}
+
+.ta-pill-done .ta-pill-val {
+  color: #10b981 !important;
+  background: rgba(16, 185, 129, 0.14) !important;
+}
+
+.ta-pill-pending .ta-pill-val {
+  color: #f59e0b !important;
+  background: rgba(245, 158, 11, 0.14) !important;
+}
+
+/* ── Streamlined Single Priority Order Badge ─────────────── */
+.ta-order-pill {
+  width: auto !important;
+  min-width: 38px !important;
+  padding: 5px 8px !important;
+  flex-direction: row !important;
+  justify-content: center !important;
+}
+
+.ta-order-label {
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.02em !important;
 }
 
 

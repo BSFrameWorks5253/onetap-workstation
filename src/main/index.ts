@@ -73,6 +73,7 @@ import { registerTitleAutomodeIPC } from './ipc/titleAutomode.ipc'
 import { registerAnyShareIPC } from './ipc/anyshare.ipc'
 import { initAnyShareBridge } from './core/anyshareBridge'
 import { initDynamicIsland } from './core/dynamicIsland'
+import { openViewerWindow } from './core/viewerWindowManager'
 import { resolveChildAppLoaderConfig, showChildAppSplash, closeChildAppSplash, ChildAppLoaderConfig } from './core/splash'
 import http from 'http'
 
@@ -97,13 +98,20 @@ if (!gotLock) {
 }
 
 app.on('second-instance', (_event, argv) => {
+  const filePath = extractFileFromArgv(argv)
+  if (filePath) {
+    try {
+      openViewerWindow(filePath)
+    } catch (err) {
+      console.error('[second-instance] Failed to open viewer window:', err)
+    }
+    // DO NOT reveal or focus the main window when opening a file; keep viewer separate
+    return
+  }
+
   if (mainWindow && !mainWindow.isDestroyed()) {
     if (mainWindow.isMinimized()) mainWindow.restore()
     revealMainWindow()
-    const filePath = extractFileFromArgv(argv)
-    if (filePath) {
-      mainWindow.webContents.send('viewer:openFile', filePath)
-    }
     const pageArg = argv.find(a => a.startsWith('--page='))
     if (pageArg) {
       const pageKey = pageArg.split('=')[1]
@@ -112,27 +120,17 @@ app.on('second-instance', (_event, argv) => {
   }
 })
 
-// Extract a supported file path from argv (for Explorer double-click launch)
-const SUPPORTED_VIEWER_EXTS = new Set([
-  '.jpg','.jpeg','.png','.gif','.webp','.bmp','.tiff','.tif','.heic','.avif',
-  '.cr2','.cr3','.nef','.nrw','.arw','.srf','.sr2','.dng','.orf','.rw2',
-  '.pef','.ptx','.raf','.raw','.3fr','.mef','.mos','.erf','.rwl','.srw',
-  '.x3f','.dcr','.kdc','.mrw',
-  '.mp4','.mkv','.avi','.mov','.webm','.wmv','.flv','.m4v','.ts','.m2ts',
-  '.pdf',
-  '.docx','.doc',
-  '.xlsx','.xls',
-  '.md','.markdown'
-])
-
 function extractFileFromArgv(argv: string[]): string | null {
-  // Electron passes the file path as the last argument that looks like an absolute path
   for (let i = argv.length - 1; i >= 1; i--) {
     const arg = argv[i]
     if (arg.startsWith('--')) continue
-    const lower = arg.toLowerCase()
-    const dot = lower.lastIndexOf('.')
-    if (dot !== -1 && SUPPORTED_VIEWER_EXTS.has(lower.slice(dot))) {
+    try {
+      if (fs.existsSync(arg) && fs.statSync(arg).isFile()) {
+        return arg
+      }
+    } catch {}
+    const dot = arg.lastIndexOf('.')
+    if (dot !== -1 && (arg.includes('\\') || arg.includes('/'))) {
       return arg
     }
   }
@@ -714,11 +712,14 @@ function createWindow(): void {
   // Send pending file-open (from Explorer double-click on first launch)
   mainWindow.webContents.once('did-finish-load', () => {
     if (pendingOpenFile && mainWindow) {
-      // Small delay so React is fully mounted before receiving the event
       setTimeout(() => {
-        mainWindow?.webContents.send('viewer:openFile', pendingOpenFile)
+        try {
+          if (pendingOpenFile) openViewerWindow(pendingOpenFile)
+        } catch {
+          mainWindow?.webContents.send('viewer:openFile', pendingOpenFile)
+        }
         pendingOpenFile = null
-      }, 800)
+      }, 600)
     }
 
     // Trigger background silent update check via GitHub Releases API
@@ -728,6 +729,8 @@ function createWindow(): void {
     if (mainWindow) {
       startAmeLogMonitor(mainWindow)
     }
+
+
   })
 
   // Intercept close event to run in background (tray mode)
@@ -796,7 +799,8 @@ function createWindow(): void {
   })
 
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
+    const devUrl = process.env['ELECTRON_RENDERER_URL']
+    mainWindow.loadURL(devUrl)
     mainWindow.webContents.openDevTools({ mode: 'detach' })
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
@@ -1162,23 +1166,7 @@ app.whenReady().then(() => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
 
-  // ── Second-instance: user double-clicked a file while app is already running ──
-  app.on('second-instance', (_event, argv) => {
-    const filePath = extractFileFromArgv(argv)
-    if (mainWindow) {
-      if (mainWindow.isMinimized()) mainWindow.restore()
-      mainWindow.show()
-      mainWindow.focus()
-      if (filePath) {
-        mainWindow.webContents.send('viewer:openFile', filePath)
-      }
-      const pageArg = argv.find(a => a.startsWith('--page='))
-      if (pageArg) {
-        const pageKey = pageArg.split('=')[1]
-        mainWindow.webContents.send('app:navigate', pageKey)
-      }
-    }
-  })
+  // Second-instance is handled above at startup (lines 100-116) with openViewerWindow()
 
   app.on('before-quit', () => {
     ;(app as any).isQuitting = true

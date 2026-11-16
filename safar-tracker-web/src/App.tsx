@@ -30,7 +30,12 @@ import {
   Share2,
   Smartphone,
   Download,
-  MessageCircle
+  MessageCircle,
+  Award,
+  Globe,
+  Building2,
+  FileText,
+  Sparkles
 } from 'lucide-react'
 import OngoingSafarKanban, { type SafarTaskItem, isJunkSafarName } from './components/OngoingSafarKanban'
 import PhotoTracker from './components/PhotoTracker'
@@ -46,7 +51,17 @@ import {
   type AuthUser
 } from './lib/googleAppsScript'
 
-type Stage = 'editing' | 'rendering' | 'upload' | 'jameya' | 'completed'
+export type Stage = 'editing_pending' | 'editing' | 'upload_pending' | 'uploaded' | 'jameya'
+
+export function normalizeStage(raw?: string): Stage {
+  const s = String(raw || '').toLowerCase().trim()
+  if (s === 'editing_pending' || s === 'pending') return 'editing_pending'
+  if (s === 'editing' || s === 'in_progress' || s === 'in progress' || s === 'review') return 'editing'
+  if (s === 'upload_pending' || s === 'rendering' || s === 'rendered') return 'upload_pending'
+  if (s === 'uploaded' || s === 'upload') return 'uploaded'
+  if (s === 'jameya' || s === 'submitted' || s === 'completed' || s === 'aljamea_done') return 'jameya'
+  return 'editing_pending'
+}
 export type PhotoStage = 'edited' | 'given_to_murtaza' | 'uploaded'
 export const DEFAULT_EDITOR = 'Murtaza'
 export const DEFAULT_PHOTO_EDITOR = 'Muffadal Peti'
@@ -86,6 +101,16 @@ function parseUrlRoute(): { view: View; safar?: string } {
     if (candidate === 'widget' || candidate === 'home-widget' || candidate === 'live-widget') return { view: 'widget', safar: safarParam }
   } catch {}
   return { view: 'dashboard' }
+}
+
+export function getPublicWebsiteOrigin(): string {
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    const origin = window.location.origin
+    if (!origin.includes('localhost') && !origin.includes('127.0.0.1') && !origin.startsWith('file:') && !origin.includes('::1')) {
+      return origin
+    }
+  }
+  return 'https://safar-tracker-web.vercel.app'
 }
 type SafarTask = {
   id: string
@@ -132,19 +157,23 @@ type SafarGroup = SafarSummary & {
   deliveredCount: number
   photoUploadedCount: number
   photoPercent: number
+  editingPendingCount: number
   editingCount: number
+  uploadPendingCount: number
+  uploadedCount: number
+  jameyaCount: number
+  // Backward compatibility aliases
   renderingCount: number
   uploadCount: number
-  jameyaCount: number
   completedCount: number
 }
 
-const STAGES: { id: Stage; label: string }[] = [
-  { id: 'editing', label: 'In Editing' },
-  { id: 'rendering', label: 'Rendered' },
-  { id: 'upload', label: 'Upload' },
-  { id: 'jameya', label: 'Submission to Al Jamea tus Saifiyah' },
-  { id: 'completed', label: 'Completed Every Stage' }
+export const STAGES: { id: Stage; label: string; short: string; color: string }[] = [
+  { id: 'editing_pending', label: 'Editing Pending', short: 'EP', color: '#f59e0b' },
+  { id: 'editing', label: 'In Progress', short: 'IP', color: '#3b82f6' },
+  { id: 'upload_pending', label: 'Upload Pending', short: 'UP', color: '#06b6d4' },
+  { id: 'uploaded', label: 'Uploaded', short: 'UL', color: '#10b981' },
+  { id: 'jameya', label: 'AlJamea Done', short: 'AD', color: '#047857' }
 ]
 const localKey = 'ot_safar_tracker_snapshot'
 const deletedTasksKey = 'ot_safar_tracker_deleted_tasks'
@@ -207,9 +236,73 @@ export function saveDeletedSafars(set: Set<string>) {
   } catch {}
 }
 
-export function extractCleanWebDate(name: string): string {
-  if (!name) return ''
+export function isCameraOrAssetFolder(name: string): boolean {
+  if (!name) return true
+  const clean = name.trim().toLowerCase()
+  if (!clean) return true
+
+  // Camera angles, devices, cards
+  if (/^(?:cam|camera|cams|angle|device)[\s._\-]*(?:\d+|[a-z])?$/i.test(clean)) return true
+  if (/^cam\b/i.test(clean) || /^camera\b/i.test(clean)) return true
+  if (/\b(?:gopro|dji|drone|action[\s._-]?cam|insta360|osmo)\b/i.test(clean)) return true
+  if (/^(?:card|sd[\s._-]?card|cfexpress|cfast|memory[\s._-]?card)[\s._-]*(?:[a-z]|\d+)?$/i.test(clean)) return true
+
+  // Audio / Sound / Microphones
+  if (/^(?:audio|mic|mics|sound|sound[\s._-]?recording|recorder|zoom|tascam|lav|lavalier|wireless|mixer|boom)[\s._\-]*(?:\d+)?$/i.test(clean)) return true
+  if (/\b(?:audio|sound|recording)\b/i.test(clean) && !/\b(?:waaz|majlis|event)\b/i.test(clean)) return true
+
+  // Raw assets, dumps, b-roll, footage
+  if (/^(?:b[-_ ]?roll|broll|footage|raw|raw[\s._-]?footage|dumps?|dump[\s._-]?\d+|clips?|stills?|photos?|pictures?)$/i.test(clean)) return true
+
+  // Render, outputs, export, project files, caches
+  if (/^(?:renders?|rendering|preview|previews|proxies|proxy|final|final[\s._-]?titles|titles|dvd|outputs?|exports?|masters?)$/i.test(clean)) return true
+  if (/^(?:projects?|prproj|premiere|cache|scratch|adobe[\s._-]?premiere[\s._-]?pro[\s._-]?auto[\s._-]?save|auto[\s._-]?save)$/i.test(clean)) return true
+  if (/^(?:assets?|graphics?|music|sfx|fonts?|temps?|tmp|backups?|trash|old)$/i.test(clean)) return true
+
+  // Placeholder or missing date strings
+  if (/^(?:date[\s._-]*(?:not[\s._-]*provided|folder[\s._-]*unavailable)|date[\s._-]*folder|undefined|null)$/i.test(clean)) return true
+
+  // System folders
+  if (clean.startsWith('$') || clean.startsWith('.') || clean === 'system volume information') return true
+
+  return false
+}
+
+export function isProperDateOrSessionFolder(name: string): boolean {
+  if (!name || isCameraOrAssetFolder(name)) return false
   const clean = name.trim()
+
+  // 1. Standard YYYY-MM-DD, YYYY.MM.DD, YYYY_MM_DD with optional session tag (e.g. "1448-05-08 _01M")
+  if (/^\d{4}[\s._-]\d{1,2}[\s._-]\d{1,2}/.test(clean)) return true
+
+  // 2. DD-MM-YYYY, DD.MM.YYYY, DD-MM-YY (e.g. "08-05-1448", "14-03-1448")
+  if (/^\d{1,2}[\s._-]\d{1,2}[\s._-]\d{2,4}/.test(clean)) return true
+
+  // 3. Day XX (e.g. "Day 01", "Day 1", "Day-02")
+  if (/^day[\s._\-]?\d{1,3}/i.test(clean)) return true
+
+  // 4. Pure numbered day folder: "01" .. "31"
+  const numOnly = clean.match(/^(\d{1,2})$/)
+  if (numOnly) {
+    const d = parseInt(numOnly[1], 10)
+    if (d >= 1 && d <= 31) return true
+  }
+
+  // 5. Numbered day with session / event or location: e.g. "01-Raipur-Waaz", "02-Bilaspur-Bethak", "01-Bhatapur-QMZ", "04-Takhatpur-QMZ", "01 Waaz"
+  if (/^\d{1,2}[\s._-]+(?:waaz|majlis|isteqbal|misaaq|urs|ziyarat|event|session|bethak|qmz|ziyafat|qadam|milad|ashara|darees)\b/i.test(clean)) return true
+  if (/(?:waaz|majlis|isteqbal|bethak|qmz|ziyafat)[\s._-]+(?:day[\s._-]?)?\d{1,2}/i.test(clean)) return true
+  if (/^\d{1,2}[\s._-]+[A-Za-z0-9]+[\s._-]+(?:waaz|majlis|isteqbal|misaaq|urs|ziyarat|event|session|bethak|qmz|ziyafat|qadam|milad|ashara|darees)\b/i.test(clean)) return true
+
+  // 6. Named religious or safar sessions containing standard session keywords
+  if (/\b(?:waaz|majlis|isteqbal|misaaq|urs|ziyarat|bethak|qmz|ziyafat|qadam|milad|ashara|darees)\b/i.test(clean)) return true
+
+  return false
+}
+
+export function extractCleanWebDate(name: string): string {
+  if (!name || isCameraOrAssetFolder(name)) return ''
+  const clean = name.trim()
+  if (isCameraOrAssetFolder(clean)) return ''
   const sessionMatch = clean.match(/(_\d{2}[A-Za-z]|\s*_\d{2}|\s*Session\s*\d+|\s*Morning|\s*Evening|\s*Night)/i)
   const rawTag = sessionMatch ? sessionMatch[1].trim() : ''
   const sessionTag = rawTag.startsWith('_') ? rawTag : (rawTag ? ` ${rawTag}` : '')
@@ -222,7 +315,10 @@ export function extractCleanWebDate(name: string): string {
   const leadingNumMatch = clean.match(/^(\d{1,2})(?:[\s._\-]+.*)?$/)
   if (leadingNumMatch) {
     const d = parseInt(leadingNumMatch[1], 10)
-    if (d >= 1 && d <= 31) return `Day ${d < 10 ? '0' + d : d}`
+    if (d >= 1 && d <= 31) {
+      if (/^\d{1,2}$/.test(clean)) return `Day ${d < 10 ? '0' + d : d}`
+      if (isProperDateOrSessionFolder(clean)) return clean
+    }
   }
   const dmMatch = clean.match(/^(\d{1,2})[\s._\-](\d{1,2})(?:[\s._\-]+.*)?$/)
   if (dmMatch) {
@@ -230,7 +326,10 @@ export function extractCleanWebDate(name: string): string {
     const m = parseInt(dmMatch[2], 10)
     if (d >= 1 && d <= 31 && m >= 1 && m <= 12) return `Day ${d < 10 ? '0' + d : d}`
   }
-  return clean.split(/[\s_]+_/)[0].replace(/[-_ ]*(?:waaz|isteqbal|majlis|misaaq|urs|ziyarat|event|morning|evening|night|session).*$/i, '').trim()
+  if (isProperDateOrSessionFolder(clean)) {
+    return clean
+  }
+  return ''
 }
 
 export function getTaskKey(safarName?: string, dateFolder?: string): string {
@@ -265,10 +364,12 @@ function dateLabel(dateFolder: string, supplied?: string, safarYear?: string | n
 function dateFolderName(task: Partial<SafarTask>): string {
   const parts = String(task.dateFolder || '').trim().split(/[\\/]+/).filter(Boolean)
   const folder = parts[parts.length - 1] || ''
+  if (!folder || isCameraOrAssetFolder(folder) || !isProperDateOrSessionFolder(folder)) {
+    return 'Date folder unavailable'
+  }
   const cleanDate = extractCleanWebDate(folder)
-  if (cleanDate) return cleanDate
-  const isDateFolder = /(?:^|\D)\d{4}[\s._-]\d{1,2}(?:[\s._-]\d{1,2})?|^\d{1,2}[\s._-]\d{1,2}(?:[\s._-]\d{4})?|^Day[_ -]?\d{1,3}/i.test(folder)
-  return /\.[a-z\d]{2,6}$/i.test(folder) || !isDateFolder ? 'Date folder unavailable' : folder
+  if (cleanDate && !isCameraOrAssetFolder(cleanDate) && isProperDateOrSessionFolder(cleanDate)) return cleanDate
+  return 'Date folder unavailable'
 }
 
 function isJunkSafarOrHardware(name: string): boolean {
@@ -325,6 +426,7 @@ function normalizeSnapshot(value: Partial<Snapshot> | null | undefined): Snapsho
       if (!safarName || isJunkSafarOrHardware(safarName)) return false
       if (deletedSafars.has(safarName.toLowerCase())) return false
       const rawFolder = String(raw?.dateFolder || '').trim()
+      if (!rawFolder || isCameraOrAssetFolder(rawFolder) || !isProperDateOrSessionFolder(rawFolder)) return false
       const taskKey = getTaskKey(safarName, rawFolder)
       if (deletedTasks.has(taskKey)) return false
       return true
@@ -336,12 +438,12 @@ function normalizeSnapshot(value: Partial<Snapshot> | null | undefined): Snapsho
       const override = overrides.get(taskKey)
       const isMissing = raw.isMissing ?? (raw.isPresent === false || raw.is_present === false)
       const isPresent = !isMissing
-      // User rule: non-present items must ONLY and ONLY appear in Stage 4: Submitted to Jameya!
-      const defaultStage: Stage = isMissing ? 'jameya' : (STAGES.some(s => s.id === raw.stage) ? raw.stage : 'editing')
-      const stage: Stage = override?.stage || defaultStage
+      // User rule: non-present items must ONLY and ONLY appear in AlJamea Done!
+      const defaultStage: Stage = isMissing ? 'jameya' : normalizeStage(raw.stage)
+      const stage: Stage = override?.stage ? normalizeStage(override.stage) : defaultStage
       const editorName = override?.editorName !== undefined ? override.editorName : (raw.editorName?.trim() || DEFAULT_EDITOR)
       const dueDate = override?.dueDate !== undefined ? override.dueDate : String(raw.dueDate || '')
-      const defaultPhotoStage: PhotoStage = (stage === 'upload' || stage === 'jameya' || stage === 'completed' || raw.photoUploaded) ? 'uploaded' : (raw.photoStage || 'edited')
+      const defaultPhotoStage: PhotoStage = (stage === 'uploaded' || stage === 'jameya' || (stage as any) === 'upload' || (stage as any) === 'completed' || raw.photoUploaded) ? 'uploaded' : (raw.photoStage || 'edited')
       const photoStage: PhotoStage = override?.photoStage || defaultPhotoStage
       const photoEditorName = override?.photoEditorName !== undefined ? override.photoEditorName : (raw.photoEditorName?.trim() || DEFAULT_PHOTO_EDITOR)
       const photoUploaded = Boolean(photoStage === 'uploaded' || override?.photoUploaded || raw.photoUploaded)
@@ -363,6 +465,7 @@ function normalizeSnapshot(value: Partial<Snapshot> | null | undefined): Snapsho
       }
     }).filter(task => {
       if (!task.safarName || !task.dateFolder || task.dateFolder === 'Date folder unavailable') return false
+      if (isCameraOrAssetFolder(task.dateFolder) || !isProperDateOrSessionFolder(task.dateFolder)) return false
       const key = getTaskKey(task.safarName, task.dateFolder)
       if (deletedTasks.has(key)) return false
       return true
@@ -378,7 +481,7 @@ function normalizeSnapshot(value: Partial<Snapshot> | null | undefined): Snapsho
     } else {
       const existing = seenKeys.get(key)!
       const override = overrides.get(key)
-      const stage = override?.stage || t.stage || existing.stage
+      const stage = normalizeStage(override?.stage || t.stage || existing.stage)
       seenKeys.set(key, {
         ...existing,
         ...t,
@@ -506,11 +609,11 @@ function SafarProductionGroup({ group, expanded, onToggle, onArchive, onUpdateTa
 }): JSX.Element {
   const year = hijriYearLabel(group.safarYear)
   const total = Math.max(group.total, group.tasks.length, 1)
+  const editingPendingPct = (group.editingPendingCount / total) * 100
   const editingPct = (group.editingCount / total) * 100
-  const renderingPct = (group.renderingCount / total) * 100
-  const uploadPct = (group.uploadCount / total) * 100
+  const uploadPendingPct = (group.uploadPendingCount / total) * 100
+  const uploadedPct = (group.uploadedCount / total) * 100
   const jameyaPct = (group.jameyaCount / total) * 100
-  const completedPct = (group.completedCount / total) * 100
 
   return <article className="panel safar-group-card">
     <div className="safar-group-header">
@@ -522,18 +625,18 @@ function SafarProductionGroup({ group, expanded, onToggle, onArchive, onUpdateTa
             <span><AnimatedNumber value={group.completed} /> of {group.total} completed</span>
           </div>
           <div className="multicolor-progress-bar mini" role="progressbar" aria-label={`${group.safarName} pipeline progress`}>
-            {editingPct > 0 && <span className="stage-segment stage-editing" style={{ width: `${editingPct}%` }} title={`Editing: ${group.editingCount}`} />}
-            {renderingPct > 0 && <span className="stage-segment stage-rendering" style={{ width: `${renderingPct}%` }} title={`Rendered: ${group.renderingCount}`} />}
-            {uploadPct > 0 && <span className="stage-segment stage-upload" style={{ width: `${uploadPct}%` }} title={`Uploaded: ${group.uploadCount}`} />}
-            {jameyaPct > 0 && <span className="stage-segment stage-jameya" style={{ width: `${jameyaPct}%` }} title={`Submitted to Jameya: ${group.jameyaCount}`} />}
-            {completedPct > 0 && <span className="stage-segment stage-completed" style={{ width: `${completedPct}%` }} title={`Completed Every Stage: ${group.completedCount}`} />}
+            {editingPendingPct > 0 && <span className="stage-segment stage-editing_pending" style={{ width: `${editingPendingPct}%` }} title={`Editing Pending: ${group.editingPendingCount}`} />}
+            {editingPct > 0 && <span className="stage-segment stage-editing" style={{ width: `${editingPct}%` }} title={`In Progress: ${group.editingCount}`} />}
+            {uploadPendingPct > 0 && <span className="stage-segment stage-upload_pending" style={{ width: `${uploadPendingPct}%` }} title={`Upload Pending: ${group.uploadPendingCount}`} />}
+            {uploadedPct > 0 && <span className="stage-segment stage-uploaded" style={{ width: `${uploadedPct}%` }} title={`Uploaded: ${group.uploadedCount}`} />}
+            {jameyaPct > 0 && <span className="stage-segment stage-jameya" style={{ width: `${jameyaPct}%` }} title={`AlJamea Done: ${group.jameyaCount}`} />}
           </div>
           <div className="multicolor-legend compact">
-            <span className="legend-chip chip-editing"><i className="chip-dot" /><AnimatedNumber value={group.editingCount} /> E</span>
-            <span className="legend-chip chip-rendering"><i className="chip-dot" /><AnimatedNumber value={group.renderingCount} /> R</span>
-            <span className="legend-chip chip-upload"><i className="chip-dot" /><AnimatedNumber value={group.uploadCount} /> U</span>
-            <span className="legend-chip chip-jameya"><i className="chip-dot" /><AnimatedNumber value={group.jameyaCount} /> J</span>
-            <span className="legend-chip chip-completed"><i className="chip-dot" /><AnimatedNumber value={group.completedCount} /> C</span>
+            <span className="legend-chip chip-editing_pending"><i className="chip-dot" /><AnimatedNumber value={group.editingPendingCount} /> EP</span>
+            <span className="legend-chip chip-editing"><i className="chip-dot" /><AnimatedNumber value={group.editingCount} /> IP</span>
+            <span className="legend-chip chip-upload_pending"><i className="chip-dot" /><AnimatedNumber value={group.uploadPendingCount} /> UP</span>
+            <span className="legend-chip chip-uploaded"><i className="chip-dot" /><AnimatedNumber value={group.uploadedCount} /> UL</span>
+            <span className="legend-chip chip-jameya"><i className="chip-dot" /><AnimatedNumber value={group.jameyaCount} /> AD</span>
           </div>
         </div>
         <ChevronDown aria-hidden="true" size={19} className={expanded ? 'expanded' : ''}/>
@@ -548,8 +651,8 @@ function SafarProductionGroup({ group, expanded, onToggle, onArchive, onUpdateTa
     {expanded && <div className="safar-date-list">
       <div className="safar-date-list-heading"><span>Date folder</span><span>Deliverables</span><span>Editor</span><span>Stage</span><span>Due date</span><span>Action</span></div>
       {group.tasks.length ? group.tasks.map(task => {
-        const isPhotoUp = task.photoStage === 'uploaded' || Boolean(task.photoUploaded) || (task.stage === 'upload' || task.stage === 'jameya' || task.stage === 'completed')
-        const isVideoUp = task.stage === 'upload' || task.stage === 'jameya' || task.stage === 'completed'
+        const isPhotoUp = task.photoStage === 'uploaded' || Boolean(task.photoUploaded) || (task.stage === 'uploaded' || task.stage === 'jameya' || (task.stage as any) === 'upload' || (task.stage as any) === 'completed')
+        const isVideoUp = task.stage === 'uploaded' || task.stage === 'jameya' || (task.stage as any) === 'upload' || (task.stage as any) === 'completed'
         return <div className="safar-date-row" key={task.id}>
           <span className="safar-date-value" title={dateFolderName(task)}>{dateFolderName(task)}</span>
           <div className="safar-edit-cell" data-label="Deliverables" style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
@@ -577,7 +680,7 @@ function SafarProductionGroup({ group, expanded, onToggle, onArchive, onUpdateTa
                 onChange={e => {
                   const willUpload = e.target.checked
                   onUpdateTask(task, {
-                    stage: willUpload ? 'upload' : 'editing',
+                    stage: willUpload ? 'uploaded' : 'editing_pending',
                     photoStage: willUpload ? 'uploaded' : 'edited',
                     photoUploaded: willUpload
                   })
@@ -740,6 +843,7 @@ export default function App(): JSX.Element {
   const [search, setSearch] = useState('')
   const [selectedSafar, setSelectedSafar] = useState<string>(() => initialRoute.safar || 'all')
   const [filter, setFilter] = useState('all')
+  const [safarStatusFilter, setSafarStatusFilter] = useState<'all' | 'pending' | 'in_process' | 'to_delete' | 'to_upload' | 'done'>('all')
   const [view, setView] = useState<View>(() => initialRoute.view)
   const [selectedEditor, setSelectedEditor] = useState('all')
   const [menuOpen, setMenuOpen] = useState(false)
@@ -750,7 +854,7 @@ export default function App(): JSX.Element {
   const [panelMenuOpen, setPanelMenuOpen] = useState(false)
   const [expandedSafars, setExpandedSafars] = useState<Set<string>>(() => new Set())
   const [page, setPage] = useState(0)
-  const [pipelineLimits, setPipelineLimits] = useState<Record<Stage, number>>({ rendering: 40, editing: 40, upload: 40, jameya: 40, completed: 40 })
+  const [pipelineLimits, setPipelineLimits] = useState<Record<Stage, number>>({ editing_pending: 40, editing: 40, upload_pending: 40, uploaded: 40, jameya: 40 })
 
   const trackerChannelRef = useRef<any>(null)
   const nexusChannelRef = useRef<any>(null)
@@ -792,19 +896,19 @@ export default function App(): JSX.Element {
     }
     return [...grouped.values()].map(({ summary, tasks }) => {
       tasks.sort((a, b) => a.dateFolder.localeCompare(b.dateFolder, undefined, { numeric: true }))
+      const editingPendingCount = tasks.filter(task => task.stage === 'editing_pending').length
       const editingCount = tasks.filter(task => task.stage === 'editing').length
-      const renderingCount = tasks.filter(task => task.stage === 'rendering').length
-      const uploadCount = tasks.filter(task => task.stage === 'upload').length
-      const jameyaCount = tasks.filter(task => task.stage === 'jameya').length
-      const completedCount = tasks.filter(task => task.stage === 'completed').length
+      const uploadPendingCount = tasks.filter(task => task.stage === 'upload_pending' || (task.stage as any) === 'rendering').length
+      const uploadedCount = tasks.filter(task => task.stage === 'uploaded' || (task.stage as any) === 'upload').length
+      const jameyaCount = tasks.filter(task => task.stage === 'jameya' || (task.stage as any) === 'completed' || (task.stage as any) === 'submitted').length
       const photoUploadedCount = tasks.filter(task => task.photoStage === 'uploaded' || task.photoUploaded).length
       const total = Math.max(tasks.length, Number(summary.totalDays) || 0)
-      const finishedDates = jameyaCount + completedCount
+      const finishedDates = jameyaCount
       const isArchived = Boolean(summary.isArchived || (total > 0 && finishedDates >= total))
       const completed = isArchived ? total : finishedDates
-      const deliveredCount = isArchived ? total : (uploadCount + jameyaCount + completedCount)
+      const deliveredCount = isArchived ? total : (uploadedCount + jameyaCount)
       const deliveredPercent = isArchived ? 100 : total ? Math.min(100, Math.round((deliveredCount / total) * 100)) : 0
-      const progressPercent = isArchived ? 100 : total ? Math.min(100, Math.round(((editingCount * 20 + renderingCount * 45 + uploadCount * 75 + jameyaCount * 90 + completedCount * 100) / total) / 100 * 100)) : 0
+      const progressPercent = isArchived ? 100 : total ? Math.min(100, Math.round(((editingPendingCount * 10 + editingCount * 35 + uploadPendingCount * 65 + uploadedCount * 90 + jameyaCount * 100) / total) / 100 * 100)) : 0
       const photoPercent = total ? Math.min(100, Math.round((photoUploadedCount / total) * 100)) : 0
       return {
         ...summary,
@@ -819,11 +923,14 @@ export default function App(): JSX.Element {
         deliveredCount,
         photoUploadedCount,
         photoPercent,
+        editingPendingCount: isArchived ? 0 : editingPendingCount,
         editingCount: isArchived ? 0 : editingCount,
-        renderingCount: isArchived ? 0 : renderingCount,
-        uploadCount: isArchived ? 0 : uploadCount,
+        uploadPendingCount: isArchived ? 0 : uploadPendingCount,
+        uploadedCount: isArchived ? 0 : uploadedCount,
         jameyaCount: isArchived ? 0 : jameyaCount,
-        completedCount: isArchived ? total : completedCount
+        renderingCount: isArchived ? 0 : uploadPendingCount,
+        uploadCount: isArchived ? 0 : uploadedCount,
+        completedCount: isArchived ? total : jameyaCount
       }
     }).sort((a, b) => a.safarName.localeCompare(b.safarName, undefined, { numeric: true }))
   }, [snapshot.safars, snapshot.tasks])
@@ -892,36 +999,107 @@ export default function App(): JSX.Element {
 
   const studioStats = useMemo(() => {
     let totalDates = 0
+    let editingPending = 0
     let editing = 0
-    let rendering = 0
-    let upload = 0
+    let uploadPending = 0
+    let uploaded = 0
     let jameya = 0
-    let completed = 0
     let photoUploaded = 0
     for (const g of activeSafarGroups) {
       totalDates += g.total
+      editingPending += g.editingPendingCount
       editing += g.editingCount
-      rendering += g.renderingCount
-      upload += g.uploadCount
+      uploadPending += g.uploadPendingCount
+      uploaded += g.uploadedCount
       jameya += g.jameyaCount
-      completed += g.completedCount
       photoUploaded += g.photoUploadedCount
     }
-    const deliveredDates = upload + jameya + completed
+    const safarsDone = activeSafarGroups.filter(g => g.isArchived || (g.total > 0 && g.deliveredCount >= g.total)).length
+    const deliveredDates = uploaded + jameya
     const deliveredPercent = totalDates > 0 ? Math.min(100, Math.round((deliveredDates / totalDates) * 100)) : 0
-    const progressPercent = totalDates > 0 ? Math.min(100, Math.round(((editing * 20 + rendering * 45 + upload * 75 + jameya * 90 + completed * 100) / totalDates) / 100 * 100)) : 0
+    const progressPercent = totalDates > 0 ? Math.min(100, Math.round(((editingPending * 10 + editing * 35 + uploadPending * 65 + uploaded * 90 + jameya * 100) / totalDates) / 100 * 100)) : 0
     const photoPercent = totalDates > 0 ? Math.min(100, Math.round((photoUploaded / totalDates) * 100)) : 0
-    return { totalDates, editing, rendering, upload, jameya, completed, deliveredDates, deliveredPercent, progressPercent, photoUploaded, photoPercent, percent: deliveredPercent }
+    return {
+      totalDates,
+      editingPending,
+      editing,
+      uploadPending,
+      uploaded,
+      jameya,
+      safarsDone,
+      totalSafars: activeSafarGroups.length,
+      deliveredDates,
+      deliveredPercent,
+      progressPercent,
+      photoUploaded,
+      photoPercent,
+      percent: deliveredPercent,
+      // Legacy aliases
+      rendering: uploadPending,
+      upload: uploaded,
+      completed: jameya
+    }
   }, [activeSafarGroups])
+
+  const safarStatusBuckets = useMemo(() => {
+    let safarPending = 0
+    let inProcess = 0
+    let toDelete = 0
+    let toUpload = 0
+    for (const s of activeSafarGroups) {
+      const statuses = (s.tasks || []).map(t => t.stage)
+      if (statuses.length === 0) continue
+      const allPending = statuses.every(st => st === 'editing_pending')
+      const anyEditing = statuses.some(st => st === 'editing' || st === 'upload_pending')
+      const allJamea = statuses.every(st => st === 'jameya')
+      const allToUpload = statuses.every(st => st === 'upload_pending' || st === 'uploaded')
+      if (allPending) safarPending++
+      if (anyEditing) inProcess++
+      if (allJamea) toDelete++
+      if (allToUpload) toUpload++
+    }
+    return {
+      safarPending,
+      inProcess,
+      toDelete,
+      toUpload,
+      archived: archiveSafarGroups.length
+    }
+  }, [activeSafarGroups, archiveSafarGroups])
   const hasTaskFilters = Boolean(search.trim()) || filter !== 'all' || selectedEditor !== 'all'
-  const visibleSafarGroups = matchingSafarGroups.filter(group =>
-    (view === 'archive' ? group.isArchived : !group.isArchived && (selectedSafar === 'all' || group.safarName === selectedSafar)) &&
-    (!hasTaskFilters || group.tasks.length > 0)
-  )
+  const visibleSafarGroups = matchingSafarGroups.filter(group => {
+    if (view === 'archive') return group.isArchived
+    if (group.isArchived) return false
+    if (selectedSafar !== 'all' && group.safarName !== selectedSafar) return false
+    if (hasTaskFilters && group.tasks.length === 0) return false
+
+    if (safarStatusFilter !== 'all') {
+      const origGroup = safarGroups.find(g => g.safarName === group.safarName)
+      const tasks = origGroup?.tasks || []
+      if (safarStatusFilter === 'pending') {
+        const allPending = tasks.length > 0 && tasks.every(t => t.stage === 'editing_pending')
+        if (!allPending) return false
+      } else if (safarStatusFilter === 'in_process') {
+        const anyEditing = tasks.some(t => t.stage === 'editing' || t.stage === 'upload_pending')
+        if (!anyEditing) return false
+      } else if (safarStatusFilter === 'to_delete') {
+        const allJamea = tasks.length > 0 && tasks.every(t => t.stage === 'jameya')
+        if (!allJamea) return false
+      } else if (safarStatusFilter === 'to_upload') {
+        const allToUpload = tasks.length > 0 && tasks.every(t => t.stage === 'upload_pending' || t.stage === 'uploaded')
+        if (!allToUpload) return false
+      } else if (safarStatusFilter === 'done') {
+        const isDone = origGroup ? (origGroup.isArchived || (origGroup.total > 0 && origGroup.deliveredCount >= origGroup.total)) : false
+        if (!isDone) return false
+      }
+    }
+
+    return true
+  })
 
   const pageHeading: Record<typeof view, { title: string; eyebrow: string; description: string }> = {
     dashboard: { title: 'Dashboard', eyebrow: 'LIVE SAFAR OVERVIEW', description: 'A compact view of each active Safar and its completion.' },
-    ongoing: { title: 'Ongoing Safar (Kanban)', eyebrow: 'INTERACTIVE DELIVERY PIPELINE', description: 'Real-time 4-stage Kanban tracking dates from editing to Jameya submission.' },
+    ongoing: { title: 'Pipeline Board', eyebrow: 'INTERACTIVE DELIVERY PIPELINE', description: 'Real-time multi-stage pipeline tracking dates from editing to Jameya submission.' },
     photos: { title: 'Photo Data Tracker', eyebrow: 'GOOGLE DRIVE & PHOTO SYNC', description: 'Track uploaded and pending photo dates with live Google Drive synchronization.' },
     tracker: { title: 'Safar tracker', eyebrow: 'SAFAR-BY-SAFAR PRODUCTION', description: 'Date folders, assignments, and progress grouped by Safar.' },
     archive: { title: 'Archived Safars', eyebrow: 'COMPLETED & STORED', description: 'Archived Safars remain available here and can be restored at any time.' },
@@ -934,7 +1112,7 @@ export default function App(): JSX.Element {
 
   const shortViewTitles: Record<typeof view, string> = {
     dashboard: 'Dashboard',
-    ongoing: 'Kanban',
+    ongoing: 'Pipeline',
     photos: 'Photos',
     tracker: 'Safars',
     archive: 'Archive',
@@ -1003,6 +1181,12 @@ export default function App(): JSX.Element {
           const cloudSnap = data.snapshot as Snapshot
           if (cloudSnap.tasks && cloudSnap.tasks.length > 0) {
             applySnapshot(cloudSnap)
+            // If cloud storage had old camera or invalid folders, re-persist normalized clean snapshot to purge them permanently
+            const hasInvalid = cloudSnap.tasks.some(t => isCameraOrAssetFolder(t.dateFolder) || !isProperDateOrSessionFolder(t.dateFolder))
+            if (hasInvalid) {
+              const cleaned = normalizeSnapshot(cloudSnap)
+              void persistSnapshot(cleaned)
+            }
           } else {
             // If cloud snapshot has 0 tasks, check local storage on this device:
             const local = readLocal()
@@ -1231,14 +1415,16 @@ export default function App(): JSX.Element {
       for (const t of current.tasks) {
         const k = getTaskKey(t.safarName, t.dateFolder)
         if (!scannedKeys.has(k) && !delSafars.has(t.safarName.trim().toLowerCase()) && !delTasks.has(k)) {
-          mergedTasks.push({
-            ...t,
-            editorName: t.editorName || 'Murtaza',
-            dueDate: t.dueDate || '',
-            photoStage: t.photoStage || 'edited',
-            photoEditorName: t.photoEditorName || 'Muffadal Peti',
-            photoUploaded: Boolean(t.photoUploaded)
-          })
+          if (!isCameraOrAssetFolder(t.dateFolder) && isProperDateOrSessionFolder(t.dateFolder)) {
+            mergedTasks.push({
+              ...t,
+              editorName: t.editorName || 'Murtaza',
+              dueDate: t.dueDate || '',
+              photoStage: t.photoStage || 'edited',
+              photoEditorName: t.photoEditorName || 'Muffadal Peti',
+              photoUploaded: Boolean(t.photoUploaded)
+            })
+          }
         }
       }
     }
@@ -1414,7 +1600,7 @@ export default function App(): JSX.Element {
         isArchived,
         taskStatuses: tasks.filter(task => task.safarName === group.safarName).map(task => ({
           dateFolder: task.dateFolder,
-          status: isArchived ? 'submitted' : task.stage === 'upload' ? 'uploaded' : (task.stage === 'jameya' || task.stage === 'completed') ? 'submitted' : 'auto'
+          status: isArchived ? 'submitted' : task.stage === 'uploaded' ? 'uploaded' : task.stage === 'jameya' ? 'submitted' : 'auto'
         }))
       }
     })
@@ -1428,6 +1614,39 @@ export default function App(): JSX.Element {
       else next.add(safarName)
       return next
     })
+  }
+
+  function applyStageFilter(stageId: string, targetView: View = 'tracker') {
+    const nextFilter = filter === stageId ? 'all' : stageId
+    setFilter(nextFilter)
+    setSafarStatusFilter('all')
+    if (nextFilter !== 'all') {
+      const matching = safarGroups.filter(g => !g.isArchived && g.tasks.some(t => t.stage === nextFilter))
+      const names = new Set(matching.map(g => g.safarName))
+      setExpandedSafars(current => new Set([...current, ...names]))
+    }
+    if (view !== targetView) navigateTo(targetView)
+  }
+
+  function applySafarStatusFilter(status: 'all' | 'pending' | 'in_process' | 'to_delete' | 'to_upload' | 'done', targetView: View = 'tracker') {
+    const nextStatus = safarStatusFilter === status ? 'all' : status
+    setSafarStatusFilter(nextStatus)
+    setFilter('all')
+    if (nextStatus !== 'all') {
+      const matching = safarGroups.filter(g => {
+        if (g.isArchived) return false
+        const tasks = g.tasks || []
+        if (nextStatus === 'pending') return tasks.length > 0 && tasks.every(t => t.stage === 'editing_pending')
+        if (nextStatus === 'in_process') return tasks.some(t => t.stage === 'editing' || t.stage === 'upload_pending')
+        if (nextStatus === 'to_delete') return tasks.length > 0 && tasks.every(t => t.stage === 'jameya')
+        if (nextStatus === 'to_upload') return tasks.length > 0 && tasks.every(t => t.stage === 'upload_pending' || t.stage === 'uploaded')
+        if (nextStatus === 'done') return g.total > 0 && g.deliveredCount >= g.total
+        return false
+      })
+      const names = new Set(matching.map(g => g.safarName))
+      setExpandedSafars(current => new Set([...current, ...names]))
+    }
+    if (view !== targetView) navigateTo(targetView)
   }
 
   async function notify(title: string, body: string, targetUrl: string = '/') {
@@ -1502,33 +1721,33 @@ export default function App(): JSX.Element {
     if (g) {
       const lines: string[] = []
       const total = g.total || g.tasks.length
-      const delivered = g.tasks.filter(t => t.stage === 'upload' || t.stage === 'jameya' || t.stage === 'completed').length
+      const delivered = g.tasks.filter(t => t.stage === 'uploaded' || t.stage === 'jameya' || (t.stage as any) === 'upload' || (t.stage as any) === 'completed').length
       const pct = total > 0 ? Math.round((delivered / total) * 100) : 0
 
       lines.push(`📢 *Ongoing Safar Production Update (${g.safarYear || '1448'} H)*`)
       lines.push(`📍 *${g.safarName}*: *${pct}% Delivered* (${delivered}/${total} dates)`)
       lines.push('')
 
-      // Video stage counts
-      const videoCompleted = g.tasks.filter(t => t.stage === 'completed').length
-      const videoJameya = g.tasks.filter(t => t.stage === 'jameya').length
-      const videoUpload = g.tasks.filter(t => t.stage === 'upload').length
-      const videoRendered = g.tasks.filter(t => t.stage === 'rendering').length
-      const videoEditing = g.tasks.filter(t => t.stage === 'editing').length
+      // Video stage counts (5 production stages)
+      const videoJameya = g.tasks.filter(t => t.stage === 'jameya' || (t.stage as any) === 'completed' || (t.stage as any) === 'submitted').length
+      const videoUploaded = g.tasks.filter(t => t.stage === 'uploaded' || (t.stage as any) === 'upload').length
+      const videoUploadPending = g.tasks.filter(t => t.stage === 'upload_pending' || (t.stage as any) === 'rendering').length
+      const videoInProgress = g.tasks.filter(t => t.stage === 'editing').length
+      const videoEditingPending = g.tasks.filter(t => t.stage === 'editing_pending').length
 
       const videoParts: string[] = []
-      if (videoCompleted > 0) videoParts.push(`${videoCompleted} Completed`)
-      if (videoJameya > 0) videoParts.push(`${videoJameya} Al Jamea`)
-      if (videoUpload > 0) videoParts.push(`${videoUpload} Uploaded`)
-      if (videoRendered > 0) videoParts.push(`${videoRendered} Rendered`)
-      if (videoEditing > 0) videoParts.push(`${videoEditing} In Editing`)
+      if (videoJameya > 0) videoParts.push(`${videoJameya} AlJamea Done`)
+      if (videoUploaded > 0) videoParts.push(`${videoUploaded} Uploaded`)
+      if (videoUploadPending > 0) videoParts.push(`${videoUploadPending} Upload Pending`)
+      if (videoInProgress > 0) videoParts.push(`${videoInProgress} In Progress`)
+      if (videoEditingPending > 0) videoParts.push(`${videoEditingPending} Editing Pending`)
 
       if (videoParts.length > 0) {
         lines.push(`• 🎬 *Video Pipeline:* ${videoParts.join(' · ')}`)
       }
 
       // Photo stage counts
-      const photoUploaded = g.tasks.filter(t => t.photoStage === 'uploaded' || t.photoUploaded || t.stage === 'upload' || t.stage === 'jameya' || t.stage === 'completed').length
+      const photoUploaded = g.tasks.filter(t => t.photoStage === 'uploaded' || t.photoUploaded || t.stage === 'uploaded' || t.stage === 'jameya' || (t.stage as any) === 'upload' || (t.stage as any) === 'completed').length
       const photoGiven = g.tasks.filter(t => t.photoStage === 'given_to_murtaza').length
       const photoEdited = g.tasks.filter(t => t.photoStage === 'edited' && !t.photoUploaded).length
 
@@ -1542,8 +1761,8 @@ export default function App(): JSX.Element {
       }
 
       // Delivered & In Progress Dates
-      const deliveredDates = g.tasks.filter(t => t.stage === 'upload' || t.stage === 'jameya' || t.stage === 'completed').map(dateFolderName)
-      const pendingDates = g.tasks.filter(t => t.stage === 'editing' || t.stage === 'rendering').map(dateFolderName)
+      const deliveredDates = g.tasks.filter(t => t.stage === 'uploaded' || t.stage === 'jameya' || (t.stage as any) === 'upload' || (t.stage as any) === 'completed').map(dateFolderName)
+      const pendingDates = g.tasks.filter(t => t.stage === 'editing_pending' || t.stage === 'editing' || t.stage === 'upload_pending' || (t.stage as any) === 'rendering').map(dateFolderName)
 
       if (deliveredDates.length > 0) {
         lines.push('')
@@ -1553,9 +1772,10 @@ export default function App(): JSX.Element {
         lines.push(`⏳ *Pending Video (${pendingDates.length}):* ${pendingDates.slice(0, 6).join(', ')}${pendingDates.length > 6 ? ` +${pendingDates.length - 6} more` : ''}`)
       }
 
+      const publicBase = getPublicWebsiteOrigin()
       lines.push('')
-      lines.push(`📱 *Interactive Briefing & Status Card:* ${window.location.origin}/briefing?safar=${encodeURIComponent(g.safarName)}`)
-      lines.push(`🔗 *Live Workstation Tracker:* ${window.location.origin}/kanban?safar=${encodeURIComponent(g.safarName)}`)
+      lines.push(`📱 *Interactive Briefing & Status Card:* ${publicBase}/briefing?safar=${encodeURIComponent(g.safarName)}`)
+      lines.push(`🔗 *Live Workstation Tracker:* ${publicBase}/kanban?safar=${encodeURIComponent(g.safarName)}`)
       lines.push(`_Generated via One Tap Workstation_`)
       return lines.join('\n')
     }
@@ -1567,14 +1787,16 @@ export default function App(): JSX.Element {
 
     activeSafarGroups.forEach(item => {
       const tot = item.total || item.tasks.length
-      const del = item.tasks.filter(t => t.stage === 'upload' || t.stage === 'jameya' || t.stage === 'completed').length
+      const del = item.tasks.filter(t => t.stage === 'uploaded' || t.stage === 'jameya' || (t.stage as any) === 'upload' || (t.stage as any) === 'completed').length
       const p = tot > 0 ? Math.round((del / tot) * 100) : 0
       lines.push(`📍 *${item.safarName}*: ${p}% Delivered (${del}/${tot} dates)`)
 
       const vParts: string[] = []
-      if (item.uploadCount + item.jameyaCount + item.completedCount > 0) vParts.push(`${item.uploadCount + item.jameyaCount + item.completedCount} Uploaded`)
-      if (item.renderingCount > 0) vParts.push(`${item.renderingCount} Rendered`)
-      if (item.editingCount > 0) vParts.push(`${item.editingCount} In Editing`)
+      if (item.jameyaCount > 0) vParts.push(`${item.jameyaCount} AlJamea Done`)
+      if (item.uploadedCount > 0) vParts.push(`${item.uploadedCount} Uploaded`)
+      if (item.uploadPendingCount > 0) vParts.push(`${item.uploadPendingCount} Upload Pending`)
+      if (item.editingCount > 0) vParts.push(`${item.editingCount} In Progress`)
+      if (item.editingPendingCount > 0) vParts.push(`${item.editingPendingCount} Editing Pending`)
       if (vParts.length > 0) lines.push(`• 🎬 Video: ${vParts.join(' · ')}`)
     })
 
@@ -1582,9 +1804,10 @@ export default function App(): JSX.Element {
     const allTotal = studioStats.totalDates
     const allPct = studioStats.percent
 
+    const publicBase = getPublicWebsiteOrigin()
     lines.push('')
     lines.push(`📊 *Overall Total:* ${allDelivered} of ${allTotal} dates delivered (${allPct}%)`)
-    lines.push(`Generated via One Tap Workstation: ${window.location.origin}`)
+    lines.push(`Generated via One Tap Workstation: ${publicBase}`)
 
     return lines.join('\n')
   }
@@ -1619,10 +1842,10 @@ export default function App(): JSX.Element {
     if (changes.photoStage === 'uploaded' || changes.photoUploaded === true) {
       effectiveChanges.photoStage = 'uploaded'
       effectiveChanges.photoUploaded = true
-      if (task.stage === 'editing' || task.stage === 'rendering') {
-        effectiveChanges.stage = 'upload'
+      if (task.stage === 'editing_pending' || task.stage === 'editing' || task.stage === 'upload_pending') {
+        effectiveChanges.stage = 'uploaded'
       }
-    } else if (changes.stage === 'upload' || changes.stage === 'jameya' || changes.stage === 'completed') {
+    } else if (changes.stage === 'uploaded' || changes.stage === 'jameya') {
       effectiveChanges.photoStage = 'uploaded'
       effectiveChanges.photoUploaded = true
     }
@@ -1664,12 +1887,12 @@ export default function App(): JSX.Element {
       if (error) setNotice('Saved on this device. Cloud history needs the Safar Tracker database setup.')
       await trackerChannelRef.current?.send({ type: 'broadcast', event: 'snapshot', payload: { snapshot: next } })
       if (effectiveChanges.stage) {
-        const status = (effectiveChanges.stage === 'jameya' || effectiveChanges.stage === 'completed') ? 'submitted' : effectiveChanges.stage === 'upload' ? 'uploaded' : 'auto'
+        const status = effectiveChanges.stage === 'jameya' ? 'submitted' : effectiveChanges.stage === 'uploaded' ? 'uploaded' : 'auto'
         await nexusChannelRef.current?.send({ type: 'broadcast', event: 'task_mark_done', payload: { safarName: task.safarName, dateFolder: task.dateFolder, status } })
 
-        // Trigger WhatsApp alert on completion of upload, jameya or completed
-        if (effectiveChanges.stage === 'upload' || effectiveChanges.stage === 'jameya' || effectiveChanges.stage === 'completed') {
-          const uploadedCount = next.tasks.filter(t => t.safarName === task.safarName && (t.stage === 'upload' || t.stage === 'jameya' || t.stage === 'completed')).length
+        // Trigger WhatsApp alert on completion of uploaded or jameya
+        if (effectiveChanges.stage === 'uploaded' || effectiveChanges.stage === 'jameya') {
+          const uploadedCount = next.tasks.filter(t => t.safarName === task.safarName && (t.stage === 'uploaded' || t.stage === 'jameya')).length
           const totalCount = next.tasks.filter(t => t.safarName === task.safarName).length
           const pendingCount = Math.max(0, totalCount - uploadedCount)
           sendWhatsAppAlert(task.dateFolder, uploadedCount, pendingCount, window.location.origin).catch(() => {})
@@ -1690,7 +1913,7 @@ export default function App(): JSX.Element {
             : 'Edited'
 
         const totalCount = next.tasks.filter(t => t.safarName === task.safarName).length
-        const deliveredCount = next.tasks.filter(t => t.safarName === task.safarName && (t.stage === 'upload' || t.stage === 'jameya' || t.stage === 'completed')).length
+        const deliveredCount = next.tasks.filter(t => t.safarName === task.safarName && (t.stage === 'uploaded' || t.stage === 'jameya')).length
         const deliveredPercent = totalCount > 0 ? Math.round((deliveredCount / totalCount) * 100) : 0
 
         const mediaType: 'video' | 'photo' | 'both' = (isStageChanged && isPhotoStageChanged)
@@ -1727,10 +1950,10 @@ export default function App(): JSX.Element {
       if (changes.photoStage === 'uploaded' || changes.photoUploaded === true) {
         effectiveChanges.photoStage = 'uploaded'
         effectiveChanges.photoUploaded = true
-        if (task.stage === 'editing' || task.stage === 'rendering') {
-          effectiveChanges.stage = 'upload'
+        if (task.stage === 'editing_pending' || task.stage === 'editing' || task.stage === 'upload_pending') {
+          effectiveChanges.stage = 'uploaded'
         }
-      } else if (changes.stage === 'upload' || changes.stage === 'jameya' || changes.stage === 'completed') {
+      } else if (changes.stage === 'uploaded' || changes.stage === 'jameya') {
         effectiveChanges.photoStage = 'uploaded'
         effectiveChanges.photoUploaded = true
       }
@@ -1783,7 +2006,7 @@ export default function App(): JSX.Element {
         const targetKey = getTaskKey(task.safarName, task.dateFolder)
         const effectiveChanges = updatesMap.get(targetKey) || changes
         if (effectiveChanges.stage) {
-          const status = (effectiveChanges.stage === 'jameya' || effectiveChanges.stage === 'completed') ? 'submitted' : effectiveChanges.stage === 'upload' ? 'uploaded' : 'auto'
+          const status = effectiveChanges.stage === 'jameya' ? 'submitted' : effectiveChanges.stage === 'uploaded' ? 'uploaded' : 'auto'
           await nexusChannelRef.current?.send({ type: 'broadcast', event: 'task_mark_done', payload: { safarName: task.safarName, dateFolder: task.dateFolder, status } })
         }
       }
@@ -1844,7 +2067,11 @@ export default function App(): JSX.Element {
   async function handleAddTask(safarName: string, dateFolder: string) {
     const current = snapshotRef.current
     const cleanFolder = dateFolder.trim()
-    if (!cleanFolder) return
+    if (!cleanFolder || isCameraOrAssetFolder(cleanFolder) || !isProperDateOrSessionFolder(cleanFolder)) {
+      setNotice(`"${cleanFolder}" is a camera or asset folder and cannot be added as a task.`)
+      setTimeout(() => setNotice(''), 4000)
+      return
+    }
 
     // Un-delete if previously excluded
     const targetKey = getTaskKey(safarName, cleanFolder)
@@ -2027,13 +2254,57 @@ export default function App(): JSX.Element {
   }
 
   if (view === 'briefing') {
+    if (initialLoading) {
+      return (
+        <div className="app-shell" style={{ display: 'block', minHeight: '100vh', background: 'transparent', padding: '24px 16px' }}>
+          <SafarLoadingSkeleton variant="tracker" />
+        </div>
+      )
+    }
+
     const targetSafarName = selectedSafar !== 'all' ? selectedSafar : effectiveOngoingSafar
-    const ongoingGroup = activeSafarGroups.find(g => g.safarName === targetSafarName) || activeSafarGroups[0]
-    const deliveredDatesList = ongoingGroup ? ongoingGroup.tasks.filter(t => t.stage === 'upload' || t.stage === 'jameya' || t.stage === 'completed').map(dateFolderName) : []
-    const pendingDatesList = ongoingGroup ? ongoingGroup.tasks.filter(t => t.stage === 'editing' || t.stage === 'rendering').map(dateFolderName) : []
+    const norm = (targetSafarName || '').trim().toLowerCase()
+    const cleanTarget = norm.replace(/[-_\s]+/g, ' ').trim()
+    const cityKey = norm.replace(/^\d+[-_\s]*/, '').replace(/[-_\s]+/g, ' ').trim()
+
+    const ongoingGroup =
+      safarGroups.find(g => g.safarName.trim().toLowerCase() === norm) ||
+      safarGroups.find(g => g.safarName.trim().toLowerCase().replace(/[-_\s]+/g, ' ').trim() === cleanTarget) ||
+      safarGroups.find(g => {
+        const gClean = g.safarName.trim().toLowerCase().replace(/[-_\s]+/g, ' ').trim()
+        return gClean.includes(cleanTarget) || cleanTarget.includes(gClean)
+      }) ||
+      (cityKey && cityKey.length >= 3 ? safarGroups.find(g => g.safarName.trim().toLowerCase().includes(cityKey)) : undefined) ||
+      activeSafarGroups.find(g => g.safarName === targetSafarName) ||
+      (targetSafarName && targetSafarName !== 'all' ? {
+        safarName: targetSafarName.replace(/[-_]/g, ' '),
+        safarYear: targetSafarName.match(/^\d{4}/)?.[0] || '1448',
+        totalDays: 0,
+        total: 0,
+        completed: 0,
+        deliveredCount: 0,
+        deliveredPercent: 0,
+        editingPendingCount: 0,
+        editingCount: 0,
+        uploadPendingCount: 0,
+        uploadedCount: 0,
+        jameyaCount: 0,
+        renderingCount: 0,
+        uploadCount: 0,
+        completedCount: 0,
+        photoUploadedCount: 0,
+        photoPercent: 0,
+        isArchived: false,
+        isDone: false,
+        tasks: []
+      } : activeSafarGroups[0])
+
+    const deliveredDatesList = ongoingGroup ? ongoingGroup.tasks.filter(t => (t.stage === 'uploaded' || t.stage === 'jameya' || (t.stage as any) === 'upload' || (t.stage as any) === 'completed') && !isCameraOrAssetFolder(t.dateFolder) && isProperDateOrSessionFolder(t.dateFolder)).map(dateFolderName) : []
+    const pendingDatesList = ongoingGroup ? ongoingGroup.tasks.filter(t => (t.stage === 'editing_pending' || t.stage === 'editing' || t.stage === 'upload_pending' || (t.stage as any) === 'rendering') && !isCameraOrAssetFolder(t.dateFolder) && isProperDateOrSessionFolder(t.dateFolder)).map(dateFolderName) : []
+    const briefingSafars = safars.filter(Boolean)
 
     return (
-      <div className="app-shell" style={{ display: 'block', minHeight: '100vh', background: '#f8fafc' }}>
+      <div className="app-shell" style={{ display: 'block', minHeight: '100vh', background: 'transparent' }}>
         <SafarBriefingView
           safarName={ongoingGroup?.safarName || targetSafarName || 'Active Safar'}
           safarYear={ongoingGroup?.safarYear || '1448'}
@@ -2041,10 +2312,15 @@ export default function App(): JSX.Element {
           deliveredDates={ongoingGroup?.deliveredCount || 0}
           deliveredPercent={ongoingGroup?.deliveredPercent || 0}
           videoStats={{
-            completed: ongoingGroup?.completedCount || 0,
+            editingPending: ongoingGroup?.editingPendingCount || 0,
+            inProgress: ongoingGroup?.editingCount || 0,
+            uploadPending: ongoingGroup?.uploadPendingCount || 0,
+            uploaded: ongoingGroup?.uploadedCount || 0,
+            aljameaDone: ongoingGroup?.jameyaCount || 0,
+            completed: ongoingGroup?.jameyaCount || 0,
             jameya: ongoingGroup?.jameyaCount || 0,
-            upload: ongoingGroup?.uploadCount || 0,
-            rendering: ongoingGroup?.renderingCount || 0,
+            upload: ongoingGroup?.uploadedCount || 0,
+            rendering: ongoingGroup?.uploadPendingCount || 0,
             editing: ongoingGroup?.editingCount || 0
           }}
           photoStats={{
@@ -2056,10 +2332,15 @@ export default function App(): JSX.Element {
           pendingDatesList={pendingDatesList}
           connected={connected}
           lastUpdated={snapshot.updatedAt}
+          availableSafars={briefingSafars}
+          onSelectSafar={safar => {
+            setSelectedSafar(safar)
+            navigateTo('briefing', safar)
+          }}
           onRefresh={requestDesktopSync}
-          onCopyBriefing={() => copyDailyBriefing(ongoingGroup?.safarName)}
-          onShareWhatsApp={() => shareDailyBriefingWhatsApp(ongoingGroup?.safarName)}
-          onOpenTracker={() => navigateTo('ongoing')}
+          onCopyBriefing={() => copyDailyBriefing(ongoingGroup?.safarName || targetSafarName)}
+          onShareWhatsApp={() => shareDailyBriefingWhatsApp(ongoingGroup?.safarName || targetSafarName)}
+          onOpenTracker={() => navigateTo('ongoing', ongoingGroup?.safarName || targetSafarName)}
         />
         {notice && <div className="toast-note" role="status" aria-live="polite"><span>{notice}</span><button type="button" onClick={() => setNotice('')}>Dismiss</button></div>}
       </div>
@@ -2119,7 +2400,7 @@ export default function App(): JSX.Element {
       
       <aside ref={sidebarRef} id="workspace-navigation" className={`sidebar ${menuOpen ? 'sidebar-open' : ''}`} aria-label="Workspace navigation" aria-hidden={isMobile && !menuOpen}>
         <div className="brand" onClick={() => navigateTo('dashboard')} style={{ cursor: 'pointer' }} title="Go to Dashboard">
-          <div className="brand-mark" aria-hidden="true">1</div>
+          <img src="/logo.svg" alt="One Tap Logo" style={{ width: 30, height: 30, borderRadius: 8, display: 'block' }} aria-hidden="true" />
           <div><strong>One Tap</strong><span>PRODUCTION WORKSPACE</span></div>
           <button ref={sidebarCloseRef} type="button" className="sidebar-close" aria-label="Close navigation menu" onClick={() => { setMenuOpen(false); menuToggleRef.current?.focus() }}><X size={18}/></button>
         </div>
@@ -2130,7 +2411,7 @@ export default function App(): JSX.Element {
             <LayoutDashboard aria-hidden="true" size={17}/> Dashboard
           </button>
           <button type="button" aria-current={view === 'ongoing' ? 'page' : undefined} className={`nav-link ${view === 'ongoing' ? 'active' : ''}`} onClick={() => navigateTo('ongoing')}>
-            <Kanban aria-hidden="true" size={17}/> Ongoing Safar <span className="nav-count">{activeSafarGroups.length}</span>
+            <Kanban aria-hidden="true" size={17}/> Pipeline <span className="nav-count">{activeSafarGroups.length}</span>
           </button>
           <button type="button" aria-current={view === 'photos' ? 'page' : undefined} className={`nav-link ${view === 'photos' ? 'active' : ''}`} onClick={() => navigateTo('photos')}>
             <Camera aria-hidden="true" size={17}/> Photo Tracker
@@ -2147,34 +2428,9 @@ export default function App(): JSX.Element {
           <button type="button" aria-current={view === 'pipeline' ? 'page' : undefined} className={`nav-link ${view === 'pipeline' ? 'active' : ''}`} onClick={() => navigateTo('pipeline')}>
             <Film aria-hidden="true" size={17}/> Media pipeline
           </button>
-
-          <div className="side-divider" />
-          <div className="nav-caption">YOUR SAFARS</div>
-          {safars.map(name => (
-            <button
-              type="button"
-              key={name}
-              aria-pressed={selectedSafar === name}
-              className={`safar-link ${selectedSafar === name ? 'selected' : ''}`}
-              onClick={() => {
-                const target = selectedSafar === name ? 'all' : name
-                setSelectedSafar(target)
-                navigateTo('ongoing', target)
-              }}
-            >
-              <span className="safar-dot" aria-hidden="true"/>{name}
-            </button>
-          ))}
         </nav>
 
         <div className="sidebar-bottom">
-          <div className="sync-status" role="status">
-            <span className={`status-dot ${connected ? 'online' : ''}`} aria-hidden="true"/>
-            <div>
-              <strong>{connected ? 'Cloud connected' : 'Offline mode'}</strong>
-              <span>{snapshot.updatedAt ? `Synced ${new Date(snapshot.updatedAt).toLocaleString()}` : 'Waiting for first sync'}</span>
-            </div>
-          </div>
           <button type="button" aria-current={view === 'settings' ? 'page' : undefined} className={`nav-link ${view === 'settings' ? 'active' : ''}`} onClick={() => navigateTo('settings')}>
             <Settings2 aria-hidden="true" size={17}/> Settings
           </button>
@@ -2218,60 +2474,33 @@ export default function App(): JSX.Element {
 
         <header className="topbar">
           <div className="topbar-left">
-            <button ref={menuToggleRef} type="button" className="icon-button menu-toggle" aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'} aria-controls="workspace-navigation" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>
-              <Menu aria-hidden="true" size={20}/>
-            </button>
-            <div className="topbar-mobile-brand" onClick={() => navigateTo('dashboard')} title="One Tap Production Workspace" style={{ cursor: 'pointer' }}>
-              <div className="brand-mark small" style={{ width: '26px', height: '26px', fontSize: '12px', borderRadius: '7px' }} aria-hidden="true">1</div>
+            <div className="topbar-brand" onClick={() => navigateTo('dashboard')} title="One Tap Production Workspace" style={{ cursor: 'pointer' }}>
+              <img src="/logo.svg" alt="One Tap Logo" style={{ width: 26, height: 26, borderRadius: 7, display: 'block' }} aria-hidden="true" />
               <strong>One Tap</strong>
             </div>
-            <div className="breadcrumb mobile-view-title" aria-label="Breadcrumb">
-              <span className="mobile-title-slash" aria-hidden="true">/</span>
-              <span className={`status-dot ${connected ? 'online' : ''}`} title={connected ? 'Live Sync Online' : 'Local Storage Mode'} />
-              <strong>{shortViewTitles[view] || pageHeading[view]?.title}</strong>
-            </div>
+            <span className="topbar-slash" aria-hidden="true">/</span>
+            <span className="topbar-view-title">{shortViewTitles[view] || pageHeading[view]?.title}</span>
+            {activeSafarGroups.length > 0 && (
+              <div className="topbar-universal-safar-wrap">
+                <select
+                  className="topbar-universal-safar-select"
+                  title="Universal Active Safar (Syncs Video, Photos & Dashboard)"
+                  value={effectiveOngoingSafar}
+                  onChange={e => {
+                    handleSetOngoingSafar(e.target.value)
+                    setSelectedSafar(e.target.value)
+                  }}
+                >
+                  {activeSafarGroups.map(g => (
+                    <option key={g.safarName} value={g.safarName}>{g.safarName}</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
           
-          <div className="topbar-actions">
-            {/* Quick Sync Button */}
-            <button
-              type="button"
-              className="notification-button mobile-sync-btn"
-              onClick={() => {
-                try { if ('vibrate' in navigator) navigator.vibrate(10) } catch {}
-                void requestDesktopSync()
-              }}
-              title={connected ? "Connected to Cloud Sync · Click to refresh" : "Sync with One Tap Workstation"}
-            >
-              <Cloud aria-hidden="true" size={16} />
-              <span className="mobile-sync-label">Sync</span>
-            </button>
-
-            {/* Mobile PWA Install Button */}
-            {!isStandalone && (
-              <button
-                type="button"
-                className="notification-button install-pwa-btn"
-                onClick={handleInstallApp}
-                title="Install One Tap to your phone or desktop home screen"
-                style={{
-                  backgroundColor: 'rgba(79, 70, 229, 0.08)',
-                  borderColor: 'rgba(79, 70, 229, 0.25)',
-                  color: '#4f46e5',
-                  fontWeight: 600
-                }}
-              >
-                <Smartphone aria-hidden="true" size={16} />
-                <span className="install-label">Install</span>
-              </button>
-            )}
-
-            <button type="button" className="notification-button notification-bell-btn" onClick={requestNotifications}>
-              <Bell aria-hidden="true" size={17}/><span>Alerts</span>
-            </button>
-
-            {/* User Profile / Email Sign-In via Google Apps Script */}
-            {currentUser ? (
+          {currentUser && (
+            <div className="topbar-actions">
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <div className="avatar" role="img" title={currentUser.email} aria-label={`Signed in as ${currentUser.name}`}>
                   {currentUser.name?.[0]?.toUpperCase() || 'U'}
@@ -2295,31 +2524,20 @@ export default function App(): JSX.Element {
                   <LogOut size={16} />
                 </button>
               </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setIsLoginModalOpen(true)}
-                className="topbar-signin-btn"
-              >
-                <LogIn size={14} />
-                <span className="signin-label">Sign in</span>
-              </button>
-            )}
-          </div>
+            </div>
+          )}
         </header>
 
         <div className="content-wrap">
-          <div className={`page-heading ${view === 'ongoing' || view === 'photos' || view === 'dashboard' ? 'has-dedicated-hero' : ''}`}>
-            <div>
-              <div className="eyebrow"><span className="live-pip" aria-hidden="true"/> {pageHeading[view]?.eyebrow}</div>
-              <h1 ref={pageTitleRef} tabIndex={-1}>{pageHeading[view]?.title}</h1>
-              <p>{pageHeading[view]?.description}</p>
+          {view !== 'ongoing' && view !== 'photos' && (
+            <div className={`page-heading ${view === 'dashboard' ? 'has-dedicated-hero' : ''}`}>
+              <div>
+                <div className="eyebrow">{pageHeading[view]?.eyebrow}</div>
+                <h1 ref={pageTitleRef} tabIndex={-1}>{pageHeading[view]?.title}</h1>
+                <p>{pageHeading[view]?.description}</p>
+              </div>
             </div>
-            <div className="heading-actions">
-              {view !== 'settings' && <button type="button" className="button-secondary" onClick={requestNotifications}><Bell aria-hidden="true" size={16}/> Enable alerts</button>}
-              <button type="button" className="button-secondary" onClick={requestDesktopSync}><Cloud aria-hidden="true" size={16}/> Sync now</button>
-            </div>
-          </div>
+          )}
 
           {/* VIEW: ONGOING SAFAR KANBAN BOARD */}
           {view === 'ongoing' && (
@@ -2328,7 +2546,11 @@ export default function App(): JSX.Element {
                 tasks={snapshot.tasks}
                 safars={snapshot.safars}
                 selectedSafar={selectedSafar === 'all' && effectiveOngoingSafar ? effectiveOngoingSafar : selectedSafar}
-                onSelectSafar={safar => navigateTo('ongoing', safar)}
+                onSelectSafar={safar => {
+                  setSelectedSafar(safar)
+                  handleSetOngoingSafar(safar)
+                  navigateTo('ongoing', safar)
+                }}
                 onUpdateTask={(task, changes) => void updateTask(task as SafarTask, changes as Partial<SafarTask>)}
                 onBatchUpdateTasks={items => void updateTasksBatch(items as any)}
                 onRemoveTask={task => void handleRemoveTask(task as SafarTask)}
@@ -2346,8 +2568,11 @@ export default function App(): JSX.Element {
             <PhotoTracker
               tasks={snapshot.tasks}
               safars={snapshot.safars}
-              selectedSafar={selectedSafar}
-              onSelectSafar={safar => setSelectedSafar(safar)}
+              selectedSafar={selectedSafar === 'all' && effectiveOngoingSafar ? effectiveOngoingSafar : selectedSafar}
+              onSelectSafar={safar => {
+                setSelectedSafar(safar)
+                handleSetOngoingSafar(safar)
+              }}
               onUpdateTask={(task, changes) => void updateTask(task as SafarTask, changes as Partial<SafarTask>)}
               onBatchUpdateTasks={items => void updateTasksBatch(items as any)}
               onRemoveTask={task => void handleRemoveTask(task as SafarTask)}
@@ -2501,12 +2726,158 @@ export default function App(): JSX.Element {
               </div>
             </div>
 
+            {/* ── 1. Top KPI Cards Row (Desktop Aligned) ── */}
+            <div className="tracker-kpi-grid" role="region" aria-label="Studio Production KPIs">
+              <div
+                className={`tracker-kpi-card kpi-total ${filter === 'all' && safarStatusFilter === 'all' ? 'active' : ''}`}
+                onClick={() => applyStageFilter('all')}
+                title="Total scheduled dates across active Safars (Click to view all)"
+              >
+                <div className="tracker-kpi-top">
+                  <span className="tracker-kpi-label">TOTAL DAYS</span>
+                  <span className="tracker-kpi-icon"><FileText size={16} /></span>
+                </div>
+                <span className="tracker-kpi-val"><AnimatedNumber value={studioStats.totalDates} /></span>
+              </div>
+
+              <div
+                className={`tracker-kpi-card kpi-pending ${filter === 'editing_pending' ? 'active' : ''}`}
+                onClick={() => applyStageFilter('editing_pending')}
+                title="Dates awaiting editing pass (Click to filter)"
+              >
+                <div className="tracker-kpi-top">
+                  <span className="tracker-kpi-label">EDITING PENDING</span>
+                  <span className="tracker-kpi-icon"><Clock size={16} /></span>
+                </div>
+                <span className="tracker-kpi-val"><AnimatedNumber value={studioStats.editingPending} /></span>
+              </div>
+
+              <div
+                className={`tracker-kpi-card kpi-editing ${filter === 'editing' ? 'active' : ''}`}
+                onClick={() => applyStageFilter('editing')}
+                title="Dates currently in editing / color grading (Click to filter)"
+              >
+                <div className="tracker-kpi-top">
+                  <span className="tracker-kpi-label">IN PROGRESS</span>
+                  <span className="tracker-kpi-icon"><Film size={16} /></span>
+                </div>
+                <span className="tracker-kpi-val"><AnimatedNumber value={studioStats.editing} /></span>
+              </div>
+
+              <div
+                className={`tracker-kpi-card kpi-upload-pending ${filter === 'upload_pending' ? 'active' : ''}`}
+                onClick={() => applyStageFilter('upload_pending')}
+                title="Dates rendered and pending upload (Click to filter)"
+              >
+                <div className="tracker-kpi-top">
+                  <span className="tracker-kpi-label">UPLOAD PENDING</span>
+                  <span className="tracker-kpi-icon"><Globe size={16} /></span>
+                </div>
+                <span className="tracker-kpi-val"><AnimatedNumber value={studioStats.uploadPending} /></span>
+              </div>
+
+              <div
+                className={`tracker-kpi-card kpi-uploaded ${filter === 'uploaded' ? 'active' : ''}`}
+                onClick={() => applyStageFilter('uploaded')}
+                title="Dates uploaded to cloud (Click to filter)"
+              >
+                <div className="tracker-kpi-top">
+                  <span className="tracker-kpi-label">UPLOADED</span>
+                  <span className="tracker-kpi-icon"><CheckCircle2 size={16} /></span>
+                </div>
+                <span className="tracker-kpi-val"><AnimatedNumber value={studioStats.uploaded} /></span>
+              </div>
+
+              <div
+                className={`tracker-kpi-card kpi-jameya ${filter === 'jameya' ? 'active' : ''}`}
+                onClick={() => applyStageFilter('jameya')}
+                title="Dates submitted and completed with AlJamea (Click to filter)"
+              >
+                <div className="tracker-kpi-top">
+                  <span className="tracker-kpi-label">ALJAMEA DONE</span>
+                  <span className="tracker-kpi-icon"><Building2 size={16} /></span>
+                </div>
+                <span className="tracker-kpi-val"><AnimatedNumber value={studioStats.jameya} /></span>
+              </div>
+
+              <div
+                className={`tracker-kpi-card kpi-safars-done ${safarStatusFilter === 'done' ? 'active' : ''}`}
+                onClick={() => applySafarStatusFilter('done')}
+                title="Safars with 100% of dates completed (Click to filter completed Safars)"
+              >
+                <div className="tracker-kpi-top">
+                  <span className="tracker-kpi-label">SAFARS 100% DONE</span>
+                  <span className="tracker-kpi-icon"><Award size={16} /></span>
+                </div>
+                <span className="tracker-kpi-val">
+                  <AnimatedNumber value={studioStats.safarsDone} /> / {studioStats.totalSafars}
+                </span>
+              </div>
+            </div>
+
+            {/* ── 2. Safar-Level Status Row (Issue 3 / Desktop Aligned) ── */}
+            <div className="tracker-safar-status-grid" role="region" aria-label="Safar-Level Status Overview">
+              <span className="tracker-safar-status-label">
+                📁 SAFAR-LEVEL STATUS
+              </span>
+
+              <button
+                type="button"
+                className={`kpi-safar-badge-btn kpi-safar-pending ${safarStatusFilter === 'pending' ? 'active' : ''}`}
+                onClick={() => applySafarStatusFilter('pending')}
+                title="Safars where all dates are still pending editing (Click to filter)"
+              >
+                <Clock size={13} />
+                <span>SAFAR PENDING: <strong>{safarStatusBuckets.safarPending}</strong></span>
+              </button>
+
+              <button
+                type="button"
+                className={`kpi-safar-badge-btn kpi-safar-in-process ${safarStatusFilter === 'in_process' ? 'active' : ''}`}
+                onClick={() => applySafarStatusFilter('in_process')}
+                title="Safars actively in editing or render pipeline (Click to filter)"
+              >
+                <Film size={13} />
+                <span>IN PROCESS: <strong>{safarStatusBuckets.inProcess}</strong></span>
+              </button>
+
+              <button
+                type="button"
+                className={`kpi-safar-badge-btn kpi-safar-to-delete ${safarStatusFilter === 'to_delete' ? 'active' : ''}`}
+                onClick={() => applySafarStatusFilter('to_delete')}
+                title="Safars fully delivered to Jamea / safe to clean up (Click to filter)"
+              >
+                <Trash2 size={13} />
+                <span>TO DELETE / JAMEA: <strong>{safarStatusBuckets.toDelete}</strong></span>
+              </button>
+
+              <button
+                type="button"
+                className={`kpi-safar-badge-btn kpi-safar-to-upload ${safarStatusFilter === 'to_upload' ? 'active' : ''}`}
+                onClick={() => applySafarStatusFilter('to_upload')}
+                title="Safars where all tasks are rendered / ready to upload (Click to filter)"
+              >
+                <Globe size={13} />
+                <span>TO UPLOAD: <strong>{safarStatusBuckets.toUpload}</strong></span>
+              </button>
+
+              <button
+                type="button"
+                className="kpi-safar-badge-btn kpi-safar-archived"
+                onClick={() => navigateTo('archive')}
+                title="Safars preserved in archive storage (Click to open archive)"
+              >
+                <Archive size={13} />
+                <span>ARCHIVED SAFARS: <strong>{safarStatusBuckets.archived}</strong></span>
+              </button>
+            </div>
+
             {/* Overall Studio Multi-Color Stage Pipeline Bar */}
             {activeSafarGroups.length > 0 && (
               <div className="panel studio-pipeline-summary">
                 <div className="studio-pipeline-header">
                   <div>
-                    <span className="eyebrow"><span className="live-pip" aria-hidden="true" /> ACTIVE STUDIO WORKLOAD</span>
+                    <span className="eyebrow">ACTIVE STUDIO WORKLOAD</span>
                     <h2>Production Stage Pipeline Distribution</h2>
                     <p>Live cross-stage status across all {activeSafarGroups.length} campaigns ({studioStats.totalDates} scheduled dates)</p>
                   </div>
@@ -2516,29 +2887,29 @@ export default function App(): JSX.Element {
                   </div>
                 </div>
                 <div className="multicolor-progress-bar large" role="progressbar" aria-label="Studio-wide pipeline stage distribution">
-                  {studioStats.editing > 0 && <span className="stage-segment stage-editing" style={{ width: `${(studioStats.editing / (studioStats.totalDates || 1)) * 100}%` }} title={`In Editing: ${studioStats.editing}`} />}
-                  {studioStats.rendering > 0 && <span className="stage-segment stage-rendering" style={{ width: `${(studioStats.rendering / (studioStats.totalDates || 1)) * 100}%` }} title={`Rendered: ${studioStats.rendering}`} />}
-                  {studioStats.upload > 0 && <span className="stage-segment stage-upload" style={{ width: `${(studioStats.upload / (studioStats.totalDates || 1)) * 100}%` }} title={`Ready/Uploaded: ${studioStats.upload}`} />}
-                  {studioStats.jameya > 0 && <span className="stage-segment stage-jameya" style={{ width: `${(studioStats.jameya / (studioStats.totalDates || 1)) * 100}%` }} title={`AlJamea Submitted: ${studioStats.jameya}`} />}
-                  {studioStats.completed > 0 && <span className="stage-segment stage-completed" style={{ width: `${(studioStats.completed / (studioStats.totalDates || 1)) * 100}%` }} title={`Completed Every Stage: ${studioStats.completed}`} />}
+                  {studioStats.editingPending > 0 && <span className="stage-segment stage-editing_pending" style={{ width: `${(studioStats.editingPending / (studioStats.totalDates || 1)) * 100}%` }} title={`Editing Pending: ${studioStats.editingPending}`} />}
+                  {studioStats.editing > 0 && <span className="stage-segment stage-editing" style={{ width: `${(studioStats.editing / (studioStats.totalDates || 1)) * 100}%` }} title={`In Progress: ${studioStats.editing}`} />}
+                  {studioStats.uploadPending > 0 && <span className="stage-segment stage-upload_pending" style={{ width: `${(studioStats.uploadPending / (studioStats.totalDates || 1)) * 100}%` }} title={`Upload Pending: ${studioStats.uploadPending}`} />}
+                  {studioStats.uploaded > 0 && <span className="stage-segment stage-uploaded" style={{ width: `${(studioStats.uploaded / (studioStats.totalDates || 1)) * 100}%` }} title={`Uploaded: ${studioStats.uploaded}`} />}
+                  {studioStats.jameya > 0 && <span className="stage-segment stage-jameya" style={{ width: `${(studioStats.jameya / (studioStats.totalDates || 1)) * 100}%` }} title={`AlJamea Done: ${studioStats.jameya}`} />}
                 </div>
                 <div className="multicolor-legend">
-                  <div className="legend-chip chip-editing"><span className="chip-dot" /><strong><AnimatedNumber value={studioStats.editing} /></strong> In Editing</div>
-                  <div className="legend-chip chip-rendering"><span className="chip-dot" /><strong><AnimatedNumber value={studioStats.rendering} /></strong> Rendered</div>
-                  <div className="legend-chip chip-upload"><span className="chip-dot" /><strong><AnimatedNumber value={studioStats.upload} /></strong> Uploaded</div>
-                  <div className="legend-chip chip-jameya"><span className="chip-dot" /><strong><AnimatedNumber value={studioStats.jameya} /></strong> Jameya</div>
-                  <div className="legend-chip chip-completed"><span className="chip-dot" /><strong><AnimatedNumber value={studioStats.completed} /></strong> Completed</div>
+                  <div className="legend-chip chip-editing_pending"><span className="chip-dot" /><strong><AnimatedNumber value={studioStats.editingPending} /></strong> Editing Pending</div>
+                  <div className="legend-chip chip-editing"><span className="chip-dot" /><strong><AnimatedNumber value={studioStats.editing} /></strong> In Progress</div>
+                  <div className="legend-chip chip-upload_pending"><span className="chip-dot" /><strong><AnimatedNumber value={studioStats.uploadPending} /></strong> Upload Pending</div>
+                  <div className="legend-chip chip-uploaded"><span className="chip-dot" /><strong><AnimatedNumber value={studioStats.uploaded} /></strong> Uploaded</div>
+                  <div className="legend-chip chip-jameya"><span className="chip-dot" /><strong><AnimatedNumber value={studioStats.jameya} /></strong> AlJamea Done</div>
                 </div>
               </div>
             )}
 
             {!activeSafarGroups.length ? <div className="panel safar-empty-state"><h3>No active Safars yet</h3><p>Safar folders from One Tap will appear here as they sync.</p></div> : <div className="dashboard-safar-grid">{activeSafarGroups.map(group => {
               const total = Math.max(group.total, group.tasks.length, 1)
+              const editingPendingPct = (group.editingPendingCount / total) * 100
               const editingPct = (group.editingCount / total) * 100
-              const renderingPct = (group.renderingCount / total) * 100
-              const uploadPct = (group.uploadCount / total) * 100
+              const uploadPendingPct = (group.uploadPendingCount / total) * 100
+              const uploadedPct = (group.uploadedCount / total) * 100
               const jameyaPct = (group.jameyaCount / total) * 100
-              const completedPct = (group.completedCount / total) * 100
 
               return <article className="panel dashboard-safar-card" key={group.safarName}>
                 <div className="dashboard-safar-top">
@@ -2555,18 +2926,18 @@ export default function App(): JSX.Element {
                 {/* Multi-Color Stage Progress Bar */}
                 <div className="multicolor-progress-wrap">
                   <div className="multicolor-progress-bar" role="progressbar" aria-label={`${group.safarName} pipeline progress`}>
-                    {editingPct > 0 && <span className="stage-segment stage-editing" style={{ width: `${editingPct}%` }} title={`In Editing: ${group.editingCount} dates (${Math.round(editingPct)}%)`} />}
-                    {renderingPct > 0 && <span className="stage-segment stage-rendering" style={{ width: `${renderingPct}%` }} title={`Rendered: ${group.renderingCount} dates (${Math.round(renderingPct)}%)`} />}
-                    {uploadPct > 0 && <span className="stage-segment stage-upload" style={{ width: `${uploadPct}%` }} title={`Uploaded: ${group.uploadCount} dates (${Math.round(uploadPct)}%)`} />}
-                    {jameyaPct > 0 && <span className="stage-segment stage-jameya" style={{ width: `${jameyaPct}%` }} title={`Submitted: ${group.jameyaCount} dates (${Math.round(jameyaPct)}%)`} />}
-                    {completedPct > 0 && <span className="stage-segment stage-completed" style={{ width: `${completedPct}%` }} title={`Completed: ${group.completedCount} dates (${Math.round(completedPct)}%)`} />}
+                    {editingPendingPct > 0 && <span className="stage-segment stage-editing_pending" style={{ width: `${editingPendingPct}%` }} title={`Editing Pending: ${group.editingPendingCount} dates (${Math.round(editingPendingPct)}%)`} />}
+                    {editingPct > 0 && <span className="stage-segment stage-editing" style={{ width: `${editingPct}%` }} title={`In Progress: ${group.editingCount} dates (${Math.round(editingPct)}%)`} />}
+                    {uploadPendingPct > 0 && <span className="stage-segment stage-upload_pending" style={{ width: `${uploadPendingPct}%` }} title={`Upload Pending: ${group.uploadPendingCount} dates (${Math.round(uploadPendingPct)}%)`} />}
+                    {uploadedPct > 0 && <span className="stage-segment stage-uploaded" style={{ width: `${uploadedPct}%` }} title={`Uploaded: ${group.uploadedCount} dates (${Math.round(uploadedPct)}%)`} />}
+                    {jameyaPct > 0 && <span className="stage-segment stage-jameya" style={{ width: `${jameyaPct}%` }} title={`AlJamea Done: ${group.jameyaCount} dates (${Math.round(jameyaPct)}%)`} />}
                   </div>
                   <div className="multicolor-legend">
-                    <span className="legend-chip chip-editing" title="In Editing"><span className="chip-dot" /><AnimatedNumber value={group.editingCount} /> Editing</span>
-                    <span className="legend-chip chip-rendering" title="Rendered"><span className="chip-dot" /><AnimatedNumber value={group.renderingCount} /> Rendered</span>
-                    <span className="legend-chip chip-upload" title="Uploaded"><span className="chip-dot" /><AnimatedNumber value={group.uploadCount} /> Upload</span>
-                    <span className="legend-chip chip-jameya" title="Submission to Al Jamea tus Saifiyah"><span className="chip-dot" /><AnimatedNumber value={group.jameyaCount} /> Jameya</span>
-                    <span className="legend-chip chip-completed" title="Completed Every Stage"><span className="chip-dot" /><AnimatedNumber value={group.completedCount} /> Completed</span>
+                    <span className="legend-chip chip-editing_pending" title="Editing Pending"><span className="chip-dot" /><AnimatedNumber value={group.editingPendingCount} /> EP</span>
+                    <span className="legend-chip chip-editing" title="In Progress"><span className="chip-dot" /><AnimatedNumber value={group.editingCount} /> IP</span>
+                    <span className="legend-chip chip-upload_pending" title="Upload Pending"><span className="chip-dot" /><AnimatedNumber value={group.uploadPendingCount} /> UP</span>
+                    <span className="legend-chip chip-uploaded" title="Uploaded"><span className="chip-dot" /><AnimatedNumber value={group.uploadedCount} /> UL</span>
+                    <span className="legend-chip chip-jameya" title="AlJamea Done"><span className="chip-dot" /><AnimatedNumber value={group.jameyaCount} /> AD</span>
                   </div>
                 </div>
 
@@ -2575,9 +2946,9 @@ export default function App(): JSX.Element {
                   <span style={{ color: '#047857', fontWeight: 700 }}>📷 Photos: <AnimatedNumber value={group.photoUploadedCount} />/{group.total} (<AnimatedNumber value={group.photoPercent} />%)</span>
                 </div>
 
-                {group.tasks.length ? <ul className="safar-preview-list">{group.tasks.slice(0, 4).map(task => {
-                  const isPhotoUp = task.photoStage === 'uploaded' || Boolean(task.photoUploaded) || (task.stage === 'upload' || task.stage === 'jameya' || task.stage === 'completed')
-                  const isVideoUp = task.stage === 'upload' || task.stage === 'jameya' || task.stage === 'completed'
+                {group.tasks.length ? <ul className="safar-preview-list safar-preview-list-scrollable">{group.tasks.map(task => {
+                  const isPhotoUp = task.photoStage === 'uploaded' || Boolean(task.photoUploaded) || (task.stage === 'uploaded' || task.stage === 'jameya' || (task.stage as any) === 'upload' || (task.stage as any) === 'completed')
+                  const isVideoUp = task.stage === 'uploaded' || task.stage === 'jameya' || (task.stage as any) === 'upload' || (task.stage as any) === 'completed'
                   return (
                     <li key={task.id} className="safar-preview-row">
                       <div className="safar-preview-date">
@@ -2670,6 +3041,204 @@ export default function App(): JSX.Element {
               <div><h2 id="safar-view-title">{view === 'archive' ? 'Archived Safars' : 'Active Safars by date'}</h2><p>Date folder names only. Open a Safar to update its assignments, stage, or due date.</p></div>
               <span className="safar-group-count">{view === 'archive' ? archiveSafarGroups.length : activeSafarGroups.length} Safars</span>
             </div>
+
+            {/* ── Top KPI Cards Row for Quick Filter in Tracker ── */}
+            {view === 'tracker' && (
+              <>
+                <div className="tracker-kpi-grid" role="region" aria-label="Studio Production KPIs">
+                  <div
+                    className={`tracker-kpi-card kpi-total ${filter === 'all' && safarStatusFilter === 'all' ? 'active' : ''}`}
+                    onClick={() => applyStageFilter('all')}
+                    title="Show all dates"
+                  >
+                    <div className="tracker-kpi-top">
+                      <span className="tracker-kpi-label">TOTAL DAYS</span>
+                      <span className="tracker-kpi-icon"><FileText size={16} /></span>
+                    </div>
+                    <span className="tracker-kpi-val"><AnimatedNumber value={studioStats.totalDates} /></span>
+                  </div>
+
+                  <div
+                    className={`tracker-kpi-card kpi-pending ${filter === 'editing_pending' ? 'active' : ''}`}
+                    onClick={() => applyStageFilter('editing_pending')}
+                    title="Filter by Editing Pending"
+                  >
+                    <div className="tracker-kpi-top">
+                      <span className="tracker-kpi-label">EDITING PENDING</span>
+                      <span className="tracker-kpi-icon"><Clock size={16} /></span>
+                    </div>
+                    <span className="tracker-kpi-val"><AnimatedNumber value={studioStats.editingPending} /></span>
+                  </div>
+
+                  <div
+                    className={`tracker-kpi-card kpi-editing ${filter === 'editing' ? 'active' : ''}`}
+                    onClick={() => applyStageFilter('editing')}
+                    title="Filter by In Progress"
+                  >
+                    <div className="tracker-kpi-top">
+                      <span className="tracker-kpi-label">IN PROGRESS</span>
+                      <span className="tracker-kpi-icon"><Film size={16} /></span>
+                    </div>
+                    <span className="tracker-kpi-val"><AnimatedNumber value={studioStats.editing} /></span>
+                  </div>
+
+                  <div
+                    className={`tracker-kpi-card kpi-upload-pending ${filter === 'upload_pending' ? 'active' : ''}`}
+                    onClick={() => applyStageFilter('upload_pending')}
+                    title="Filter by Upload Pending"
+                  >
+                    <div className="tracker-kpi-top">
+                      <span className="tracker-kpi-label">UPLOAD PENDING</span>
+                      <span className="tracker-kpi-icon"><Globe size={16} /></span>
+                    </div>
+                    <span className="tracker-kpi-val"><AnimatedNumber value={studioStats.uploadPending} /></span>
+                  </div>
+
+                  <div
+                    className={`tracker-kpi-card kpi-uploaded ${filter === 'uploaded' ? 'active' : ''}`}
+                    onClick={() => applyStageFilter('uploaded')}
+                    title="Filter by Uploaded"
+                  >
+                    <div className="tracker-kpi-top">
+                      <span className="tracker-kpi-label">UPLOADED</span>
+                      <span className="tracker-kpi-icon"><CheckCircle2 size={16} /></span>
+                    </div>
+                    <span className="tracker-kpi-val"><AnimatedNumber value={studioStats.uploaded} /></span>
+                  </div>
+
+                  <div
+                    className={`tracker-kpi-card kpi-jameya ${filter === 'jameya' ? 'active' : ''}`}
+                    onClick={() => applyStageFilter('jameya')}
+                    title="Filter by AlJamea Done"
+                  >
+                    <div className="tracker-kpi-top">
+                      <span className="tracker-kpi-label">ALJAMEA DONE</span>
+                      <span className="tracker-kpi-icon"><Building2 size={16} /></span>
+                    </div>
+                    <span className="tracker-kpi-val"><AnimatedNumber value={studioStats.jameya} /></span>
+                  </div>
+
+                  <div
+                    className={`tracker-kpi-card kpi-safars-done ${safarStatusFilter === 'done' ? 'active' : ''}`}
+                    onClick={() => applySafarStatusFilter('done')}
+                    title="Completed Safars (Click to filter 100% completed)"
+                  >
+                    <div className="tracker-kpi-top">
+                      <span className="tracker-kpi-label">SAFARS 100% DONE</span>
+                      <span className="tracker-kpi-icon"><Award size={16} /></span>
+                    </div>
+                    <span className="tracker-kpi-val">
+                      <AnimatedNumber value={studioStats.safarsDone} /> / {studioStats.totalSafars}
+                    </span>
+                  </div>
+                </div>
+
+                {/* ── 2. Safar-Level Status Row (Tracker View) ── */}
+                <div className="tracker-safar-status-grid" role="region" aria-label="Safar-Level Status Overview">
+                  <span className="tracker-safar-status-label">
+                    📁 SAFAR-LEVEL STATUS
+                  </span>
+
+                  <button
+                    type="button"
+                    className={`kpi-safar-badge-btn kpi-safar-pending ${safarStatusFilter === 'pending' ? 'active' : ''}`}
+                    onClick={() => applySafarStatusFilter('pending')}
+                    title="Safars where all dates are still pending editing"
+                  >
+                    <Clock size={13} />
+                    <span>SAFAR PENDING: <strong>{safarStatusBuckets.safarPending}</strong></span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className={`kpi-safar-badge-btn kpi-safar-in-process ${safarStatusFilter === 'in_process' ? 'active' : ''}`}
+                    onClick={() => applySafarStatusFilter('in_process')}
+                    title="Safars actively in editing or render pipeline"
+                  >
+                    <Film size={13} />
+                    <span>IN PROCESS: <strong>{safarStatusBuckets.inProcess}</strong></span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className={`kpi-safar-badge-btn kpi-safar-to-delete ${safarStatusFilter === 'to_delete' ? 'active' : ''}`}
+                    onClick={() => applySafarStatusFilter('to_delete')}
+                    title="Safars fully delivered to Jamea (safe to clean up)"
+                  >
+                    <Trash2 size={13} />
+                    <span>TO DELETE / JAMEA: <strong>{safarStatusBuckets.toDelete}</strong></span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className={`kpi-safar-badge-btn kpi-safar-to-upload ${safarStatusFilter === 'to_upload' ? 'active' : ''}`}
+                    onClick={() => applySafarStatusFilter('to_upload')}
+                    title="Safars where all tasks are rendered / ready to upload"
+                  >
+                    <Globe size={13} />
+                    <span>TO UPLOAD: <strong>{safarStatusBuckets.toUpload}</strong></span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="kpi-safar-badge-btn kpi-safar-archived"
+                    onClick={() => navigateTo('archive')}
+                    title="Safars preserved in archive storage"
+                  >
+                    <Archive size={13} />
+                    <span>ARCHIVED SAFARS: <strong>{safarStatusBuckets.archived}</strong></span>
+                  </button>
+                </div>
+
+                {/* ── Active Filter Bar ── */}
+                {(filter !== 'all' || safarStatusFilter !== 'all' || selectedEditor !== 'all' || selectedSafar !== 'all' || search.trim()) && (
+                  <div className="active-filter-indicator-bar anim-fade-in">
+                    <div className="filter-pill-active">
+                      <span>Filtered by:</span>
+                      {filter !== 'all' && (
+                        <span className="filter-badge stage-badge">
+                          Stage: <strong>{STAGES.find(s => s.id === filter)?.label || filter}</strong>
+                        </span>
+                      )}
+                      {safarStatusFilter !== 'all' && (
+                        <span className="filter-badge safar-status-badge">
+                          Safar Status: <strong>{safarStatusFilter === 'done' ? '100% Completed' : safarStatusFilter === 'pending' ? 'Safar Pending' : safarStatusFilter === 'in_process' ? 'In Process' : safarStatusFilter === 'to_delete' ? 'To Delete / Jamea' : 'To Upload'}</strong>
+                        </span>
+                      )}
+                      {selectedEditor !== 'all' && (
+                        <span className="filter-badge editor-badge">
+                          Editor: <strong>{selectedEditor}</strong>
+                        </span>
+                      )}
+                      {selectedSafar !== 'all' && (
+                        <span className="filter-badge safar-badge">
+                          Safar: <strong>{selectedSafar}</strong>
+                        </span>
+                      )}
+                      {search.trim() && (
+                        <span className="filter-badge search-badge">
+                          Search: <strong>"{search.trim()}"</strong>
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      className="btn-clear-active-filter"
+                      onClick={() => {
+                        setFilter('all')
+                        setSafarStatusFilter('all')
+                        setSelectedEditor('all')
+                        setSelectedSafar('all')
+                        setSearch('')
+                      }}
+                      title="Clear all active filters"
+                    >
+                      <X size={13} /> Clear Filters
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
             <div className="toolbar">
               <div className="search-box">
                 <Search aria-hidden="true" size={16}/>
@@ -2702,7 +3271,7 @@ export default function App(): JSX.Element {
           {view === 'editors' && <section className="editor-overview" aria-label="Editor workloads">
             {editors.length === 0 ? <div className="panel editor-empty"><div className="empty-orb" aria-hidden="true"><Users size={24}/></div><div><h2>No editors assigned yet</h2><p>Assign a date to an editor in the table below. Their workload and stage progress will appear here.</p></div></div> : editors.map((editor, index) => {
               const assigned = tasksByEditor.get(editor) || []
-              const done = assigned.filter(task => task.stage === 'jameya' || task.stage === 'completed').length
+              const done = assigned.filter(task => task.stage === 'jameya' || (task.stage as any) === 'completed' || task.stage === 'uploaded').length
               const activeStage = STAGES.find(stage => assigned.some(task => task.stage === stage.id))?.label || 'All caught up'
               return <button type="button" className="editor-card" key={editor} aria-pressed={selectedEditor === editor} onClick={() => setSelectedEditor(selectedEditor === editor ? 'all' : editor)}>
                 <div className={`editor-avatar editor-avatar-${index % 4}`} aria-hidden="true"><UserRound size={19}/></div>
@@ -2775,6 +3344,34 @@ export default function App(): JSX.Element {
                 <h2>Workstation Disk Rescan</h2>
                 <p>Purge ghost entries and enforce disk synchronization so only present folders appear in active stages.</p>
                 <button className="button-secondary" onClick={handleResetAndRescan}>Reset & Clean Rescan</button>
+              </div>
+            </article>
+
+            <article className="panel settings-card">
+              <div className="settings-icon"><Sparkles size={18}/></div>
+              <div>
+                <h2>PWA Cache & Update Refresh</h2>
+                <p>Purge local device caches, refresh the Service Worker, and hard-reload the newest version of the website.</p>
+                <button
+                  type="button"
+                  className="button-secondary"
+                  onClick={async () => {
+                    setNotice('Clearing PWA cache and fetching latest website build...')
+                    try {
+                      if ('caches' in window) {
+                        const keys = await caches.keys()
+                        await Promise.all(keys.map(k => caches.delete(k)))
+                      }
+                      if ('serviceWorker' in navigator) {
+                        const regs = await navigator.serviceWorker.getRegistrations()
+                        for (const r of regs) await r.unregister()
+                      }
+                    } catch {}
+                    window.location.href = window.location.pathname + '?v=' + Date.now()
+                  }}
+                >
+                  <RefreshCw size={14} /> Clear Cache & Update PWA
+                </button>
               </div>
             </article>
 
@@ -2862,11 +3459,6 @@ export default function App(): JSX.Element {
 
           {notice && <div className="toast-note" role="status" aria-live="polite"><span>{notice}</span><button type="button" onClick={() => setNotice('')}>Dismiss</button></div>}
         </div>
-
-        <footer className="site-footer">
-          <span>ONE TAP <i>•</i> SAFAR PRODUCTION</span>
-          <span>{snapshot.updatedAt ? `Last update ${new Date(snapshot.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Ready for workstation sync'}</span>
-        </footer>
       </main>
 
       {/* Native-Feel Mobile Fixed Bottom Navigation Bar (Thumb Zone) */}
@@ -2885,17 +3477,17 @@ export default function App(): JSX.Element {
           type="button"
           className={`mobile-nav-item ${view === 'ongoing' ? 'active' : ''}`}
           onClick={() => navigateTo('ongoing')}
-          aria-label="Kanban Board"
+          aria-label="Pipeline"
         >
           <div className="mobile-nav-icon-wrap">
             <Kanban size={20} />
             {effectiveOngoingSafar ? (
               <span className="mobile-nav-badge">
-                {snapshot.tasks.filter(t => t.safarName === effectiveOngoingSafar && t.stage !== 'completed' && t.stage !== 'jameya').length}
+                {snapshot.tasks.filter(t => t.safarName === effectiveOngoingSafar && t.stage !== 'jameya' && t.stage !== 'uploaded').length}
               </span>
             ) : null}
           </div>
-          <span>Kanban</span>
+          <span>Pipeline</span>
         </button>
 
         <button

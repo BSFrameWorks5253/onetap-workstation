@@ -38,41 +38,42 @@
   transform: translateY(-0.5px);
 }
 
-/* -- Active: Premium macOS / iPadOS frosted pill highlight --- */
+/* -- Active: Sleek container with rich accent glow and luminous indicator bar --- */
 .nav-item--active {
   background: color-mix(in srgb, var(--item-accent) 14%, var(--surface-2, #F3EFE6)) !important;
-  border: 1px solid color-mix(in srgb, var(--item-accent) 32%, var(--border)) !important;
+  border-color: color-mix(in srgb, var(--item-accent) 32%, var(--border)) !important;
   box-shadow:
     0 3px 12px color-mix(in srgb, var(--item-accent) 16%, transparent),
     inset 0 1px 0 var(--specular-highlight) !important;
   transform: none !important;
+  position: relative;
 }
 
-/* Left-side sleek Apple accent pill indicator */
+/* Luminous left accent indicator bar (Apple-Grade 3.5px with rounded outer edge) */
 .nav-item--active::before {
-  content: '';
+  content: '' !important;
+  display: block !important;
   position: absolute;
   left: 0;
-  top: 9px;
-  bottom: 9px;
+  top: 8px;
+  bottom: 8px;
   width: 3.5px;
   border-radius: 0 4px 4px 0;
-  background: var(--item-accent);
+  background: var(--item-accent) !important;
   box-shadow:
     0 0 10px color-mix(in srgb, var(--item-accent) 70%, transparent),
-    0 0 3px color-mix(in srgb, var(--item-accent) 50%, transparent);
-  animation: fadeIn 0.2s ease;
-  z-index: 3;
+    0 0 3px color-mix(in srgb, var(--item-accent) 50%, transparent) !important;
+  transition: all 0.2s ease;
+  z-index: 2;
 }
 
-/* Clean up old right-side lens */
-.nav-item--active::after {
-  display: none;
-}
-
-/* In collapsed mode: hide the pill, show tooltip on hover */
+/* In collapsed mode: compact luminous indicator bar */
 .sidebar--collapsed .nav-item--active::before {
-  display: none;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
 }
 
 /* -- Squircle Icon Badge ------------------------------- */
@@ -124,36 +125,27 @@
 /* -- Label --------------------------------------------- */
 .nav-item-label {
   flex: 1;
+  font-family: var(--font-sans);
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-secondary, #44403C);
+  color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   letter-spacing: -0.015em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   transition: color 0.2s ease, font-weight 0.15s ease;
 }
 
 .nav-item:hover:not(.nav-item--active) .nav-item-label {
   color: var(--text-primary);
-  font-weight: 650;
+  font-weight: 700;
 }
 
 .nav-item--active .nav-item-label {
   color: var(--text-primary);
   font-weight: 750;
-}
-  transition: color 0.22s ease, font-weight 0.15s ease;
-}
-
-.nav-item:hover:not(.nav-item--active) .nav-item-label {
-  color: var(--sidebar-text-active, var(--text-primary));
-  font-weight: 700;
-}
-
-.nav-item--active .nav-item-label {
-  color: var(--sidebar-text-active, var(--text-primary));
-  font-weight: 800;
 }
 
 /* -- Arrow: appears on hover with smooth slide ----- */
@@ -199,3 +191,25 @@
   align-items: center;
   justify-content: center;
 }
+
+/* -- Submenu Hover Indicator Arrow -------------------- */
+.nav-item-submenu-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  opacity: 0.6;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease, color 0.2s ease;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.nav-item:hover .nav-item-submenu-indicator,
+.nav-item-group:hover .nav-item-submenu-indicator,
+.nav-item-group--hovered .nav-item-submenu-indicator,
+.nav-item-submenu-indicator--open {
+  transform: rotate(90deg) !important;
+  opacity: 1 !important;
+  color: var(--item-accent) !important;
+}
+

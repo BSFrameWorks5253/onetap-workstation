@@ -23,11 +23,16 @@ interface SafarBriefingViewProps {
   deliveredDates: number
   deliveredPercent: number
   videoStats: {
-    completed: number
-    jameya: number
-    upload: number
-    rendering: number
-    editing: number
+    editingPending?: number
+    inProgress?: number
+    uploadPending?: number
+    uploaded?: number
+    aljameaDone?: number
+    completed?: number
+    jameya?: number
+    upload?: number
+    rendering?: number
+    editing?: number
   }
   photoStats: {
     uploaded: number
@@ -38,6 +43,8 @@ interface SafarBriefingViewProps {
   pendingDatesList: string[]
   connected: boolean
   lastUpdated?: string
+  availableSafars?: string[]
+  onSelectSafar?: (name: string) => void
   onRefresh?: () => void
   onCopyBriefing: () => void
   onShareWhatsApp: () => void
@@ -56,6 +63,8 @@ export default function SafarBriefingView({
   pendingDatesList,
   connected,
   lastUpdated,
+  availableSafars,
+  onSelectSafar,
   onRefresh,
   onCopyBriefing,
   onShareWhatsApp,
@@ -83,7 +92,7 @@ export default function SafarBriefingView({
   return (
     <div className="safar-briefing-shell">
       <div className="safar-briefing-card anim-scale-in">
-        {/* Top bar with verified badge and workstation jump */}
+        {/* Top bar with verified badge, Safar switcher, and workstation jump */}
         <header className="briefing-topbar">
           <div className="briefing-brand-badge">
             <span className="briefing-brand-logo">One Tap</span>
@@ -93,21 +102,40 @@ export default function SafarBriefingView({
             </span>
           </div>
 
-          <button
-            type="button"
-            className="briefing-btn-open-site"
-            onClick={onOpenTracker}
-            title="Open Interactive Workstation Website"
-          >
-            <span>Open Website</span>
-            <ArrowRight size={13} />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            {availableSafars && availableSafars.length > 1 && (
+              <select
+                aria-label="Switch Safar"
+                value={safarName}
+                onChange={e => onSelectSafar?.(e.target.value)}
+                className="briefing-safar-select"
+                title="Switch Safar Campaign"
+              >
+                {availableSafars.map(s => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            )}
+
+            <a
+              href={safarName ? `/kanban?safar=${encodeURIComponent(safarName)}` : '/kanban'}
+              className="briefing-btn-open-site"
+              onClick={(e) => {
+                e.preventDefault()
+                onOpenTracker()
+              }}
+              title="Open Interactive Workstation Website"
+            >
+              <span>Open Website</span>
+              <ArrowRight size={13} />
+            </a>
+          </div>
         </header>
 
         {/* Hero Section */}
         <div className="briefing-hero">
           <div className="briefing-hero-eyebrow">
-            <ShieldCheck size={14} className="briefing-icon-gold" />
+            <ShieldCheck size={13} className="briefing-icon-copper" />
             <span>OFFICIAL PRODUCTION BRIEFING · {safarYear ? `${safarYear} H` : '1448 H'}</span>
           </div>
           <h1 className="briefing-title">{safarName || 'Active Safar Campaign'}</h1>
@@ -154,7 +182,7 @@ export default function SafarBriefingView({
           <div className="briefing-metric-tile">
             <span className="briefing-metric-icon">🎬</span>
             <div className="briefing-metric-val" style={{ color: '#059669' }}>
-              <AnimatedNumber value={videoStats.completed + videoStats.jameya + videoStats.upload} />
+              <AnimatedNumber value={deliveredDates} />
               <small>/{totalDates}</small>
             </div>
             <span className="briefing-metric-lbl">Video Delivered</span>
@@ -172,9 +200,9 @@ export default function SafarBriefingView({
           <div className="briefing-metric-tile">
             <span className="briefing-metric-icon">⏳</span>
             <div className="briefing-metric-val" style={{ color: '#d97706' }}>
-              <AnimatedNumber value={videoStats.rendering + videoStats.editing} />
+              <AnimatedNumber value={(videoStats.editingPending || 0) + (videoStats.inProgress || videoStats.editing || 0) + (videoStats.uploadPending || videoStats.rendering || 0)} />
             </div>
-            <span className="briefing-metric-lbl">In Editing Queue</span>
+            <span className="briefing-metric-lbl">In Production Queue</span>
           </div>
 
           <div className="briefing-metric-tile">
@@ -194,11 +222,11 @@ export default function SafarBriefingView({
               <strong>Video Status</strong>
             </div>
             <div className="briefing-pill-group">
-              {videoStats.completed > 0 && <span className="briefing-pill pill-completed">{videoStats.completed} Completed</span>}
-              {videoStats.jameya > 0 && <span className="briefing-pill pill-jameya">{videoStats.jameya} Al Jamea</span>}
-              {videoStats.upload > 0 && <span className="briefing-pill pill-upload">{videoStats.upload} Uploaded</span>}
-              {videoStats.rendering > 0 && <span className="briefing-pill pill-rendering">{videoStats.rendering} Rendered</span>}
-              {videoStats.editing > 0 && <span className="briefing-pill pill-editing">{videoStats.editing} In Editing</span>}
+              {(videoStats.aljameaDone || videoStats.jameya || videoStats.completed || 0) > 0 && <span className="briefing-pill pill-jameya">{(videoStats.aljameaDone || 0) + (videoStats.jameya || 0) + (videoStats.completed || 0)} AlJamea Done</span>}
+              {(videoStats.uploaded || videoStats.upload || 0) > 0 && <span className="briefing-pill pill-upload">{(videoStats.uploaded || 0) + (videoStats.upload || 0)} Uploaded</span>}
+              {(videoStats.uploadPending || videoStats.rendering || 0) > 0 && <span className="briefing-pill pill-rendering">{(videoStats.uploadPending || 0) + (videoStats.rendering || 0)} Upload Pending</span>}
+              {(videoStats.inProgress || videoStats.editing || 0) > 0 && <span className="briefing-pill pill-editing">{(videoStats.inProgress || 0) + (videoStats.editing || 0)} In Progress</span>}
+              {(videoStats.editingPending || 0) > 0 && <span className="briefing-pill pill-pending">{videoStats.editingPending} Editing Pending</span>}
               {totalDates === 0 && <span className="briefing-pill pill-neutral">No date folders found</span>}
             </div>
           </div>
@@ -265,14 +293,17 @@ export default function SafarBriefingView({
 
         {/* Primary Interactive CTA: Takes user to full tracker website */}
         <div className="briefing-cta-box">
-          <button
-            type="button"
+          <a
+            href={safarName ? `/kanban?safar=${encodeURIComponent(safarName)}` : '/kanban'}
             className="briefing-primary-website-btn"
-            onClick={onOpenTracker}
+            onClick={(e) => {
+              e.preventDefault()
+              onOpenTracker()
+            }}
           >
             <span>🚀 Open Full Workstation Tracker</span>
             <ArrowRight size={16} />
-          </button>
+          </a>
           <p className="briefing-cta-hint">
             View the live interactive Kanban board, assign editors, change stages, and manage Google Drive photos.
           </p>

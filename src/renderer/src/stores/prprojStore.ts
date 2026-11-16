@@ -68,7 +68,7 @@ const initialState: PrprojState = {
   enableExcelReport: true,
   showExcelModal: false,
   generatedExcelPath: null,
-  enableRelinkManifest: true,
+  enableRelinkManifest: false,
   generatingRelinkManifest: false,
   generatedRelinkManifestPaths: [],
   manifestStats: null,

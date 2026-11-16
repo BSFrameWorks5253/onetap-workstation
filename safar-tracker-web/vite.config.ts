@@ -25,5 +25,5 @@ export default defineConfig({
   plugins: [react(), spaFallbackPlugin()],
   publicDir: 'public',
   envPrefix: ['VITE_', 'SUPABASE_'],
-  server: { port: 4173 }
+  server: { port: 5173, host: true }
 })

@@ -32,7 +32,7 @@ import {
   PhotoStats
 } from '../lib/googleAppsScript';
 import { isJunkSafarName } from './OngoingSafarKanban';
-import { AnimatedNumber } from '../App';
+import { AnimatedNumber, isCameraOrAssetFolder, isProperDateOrSessionFolder } from '../App';
 
 export const DEFAULT_PHOTO_EDITOR = 'Muffadal Peti';
 export const DEFAULT_VIDEO_EDITOR = 'Murtaza';
@@ -126,6 +126,12 @@ export default function PhotoTracker({
 
   const selectedSafar = (propSelectedSafar && propSelectedSafar !== 'all') ? propSelectedSafar : internalSelectedSafar;
 
+  useEffect(() => {
+    if (propSelectedSafar && propSelectedSafar !== 'all') {
+      setInternalSelectedSafar(propSelectedSafar);
+    }
+  }, [propSelectedSafar]);
+
   const handleSafarChange = (name: string) => {
     setInternalSelectedSafar(name);
     if (onSelectSafar) onSelectSafar(name);
@@ -140,7 +146,7 @@ export default function PhotoTracker({
 
   // Tasks for the selected Safar
   const safarTasks = useMemo(() => {
-    return tasks.filter(t => t.safarName === selectedSafar);
+    return tasks.filter(t => t.safarName === selectedSafar && !isCameraOrAssetFolder(t.dateFolder) && isProperDateOrSessionFolder(t.dateFolder));
   }, [tasks, selectedSafar]);
 
   // Expected date folders
@@ -189,7 +195,7 @@ export default function PhotoTracker({
   // Helper to resolve photo stage
   const getPhotoStage = (task: PhotoTaskItem): PhotoStage => {
     if (task.photoStage) return task.photoStage;
-    if (task.photoUploaded || task.stage === 'upload' || task.stage === 'jameya' || task.stage === 'completed') {
+    if (task.photoUploaded || task.stage === 'uploaded' || task.stage === 'upload' || task.stage === 'jameya' || task.stage === 'completed') {
       return 'uploaded';
     }
     return 'edited';
@@ -229,7 +235,7 @@ export default function PhotoTracker({
     let bothPend = 0;
     for (const t of safarTasks) {
       const pUp = getPhotoStage(t) === 'uploaded';
-      const vUp = t.stage === 'upload' || t.stage === 'jameya' || t.stage === 'completed';
+      const vUp = t.stage === 'uploaded' || t.stage === 'upload' || t.stage === 'jameya' || t.stage === 'completed';
       if (pUp && vUp) bothUp++;
       else if (pUp && !vUp) photoOnly++;
       else if (!pUp && vUp) videoOnly++;
@@ -260,8 +266,8 @@ export default function PhotoTracker({
 
     // Cross-sync rule: when marked uploaded in photo tracker, also mark video as upload!
     if (isUploading) {
-      if (task.stage === 'editing' || task.stage === 'rendering') {
-        changes.stage = 'upload';
+      if (task.stage === 'editing_pending' || task.stage === 'editing' || task.stage === 'upload_pending' || (task.stage as any) === 'rendering') {
+        changes.stage = 'uploaded';
       }
     }
 
@@ -439,33 +445,22 @@ export default function PhotoTracker({
   }, [filteredTasks]);
 
   return (
-    <section className="panel photo-tracker-panel">
+    <section className="panel photo-tracker-panel apple-glass-panel">
       {/* Notice Banner */}
       {notice && (
-        <div style={{ padding: '12px 16px', borderRadius: '12px', background: '#ECFDF5', border: '1px solid #A7F3D0', color: '#065F46', fontSize: '13px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', animation: 'fadeIn 0.2s ease' }}>
+        <div style={{ padding: '12px 18px', borderRadius: '14px', background: 'rgba(52, 199, 89, 0.14)', border: '1px solid rgba(52, 199, 89, 0.35)', color: '#15803d', fontSize: '13px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', animation: 'appleModalSpring 0.25s ease' }}>
           <CheckCircle2 size={16} />
           <span>{notice}</span>
         </div>
       )}
 
       {/* Header */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '16px', borderBottom: '1px solid #E2E8F0', paddingBottom: '18px' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.6px', padding: '3px 8px', borderRadius: '6px', background: 'rgba(139, 92, 246, 0.12)', color: '#7c3aed' }}>
-              <Camera size={12} style={{ display: 'inline', marginRight: '4px' }} /> Photo Data Tracker
-            </span>
-            <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '6px', background: '#EEF2FF', color: '#4338CA' }}>
-              Lead Photo Editor: <strong>{DEFAULT_PHOTO_EDITOR}</strong>
-            </span>
-            <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '6px', background: '#ECFDF5', color: '#047857' }}>
-              WA: +91 {DEFAULT_WHATSAPP_PHONE}
-            </span>
-          </div>
-          <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: '#0F172A' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '16px', borderBottom: '1px solid var(--color-hairline, rgba(232, 229, 223, 0.7))', paddingBottom: '18px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+          <h1 style={{ margin: '2px 0 0', fontFamily: 'var(--font-display-serif, "Lora", serif)', fontSize: '26px', fontWeight: 500, color: 'var(--color-ink, #0a0a0a)', letterSpacing: '-0.024em' }}>
             Photo Pipeline & Delivery Tracker
-          </h2>
-          <p style={{ margin: 0, fontSize: '12px', color: '#64748B' }}>
+          </h1>
+          <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#666660', fontFamily: 'var(--font-ui-sans, "Inter", sans-serif)', lineHeight: 1.5 }}>
             Track photo deliverables from Edited to Given To Murtaza to Uploaded. When marked Uploaded, changes instantly sync across both Photo & Safar Trackers.
           </p>
         </div>
@@ -474,55 +469,43 @@ export default function PhotoTracker({
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           {safarNames.length > 1 && (
             <select
+              aria-label="Select Safar"
               value={selectedSafar}
               onChange={e => handleSafarChange(e.target.value)}
-              style={{ fontSize: '12px', fontWeight: 700, padding: '7px 12px', borderRadius: '10px', border: '1px solid #CBD5E1', background: '#F8FAFC', color: '#0F172A', cursor: 'pointer' }}
+              className="kanban-safar-select"
+              style={{
+                fontFamily: 'var(--font-ui-sans, "Inter", sans-serif)',
+                fontSize: '12.5px',
+                fontWeight: 600,
+                padding: '7px 12px',
+                borderRadius: '9999px',
+                border: '1px solid var(--color-hairline, #e8e5df)',
+                background: '#ffffff',
+                color: 'var(--color-ink, #0a0a0a)',
+                cursor: 'pointer'
+              }}
             >
-              {safarNames.map(name => <option key={name} value={name}>{name}</option>)}
+              {safarNames.map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
             </select>
           )}
 
-          {/* Toggle view mode */}
-          <div style={{ display: 'flex', background: '#F1F5F9', padding: '2px', borderRadius: '8px' }}>
+          {/* Apple Segmented Control view mode toggle */}
+          <div className="apple-segmented-control" role="group" aria-label="View Mode">
             <button
               type="button"
               onClick={() => setViewMode('kanban')}
-              style={{
-                border: 'none',
-                background: viewMode === 'kanban' ? '#FFFFFF' : 'transparent',
-                color: viewMode === 'kanban' ? '#0F172A' : '#64748B',
-                padding: '6px 10px',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                fontSize: '11px',
-                fontWeight: 700,
-                boxShadow: viewMode === 'kanban' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
-              }}
+              className={`apple-segmented-item ${viewMode === 'kanban' ? 'active' : ''}`}
               title="Kanban 3-Stage Pipeline View"
             >
               <Kanban size={13} />
-              <span>Kanban</span>
+              <span>Board</span>
             </button>
             <button
               type="button"
               onClick={() => setViewMode('grid')}
-              style={{
-                border: 'none',
-                background: viewMode === 'grid' ? '#FFFFFF' : 'transparent',
-                color: viewMode === 'grid' ? '#0F172A' : '#64748B',
-                padding: '6px 10px',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                fontSize: '11px',
-                fontWeight: 700,
-                boxShadow: viewMode === 'grid' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
-              }}
+              className={`apple-segmented-item ${viewMode === 'grid' ? 'active' : ''}`}
               title="Card Grid View"
             >
               <LayoutGrid size={13} />
@@ -534,28 +517,28 @@ export default function PhotoTracker({
             type="button"
             onClick={loadPhotoStatus}
             disabled={loading}
-            style={{ fontSize: '12px', fontWeight: 700, padding: '7px 14px', borderRadius: '10px', background: '#4F46E5', color: '#FFF', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', opacity: loading ? 0.6 : 1 }}
+            className="apple-primary-btn"
           >
-            <RefreshCw size={14} className={loading ? 'spinning' : ''} />
+            <RefreshCw size={13} className={loading ? 'spinning' : ''} />
             <span>Sync Drive</span>
           </button>
 
           <button
             type="button"
             onClick={() => setIsConfigOpen(true)}
-            style={{ padding: '7px 10px', borderRadius: '10px', background: '#F1F5F9', border: '1px solid #E2E8F0', cursor: 'pointer', color: '#475569' }}
+            className="apple-secondary-btn"
             title="Configure Google Apps Script URL"
           >
-            <Settings size={15} />
+            <Settings size={14} />
           </button>
         </div>
       </div>
 
       {/* Photo Pipeline KPI & Multi-Color Stage Progress Bar */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', background: '#F8FAFC', padding: '16px', borderRadius: '16px', border: '1px solid #E2E8F0' }}>
+      <div className="photo-kpi-glass-container" style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '18px 20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A' }}>
+            <span style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.01em' }}>
               {selectedSafar} Photo Progress
             </span>
             <span style={{ fontSize: '12px', color: '#64748B' }}>
@@ -563,7 +546,7 @@ export default function PhotoTracker({
             </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <strong style={{ fontSize: '18px', fontWeight: 800, color: '#059669' }}>
+            <strong style={{ fontSize: '20px', fontWeight: 800, color: '#059669', letterSpacing: '-0.02em' }}>
               {photoPercent}%
             </strong>
             <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748B' }}>
@@ -598,7 +581,7 @@ export default function PhotoTracker({
         </div>
 
         {/* Stage Legend */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', fontSize: '11px', fontWeight: 700 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap', fontSize: '11px', fontWeight: 700 }}>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', color: '#7C3AED' }}>
             <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#8B5CF6' }} />
             <AnimatedNumber value={editedCount} /> In Editing
@@ -669,7 +652,7 @@ export default function PhotoTracker({
       {/* Category Pills, Sync Filter, and Search */}
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
         {/* Core 4 Categories: All, Edited, Given to Murtaza, Uploaded */}
-        <div className="photo-category-tabs" style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#f1f5f9', padding: '4px', borderRadius: '12px', flexWrap: 'wrap' }}>
+        <div className="apple-segmented-control photo-category-tabs" role="tablist" aria-label="Photo Category Presets">
           {[
             { id: 'all', label: 'All', count: totalCount },
             { id: 'edited', label: 'In Editing', count: editedCount, dot: '#8b5cf6' },
@@ -679,29 +662,17 @@ export default function PhotoTracker({
             <button
               key={tab.id}
               type="button"
+              role="tab"
+              aria-selected={filter === tab.id}
               onClick={() => {
                 try { if ('vibrate' in navigator) navigator.vibrate(10) } catch {}
                 setFilter(tab.id as any);
               }}
-              style={{
-                fontSize: '12px',
-                fontWeight: 700,
-                padding: '6px 14px',
-                borderRadius: '8px',
-                border: 'none',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                background: filter === tab.id ? '#0f172a' : 'transparent',
-                color: filter === tab.id ? '#ffffff' : '#64748b',
-                boxShadow: filter === tab.id ? '0 2px 6px rgba(15, 23, 42, 0.2)' : 'none',
-                transition: 'all 0.15s ease'
-              }}
+              className={`apple-segmented-item ${filter === tab.id ? 'active' : ''}`}
             >
               {tab.dot && <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: tab.dot }} />}
               <span>{tab.label}</span>
-              <span style={{ fontSize: '10px', fontWeight: 800, padding: '1px 6px', borderRadius: '999px', background: filter === tab.id ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.06)', color: filter === tab.id ? '#ffffff' : '#334155' }}>
+              <span className="chip-badge">
                 <AnimatedNumber value={tab.count} />
               </span>
             </button>
@@ -715,16 +686,11 @@ export default function PhotoTracker({
             onChange={e => setSyncFilter(e.target.value as any)}
             title="Filter by Photo & Video cross-sync status"
             style={{
-              padding: '7px 12px',
-              borderRadius: '10px',
-              border: '1px solid #cbd5e1',
-              background: '#ffffff',
-              color: '#334155',
+              padding: '8px 14px',
+              maxWidth: '240px',
               fontSize: '12px',
               fontWeight: 600,
-              cursor: 'pointer',
-              outline: 'none',
-              maxWidth: '240px'
+              cursor: 'pointer'
             }}
           >
             <option value="all">Deliverables: All Sync States</option>
@@ -741,7 +707,7 @@ export default function PhotoTracker({
               placeholder="Search date folder..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              style={{ width: '100%', fontSize: '13px', padding: '8px 12px 8px 32px', borderRadius: '10px', border: '1px solid #CBD5E1', outline: 'none' }}
+              style={{ width: '100%', fontSize: '13px', padding: '8px 12px 8px 32px' }}
             />
           </div>
         </div>
@@ -791,22 +757,17 @@ export default function PhotoTracker({
                 <div
                   key={col.id}
                   id={`photo-col-${col.id}`}
-                  className="kanban-column"
+                  className="kanban-column apple-glass-column"
                   style={{
                     display: 'flex',
                     flexDirection: 'column',
-                    background: '#FFFFFF',
-                    border: '1px solid #E2E8F0',
-                    borderRadius: '16px',
-                    overflow: 'hidden',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
                     minHeight: '440px'
                   }}
                 >
                 {/* Column Header */}
-                <div style={{ padding: '12px 16px', background: col.headerBg, borderBottom: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ padding: '14px 18px', background: col.headerBg, borderBottom: '1px solid rgba(255, 255, 255, 0.7)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div>
-                    <h3 style={{ margin: 0, fontSize: '13px', fontWeight: 800, color: '#0F172A' }}>
+                    <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.01em' }}>
                       {col.title}
                     </h3>
                     <p style={{ margin: 0, fontSize: '11px', color: '#64748B' }}>
@@ -839,20 +800,17 @@ export default function PhotoTracker({
                   ) : (
                     list.map(task => {
                       const isPhotoUp = getPhotoStage(task) === 'uploaded';
-                      const isVideoUp = task.stage === 'upload' || task.stage === 'jameya' || task.stage === 'completed';
+                      const isVideoUp = task.stage === 'uploaded' || task.stage === 'upload' || task.stage === 'jameya' || task.stage === 'completed';
 
                       return (
                         <div
                           key={task.id}
+                          className="photo-task-card"
                           style={{
-                            background: '#F8FAFC',
-                            border: '1px solid #E2E8F0',
-                            borderRadius: '12px',
-                            padding: '12px 14px',
+                            padding: '14px 16px',
                             display: 'flex',
                             flexDirection: 'column',
-                            gap: '8px',
-                            boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
+                            gap: '10px'
                           }}
                         >
                           {/* Folder Name & Cross Status Badge */}
@@ -868,11 +826,11 @@ export default function PhotoTracker({
                                 />
                               )}
                               <div>
-                                <span style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A', display: 'block', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+                                <span style={{ fontFamily: 'var(--font-display-serif, "Lora", serif)', fontSize: '15px', fontWeight: 600, color: 'var(--color-ink, #0a0a0a)', display: 'block', wordBreak: 'break-word', overflowWrap: 'break-word', letterSpacing: '-0.015em' }}>
                                   {task.dateFolder}
                                 </span>
                                 {task.hijriDate && (
-                                  <span style={{ fontSize: '11px', color: '#64748B' }}>
+                                  <span style={{ fontSize: '11px', color: '#737373', fontFamily: 'var(--font-ui-sans, "Inter", sans-serif)' }}>
                                     {task.hijriDate}
                                   </span>
                                 )}
@@ -1013,17 +971,14 @@ export default function PhotoTracker({
           {filteredTasks.map(task => {
             const photoStage = getPhotoStage(task);
             const isPhotoUp = photoStage === 'uploaded';
-            const isVideoUp = task.stage === 'upload' || task.stage === 'jameya' || task.stage === 'completed';
+            const isVideoUp = task.stage === 'uploaded' || task.stage === 'upload' || task.stage === 'jameya' || task.stage === 'completed';
 
             return (
               <div
                 key={task.id}
+                className="photo-task-card"
                 style={{
-                  padding: '16px',
-                  borderRadius: '16px',
-                  background: '#FFFFFF',
-                  border: '1px solid #E2E8F0',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                  padding: '18px 20px',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '12px'
@@ -1042,11 +997,11 @@ export default function PhotoTracker({
                       />
                     )}
                     <div>
-                      <span style={{ fontSize: '14px', fontWeight: 800, color: '#0F172A' }}>
+                      <span style={{ fontFamily: 'var(--font-display-serif, "Lora", serif)', fontSize: '15px', fontWeight: 600, color: 'var(--color-ink, #0a0a0a)', letterSpacing: '-0.015em', display: 'block' }}>
                         {task.dateFolder}
                       </span>
                       {task.hijriDate && (
-                        <span style={{ fontSize: '11px', color: '#64748B', display: 'block' }}>
+                        <span style={{ fontSize: '11px', color: '#737373', fontFamily: 'var(--font-ui-sans, "Inter", sans-serif)', display: 'block' }}>
                           {task.hijriDate}
                         </span>
                       )}

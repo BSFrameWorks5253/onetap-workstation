@@ -1,4 +1,4 @@
-const CACHE = 'one-tap-safar-v7'
+const CACHE = 'one-tap-safar-v12-20261116-apple-glass'
 
 self.addEventListener('install', event => {
   event.waitUntil(
@@ -10,10 +10,20 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(keys.filter(key => key !== CACHE).map(key => caches.delete(key)))
+      Promise.all(keys.filter(key => key !== CACHE).map(key => {
+        console.log('[SW] Purging outdated cache:', key)
+        return caches.delete(key)
+      }))
     )
   )
   self.clients.claim()
+})
+
+// Allow instant skip-waiting on broadcast message
+self.addEventListener('message', event => {
+  if (event.data && (event.data.type === 'SKIP_WAITING' || event.data === 'skipWaiting')) {
+    self.skipWaiting()
+  }
 })
 
 self.addEventListener('fetch', event => {
@@ -22,10 +32,10 @@ self.addEventListener('fetch', event => {
   const url = new URL(event.request.url)
   if (url.pathname.startsWith('/api/')) return
 
-  // Network-first for navigation requests so updates show up immediately without stale cache
+  // Network-first with no-cache for navigation requests so updates show up immediately
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request)
+      fetch(event.request, { cache: 'no-cache' })
         .then(response => {
           if (response.status === 200) {
             const copy = response.clone()

@@ -709,6 +709,18 @@ export default function ArchiveVault(): JSX.Element {
     }
   }
 
+  const handlePreviewFile = (item: MediaItem) => {
+    playTick()
+    const target = item.full_path || item.relative_path
+    if (target) {
+      if ((window as any).openFileInViewer) {
+        (window as any).openFileInViewer(target)
+      } else if (api?.viewer?.openWindow) {
+        api.viewer.openWindow(target)
+      }
+    }
+  }
+
   const handleOpenFolder = async (item: MediaItem) => {
     playTick()
     const folderPath = item.full_path ? item.full_path.substring(0, item.full_path.lastIndexOf('\\')) : ''
@@ -1700,14 +1712,15 @@ export default function ArchiveVault(): JSX.Element {
       {/* ── 1. Hero Command Header ── */}
       <div className="vault-header">
         <div className="vault-header-left">
-          <div className="vault-hero-icon">🔍</div>
+          <div className="vault-hero-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.3-4.3" />
+            </svg>
+          </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
               <h1 className="vault-header-title">Data Search & Virtual Catalog</h1>
-              <span className="vault-live-tag">
-                <span className="vault-live-dot" />
-                ZERO STORAGE ENGINE
-              </span>
             </div>
             <p className="vault-header-sub">
               Sub-millisecond search across disconnected hard drives, virtual media catalogs, and Title Adder event structures.
@@ -1723,7 +1736,10 @@ export default function ArchiveVault(): JSX.Element {
               setActiveTab('scan')
             }}
           >
-            <span>⚡</span> Scan Other Folder
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px' }}>
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+            </svg>
+            Scan Other Folder
           </button>
           <button
             className="vault-btn vault-btn-ghost"
@@ -1733,13 +1749,19 @@ export default function ArchiveVault(): JSX.Element {
               loadDrives()
               executeSearch()
               showToast({
-                title: 'Catalog Refreshed 🔄',
+                title: 'Catalog Refreshed',
                 message: 'Virtual catalog and drive status updated.',
                 type: 'info'
               })
             }}
           >
-            <span>🔄</span> Refresh
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px' }}>
+              <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+              <path d="M3 3v5h5" />
+              <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+              <path d="M16 16h5v5" />
+            </svg>
+            Refresh
           </button>
         </div>
       </div>
@@ -1769,13 +1791,6 @@ export default function ArchiveVault(): JSX.Element {
             Photos: {currentSafarObj ? currentSafarObj.total_photo_count : safars.reduce((a, b) => a + b.total_photo_count, 0)}
           </span>
         </div>
-        <div className="vault-stat-card">
-          <span className="vault-stat-label">Total Footage Duration</span>
-          <span className="vault-stat-value">
-            {currentSafarObj ? currentSafarObj.duration_formatted : 'Multi-Hour'}
-          </span>
-          <span className="vault-stat-sub">Sub-2ms MP4 atom inspection</span>
-        </div>
       </div>
 
       {/* ── Main Tab Navigation (2 Primary Options Requested: Search & Scan Other Folder) ── */}
@@ -1787,7 +1802,11 @@ export default function ArchiveVault(): JSX.Element {
             setActiveTab('search')
           }}
         >
-          <span>🔍</span> Search File or Folder
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.3-4.3" />
+          </svg>
+          Search File or Folder
         </button>
         <button
           className={`vault-tab-btn ${activeTab === 'safars' ? 'active' : ''}`}
@@ -1796,7 +1815,12 @@ export default function ArchiveVault(): JSX.Element {
             setActiveTab('safars')
           }}
         >
-          <span>📚</span> Scanned Safars ({safars.length})
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z" />
+            <path d="M6 6h10" />
+            <path d="M6 10h10" />
+          </svg>
+          Scanned Safars ({safars.length})
         </button>
         <button
           className={`vault-tab-btn ${activeTab === 'scan' ? 'active' : ''}`}
@@ -1805,7 +1829,10 @@ export default function ArchiveVault(): JSX.Element {
             setActiveTab('scan')
           }}
         >
-          <span>⚡</span> Scan Other Folder
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+          </svg>
+          Scan Other Folder
         </button>
         <button
           className={`vault-tab-btn ${activeTab === 'excel' ? 'active' : ''}`}
@@ -1814,7 +1841,12 @@ export default function ArchiveVault(): JSX.Element {
             setActiveTab('excel')
           }}
         >
-          <span>📊</span> Excel Audit & Reconciler
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect width="18" height="18" x="3" y="3" rx="2" />
+            <path d="M3 9h18" />
+            <path d="M9 21V9" />
+          </svg>
+          Excel Audit & Reconciler
         </button>
         <button
           className={`vault-tab-btn ${activeTab === 'drives' ? 'active' : ''}`}
@@ -1823,7 +1855,13 @@ export default function ArchiveVault(): JSX.Element {
             setActiveTab('drives')
           }}
         >
-          <span>💾</span> Hard Drive Tracker ({drives.length})
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect width="20" height="8" x="2" y="3" rx="2" />
+            <rect width="20" height="8" x="2" y="13" rx="2" />
+            <line x1="6" y1="7" x2="6.01" y2="7" />
+            <line x1="6" y1="17" x2="6.01" y2="17" />
+          </svg>
+          Hard Drive Tracker ({drives.length})
         </button>
         <button
           className={`vault-tab-btn ${activeTab === 'assistant' ? 'active' : ''}`}
@@ -1833,7 +1871,10 @@ export default function ArchiveVault(): JSX.Element {
             setActiveTab('assistant')
           }}
         >
-          <span>💬</span> Vault Assistant ("Ask Archive")
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z" />
+          </svg>
+          Vault Assistant ("Ask Archive")
         </button>
       </div>
 
@@ -1895,8 +1936,14 @@ export default function ArchiveVault(): JSX.Element {
                     setSearchTarget('all')
                   }}
                   title="Search both file names and folder directories"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                 >
-                  🌐 All Names
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="2" y1="12" x2="22" y2="12" />
+                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                  </svg>
+                  <span>All Names</span>
                 </button>
                 <button
                   className={`vault-target-btn ${searchTarget === 'file' ? 'active' : ''}`}
@@ -1905,8 +1952,13 @@ export default function ArchiveVault(): JSX.Element {
                     setSearchTarget('file')
                   }}
                   title="Search file name specifically"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                 >
-                  📄 File Name
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                  </svg>
+                  <span>File Name</span>
                 </button>
                 <button
                   className={`vault-target-btn ${searchTarget === 'folder' ? 'active' : ''}`}
@@ -1915,14 +1967,23 @@ export default function ArchiveVault(): JSX.Element {
                     setSearchTarget('folder')
                   }}
                   title="Search folder directory name specifically"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                 >
-                  📁 Folder Name
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                  </svg>
+                  <span>Folder Name</span>
                 </button>
               </div>
 
               {/* Instant Search Input */}
               <div className="vault-search-box">
-                <span className="vault-search-icon">🔍</span>
+                <span className="vault-search-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="11" cy="11" r="8" />
+                    <path d="m21 21-4.3-4.3" />
+                  </svg>
+                </span>
                 <input
                   type="text"
                   placeholder={
@@ -1956,8 +2017,14 @@ export default function ArchiveVault(): JSX.Element {
                     setIsExcelModalOpen(true)
                   }}
                   title="Generate a pre-filled Excel audit spreadsheet from a selected Safar or folder"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                 >
-                  <span>📊</span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect width="18" height="18" x="3" y="3" rx="2" />
+                    <path d="M3 9h18" />
+                    <path d="M3 15h18" />
+                    <path d="M9 3v18" />
+                  </svg>
                   <span>Generate Excel</span>
                 </button>
 
@@ -1966,8 +2033,11 @@ export default function ArchiveVault(): JSX.Element {
                   disabled={isCheckingUploads}
                   onClick={handleCheckUploads}
                   title="Synchronizes video and date folder upload statuses directly from Task Tracker (tracker.db) and verifies connected drives"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                 >
-                  <span>{isCheckingUploads ? '⏳' : '⚡'}</span>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className={isCheckingUploads ? 'anim-spin' : ''}>
+                    <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
+                  </svg>
                   <span>{isCheckingUploads ? 'Syncing...' : 'Sync Tracker'}</span>
                 </button>
               </div>
@@ -1978,10 +2048,17 @@ export default function ArchiveVault(): JSX.Element {
               {/* Media Type Category Pills */}
               <div className="vault-filter-pills">
                 {[
-                  { key: 'all', label: '🌟 ALL' },
-                  { key: 'video', label: '🎥 VIDEOS' },
-                  { key: 'photo', label: '🖼️ PHOTOS' },
-                  { key: 'audio', label: '🎵 AUDIO' }
+                  { key: 'all', label: 'All Files', icon: (
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                    </svg>
+                  ) },
+                  { key: 'video', label: 'Videos', icon: (
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect width="18" height="14" x="3" y="5" rx="2" />
+                      <path d="m10 9 5 3-5 3V9Z" />
+                    </svg>
+                  ) }
                 ].map((cat) => (
                   <button
                     key={cat.key}
@@ -1990,8 +2067,10 @@ export default function ArchiveVault(): JSX.Element {
                       playTick()
                       setMediaType(cat.key)
                     }}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}
                   >
-                    {cat.label}
+                    {cat.icon}
+                    <span>{cat.label}</span>
                   </button>
                 ))}
               </div>
@@ -2009,7 +2088,12 @@ export default function ArchiveVault(): JSX.Element {
                   }}
                   title={finalVideosOnly ? 'Click to show all catalog files' : 'Click to filter exclusively for Final Videos'}
                 >
-                  <span className="vault-final-icon">🎬</span>
+                  <span className="vault-final-icon">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect width="20" height="15" x="2" y="5" rx="2" />
+                      <polygon points="10 9 15 12.5 10 16" fill="currentColor" />
+                    </svg>
+                  </span>
                   <span style={{ fontWeight: 700 }}>Final Videos Only</span>
                   <span className={`vault-final-indicator ${finalVideosOnly ? 'on' : 'off'}`}>
                     {finalVideosOnly ? 'ON' : 'OFF'}
@@ -2474,14 +2558,24 @@ export default function ArchiveVault(): JSX.Element {
                             {online ? (
                               <>
                                 {!isFolder && (
-                                  <button
-                                    className="vault-btn vault-btn-primary"
-                                    style={{ padding: '4px 9px', fontSize: '11px' }}
-                                    onClick={() => handleLocateItem(item)}
-                                    title="Highlight file in Windows Explorer"
-                                  >
-                                    🎯 Locate
-                                  </button>
+                                  <>
+                                    <button
+                                      className="vault-btn vault-btn-primary"
+                                      style={{ padding: '4px 9px', fontSize: '11px', background: 'rgba(99, 102, 241, 0.2)', color: '#818cf8', borderColor: 'rgba(129, 140, 248, 0.4)' }}
+                                      onClick={() => handlePreviewFile(item)}
+                                      title="Open in dedicated One Tap Studio Viewer window"
+                                    >
+                                      👁 View
+                                    </button>
+                                    <button
+                                      className="vault-btn vault-btn-primary"
+                                      style={{ padding: '4px 9px', fontSize: '11px' }}
+                                      onClick={() => handleLocateItem(item)}
+                                      title="Highlight file in Windows Explorer"
+                                    >
+                                      🎯 Locate
+                                    </button>
+                                  </>
                                 )}
                                 <button
                                   className="vault-btn vault-btn-ghost"

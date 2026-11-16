@@ -115,18 +115,33 @@ export const PAGE_SVGS: Record<string, (props: { size: number | string; color?: 
     </svg>
   ),
 
-  prproj: ({ size }) => (
-    <img
-      src={prLogo}
-      alt="Premiere Pro"
-      style={{
-        width: typeof size === 'number' ? `${size}px` : size,
-        height: typeof size === 'number' ? `${size}px` : size,
-        objectFit: 'contain',
-        borderRadius: '4px'
-      }}
-    />
-  ),
+  prproj: ({ size }) => {
+    const s = typeof size === 'number' ? size : 20
+    const fs = Math.round(s * 0.48)
+    const rad = Math.round(s * 0.24)
+    return (
+      <div
+        style={{
+          width: `${s}px`,
+          height: `${s}px`,
+          borderRadius: `${rad}px`,
+          background: 'linear-gradient(135deg, #00005B 0%, #17073B 100%)',
+          border: '1px solid rgba(153, 153, 255, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontWeight: 900,
+          fontSize: `${fs}px`,
+          color: '#9999FF',
+          letterSpacing: '-0.5px',
+          userSelect: 'none',
+          boxShadow: '0 2px 6px rgba(153, 153, 255, 0.25)'
+        }}
+      >
+        Pr
+      </div>
+    )
+  },
 
   videotransfer: ({ size, color = 'currentColor', strokeWidth = 2 }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">

@@ -85,6 +85,25 @@ export default function PageHoverPreview({
 
   const details = getPageLiveDetails()
 
+  // Extract discovered & archived safars for live Task Tracker preview
+  const safarData = React.useMemo(() => {
+    if (pageKey !== 'tracker') return { ongoing: [], archived: [] }
+    try {
+      const folderSafarsRaw = localStorage.getItem('ot_stats_folder_safars')
+      const folderSafars: Record<string, string> = folderSafarsRaw ? JSON.parse(folderSafarsRaw) : {}
+      const archivedRaw = localStorage.getItem('ot_tracker_archived_safar_names')
+      const archivedSet = new Set<string>(archivedRaw ? JSON.parse(archivedRaw) : [])
+
+      const allSafars = Array.from(new Set(Object.values(folderSafars))).filter(s => s && s !== 'Unassigned')
+      const ongoing = allSafars.filter(s => !archivedSet.has(s)).slice(0, 4)
+      const archived = allSafars.filter(s => archivedSet.has(s)).slice(0, 4)
+
+      return { ongoing, archived }
+    } catch {
+      return { ongoing: [], archived: [] }
+    }
+  }, [pageKey])
+
   return (
     <div
       className="taskbar-preview-popover anim-scale-in"
@@ -140,7 +159,40 @@ export default function PageHoverPreview({
             </div>
           )}
 
-          {details.previewType !== 'adder' && details.previewType !== 'converter' && (
+          {details.previewType === 'tracker' && (
+            <div className="thumb-tracker-layout" style={{ display: 'flex', flexDirection: 'column', gap: '5px', padding: '6px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '10px', color: 'var(--text-muted)' }}>
+                <span style={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Active Safars</span>
+                <span style={{ color: '#06b6d4', fontWeight: 600 }}>{safarData.ongoing.length} Active</span>
+              </div>
+              {safarData.ongoing.length > 0 ? (
+                safarData.ongoing.map(s => (
+                  <div key={s} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--surface-2)', padding: '3px 6px', borderRadius: '4px', fontSize: '11px', color: 'var(--text-primary)' }}>
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}>{s}</span>
+                    <span style={{ fontSize: '9px', background: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6', padding: '1px 4px', borderRadius: '3px', fontWeight: 600 }}>In Production</span>
+                  </div>
+                ))
+              ) : (
+                <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontStyle: 'italic' }}>No active safars in production</div>
+              )}
+              {safarData.archived.length > 0 && (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                    <span style={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>100% Delivered (Archived)</span>
+                    <span style={{ color: '#10b981', fontWeight: 600 }}>{safarData.archived.length} Completed</span>
+                  </div>
+                  {safarData.archived.map(s => (
+                    <div key={s} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--surface-2)', padding: '3px 6px', borderRadius: '4px', fontSize: '11px', color: 'var(--text-primary)' }}>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}>{s}</span>
+                      <span style={{ fontSize: '9px', background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', padding: '1px 4px', borderRadius: '3px', fontWeight: 600 }}>100% Delivered</span>
+                    </div>
+                  ))}
+                </>
+              )}
+            </div>
+          )}
+
+          {details.previewType !== 'adder' && details.previewType !== 'converter' && details.previewType !== 'tracker' && (
             <div className="thumb-generic-layout">
               <div className="thumb-line full" />
               <div className="thumb-line medium" />

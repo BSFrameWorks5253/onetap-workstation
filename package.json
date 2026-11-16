@@ -12,6 +12,7 @@
   "main": "out/main/index.js",
   "scripts": {
     "dev": "node scripts/run-dev.js dev",
+    "live": "node .agent/skills/live-edit/scripts/live.mjs start --target http://localhost:5173",
     "build": "electron-vite build",
     "preview": "node scripts/run-dev.js preview",
     "build:linux": "npm run build && electron-builder --linux",

@@ -104,40 +104,60 @@
 }
 
 .st-toggle {
-  width: 46px;
-  height: 26px;
+  width: 44px;
+  height: 24px;
   border-radius: 999px;
-  background: var(--border);
-  border: none;
+  background: var(--surface-3, #e2e8f0);
+  border: 1px solid var(--border, rgba(0, 0, 0, 0.1));
   cursor: pointer;
   position: relative;
-  transition: background var(--dur-normal) var(--ease-out), box-shadow var(--dur-normal);
+  transition: background 0.24s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.24s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.24s cubic-bezier(0.16, 1, 0.3, 1);
   flex-shrink: 0;
+  outline: none;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 .st-toggle::after {
   content: '';
   position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 20px;
-  height: 20px;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
-  background: #fff;
-  transition: transform var(--dur-normal) var(--ease-spring), box-shadow var(--dur-normal);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+  background: #ffffff;
+  transition: transform 0.24s cubic-bezier(0.34, 1.56, 0.64, 1),
+              width 0.18s ease,
+              box-shadow 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18), 0 0 1px rgba(0, 0, 0, 0.1);
+}
+
+.st-toggle:hover {
+  background: var(--surface-4, #cbd5e1);
+}
+
+.st-toggle:active::after {
+  width: 22px;
 }
 
 .st-toggle--on {
-  background: linear-gradient(90deg, var(--accent-adder), var(--accent-folder));
-  box-shadow: 0 0 12px color-mix(in srgb, var(--accent-adder) 35%, transparent);
+  background: #8B5CF6 !important;
+  border-color: #7C3AED !important;
+  box-shadow: 0 0 10px rgba(139, 92, 246, 0.25);
 }
 
 .st-toggle--on::after {
   transform: translateX(20px);
-  /* Knob glow when ON */
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2), 0 0 0 2px color-mix(in srgb, var(--accent-adder) 20%, transparent);
-  animation: microBounce 0.4s var(--ease-spring) both;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  animation: none !important;
+}
+
+.st-toggle--on:active::after {
+  transform: translateX(16px);
+  width: 22px;
 }
 
 /* ── Radio cards ─────────────────────────────── */
@@ -413,6 +433,22 @@
   cursor: pointer;
   transition: all 0.2s ease;
   font-size: 14px;
+}
+
+.st-mode-panel .st-pfx-play,
+.st-pfx-play--label {
+  width: auto !important;
+  min-width: 86px;
+  height: 36px;
+  padding: 0 14px;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 8px;
+  flex-shrink: 0;
 }
 
 .st-pfx-play:hover {

@@ -93,3 +93,5 @@ resources\ai\Push Git Code.txt
 scratch/
 __pycache__/
 *.pyc
+.live/
+.hallmark/

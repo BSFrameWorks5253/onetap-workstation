@@ -32,7 +32,7 @@ interface AutoUpdateModalProps {
   errorMsg?: string
   onClose: () => void
   onStartDownload: () => void
-  onApplyUpdate: () => void
+  onApplyUpdate: (options?: { silent?: boolean }) => void
 }
 
 export function AutoUpdateModal({
@@ -67,13 +67,15 @@ export function AutoUpdateModal({
     onStartDownload()
   }
 
-  const handleInstallClick = () => {
+  const handleInstallClick = (silent: boolean = true) => {
     showToast({
-      title: 'Launching Installer',
-      message: 'One Tap will restart now to apply the update.',
+      title: silent ? 'Launching Silent Installer' : 'Launching Setup Wizard',
+      message: silent
+        ? 'One Tap will install silently in the background and relaunch.'
+        : 'One Tap custom installer wizard is opening...',
       type: 'success'
     })
-    onApplyUpdate()
+    onApplyUpdate({ silent })
   }
 
   return (
@@ -191,7 +193,7 @@ export function AutoUpdateModal({
               <div className="update-progress-header">
                 <span className="update-progress-label">
                   {status === 'ready'
-                    ? 'Update Verified — Ready to Install'
+                    ? 'Custom Installer Ready • Verified'
                     : (isAnythingSource ? 'Syncing Update Package from Anything...' : 'Downloading Fast Update from GitHub...')}
                 </span>
                 <span className="update-progress-percent">
@@ -214,6 +216,28 @@ export function AutoUpdateModal({
                     {formatMB(progress.transferredBytes)} / {formatMB(progress.totalBytes)}
                   </span>
                   <span>{formatSpeed(progress.speedBytesPerSec)}</span>
+                </div>
+              )}
+
+              {status === 'ready' && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  marginTop: '10px',
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                  background: 'rgba(16, 185, 129, 0.08)',
+                  border: '1px solid rgba(16, 185, 129, 0.25)',
+                  fontSize: '0.8rem',
+                  color: 'var(--text-sub, #94a3b8)'
+                }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2.5">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  <span>
+                    <strong style={{ color: '#10B981' }}>Silent Background Mode:</strong> Installs immediately with 0 popups and auto-restarts with your active session saved.
+                  </span>
                 </div>
               )}
             </div>
@@ -252,12 +276,26 @@ export function AutoUpdateModal({
           )}
 
           {status === 'ready' && (
-            <button className="update-btn update-btn--success" onClick={handleInstallClick}>
-              <span>Restart & Install Now</span>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <polyline points="20 6 9 17 4 12"></polyline>
-              </svg>
-            </button>
+            <>
+              <button
+                className="update-btn update-btn--secondary"
+                onClick={() => handleInstallClick(false)}
+                title="Launch full custom setup wizard to select custom paths"
+                style={{ fontSize: '11px', padding: '8px 12px' }}
+              >
+                Custom Setup Wizard
+              </button>
+              <button
+                className="update-btn update-btn--success"
+                onClick={() => handleInstallClick(true)}
+                title="Perform fast silent background install and restart"
+              >
+                <span>Silent Install & Restart</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </button>
+            </>
           )}
         </div>
       </div>

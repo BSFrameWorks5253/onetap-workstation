@@ -1,9 +1,10 @@
-import { ipcMain } from 'electron'
+import { ipcMain, shell } from 'electron'
 import { readFile, stat } from 'fs/promises'
 import { extname, dirname, basename } from 'path'
 import { existsSync } from 'fs'
 import { mkdir } from 'fs/promises'
 import { getSharp } from '../core/sharpHelper'
+import { openViewerWindow } from '../core/viewerWindowManager'
 
 // RAW image extensions that need conversion via sharp
 const RAW_EXTENSIONS = new Set([
@@ -431,5 +432,164 @@ export function registerViewerIPC(): void {
     }
 
     return { ok: true, results }
+  })
+
+  // ── Open dedicated standalone File Viewer window ─────────────────────────
+  ipcMain.handle('viewer:openWindow', (_event, filePath: string) => {
+    try {
+      if (!filePath) return { ok: false, error: 'No file path provided' }
+      openViewerWindow(filePath)
+      return { ok: true }
+    } catch (err: any) {
+      console.error('[viewer:openWindow] Failed:', err)
+      return { ok: false, error: err?.message || String(err) }
+    }
+  })
+
+  // ── Show item in Windows Explorer ─────────────────────────────────────────
+  ipcMain.handle('viewer:showItemInFolder', (_event, filePath: string) => {
+    try {
+      shell.showItemInFolder(filePath)
+      return { ok: true }
+    } catch (err: any) {
+      return { ok: false, error: err?.message || String(err) }
+    }
+  })
+
+  // ── Open in default OS application ────────────────────────────────────────
+  ipcMain.handle('viewer:openExternal', async (_event, filePath: string) => {
+    try {
+      await shell.openPath(filePath)
+      return { ok: true }
+    } catch (err: any) {
+      return { ok: false, error: err?.message || String(err) }
+    }
+  })
+
+  // ── Read document (.docx, .doc, .rtf) ─────────────────────────────────────
+  ipcMain.handle('viewer:readDoc', async (_event, filePath: string) => {
+    try {
+      const buf = await readFile(filePath)
+      const ext = extname(filePath).toLowerCase()
+
+      // 1. Check for ZIP signature (PK\x03\x04) -> DOCX
+      if (buf.length > 4 && buf[0] === 0x50 && buf[1] === 0x4b && buf[2] === 0x03 && buf[3] === 0x04) {
+        return {
+          ok: true,
+          isDocx: true,
+          base64: buf.toString('base64')
+        }
+      }
+
+      // 2. Check for RTF signature ({\rtf)
+      const headerStr = buf.slice(0, 10).toString('ascii')
+      if (headerStr.startsWith('{\\rtf')) {
+        const rtfRaw = buf.toString('utf-8')
+        // Clean basic RTF tags into text
+        const text = rtfRaw
+          .replace(/\\par[d]?/g, '\n')
+          .replace(/\\tab/g, '\t')
+          .replace(/\\'[0-9a-fA-F]{2}/g, ' ')
+          .replace(/\\[a-zA-Z0-9\-]+ ?/g, '')
+          .replace(/[{}]/g, '')
+          .trim()
+        return {
+          ok: true,
+          isDocx: false,
+          isRtf: true,
+          text: text || 'Empty RTF Document'
+        }
+      }
+
+      // 3. Binary Word Document (CFB / OLE2) -> Extract clean readable text
+      if (ext === '.doc' || (buf.length > 8 && buf[0] === 0xd0 && buf[1] === 0xcf && buf[2] === 0x11 && buf[3] === 0xe0)) {
+        // Extract UTF-16LE text sequences and ASCII sequences
+        const extractedParagraphs: string[] = []
+
+        // Extract UTF-16LE text chunks
+        for (let i = 0; i < buf.length - 8; i += 2) {
+          let chunk = ''
+          while (i < buf.length - 1) {
+            const code = buf.readUInt16LE(i)
+            if (code >= 32 && code <= 126 || code === 10 || code === 13 || (code >= 0x0600 && code <= 0x06ff)) {
+              chunk += String.fromCharCode(code)
+              i += 2
+            } else {
+              break
+            }
+          }
+          if (chunk.trim().length >= 6) {
+            extractedParagraphs.push(chunk.trim())
+          }
+        }
+
+        // If UTF-16 didn't find substantial text, try ASCII strings
+        if (extractedParagraphs.join(' ').length < 50) {
+          const asciiStr = buf.toString('latin1')
+          const matches = asciiStr.match(/[A-Za-z0-9\s.,!?:;\-_'"()]{8,}/g) || []
+          extractedParagraphs.push(...matches.map(m => m.trim()).filter(m => m.length >= 8))
+        }
+
+        const finalText = extractedParagraphs.join('\n\n')
+        return {
+          ok: true,
+          isDocx: false,
+          isDoc: true,
+          text: finalText || 'Legacy Word Document (text streams could not be isolated)'
+        }
+      }
+
+      // 4. Fallback text read
+      return {
+        ok: true,
+        isDocx: false,
+        text: buf.toString('utf-8')
+      }
+    } catch (err: any) {
+      return { ok: false, error: err?.message || String(err) }
+    }
+  })
+
+  // ── Read Hex Dump for any unknown file format ─────────────────────────────
+  ipcMain.handle('viewer:readHexDump', async (_event, filePath: string, maxBytes = 4096) => {
+    try {
+      const fileStat = await stat(filePath)
+      const bytesToRead = Math.min(fileStat.size, maxBytes)
+      const buf = Buffer.alloc(bytesToRead)
+      const fs = await import('fs/promises')
+      const handle = await fs.open(filePath, 'r')
+      await handle.read(buf, 0, bytesToRead, 0)
+      await handle.close()
+
+      const rows: Array<{ offset: string; hex: string; ascii: string }> = []
+      for (let i = 0; i < buf.length; i += 16) {
+        const offset = i.toString(16).padStart(8, '0').toUpperCase()
+        const slice = buf.slice(i, i + 16)
+        const hexParts: string[] = []
+        let ascii = ''
+
+        for (let j = 0; j < 16; j++) {
+          if (j < slice.length) {
+            const b = slice[j]
+            hexParts.push(b.toString(16).padStart(2, '0').toUpperCase())
+            ascii += b >= 32 && b <= 126 ? String.fromCharCode(b) : '·'
+          } else {
+            hexParts.push('  ')
+          }
+        }
+
+        // Format as 8 bytes, space, 8 bytes
+        const hex = `${hexParts.slice(0, 8).join(' ')}  ${hexParts.slice(8).join(' ')}`
+        rows.push({ offset, hex, ascii })
+      }
+
+      return {
+        ok: true,
+        totalSize: fileStat.size,
+        rows
+      }
+    } catch (err: any) {
+      return { ok: false, error: err?.message || String(err), rows: [] }
+    }
   })
 }

@@ -824,19 +824,18 @@ export function generateExcelSequenceReportNode(
     fs.mkdirSync(excelFolder, { recursive: true })
   }
 
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
   const cleanParentName = parentFolderName.replace(/[^a-zA-Z0-9_-]/g, '_')
-  const excelFileName = `Sequence_Summary_Report_${cleanParentName}_${timestamp}.xlsx`
-  const excelFilePath = path.join(excelFolder, excelFileName)
   const standardExcelFilePath = path.join(excelFolder, `Sequence_Summary_Report_${cleanParentName}.xlsx`)
 
   let finalReturnedPath = standardExcelFilePath
-  XLSX.writeFile(wb, excelFilePath)
   try {
     XLSX.writeFile(wb, standardExcelFilePath)
   } catch (lockErr) {
-    console.warn(`[Prproj IPC] Could not overwrite standard Excel file (file may be open in Microsoft Excel): ${standardExcelFilePath}`, lockErr)
-    finalReturnedPath = excelFilePath
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
+    const fallbackPath = path.join(excelFolder, `Sequence_Summary_Report_${cleanParentName}_${timestamp}.xlsx`)
+    XLSX.writeFile(wb, fallbackPath)
+    finalReturnedPath = fallbackPath
+    console.warn(`[Prproj IPC] Standard Excel file locked, wrote fallback file: ${fallbackPath}`)
   }
 
   return finalReturnedPath
@@ -1055,10 +1054,10 @@ export function generateMediaRelinkManifestNode(
 
   let finalExcelPath = excelNamedPath
   try {
-    XLSX.writeFile(wb, excelDatedPath)
+    // Single canonical excel manifest
     XLSX.writeFile(wb, excelNamedPath)
     try {
-      XLSX.writeFile(wb, excelStandardPath)
+      // Omit duplicate standard path
     } catch {}
   } catch (err) {
     console.warn('[Prproj IPC] Excel manifest write lock error:', err)
@@ -1086,10 +1085,10 @@ export function generateMediaRelinkManifestNode(
 
   try {
     const jsonStr = JSON.stringify(jsonPayload, null, 2)
-    fs.writeFileSync(jsonDatedPath, jsonStr, 'utf-8')
+    // Single canonical json manifest
     fs.writeFileSync(jsonNamedPath, jsonStr, 'utf-8')
     try {
-      fs.writeFileSync(jsonStandardPath, jsonStr, 'utf-8')
+      // Omit duplicate standard json path
     } catch {}
   } catch (jErr) {
     console.warn('[Prproj IPC] JSON manifest write error:', jErr)
@@ -2004,6 +2003,27 @@ export function registerPrprojIPC(): void {
         const overwrite = params.overwrite === true
         const hasPrprojFile = fs.existsSync(destPrprojPath) || (fs.existsSync(dirPath) && fs.readdirSync(dirPath).some(f => f.toLowerCase().endsWith('.prproj')))
 
+        let videos: VideoFileEntryNode[] = []
+        try {
+          videos = discoverSubfolderVideosWithFoldersNode(dirPath)
+          if (Array.isArray(params.excludedPaths) && params.excludedPaths.length > 0) {
+            const excludedNorm = params.excludedPaths.map(p => path.normalize(p).toLowerCase())
+            videos = videos.filter(v => {
+              const vDir = path.normalize(path.dirname(v.path)).toLowerCase()
+              const vFile = path.normalize(v.path).toLowerCase()
+              return !excludedNorm.some(ex => {
+                if (vFile === ex || vDir === ex) return true
+                const exWithSep = ex.endsWith(path.sep) ? ex : ex + path.sep
+                return vFile.startsWith(exWithSep) || vDir.startsWith(exWithSep)
+              })
+            })
+          }
+          const dateReport = await collectDateSequenceStatsNode(folderName, videos)
+          allDateReports.push(dateReport)
+        } catch (stErr) {
+          console.warn(`[Prproj IPC] Failed to collect sequence stats for ${folderName}:`, stErr)
+        }
+
         if (!overwrite && hasPrprojFile) {
           skipped.push(destPrprojPath)
           console.log(`[Prproj IPC] Skipped "${folderName}" because a .prproj file already exists in this folder.`)
@@ -2011,7 +2031,7 @@ export function registerPrprojIPC(): void {
         }
 
         try {
-          let videos = discoverSubfolderVideosWithFoldersNode(dirPath)
+          // Videos and stats already collected above
 
           // Filter out clips inside excluded paths/folders
           if (Array.isArray(params.excludedPaths) && params.excludedPaths.length > 0) {
@@ -2029,8 +2049,7 @@ export function registerPrprojIPC(): void {
 
           // Collect stats for date-wise Excel report
           try {
-            const dateReport = await collectDateSequenceStatsNode(folderName, videos)
-            allDateReports.push(dateReport)
+            // Stats already registered for master Excel report
           } catch (stErr) {
             console.warn(`[Prproj IPC] Failed to collect sequence stats for ${folderName}:`, stErr)
           }

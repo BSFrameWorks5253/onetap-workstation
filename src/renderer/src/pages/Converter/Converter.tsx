@@ -559,7 +559,7 @@ export default function Converter(): JSX.Element {
               accentSoft={meta.accentSoft} 
               right={
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <StatusChip label={convertRunning ? 'Converting…' : 'Idle'} variant={convertRunning ? 'warning' : 'muted'} />
+                  {convertRunning && <StatusChip label="Converting…" variant="warning" />}
                   <span style={{ 
                     transition: 'transform 0.2s', 
                     transform: convertCollapsed ? 'rotate(-90deg)' : 'none', 
@@ -646,7 +646,7 @@ export default function Converter(): JSX.Element {
               accentSoft={meta.accentSoft} 
               right={
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <StatusChip label={renameRunning ? (batchRunningAll ? 'Renaming All…' : 'Renaming…') : 'Idle'} variant={renameRunning ? 'warning' : 'muted'} />
+                  {renameRunning && <StatusChip label={batchRunningAll ? 'Renaming All…' : 'Renaming…'} variant="warning" />}
                   <span style={{ 
                     transition: 'transform 0.2s', 
                     transform: renameCollapsed ? 'rotate(-90deg)' : 'none', 

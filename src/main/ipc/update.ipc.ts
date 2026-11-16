@@ -862,7 +862,7 @@ export function registerUpdateIPC(mainWindowGetter: () => BrowserWindow | null):
   })
 
   // 4. Installer Launch Execution Strategy
-  ipcMain.handle('update:install', async () => {
+  ipcMain.handle('update:install', async (_event, options?: { silent?: boolean }) => {
     const tempFolder = app.getPath('temp')
     const candidates = [
       lastDownloadedInstallerPath,
@@ -879,7 +879,7 @@ export function registerUpdateIPC(mainWindowGetter: () => BrowserWindow | null):
       // Look for any newly downloaded installer in tempFolder
       try {
         const files = fs.readdirSync(tempFolder)
-        const match = files.find(f => (f.endsWith('.AppImage') || f.endsWith('.deb') || f.endsWith('.exe')) && (f.toLowerCase().includes('onetap') || f.toLowerCase().includes('one_tap') || f.toLowerCase().includes('unidesk')))
+        const match = files.find(f => (f.endsWith('.AppImage') || f.endsWith('.deb') || f.endsWith('.exe') || f.endsWith('.msi')) && (f.toLowerCase().includes('onetap') || f.toLowerCase().includes('one_tap') || f.toLowerCase().includes('unidesk')))
         if (match) installerPath = path.join(tempFolder, match)
       } catch {}
     }
@@ -888,7 +888,7 @@ export function registerUpdateIPC(mainWindowGetter: () => BrowserWindow | null):
       throw new Error('Installer binary executable missing or not found in temporary folder.')
     }
 
-    console.log(`[Updater] Spawning update setup installer: ${installerPath}`)
+    console.log(`[Updater] Spawning update setup installer: ${installerPath} (silent: ${options?.silent !== false})`)
 
     ;(app as any).isQuitting = true
 
@@ -918,8 +918,40 @@ export function registerUpdateIPC(mainWindowGetter: () => BrowserWindow | null):
     } else if (process.platform === 'win32') {
       // Windows Out-of-Process Supervisor Updater
       // Writes a batch script to safely await main process shutdown, terminate any lingering locks,
-      // execute the setup installer (silent with GUI fallback), and automatically restart the updated app.
+      // execute the setup installer (custom branded or silent), and automatically restart the updated app.
+      const isSilent = options?.silent !== false
       const safeInstallerPath = installerPath.replace(/["&]/g, '')
+      const isMsi = safeInstallerPath.toLowerCase().endsWith('.msi')
+
+      // Detect installer type to provide the exact silent automation flags
+      let silentArgs = '/S' // Default NSIS silent argument
+      if (isSilent) {
+        if (isMsi) {
+          silentArgs = '/qn /norestart'
+        } else {
+          try {
+            const fd = fs.openSync(safeInstallerPath, 'r')
+            const buf = Buffer.alloc(32768)
+            fs.readSync(fd, buf, 0, 32768, 0)
+            fs.closeSync(fd)
+            const header = buf.toString('latin1')
+            if (header.includes('Inno Setup') || header.includes('InnoSetup') || safeInstallerPath.toLowerCase().includes('inno')) {
+              // Inno Setup enterprise silent switches
+              silentArgs = '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-'
+            } else {
+              // NSIS Modern UI silent switch
+              silentArgs = '/S'
+            }
+          } catch {
+            silentArgs = safeInstallerPath.toLowerCase().includes('inno')
+              ? '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-'
+              : '/S'
+          }
+        }
+      } else {
+        silentArgs = ''
+      }
+
       const batPath = path.join(tempFolder, `unidesk_updater_${Date.now()}.bat`)
       const batContent = `@echo off
 setlocal
@@ -928,18 +960,21 @@ chcp 65001 >nul
 :: Wait 1.5 seconds for Electron process to completely exit and release file locks
 timeout /t 2 /nobreak >nul
 
-:: Ensure any lingering Uni Desk process instances are terminated
+:: Ensure any lingering process instances are terminated
 taskkill /F /IM "One Tap.exe" >nul 2>&1
+taskkill /F /IM "One_Tap.exe" >nul 2>&1
 taskkill /F /IM "Uni Desk.exe" >nul 2>&1
 taskkill /F /IM "UniDesk_App.exe" >nul 2>&1
 timeout /t 1 /nobreak >nul
 
-:: Execute the NSIS installer
-:: Attempt silent install first; fallback to GUI if silent returns non-zero error
-start /wait "" "${safeInstallerPath}" /S
+:: Execute the installer (Silent mode: ${isSilent ? 'ON' : 'OFF'})
+${isMsi 
+  ? `start /wait msiexec.exe /i "${safeInstallerPath}" ${silentArgs}` 
+  : `start /wait "" "${safeInstallerPath}" ${silentArgs}
 if %ERRORLEVEL% NEQ 0 (
+    :: Fallback to GUI mode if silent installation encountered code block
     start /wait "" "${safeInstallerPath}"
-)
+)`}
 
 :: Re-launch updated workstation
 set "TARGET_EXE=${process.execPath.replace(/["&]/g, '')}"
@@ -959,7 +994,7 @@ if exist "%TARGET_EXE%" (
 `
       fs.writeFileSync(batPath, batContent, 'utf8')
 
-      console.log(`[Updater] Launching Windows updater supervisor: ${batPath}`)
+      console.log(`[Updater] Launching Windows updater supervisor (silent: ${isSilent}, args: ${silentArgs}): ${batPath}`)
 
       const batProcess = spawn('cmd.exe', ['/c', batPath], {
         detached: true,

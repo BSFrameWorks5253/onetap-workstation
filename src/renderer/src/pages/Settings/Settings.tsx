@@ -81,6 +81,7 @@ export default function Settings(): JSX.Element {
   const [updateInfo, setUpdateInfo] = useState<any>(null)
   const [downloadProgress, setDownloadProgress] = useState({ percent: 0, transferredBytes: 0, totalBytes: 0, speedBytesPerSec: 0 })
   const [autoCheckUpdates, setAutoCheckUpdates] = useState(true)
+  const [silentInstallUpdates, setSilentInstallUpdates] = useState(true)
   const [appVersion, setAppVersion] = useState('v26.11.12')
   const [_updateError, setUpdateError] = useState('')
 
@@ -529,6 +530,7 @@ export default function Settings(): JSX.Element {
     async function loadUpdateSettings() {
       const all = await api.settings.getAll()
       setAutoCheckUpdates(all.auto_check_updates !== false)
+      setSilentInstallUpdates(all.silent_update_install !== false)
     }
     loadUpdateSettings()
   }, [])
@@ -582,10 +584,18 @@ export default function Settings(): JSX.Element {
     }
   }
 
-  async function applyUpdate() {
+  async function applyUpdate(silentOverride?: boolean) {
+    const isSilent = silentOverride !== undefined ? silentOverride : silentInstallUpdates
     try {
       playSuccess()
-      await api.update.install()
+      showToast({
+        title: isSilent ? 'Launching Silent Installer' : 'Launching Setup Wizard',
+        message: isSilent
+          ? 'Updating silently in the background. App will relaunch automatically.'
+          : 'Opening custom installer setup wizard...',
+        type: 'info'
+      })
+      await api.update.install({ silent: isSilent })
     } catch (e) {
       setUpdateStatus('error')
       setUpdateError(String(e))
@@ -903,8 +913,8 @@ export default function Settings(): JSX.Element {
                         }}
                       />
                       <div>
-                        <strong>Sequential Rotation Mode (Pool Cycles)</strong>
-                        <p>Rotates sequentially through available audio tracks (Audio 1, Audio 2, Audio 3...) for each video in order.</p>
+                        <strong>Sequential Rotation (Auto Cycle)</strong>
+                        <p>Rotates automatically across your audio pool in sequence for each clip.</p>
                       </div>
                     </label>
 
@@ -916,8 +926,8 @@ export default function Settings(): JSX.Element {
                         }}
                       />
                       <div>
-                        <strong>Smart Prefix Assignments</strong>
-                        <p>Map specific title prefix keywords (Q, Z, MZ, M, WAAZ...) to custom audio files.</p>
+                        <strong>Prefix-Based Audio Matching</strong>
+                        <p>Automatically pairs dedicated audio files to matching clip prefixes (Q, Z, MZ, M, WAAZ).</p>
                       </div>
                     </label>
                   </div>
@@ -937,7 +947,7 @@ export default function Settings(): JSX.Element {
                           <option key={i} value={String(i + 1)}>{opt}</option>
                         ))}
                       </select>
-                      <button className="st-pfx-play" onClick={() => togglePlay(`Audio ${singleIdx}`)}>
+                      <button className="st-pfx-play st-pfx-play--label" onClick={() => togglePlay(`Audio ${singleIdx}`)}>
                         {playingAudio === `Audio ${singleIdx}` ? (
                           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                             <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><rect width="16" height="16" x="4" y="4" rx="2" /></svg>
@@ -1886,7 +1896,6 @@ export default function Settings(): JSX.Element {
             </div>
             <div className="st-compact-text">
               <span className="st-compact-title">Audio Pool & Track Assignments</span>
-              <span className="st-compact-desc">{poolInfo || 'Manage audio tracks and custom prefix assignments'}</span>
               <div className="st-compact-chips">
                 <span className="st-summary-chip">Mode: {assignMode === 'single' ? 'Single Track' : assignMode === 'alternate' ? 'Sequential Rotation' : 'Smart Prefix'}</span>
                 <span className="st-summary-chip">Instrumentals: {instrumentalCollection.length} tracks</span>
@@ -1907,11 +1916,6 @@ export default function Settings(): JSX.Element {
             </div>
             <div className="st-compact-text">
               <span className="st-compact-title">Task Tracker Drives & Workspaces</span>
-              <span className="st-compact-desc">
-                {trackerDrives.length > 0
-                  ? `${trackerDrives.filter(d => d.enabled).length} of ${trackerDrives.length} Drives Active (${trackerDrives.map(d => d.driveRoot).join(', ')})`
-                  : 'No production storage drives configured'}
-              </span>
               <div className="st-compact-chips">
                 <span className="st-summary-chip">
                   Drives: {trackerDrives.length > 0 ? trackerDrives.map(d => d.driveRoot.replace(/[\\/]/g, '')).join(', ') : 'None'}
@@ -1936,7 +1940,6 @@ export default function Settings(): JSX.Element {
             </div>
             <div className="st-compact-text">
               <span className="st-compact-title">Storage & Default Folder Paths</span>
-              <span className="st-compact-desc">{titlesFolder || 'No default titles folder selected'}</span>
               <div className="st-compact-chips">
                 <span className="st-summary-chip">Remember Paths: {rememberPaths ? 'Enabled' : 'Disabled'}</span>
                 <span className="st-summary-chip">Settings File Configured</span>
@@ -1957,7 +1960,6 @@ export default function Settings(): JSX.Element {
             </div>
             <div className="st-compact-text">
               <span className="st-compact-title">Folder Watcher (Auto Convert)</span>
-              <span className="st-compact-desc">{watcherInputFolder || 'No watched folder selected'}</span>
               <div className="st-compact-chips">
                 <span className="st-summary-chip" style={{ color: watcherEnabled ? '#10B981' : 'var(--text-secondary)' }}>
                   Service: {watcherEnabled ? 'Active' : 'Disabled'}
@@ -1979,7 +1981,6 @@ export default function Settings(): JSX.Element {
             </div>
             <div className="st-compact-text">
               <span className="st-compact-title">Theme & Visual Styling</span>
-              <span className="st-compact-desc">Active Theme: {THEMES.find(t => t.id === theme)?.label || theme}</span>
               <div className="st-compact-chips">
                 <span className="st-summary-chip">Anim: {animPreset}</span>
                 <span className="st-summary-chip">Transition: {pageTransition}</span>
@@ -1992,75 +1993,12 @@ export default function Settings(): JSX.Element {
           </Button>
         </div>
 
-        {/* 5. Performance & Engine */}
-        <div className="st-compact-card">
-          <div className="st-compact-info">
-            <div className="st-compact-icon-box" style={{ background: 'rgba(245, 158, 11, 0.12)', color: '#F59E0B' }}>
-              <PageIcon pageKey="bolt" size={20} color="#F59E0B" />
-            </div>
-            <div className="st-compact-text">
-              <span className="st-compact-title">Performance & Engine Tuning</span>
-              <span className="st-compact-desc">Parallel Stream Workers: {threads} threads · Buffer: {bufSize} MB</span>
-            </div>
-          </div>
-          <Button variant="secondary" onClick={() => setActiveModal('perf')}>
-            <PageIcon pageKey="bolt" size={14} style={{ marginRight: '6px' }} />
-            Configure Engine
-          </Button>
-        </div>
-
-        {/* 6. Document & File Viewer */}
-        <div className="st-compact-card">
-          <div className="st-compact-info">
-            <div className="st-compact-icon-box" style={{ background: 'rgba(99, 102, 241, 0.12)', color: '#6366F1' }}>
-              <PageIcon pageKey="converter" size={20} color="#6366F1" />
-            </div>
-            <div className="st-compact-text">
-              <span className="st-compact-title">Document & Media File Viewer</span>
-              <span className="st-compact-desc">Customize built-in viewer presets for PDF, Word, Excel, Markdown, Images</span>
-            </div>
-          </div>
-          <Button variant="secondary" onClick={() => setActiveModal('fileViewer')}>
-            <PageIcon pageKey="converter" size={14} style={{ marginRight: '6px' }} />
-            Configure Viewer
-          </Button>
-        </div>
-
-        {/* 7. Camera SD Transfer & Sorting */}
-        <div className="st-compact-card">
-          <div className="st-compact-info">
-            <div className="st-compact-icon-box" style={{ background: 'rgba(236, 72, 153, 0.12)', color: '#EC4899' }}>
-              <PageIcon pageKey="cameratransfer" size={20} color="#EC4899" />
-            </div>
-            <div className="st-compact-text">
-              <span className="st-compact-title">Camera SD Transfer & Sorting</span>
-              <span className="st-compact-desc">Sort clips from SD card into cameraman subfolders with Hijri date formatting</span>
-              <div className="st-compact-chips">
-                <span className="st-summary-chip">Preset & Multi-Camera Support</span>
-              </div>
-            </div>
-          </div>
-          <Button variant="primary" accent="#EC4899" accentHv="#DB2777" onClick={() => setActiveModal('cameraTransfer')}>
-            <PageIcon pageKey="cameratransfer" size={14} style={{ marginRight: '6px' }} />
-            Open Camera Transfer
-          </Button>
-        </div>
-
         {/* Software Updates Card */}
         <Card className="anim-scale-in">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <CardHeader title="Software Updates & Platform Release" accent="#8B5CF6" accentSoft="rgba(139, 92, 246, 0.08)" />
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-sub)' }}>One Tap v{appVersion}</span>
-              <Button variant="ghost" accent="#8B5CF6" onClick={() => { setActiveModal('changelog'); playTick() }} style={{ padding: '6px 12px', fontSize: '11px', border: '1px solid rgba(139, 92, 246, 0.3)' }}>
-                <PageIcon pageKey="file_text" size={12} style={{ marginRight: '6px' }} />
-                View Changelog
-              </Button>
-              {updateStatus === 'idle' && (
-                <Button variant="ghost" accent="#8B5CF6" onClick={checkForUpdates} style={{ padding: '6px 14px', fontSize: '12px' }}>
-                  Check for Updates
-                </Button>
-              )}
               {updateStatus === 'checking' && (
                 <span style={{ fontSize: '12px', color: 'var(--text-sub)' }}>Checking...</span>
               )}
@@ -2087,15 +2025,12 @@ export default function Settings(): JSX.Element {
                       Active
                     </span>
                   </div>
-                  <p style={{ margin: '3px 0 0', fontSize: '12px', color: 'var(--text-sub)' }}>
-                    Primary: <strong>Anything Hub</strong> (<code>C:\Users\Burhanuddin\OneDrive\Desktop\New folder (2)\Anything</code>) · Mirror: <strong>GitHub Releases</strong>
-                  </p>
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <Button variant="ghost" accent="#8B5CF6" onClick={checkForUpdates} disabled={updateStatus === 'checking'} style={{ padding: '6px 12px', fontSize: '11px' }}>
                   <PageIcon pageKey="refresh" size={12} style={{ marginRight: '5px' }} />
-                  {updateStatus === 'checking' ? 'Querying Route...' : 'Sync with Anything'}
+                  {updateStatus === 'checking' ? 'Checking...' : 'Check Update'}
                 </Button>
               </div>
             </div>
@@ -2111,8 +2046,33 @@ export default function Settings(): JSX.Element {
                   setAutoCheckUpdates(nv)
                   await api.settings.setAndSave('auto_check_updates', nv)
                 }}
-                style={autoCheckUpdates ? { background: '#8B5CF6' } : {}}
               />
+            </div>
+
+            <div className="st-toggle-row">
+              <div>
+                <p className="st-toggle-label">Silent Background Installation</p>
+                <p className="st-toggle-sub">Install downloaded updates seamlessly in the background with zero setup wizard popups or interruptions</p>
+              </div>
+              <button
+                className={`st-toggle ${silentInstallUpdates ? 'st-toggle--on' : ''}`}
+                onClick={async () => {
+                  const nv = !silentInstallUpdates
+                  setSilentInstallUpdates(nv)
+                  await api.settings.setAndSave('silent_update_install', nv)
+                  saveAndFlash(nv ? 'Silent update install enabled' : 'Interactive setup wizard mode enabled', async () => {})
+                }}
+              />
+            </div>
+
+            <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+              <div>
+                <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', display: 'block' }}>Custom Setup Packaging</span>
+                <span style={{ fontSize: '12px', color: 'var(--text-sub)' }}>Branded NSIS & Inno Setup with process lock termination, shortcut cleanup, and silent background updates</span>
+              </div>
+              <span style={{ fontSize: '11px', fontWeight: 700, padding: '4px 10px', background: 'rgba(99,102,241,0.12)', color: '#8B5CF6', border: '1px solid rgba(99,102,241,0.25)', borderRadius: '8px', whiteSpace: 'nowrap' }}>
+                One Tap Custom Engine
+              </span>
             </div>
 
             <div className="st-toggle-row">
@@ -2130,7 +2090,6 @@ export default function Settings(): JSX.Element {
                     saveAndFlash(res ? 'Auto-start enabled on Windows boot' : 'Auto-start disabled', async () => {})
                   }
                 }}
-                style={ autoStartApp ? { background: '#8B5CF6' } : {}}
               />
             </div>
 
@@ -2216,10 +2175,16 @@ export default function Settings(): JSX.Element {
                 )}
 
                 {updateStatus === 'ready' && (
-                  <Button variant="primary" accent="#10B981" accentHv="#059669" onClick={applyUpdate} style={{ width: '100%', padding: '12px', fontWeight: 700 }}>
-                    <PageIcon pageKey="bolt" size={14} style={{ marginRight: '6px' }} />
-                    Restart & Install Update
-                  </Button>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <Button variant="ghost" accent="#8B5CF6" onClick={() => applyUpdate(false)} style={{ flex: 1, padding: '10px 14px', fontSize: '12px' }}>
+                      <PageIcon pageKey="tool" size={13} style={{ marginRight: '6px' }} />
+                      Custom Setup Wizard
+                    </Button>
+                    <Button variant="primary" accent="#10B981" accentHv="#059669" onClick={() => applyUpdate(true)} style={{ flex: 1.5, padding: '10px 14px', fontWeight: 700 }}>
+                      <PageIcon pageKey="bolt" size={14} style={{ marginRight: '6px' }} />
+                      Silent Install & Restart
+                    </Button>
+                  </div>
                 )}
               </div>
             )}

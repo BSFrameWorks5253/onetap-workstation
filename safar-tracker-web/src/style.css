@@ -1210,16 +1210,20 @@ tr:last-child td {
 @media (max-width: 760px) {
   .sidebar {
     position: fixed;
-    z-index: 5;
+    z-index: 2000;
     left: 0;
     top: 0;
     bottom: 0;
     transform: translateX(-102%);
-    transition: transform 0.2s var(--ease-panel, ease);
+    visibility: hidden;
+    pointer-events: none;
+    transition: transform 0.2s var(--ease-panel, ease), visibility 0.2s;
     box-shadow: 8px 0 28px rgba(0, 0, 0, 0.1);
   }
   .sidebar-open {
     transform: translateX(0);
+    visibility: visible;
+    pointer-events: auto;
   }
   .topbar {
     height: 55px;

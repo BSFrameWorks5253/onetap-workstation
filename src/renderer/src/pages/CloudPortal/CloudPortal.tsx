@@ -164,7 +164,7 @@ export default function CloudPortal(): JSX.Element {
   return (
     <div className="cp-page cp-page--fullscreen">
       <div className="cp-viewport-container anim-scale-in">
-        {/* Navigation / Address Bar */}
+        {/* Navigation Bar */}
         <div className="cp-address-bar">
           <div className="cp-nav-buttons">
             <button className="cp-nav-btn" onClick={handleBack} title="Back">
@@ -181,47 +181,18 @@ export default function CloudPortal(): JSX.Element {
             </button>
           </div>
 
-          <div className="cp-address-input-wrap">
-            <span className="cp-secure-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-              <span className="cp-secure-text">HTTPS Secure</span>
+          <div className="cp-address-input-wrap" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span className="cp-host-badge cp-host-drive" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
+              <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }}></span>
+              Sharaf Media Cloud Portal
             </span>
-            <input
-              type="text"
-              className="cp-address-input"
-              value={addressBarMediaUrl}
-              readOnly
-              title="Sharaf Media Live Endpoint"
-            />
-            <span className="cp-host-badge cp-host-drive">Sharaf Media</span>
           </div>
 
           <div className="cp-action-buttons">
             <button className="cp-action-btn cp-chrome-btn" onClick={handleOpenExternal} title="Launch in external browser">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-              <span>Open Browser</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
             </button>
           </div>
-        </div>
-
-        {/* Quick Link Bookmark Bar */}
-        <div className="cp-bookmarks-bar">
-          <span className="cp-bookmarks-title" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.89A4 4 0 0 1 14 9V5a2 2 0 0 0-2-2h0a2 2 0 0 0-2 2v4a4 4 0 0 1-2.11 3.56l-1.78.89A2 2 0 0 0 5 15.24Z"/></svg>
-            <span>Quick Access:</span>
-          </span>
-          <button className="cp-bookmark-btn" onClick={handleMediaHome}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
-            <span>Dashboard Home</span>
-          </button>
-          <button className="cp-bookmark-btn" onClick={handleRefresh}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-            <span>Reload Portal</span>
-          </button>
-          <button className="cp-bookmark-btn" onClick={handleOpenExternal}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-            <span>Launch Chrome / Edge</span>
-          </button>
         </div>
 
         {/* Live Portal Webview */}

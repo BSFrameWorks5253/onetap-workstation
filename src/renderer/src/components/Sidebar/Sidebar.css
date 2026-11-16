@@ -66,30 +66,9 @@
   display: none;
 }
 
-/* Sleek floating tooltip in collapsed mode */
+/* Collapsed hover is handled by SidebarFlyoutMenu */
 .sidebar--collapsed .nav-item:hover::after {
-  content: attr(title);
-  position: absolute;
-  left: calc(100% + 14px);
-  top: 50%;
-  transform: translateY(-50%);
-  background: var(--surface);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  color: var(--text-primary);
-  border: 1px solid var(--border);
-  padding: 6px 14px;
-  border-radius: var(--radius-sm, 8px);
-  font-size: 12px;
-  font-weight: 750;
-  white-space: nowrap;
-  box-shadow: 
-    0 10px 25px -4px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 var(--specular-highlight);
-  z-index: 9999;
-  pointer-events: none;
-  animation: fadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
-  letter-spacing: 0.01em;
+  display: none !important;
 }
 
 /* -- Top Shimmer Strip --------------------------------- */
@@ -182,10 +161,6 @@
   padding: 0 2px;
 }
 
-.sidebar-nav-indicator {
-  display: none;
-}
-
 /* -- Nav List ------------------------------------------ */
 .sidebar-nav {
   padding: 2px 0;
@@ -207,6 +182,177 @@
   background: var(--theme-accent); 
 }
 
+/* -- Submenu Group & Dropdown (Inline for Expanded Sidebar, comes on hover only) -- */
+.nav-item-group {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.nav-submenu {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+  margin-left: 20px;
+  margin-right: 2px;
+  padding-left: 12px;
+  border-left: 1.5px solid color-mix(in srgb, var(--item-accent, var(--theme-accent)) 28%, var(--border));
+  transition:
+    max-height 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.2s ease,
+    margin-top 0.2s ease,
+    margin-bottom 0.2s ease;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.nav-item-group:hover .nav-submenu,
+.nav-item-group--hovered .nav-submenu {
+  max-height: 360px;
+  opacity: 1;
+  pointer-events: auto;
+  margin-top: 4px;
+  margin-bottom: 6px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.sidebar--collapsed .nav-submenu {
+  display: none !important;
+}
+
+/* Individual Sub-Item: Executive 2-line Card */
+.nav-subitem {
+  display: flex;
+  flex-direction: column;
+  padding: 6.5px 10px 6.5px 14px;
+  border-radius: var(--radius-sm, 8px);
+  cursor: pointer;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  text-decoration: none;
+  box-sizing: border-box;
+  width: 100%;
+  user-select: none;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.nav-subitem:hover:not(.nav-subitem--active) {
+  background: color-mix(in srgb, var(--item-accent, var(--theme-accent)) 10%, var(--surface-hover));
+  border-color: color-mix(in srgb, var(--item-accent, var(--theme-accent)) 30%, var(--border));
+  box-shadow: 0 3px 10px color-mix(in srgb, var(--item-accent, var(--theme-accent)) 10%, transparent);
+  transform: translateX(2px);
+}
+
+.nav-subitem--active {
+  background: color-mix(in srgb, var(--item-accent, var(--theme-accent)) 18%, var(--surface-2)) !important;
+  border-color: color-mix(in srgb, var(--item-accent, var(--theme-accent)) 50%, var(--border)) !important;
+  box-shadow:
+    0 3px 12px color-mix(in srgb, var(--item-accent, var(--theme-accent)) 22%, transparent),
+    inset 0 1px 0 var(--specular-highlight) !important;
+}
+
+/* Left accent sliding active bar */
+.nav-subitem--active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 4px;
+  bottom: 4px;
+  width: 3.5px;
+  border-radius: 0 4px 4px 0;
+  background: var(--item-accent, var(--theme-accent)) !important;
+  box-shadow:
+    0 0 10px color-mix(in srgb, var(--item-accent, var(--theme-accent)) 85%, transparent),
+    0 0 3px color-mix(in srgb, var(--item-accent, var(--theme-accent)) 60%, transparent) !important;
+}
+
+.nav-subitem-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+}
+
+.nav-subitem-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+/* Subtle muted dot by default for inactive subitems */
+.nav-subitem-dot {
+  width: 5.5px;
+  height: 5.5px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  opacity: 0.45;
+  flex-shrink: 0;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, opacity 0.2s ease;
+}
+
+.nav-subitem:hover:not(.nav-subitem--active) .nav-subitem-dot {
+  background: var(--item-accent, var(--theme-accent));
+  opacity: 0.85;
+}
+
+/* Active dot: bright accent color with luminous glow */
+.nav-subitem--active .nav-subitem-dot {
+  background: var(--item-accent, var(--theme-accent)) !important;
+  opacity: 1 !important;
+  transform: scale(1.25);
+  box-shadow: 0 0 6px var(--item-accent, var(--theme-accent));
+}
+
+.nav-subitem-label {
+  flex: 1;
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.01em;
+}
+
+.nav-subitem-badge {
+  font-size: 9px;
+  font-weight: 750;
+  padding: 1.5px 6px;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--item-accent, var(--theme-accent)) 15%, transparent);
+  color: var(--item-accent, var(--theme-accent));
+  border: 1px solid color-mix(in srgb, var(--item-accent, var(--theme-accent)) 30%, transparent);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.nav-subitem-sublabel {
+  font-size: 10px;
+  font-weight: 450;
+  color: var(--text-muted);
+  padding-left: 11.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.25;
+}
+
 /* -- Separator: elegant ruled line with fade ends ------ */
 .sidebar-sep {
   height: 1px;
@@ -226,6 +372,12 @@
 .sidebar-bottom-nav {
   padding: 3px 0;
   flex-shrink: 0;
+}
+
+.sidebar-bottom-nav .nav-item--active {
+  background: color-mix(in srgb, var(--item-accent) 14%, var(--surface-2)) !important;
+  border-color: color-mix(in srgb, var(--item-accent) 32%, var(--border)) !important;
+  box-shadow: 0 3px 12px color-mix(in srgb, var(--item-accent) 16%, transparent) !important;
 }
 
 /* -- Toggle Button ------------------------------------- */

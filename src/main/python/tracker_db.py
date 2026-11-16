@@ -184,6 +184,57 @@ STATUS_RANK = {
     'submitted': 6
 }
 
+def is_camera_or_asset_folder(name: str) -> bool:
+    if not name:
+        return True
+    clean = name.strip().lower()
+    if not clean:
+        return True
+    if re.match(r'^(?:cam|camera|cams|angle|device)[\s._\-]*(?:\d+|[a-z])?$', clean) or re.match(r'^cam\b', clean) or re.match(r'^camera\b', clean):
+        return True
+    if re.search(r'\b(?:gopro|dji|drone|action[\s._-]?cam|insta360|osmo)\b', clean):
+        return True
+    if re.match(r'^(?:card|sd[\s._-]?card|cfexpress|cfast|memory[\s._-]?card)[\s._-]*(?:[a-z]|\d+)?$', clean):
+        return True
+    if re.match(r'^(?:audio|mic|mics|sound|sound[\s._-]?recording|recorder|zoom|tascam|lav|lavalier|wireless|mixer|boom)[\s._\-]*(?:\d+)?$', clean):
+        return True
+    if re.match(r'^(?:b[-_ ]?roll|broll|footage|raw|raw[\s._-]?footage|dumps?|dump[\s._-]?\d+|clips?|stills?|photos?|pictures?)$', clean):
+        return True
+    if re.match(r'^(?:renders?|rendering|preview|previews|proxies|proxy|final|final[\s._-]?titles|titles|dvd|outputs?|exports?|masters?)$', clean):
+        return True
+    if re.match(r'^(?:projects?|prproj|premiere|cache|scratch|auto[\s._-]?save)$', clean):
+        return True
+    if re.match(r'^(?:assets?|graphics?|music|sfx|fonts?|temps?|tmp|backups?|trash|old)$', clean):
+        return True
+    if re.match(r'^(?:date[\s._-]*(?:not[\s._-]*provided|folder[\s._-]*unavailable)|date[\s._-]*folder|undefined|null)$', clean):
+        return True
+    if clean.startswith('$') or clean.startswith('.') or clean == 'system volume information':
+        return True
+    return False
+
+def is_proper_date_or_session_folder(name: str) -> bool:
+    if not name or is_camera_or_asset_folder(name):
+        return False
+    clean = name.strip()
+    if re.match(r'^\d{4}[\s._-]\d{1,2}[\s._-]\d{1,2}', clean):
+        return True
+    if re.match(r'^\d{1,2}[\s._-]\d{1,2}[\s._-]\d{2,4}', clean):
+        return True
+    if re.match(r'^day[\s._\-]?\d{1,3}', clean, re.I):
+        return True
+    m_num = re.match(r'^(\d{1,2})$', clean)
+    if m_num and 1 <= int(m_num.group(1)) <= 31:
+        return True
+    if re.match(r'^\d{1,2}[\s._-]+(?:waaz|majlis|isteqbal|misaaq|urs|ziyarat|event|session|bethak|qmz|ziyafat|qadam|milad|ashara|darees)\b', clean, re.I):
+        return True
+    if re.search(r'(?:waaz|majlis|isteqbal|bethak|qmz|ziyafat)[\s._-]+(?:day[\s._-]?)?\d{1,2}', clean, re.I):
+        return True
+    if re.match(r'^\d{1,2}[\s._-]+[A-Za-z0-9]+[\s._-]+(?:waaz|majlis|isteqbal|misaaq|urs|ziyarat|event|session|bethak|qmz|ziyafat|qadam|milad|ashara|darees)\b', clean, re.I):
+        return True
+    if re.search(r'\b(?:waaz|majlis|isteqbal|misaaq|urs|ziyarat|bethak|qmz|ziyafat|qadam|milad|ashara|darees)\b', clean, re.I):
+        return True
+    return False
+
 def upsert_tasks(conn, tasks):
     now_ms = int(time.time() * 1000)
     cursor = conn.cursor()
@@ -194,6 +245,8 @@ def upsert_tasks(conn, tasks):
         if not safar_name or safar_name.lower().startswith(('intelvga', 'dptf', 'mei')) or safar_name.lower() in ('in process', 'to upload', 'to delete', 'uploaded data', 'pending', 'client'):
             continue
         date_folder = t.get('dateFolder') or t.get('date_folder') or ''
+        if not date_folder or is_camera_or_asset_folder(date_folder) or not is_proper_date_or_session_folder(date_folder):
+            continue
         status = t.get('status', 'editing_pending')
         prproj_mod = t.get('prprojModifiedAt') or t.get('prproj_modified_at') or 0
         prproj_path = t.get('prprojPath') or t.get('prproj_path') or ''
@@ -555,6 +608,13 @@ def get_all_data(conn):
     rows = cursor.fetchall()
     tasks = []
     for r in rows:
+        d_folder = r[2] if len(r) > 19 else (r[3] if len(r) > 3 and r[3] else '')
+        if len(r) > 19:
+            if not d_folder or is_camera_or_asset_folder(d_folder) or not is_proper_date_or_session_folder(d_folder):
+                continue
+        elif d_folder and (is_camera_or_asset_folder(d_folder) or not is_proper_date_or_session_folder(d_folder)):
+            continue
+            continue
         meta = {}
         if r[19]:
             try: meta = json.loads(r[19])
@@ -686,6 +746,7 @@ def reset_and_clean_tracker(conn, preserve_submitted=True, allowed_drives=None):
     cursor = conn.cursor()
     cursor.execute("DELETE FROM tracker_tasks WHERE LOWER(safar_name) LIKE 'intelvga%' OR LOWER(safar_name) LIKE 'dptf%' OR LOWER(safar_name) = 'in process' OR LOWER(safar_name) LIKE 'mei%'")
     cursor.execute("DELETE FROM safars WHERE LOWER(safar_name) LIKE 'intelvga%' OR LOWER(safar_name) LIKE 'dptf%' OR LOWER(safar_name) = 'in process' OR LOWER(safar_name) LIKE 'mei%'")
+    cursor.execute("DELETE FROM tracker_tasks WHERE LOWER(date_folder) LIKE 'cam%' OR LOWER(date_folder) LIKE 'camera%' OR LOWER(date_folder) LIKE 'audio%' OR LOWER(date_folder) LIKE 'mic%' OR LOWER(date_folder) LIKE 'b-roll%' OR LOWER(date_folder) LIKE 'raw%' OR LOWER(date_folder) LIKE 'footage%' OR LOWER(date_folder) LIKE 'date not provided%' OR LOWER(date_folder) LIKE 'date folder unavailable%'")
     if preserve_submitted:
         cursor.execute("DELETE FROM tracker_tasks WHERE status != 'submitted'")
         cursor.execute("DELETE FROM tracker_media_resources WHERE date_folder NOT IN (SELECT date_folder FROM tracker_tasks)")
@@ -714,6 +775,13 @@ def get_history_logs(conn, safar_name=None, date_folder=None):
     rows = cursor.fetchall()
     logs = []
     for r in rows:
+        d_folder = r[2] if len(r) > 19 else (r[3] if len(r) > 3 and r[3] else '')
+        if len(r) > 19:
+            if not d_folder or is_camera_or_asset_folder(d_folder) or not is_proper_date_or_session_folder(d_folder):
+                continue
+        elif d_folder and (is_camera_or_asset_folder(d_folder) or not is_proper_date_or_session_folder(d_folder)):
+            continue
+            continue
         logs.append({
             'id': r[0],
             'taskId': r[1],
@@ -834,6 +902,13 @@ def search_resources(conn, query=None, file_type=None, category=None, drive_root
     rows = cursor.fetchall()
     results = []
     for r in rows:
+        d_folder = r[2] if len(r) > 19 else (r[3] if len(r) > 3 and r[3] else '')
+        if len(r) > 19:
+            if not d_folder or is_camera_or_asset_folder(d_folder) or not is_proper_date_or_session_folder(d_folder):
+                continue
+        elif d_folder and (is_camera_or_asset_folder(d_folder) or not is_proper_date_or_session_folder(d_folder)):
+            continue
+            continue
         results.append({
             'id': r[0],
             'taskId': r[1],

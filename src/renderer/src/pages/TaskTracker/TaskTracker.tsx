@@ -309,6 +309,10 @@ export default function TaskTracker(): JSX.Element {
         const websiteTasks = (res.websiteTasks || res.tasks || []).filter((task: TrackerTaskItem) => !removedSafarNames.includes(task.safarName) && !isJunkOrContainerSafar(task.safarName))
         anyShareRealtimeService.syncSafarTrackerSnapshot(websiteSafars, websiteTasks, Boolean(res.websiteScanComplete))
 
+        const activeSafarsList = (res.safars || []).filter((s: SafarGroupItem) => !archivedSafarNames.includes(s.safarName) && !removedSafarNames.includes(s.safarName))
+        localStorage.setItem('ot_active_safars', JSON.stringify(activeSafarsList))
+        window.dispatchEvent(new CustomEvent('ot-safars-updated', { detail: activeSafarsList }))
+
         // Automatically push detected Safar campaigns to AnyShare Web Portal
         if (res.safars && res.safars.length > 0) {
           for (const s of res.safars.filter((item: SafarGroupItem) => !archivedSafarNames.includes(item.safarName) && !removedSafarNames.includes(item.safarName))) {
@@ -1274,6 +1278,21 @@ export default function TaskTracker(): JSX.Element {
     setCollapsedSafars(prev => ({ ...prev, [name]: !prev[name] }))
   }
 
+  // Handle direct navigation to a specific Safar from Sidebar dropdown
+  useEffect(() => {
+    const handleSelectSafar = (e: any) => {
+      const name = e.detail?.safarName
+      if (name) {
+        setCollapsedSafars(prev => ({ ...prev, [name]: false }))
+        setTimeout(() => {
+          safarCardRefs.current[name]?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+        }, 150)
+      }
+    }
+    window.addEventListener('ot-select-safar', handleSelectSafar)
+    return () => window.removeEventListener('ot-select-safar', handleSelectSafar)
+  }, [])
+
   // ── Keyboard Navigation Accelerators (/ for search, Up/Down for Safars, Space to expand/collapse) ──
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -1372,13 +1391,7 @@ export default function TaskTracker(): JSX.Element {
         </div>
         <h3 className="tracker-empty-title">No Safars Discovered in Selected Workspaces</h3>
         <p className="tracker-empty-sub">
-          {drives.some(d => !driveSpaces[normalizeDrive(d.driveRoot)]?.isOnline) ? (
-            <>
-              Configured external drives (<span className="offline-pill-text">{drives.filter(d => !driveSpaces[normalizeDrive(d.driveRoot)]?.isOnline).map(d => d.driveRoot.replace(/[\\/]/g, '')).join(', ')}</span>) are offline. Plug in your external drives or select a local working folder below.
-            </>
-          ) : (
-            'Select your In Process or Safar working folder to automatically track date renders, projects, and deliverables.'
-          )}
+          Select your In Process or Safar working folder to automatically track date renders, projects, and deliverables.
         </p>
         <div className="tracker-empty-actions">
           <button className="btn-primary-action" onClick={handleSelectWorkingFolder}>
@@ -1403,7 +1416,7 @@ export default function TaskTracker(): JSX.Element {
   return (
     <div className="tracker-page">
       {/* ── 1. Hero Header ── */}
-      <div className="tracker-header">
+      <div className="tracker-header anim-scale-in">
         <div className="tracker-header-left">
           <div className="tracker-hero-icon">
             <PageIcon pageKey="tracker" size={26} />
@@ -1411,14 +1424,7 @@ export default function TaskTracker(): JSX.Element {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
               <h1 className="tracker-header-title">Task & Production Tracker</h1>
-              <span className="tracker-live-tag">
-                <span className="tracker-live-dot" />
-                100% AUTONOMOUS ENGINE
-              </span>
             </div>
-            <p className="tracker-header-sub">
-              Autonomous lifecycle tracking across Safars, Final renders, SSD uploads & AlJamea submissions.
-            </p>
           </div>
         </div>
 
@@ -1486,125 +1492,6 @@ export default function TaskTracker(): JSX.Element {
       </div>
 
       {/* ── 2. Standard Production Views Toolbar & KPIs ── */}
-      {/* Executive Multi-Drive Workspace Bar */}
-      <div className="tracker-drives-bar">
-        <div className="tracker-drives-left">
-          <div className="tracker-drive-tabs">
-            <button
-              className={`tracker-drive-tab ${selectedDrive === 'all' ? 'active' : ''}`}
-              onClick={() => setSelectedDrive('all')}
-            >
-              <div className="tracker-drive-tab-main">
-                <span className="drive-tab-icon">
-                  <PageIcon pageKey="globe" size={14} />
-                </span>
-                <span className="drive-tab-name">All Drives</span>
-                <span className="drive-tab-count">({drives.filter(d => d.enabled).length || 1})</span>
-              </div>
-            </button>
-
-            {drives.filter(d => d.enabled).map(d => {
-              const normD = normalizeDrive(d.driveRoot)
-              const safarCountOnDrive = safars.filter(
-                s => normalizeDrive(s.currentDrive) === normD
-              ).length
-              const isActive = selectedDrive !== 'all' && normalizeDrive(selectedDrive) === normD
-              const space = driveSpaces[normD]
-              const isOnline = space !== undefined ? space.isOnline : true
-              const isLow = Boolean(space?.isLowSpace)
-              const isCritical = Boolean(space?.isCritical)
-
-              return (
-                <button
-                  key={d.id}
-                  className={`tracker-drive-tab ${isActive ? 'active' : ''} ${!isOnline ? 'offline' : 'online'} ${isCritical ? 'critical-space' : isLow ? 'low-space' : ''}`}
-                  onClick={() => setSelectedDrive(d.driveRoot)}
-                  title={`Filter by drive ${d.driveRoot}${space ? ` • ${space.freeGB} GB free (${space.totalGB} GB total)` : ''}${!isOnline ? ' • Offline' : ''}`}
-                >
-                  <div className="tracker-drive-tab-main">
-                    <span className="drive-tab-icon">
-                      <PageIcon pageKey="drive" size={14} />
-                    </span>
-                    <span className="drive-tab-name">{d.driveRoot}</span>
-                    <span className="drive-tab-count">({safarCountOnDrive})</span>
-                    <span
-                      className="drive-tab-remove"
-                      onClick={(e) => handleRemoveDriveWorkspace(d.id, e)}
-                      title="Remove this drive workspace"
-                    >
-                      ×
-                    </span>
-                    <span className={`drive-tab-badge ${isOnline ? 'badge-connected' : 'badge-offline'}`}>
-                      {isOnline ? (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                          <PageIcon pageKey="dot" size={8} color="#10B981" /> Connected
-                        </span>
-                      ) : (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                          <PageIcon pageKey="dot" size={8} color="#EF4444" /> Offline
-                        </span>
-                      )}
-                    </span>
-                  </div>
-
-                  {space && isOnline ? (
-                    <div className="drive-tab-space-row">
-                      <span className={`drive-tab-space-text ${isCritical ? 'text-critical' : isLow ? 'text-low' : ''}`}>
-                        {space.freeGB} GB free
-                      </span>
-                      {isCritical ? (
-                        <span className="drive-tab-alert-pill critical" title="Less than 10 GB free! Premiere render or export failure risk.">
-                          <PageIcon pageKey="warning" size={11} color="#EF4444" style={{ marginRight: 3 }} /> &lt;10 GB
-                        </span>
-                      ) : isLow ? (
-                        <span className="drive-tab-alert-pill warning" title="Less than 20 GB free. Monitor drive space.">
-                          <PageIcon pageKey="warning" size={11} color="#F59E0B" style={{ marginRight: 3 }} /> Low Space
-                        </span>
-                      ) : null}
-                      <div className="drive-tab-space-meter" title={`${space.usedPercent}% used`}>
-                        <div
-                          className={`drive-tab-space-fill ${isCritical ? 'fill-critical' : isLow ? 'fill-low' : 'fill-ok'}`}
-                          style={{ width: `${Math.min(100, Math.max(4, space.usedPercent))}%` }}
-                        />
-                      </div>
-                    </div>
-                  ) : !isOnline ? (
-                    <div className="drive-tab-space-row offline">
-                      <span className="drive-tab-space-text text-offline">Disconnected</span>
-                    </div>
-                  ) : null}
-                </button>
-              )
-            })}
-          </div>
-        </div>
-
-        <div className="tracker-drives-right">
-          {/* Quick folder auto-binding health indicators */}
-          <div className="tracker-folders-status">
-            <span className="tracker-status-item" title="Working Safars auto-bound (e.g. F:\In Process)">
-              <PageIcon pageKey="folder_open" size={13} style={{ marginRight: 5 }} />
-              In Process
-            </span>
-            <span className="tracker-status-item" title="Uploaded deliverables auto-bound (e.g. F:\To Upload)">
-              <PageIcon pageKey="upload" size={13} style={{ marginRight: 5 }} />
-              To Upload
-            </span>
-            <span className="tracker-status-item" title="Cleanup / submitted archives (e.g. F:\To Delete)">
-              <PageIcon pageKey="trash" size={13} style={{ marginRight: 5 }} />
-              To Delete
-            </span>
-          </div>
-
-          <button
-            className="tracker-settings-btn"
-            onClick={handleOpenSettings}
-            title="Configure Drives and auto-detected folders in Settings"
-          >
-            <PageIcon pageKey="settings" size={13} style={{ marginRight: 6 }} /> Manage Drives in Settings
-          </button>
-        </div>
-      </div>
 
       {/* Banner if no drives configured yet */}
       {drives.length === 0 && (
@@ -1912,11 +1799,10 @@ export default function TaskTracker(): JSX.Element {
           <input
             type="text"
             ref={searchInputRef}
-            placeholder="Search Safar, Date folder, City... (Press / to search)"
+            placeholder="Search Safar, Date folder, City..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
           />
-          <kbd className="tracker-search-kbd" title="Press / anywhere to search" onClick={() => searchInputRef.current?.focus()}>/</kbd>
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
@@ -2068,31 +1954,8 @@ export default function TaskTracker(): JSX.Element {
       {/* ── 5. View Mode: Safar Groups Accordion ── */}
       {viewMode === 'safar' && (
         <div className="tracker-safars-container">
-          {filteredSafars.length === 0 ? renderEmptyState() : null}
-          {filteredSafars.length === 0 && false ? (
-            <div className="tracker-empty-card">
-              <div className="tracker-empty-icon-wrap">
-                <PageIcon pageKey="folder_open" size={44} color="var(--theme-accent, #6366F1)" />
-              </div>
-              <h3 className="tracker-empty-title">No Safars Discovered in Selected Workspaces</h3>
-              <p className="tracker-empty-sub">
-                {drives.some(d => !driveSpaces[normalizeDrive(d.driveRoot)]?.isOnline) ? (
-                  <>
-                    Configured external drives (<span className="offline-pill-text">{drives.filter(d => !driveSpaces[normalizeDrive(d.driveRoot)]?.isOnline).map(d => d.driveRoot.replace(/[\\/]/g, '')).join(', ')}</span>) are offline. Plug in your external drives or select a local working folder below.
-                  </>
-                ) : (
-                  'Select your In Process or Safar working folder to automatically track date renders, projects, and deliverables.'
-                )}
-              </p>
-              <div className="tracker-empty-actions">
-                <button className="btn-primary-action" onClick={handleSelectWorkingFolder}>
-                  <PageIcon pageKey="folder_open" size={14} style={{ marginRight: 6 }} /> Select Safar / Working Directory
-                </button>
-                <button className="btn-secondary-action" onClick={handleOpenSettings}>
-                  <PageIcon pageKey="settings" size={14} style={{ marginRight: 6 }} /> Manage Drives in Settings
-                </button>
-              </div>
-            </div>
+          {filteredSafars.length === 0 ? (
+            renderEmptyState()
           ) : (
             filteredSafars.map((safar, index) => {
               const isCollapsed = collapsedSafars[safar.safarName]

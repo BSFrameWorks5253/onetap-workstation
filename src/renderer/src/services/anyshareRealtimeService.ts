@@ -27,9 +27,69 @@ export interface WorkstationTelemetry {
   timestamp: string;
 }
 
-function extractPureDate(name: string): string {
-  if (!name) return '';
+export function isCameraOrAssetFolder(name: string): boolean {
+  if (!name) return true;
+  const clean = name.trim().toLowerCase();
+  if (!clean) return true;
+
+  // Camera angles, devices, cards
+  if (/^(?:cam|camera|cams|angle|device)[\s._\-]*(?:\d+|[a-z])?$/i.test(clean)) return true;
+  if (/^cam\b/i.test(clean) || /^camera\b/i.test(clean)) return true;
+  if (/\b(?:gopro|dji|drone|action[\s._-]?cam|insta360|osmo)\b/i.test(clean)) return true;
+  if (/^(?:card|sd[\s._-]?card|cfexpress|cfast|memory[\s._-]?card)[\s._-]*(?:[a-z]|\d+)?$/i.test(clean)) return true;
+
+  // Audio / Sound / Microphones
+  if (/^(?:audio|mic|mics|sound|sound[\s._-]?recording|recorder|zoom|tascam|lav|lavalier|wireless|mixer|boom)[\s._\-]*(?:\d+)?$/i.test(clean)) return true;
+  if (/\b(?:audio|sound|recording)\b/i.test(clean) && !/\b(?:waaz|majlis|event)\b/i.test(clean)) return true;
+
+  // Raw assets, dumps, b-roll, footage
+  if (/^(?:b[-_ ]?roll|broll|footage|raw|raw[\s._-]?footage|dumps?|dump[\s._-]?\d+|clips?|stills?|photos?|pictures?)$/i.test(clean)) return true;
+
+  // Render, outputs, export, project files, caches
+  if (/^(?:renders?|rendering|preview|previews|proxies|proxy|final|final[\s._-]?titles|titles|dvd|outputs?|exports?|masters?)$/i.test(clean)) return true;
+  if (/^(?:projects?|prproj|premiere|cache|scratch|adobe[\s._-]?premiere[\s._-]?pro[\s._-]?auto[\s._-]?save|auto[\s._-]?save)$/i.test(clean)) return true;
+  if (/^(?:assets?|graphics?|music|sfx|fonts?|temps?|tmp|backups?|trash|old)$/i.test(clean)) return true;
+
+  // Placeholder or missing date strings
+  if (/^(?:date[\s._-]*(?:not[\s._-]*provided|folder[\s._-]*unavailable)|date[\s._-]*folder|undefined|null)$/i.test(clean)) return true;
+
+  // System folders
+  if (clean.startsWith('$') || clean.startsWith('.') || clean === 'system volume information') return true;
+
+  return false;
+}
+
+export function isProperDateOrSessionFolder(name: string): boolean {
+  if (!name || isCameraOrAssetFolder(name)) return false;
   const clean = name.trim();
+
+  // 1. Matches standard date format with or without session: e.g. "1448-05-08 _01M", "1448-05-08 _02E", "1448-05-08", "2026-11-05"
+  if (/^\d{4}[\s._-]\d{1,2}[\s._-]\d{1,2}/.test(clean)) return true;
+  // 2. Matches "01-1448-05" or "14-03-1448"
+  if (/^\d{1,2}[\s._-]\d{1,2}[\s._-]\d{2,4}/.test(clean)) return true;
+  // 3. Matches "Day 01", "Day 1", "Day-02"
+  if (/^day[\s._\-]?\d{1,3}/i.test(clean)) return true;
+  // 4. Pure numbered day folder: "01" .. "31"
+  const numOnly = clean.match(/^(\d{1,2})$/);
+  if (numOnly) {
+    const d = parseInt(numOnly[1], 10);
+    if (d >= 1 && d <= 31) return true;
+  }
+  // 5. Session / Waaz formats: "01 Waaz...", "23-01 Waaz Leicester", "Waaz Day 01", "01-Raipur-Waaz", "02-Bilaspur-Bethak", "01-Bhatapur-QMZ", "04-Takhatpur-QMZ"
+  if (/^\d{1,2}[\s._-]+(?:waaz|majlis|isteqbal|misaaq|urs|ziyarat|event|session|bethak|qmz|ziyafat|qadam|milad|ashara|darees)\b/i.test(clean)) return true;
+  if (/(?:waaz|majlis|isteqbal|bethak|qmz|ziyafat)[\s._-]+(?:day[\s._-]?)?\d{1,2}/i.test(clean)) return true;
+  if (/^\d{1,2}[\s._-]+[A-Za-z0-9]+[\s._-]+(?:waaz|majlis|isteqbal|misaaq|urs|ziyarat|event|session|bethak|qmz|ziyafat|qadam|milad|ashara|darees)\b/i.test(clean)) return true;
+
+  // 6. Named religious or safar sessions containing standard session keywords
+  if (/\b(?:waaz|majlis|isteqbal|misaaq|urs|ziyarat|bethak|qmz|ziyafat|qadam|milad|ashara|darees)\b/i.test(clean)) return true;
+
+  return false;
+}
+
+function extractPureDate(name: string): string {
+  if (!name || isCameraOrAssetFolder(name)) return '';
+  const clean = name.trim();
+  if (isCameraOrAssetFolder(clean)) return '';
   // 1. YYYY-MM-DD anywhere in the string
   const sessionMatch = clean.match(/(_\d{2}[A-Za-z]|\s*_\d{2}|\s*Session\s*\d+|\s*Morning|\s*Evening|\s*Night)/i);
   const sessionTag = sessionMatch ? ` ${sessionMatch[1].trim()}` : '';
@@ -45,7 +105,10 @@ function extractPureDate(name: string): string {
   const leadingNumMatch = clean.match(/^(\d{1,2})(?:[\s._\-]+.*)?$/);
   if (leadingNumMatch) {
     const d = parseInt(leadingNumMatch[1], 10);
-    if (d >= 1 && d <= 31) return `Day ${d < 10 ? '0' + d : d}`;
+    if (d >= 1 && d <= 31) {
+      if (/^\d{1,2}$/.test(clean)) return `Day ${d < 10 ? '0' + d : d}`;
+      if (isProperDateOrSessionFolder(clean)) return clean;
+    }
   }
   // 5. DD-MM (e.g. "24-03", "24_03")
   const dmMatch = clean.match(/^(\d{1,2})[\s._\-](\d{1,2})(?:[\s._\-]+.*)?$/);
@@ -54,8 +117,10 @@ function extractPureDate(name: string): string {
     const m = parseInt(dmMatch[2], 10);
     if (d >= 1 && d <= 31 && m >= 1 && m <= 12) return `Day ${d < 10 ? '0' + d : d}`;
   }
-  // 6. Generic date-like folder: strip event suffix (_01M, -Waaz, etc.)
-  return clean.split(/[\s_]+_/)[0].replace(/[-_ ]*(?:waaz|isteqbal|majlis|misaaq|urs|ziyarat|event|morning|evening|night|session).*$/i, '').trim();
+  if (isProperDateOrSessionFolder(clean)) {
+    return clean;
+  }
+  return '';
 }
 
 class AnyShareRealtimeService {
@@ -118,25 +183,26 @@ class AnyShareRealtimeService {
     let rowId = '';
     const rows = (tasks || []).map((task: any, index: number) => {
       const safarName = String(task.safarName || '');
-      const dateFolder = extractPureDate(String(task.dateFolder || '')) || String(task.dateFolder || '');
+      const rawDate = String(task.dateFolder || '').trim();
+      if (!rawDate || isCameraOrAssetFolder(rawDate) || !isProperDateOrSessionFolder(rawDate)) return null;
+      const dateFolder = extractPureDate(rawDate) || rawDate;
+      if (!dateFolder || isCameraOrAssetFolder(dateFolder) || !isProperDateOrSessionFolder(dateFolder)) return null;
       rowId = `${safarName}::${dateFolder}`;
       const priorTask = priorRows.get(rowId);
       const status = String(task.status || 'editing_pending');
       const isMissing = task.isMissing === true || task.isPresent === false || task.isAvailable === false;
 
-      let stage: 'editing' | 'rendering' | 'upload' | 'jameya' | 'completed' = 'editing';
-      if (isMissing || status === 'submitted') {
+      let stage: 'editing_pending' | 'editing' | 'upload_pending' | 'uploaded' | 'jameya' = 'editing_pending';
+      if (isMissing || status === 'submitted' || status === 'completed') {
         stage = 'jameya';
-      } else if (status === 'completed') {
-        stage = 'completed';
       } else if (status === 'uploaded') {
-        stage = 'upload';
+        stage = 'uploaded';
       } else if (status === 'upload_pending' || (task.renderVideoCount && task.renderVideoCount > 0) || task.finalPath) {
-        stage = 'rendering';
+        stage = 'upload_pending';
       } else if (status === 'editing' || status === 'review') {
         stage = 'editing';
       } else {
-        stage = 'editing';
+        stage = 'editing_pending';
       }
       const taskKey = `${safarName.toLowerCase()}::${dateFolder.toLowerCase().replace(/[\s_\-]/g, '')}`;
       const override = priorOverrides[taskKey];
@@ -164,14 +230,15 @@ class AnyShareRealtimeService {
         isMissing,
         dueDate: override?.dueDate || previous?.dueDate || '',
         editorName: override?.editorName || previous?.editorName || 'Murtaza',
-        photoStage: override?.photoStage || (previous as any)?.photoStage || (resolvedStage === 'upload' || resolvedStage === 'jameya' || resolvedStage === 'completed' ? 'uploaded' : 'edited'),
+        photoStage: override?.photoStage || (previous as any)?.photoStage || (resolvedStage === 'uploaded' || resolvedStage === 'upload' || resolvedStage === 'jameya' || resolvedStage === 'completed' ? 'uploaded' : 'edited'),
         photoEditorName: override?.photoEditorName || (previous as any)?.photoEditorName || 'Muffadal Peti',
-        photoUploaded: override?.photoUploaded !== undefined ? override.photoUploaded : ((previous as any)?.photoUploaded !== undefined ? (previous as any).photoUploaded : (resolvedStage === 'upload' || resolvedStage === 'jameya' || resolvedStage === 'completed')),
+        photoUploaded: override?.photoUploaded !== undefined ? override.photoUploaded : ((previous as any)?.photoUploaded !== undefined ? (previous as any).photoUploaded : (resolvedStage === 'uploaded' || resolvedStage === 'upload' || resolvedStage === 'jameya' || resolvedStage === 'completed')),
         updatedAt: now,
         order: index
       };
-    }).filter((row: any) => {
+    }).filter(Boolean).filter((row: any) => {
       if (!row.safarName || !row.dateFolder) return false;
+      if (isCameraOrAssetFolder(row.dateFolder) || !isProperDateOrSessionFolder(row.dateFolder)) return false;
       const s = String(row.safarName).trim().toLowerCase();
       if (priorDeletedSafars.has(s)) return false;
       const taskKey = `${s}::${String(row.dateFolder).toLowerCase().replace(/[\s_\-]/g, '')}`;
@@ -182,7 +249,9 @@ class AnyShareRealtimeService {
     for (const [id, priorTask] of priorRows.entries()) {
       if (!scannedSafarNames.has(priorTask.safarName)) {
         if (!priorDeletedSafars.has(String(priorTask.safarName).trim().toLowerCase())) {
-          rows.push(priorTask);
+          if (!isCameraOrAssetFolder(priorTask.dateFolder) && isProperDateOrSessionFolder(priorTask.dateFolder)) {
+            rows.push(priorTask);
+          }
         }
       }
     }
@@ -197,7 +266,7 @@ class AnyShareRealtimeService {
         uniqueRowsMap.set(r.id, r);
       } else {
         const existing = uniqueRowsMap.get(r.id)!;
-        const rank = (st: string) => st === 'completed' ? 5 : st === 'jameya' ? 4 : st === 'upload' ? 3 : st === 'rendering' ? 2 : 1;
+        const rank = (st: string) => st === 'jameya' || st === 'completed' ? 5 : st === 'uploaded' || st === 'upload' ? 4 : st === 'upload_pending' || st === 'rendering' ? 3 : st === 'editing' ? 2 : 1;
         if (rank(r.stage) > rank(existing.stage)) uniqueRowsMap.set(r.id, { ...existing, ...r });
       }
     }

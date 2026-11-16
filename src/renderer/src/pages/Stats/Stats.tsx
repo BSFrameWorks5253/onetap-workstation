@@ -2082,10 +2082,11 @@ export default function Stats(): JSX.Element {
           <h2
             className="stats-title"
             onClick={handleTitleClick}
-            style={{ cursor: 'pointer', userSelect: 'none' }}
+            style={{ cursor: 'pointer', userSelect: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}
             title="Stats (Secret: Triple click or Ctrl+Shift+O to locate & sync old data)"
           >
-            📊 Stats
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+            Stats
           </h2>
           
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -2093,20 +2094,26 @@ export default function Stats(): JSX.Element {
               <button
                 className={`stats-tab-btn ${statsTab === 'category' ? 'active' : ''}`}
                 onClick={() => { setStatsTab('category'); setSelectedSafarDetail(null); setSelectedMonthDetail(null); setSelectedMonthCategory(null) }}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
               >
-                📊 By Category
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                By Category
               </button>
               <button
                 className={`stats-tab-btn ${statsTab === 'safar' ? 'active' : ''}`}
                 onClick={() => { setStatsTab('safar'); setSelectedSafarDetail(null); setSelectedMonthDetail(null); setSelectedMonthCategory(null) }}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
               >
-                🏕️ By Safar
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+                By Safar
               </button>
               <button
                 className={`stats-tab-btn ${statsTab === 'reedit' ? 'active' : ''}`}
                 onClick={() => { setStatsTab('reedit'); setSelectedSafarDetail(null); setSelectedMonthDetail(null); setSelectedMonthCategory(null) }}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
               >
-                🔄 Re-edit History
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                Re-edit History
               </button>
             </div>
 
@@ -2116,16 +2123,20 @@ export default function Stats(): JSX.Element {
                 className={`stats-tab-btn ${statsViewMode === 'grid' ? 'active' : ''}`}
                 onClick={() => { setStatsViewMode('grid'); localStorage.setItem('ot_stats_view_mode', 'grid') }}
                 title="Grid View"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}
               >
-                📊 Grid
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                Grid
               </button>
               <button
                 type="button"
                 className={`stats-tab-btn ${statsViewMode === 'list' ? 'active' : ''}`}
                 onClick={() => { setStatsViewMode('list'); localStorage.setItem('ot_stats_view_mode', 'list') }}
                 title="List View"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}
               >
-                📝 List
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                List
               </button>
             </div>
           </div>
@@ -2134,15 +2145,15 @@ export default function Stats(): JSX.Element {
         {/* Right: Action buttons */}
         <div className="stats-topbar-right">
           <button
-            className="stats-action-btn search-trigger-btn"
-            onClick={() => setIsSpotlightOpen(true)}
-            title="Spotlight Search across all videos, safars, dates, and sessions (Ctrl + F)"
+            className={`stats-action-btn ${showTrends ? 'active' : ''}`}
+            onClick={() => setShowTrends(!showTrends)}
+            title="Show 14-day trend chart"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
           >
-            🔍 Search <span className="stats-kbd-pill">Ctrl+F</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+            Trends
           </button>
-          <button className={`stats-action-btn ${showTrends ? 'active' : ''}`} onClick={() => setShowTrends(!showTrends)} title="Show 14-day trend chart">
-            📈 Trends
-          </button>
+
           {/* Unified Export Menu (Excel, PDF, CSV) */}
           <div className="stats-export-dropdown-wrapper" ref={exportDropdownRef}>
             <button
@@ -2150,8 +2161,10 @@ export default function Stats(): JSX.Element {
               className={`stats-action-btn export-unified-btn ${isExportMenuOpen ? 'active' : ''}`}
               onClick={() => setIsExportMenuOpen(prev => !prev)}
               title="Export Analytics & Records in Excel (.xlsx), PDF (.pdf), or CSV (.csv)"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
             >
-              <span>📤 Export Reports</span>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <span>Export Reports</span>
               <span className="export-chevron">{isExportMenuOpen ? '▴' : '▾'}</span>
             </button>
             {isExportMenuOpen && (
@@ -2166,7 +2179,9 @@ export default function Stats(): JSX.Element {
                     handleGenerateExcel()
                   }}
                 >
-                  <div className="export-item-icon-box excel-icon-box">📊</div>
+                  <div className="export-item-icon-box excel-icon-box">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
+                  </div>
                   <div className="export-item-text">
                     <div className="export-item-title">Excel Spreadsheet (.xlsx)</div>
                     <div className="export-item-desc">Comprehensive workbook with sheets, formulas &amp; summaries</div>
@@ -2182,7 +2197,9 @@ export default function Stats(): JSX.Element {
                     handleExportPdfReport()
                   }}
                 >
-                  <div className="export-item-icon-box pdf-icon-box">📄</div>
+                  <div className="export-item-icon-box pdf-icon-box">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                  </div>
                   <div className="export-item-text">
                     <div className="export-item-title">Executive PDF Report (.pdf)</div>
                     <div className="export-item-desc">High-resolution printable Safar audit report with charts</div>
@@ -2198,7 +2215,9 @@ export default function Stats(): JSX.Element {
                     handleExportCsvReport()
                   }}
                 >
-                  <div className="export-item-icon-box csv-icon-box">📑</div>
+                  <div className="export-item-icon-box csv-icon-box">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                  </div>
                   <div className="export-item-text">
                     <div className="export-item-title">Raw CSV Data (.csv)</div>
                     <div className="export-item-desc">Universal comma-delimited export of all filtered records</div>
@@ -2208,21 +2227,15 @@ export default function Stats(): JSX.Element {
               </div>
             )}
           </div>
-          <button className="stats-action-btn" onClick={handleShareSummary} title="Copy summary to clipboard">
-            🔗 Copy Report
-          </button>
-          <button className="stats-action-btn" onClick={handleImport} title="Import from folder">
-            📥 Import
-          </button>
+
           <button
-            className="stats-action-btn"
-            onClick={() => setShowSyncOldDataModal(true)}
-            title="Scan & Sync historical Safar folders into Stats (Ctrl+Shift+O)"
+            className="stats-action-btn danger"
+            onClick={handleReset}
+            title="Reset all stats"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}
           >
-            ⚡ Sync Safar
-          </button>
-          <button className="stats-action-btn danger" onClick={handleReset} title="Reset all stats">
-            🔄 Reset
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+            Reset
           </button>
         </div>
       </div>
@@ -2236,20 +2249,26 @@ export default function Stats(): JSX.Element {
             <button
               className={`mode-switch-btn ${filterType === 'hijri' ? 'active' : ''}`}
               onClick={() => setFilterType('hijri')}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}
             >
-              🌙 Hijri
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+              Hijri
             </button>
             <button
               className={`mode-switch-btn ${filterType === 'relative' ? 'active' : ''}`}
               onClick={() => setFilterType('relative')}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}
             >
-              📅 Gregorian
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              Gregorian
             </button>
             <button
               className={`mode-switch-btn ${filterType === 'all' ? 'active' : ''}`}
               onClick={() => setFilterType('all')}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}
             >
-              🌍 All Records
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+              All Records
             </button>
           </div>
         </div>
@@ -2289,18 +2308,7 @@ export default function Stats(): JSX.Element {
               </select>
             </div>
 
-            {/* Quick year pills */}
-            <div className="hijri-quick-years">
-              {uniqueHijriYears.map(y => (
-                <button
-                  key={y}
-                  className={`quick-year-btn ${hijriYear === y ? 'active' : ''}`}
-                  onClick={() => { setFilterType('hijri'); setHijriYear(y) }}
-                >
-                  {y}
-                </button>
-              ))}
-            </div>
+
           </div>
         ) : filterType === 'relative' ? (
           <div className="filterbar-section">
@@ -2364,13 +2372,13 @@ export default function Stats(): JSX.Element {
                 onChange={e => { setSelectedSafar(e.target.value); setSelectedSafarDetail(null); setSelectedMonthDetail(null); setSelectedMonthCategory(null) }}
                 className="hijri-month-select"
               >
-                <option value="all">🏕️ All Safars</option>
+                <option value="all">All Safars</option>
                 {uniqueSafarsList.map(s => {
                   const hierarchy = parseSafarHierarchy(s)
-                  const label = s === 'Unassigned' ? '🌍 Unassigned' : (hierarchy.safarName ? `${hierarchy.safarSerial ? `[${hierarchy.safarSerial}] ` : ''}${hierarchy.safarName}` : s)
+                  const label = s === 'Unassigned' ? 'Unassigned' : (hierarchy.safarName ? `${hierarchy.safarSerial ? `[${hierarchy.safarSerial}] ` : ''}${hierarchy.safarName}` : s)
                   return (
                     <option key={s} value={s}>
-                      {s === 'Unassigned' ? '🌍 Unassigned' : `🏕️ ${label}`}
+                      {label}
                     </option>
                   )
                 })}
@@ -2781,7 +2789,7 @@ export default function Stats(): JSX.Element {
                   {/* Search Bar for Safars (Serial, Name, Year) */}
                   <div className="stats-search-row anim-scale-in" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', gap: '16px', flexWrap: 'wrap' }}>
                     <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '100%', maxWidth: '380px' }}>
-                      <span style={{ position: 'absolute', left: '12px', opacity: 0.6 }}>🔍</span>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', left: '12px', opacity: 0.5 }}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                       <input
                         type="text"
                         placeholder="Search by serial (e.g. 08), name (Mumbai), or year (1447)..."
@@ -2816,9 +2824,6 @@ export default function Stats(): JSX.Element {
                           ✕
                         </button>
                       )}
-                    </div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                      💡 <em>Ctrl+Click or Shift+Click cards to select multiple · Del to delete or unassign</em>
                     </div>
                   </div>
 
@@ -3707,23 +3712,7 @@ export default function Stats(): JSX.Element {
         </>
       )}
 
-      {/* ── FOLDERS ACCORDION (Trigger Card for Full-Screen View) ── */}
-      <div className="stats-details-wrap anim-scale-in" style={{ animationDelay: '200ms', marginTop: '16px' }}>
-        <Card className="details-card collapsible-card collapsed">
-          <div className="collapsible-header" onClick={() => setIsFoldersOpen(true)} style={{ cursor: 'pointer' }}>
-            <div className="details-title-group">
-              <h3>
-                <span className="folder-icon">📂</span> Source Folders
-                <span className="folders-count-badge">{displayedFolders.totalCount} folders</span>
-              </h3>
-              <p>Folders contributing to the current view — click to view in full-screen</p>
-            </div>
-            <div className="details-header-right">
-              <span className="collapse-arrow" style={{ transform: 'rotate(-90deg)' }}>▼</span>
-            </div>
-          </div>
-        </Card>
-      </div>
+
 
       {/* ── FULL SCREEN FOLDERS VIEW OVERLAY (Solid Modal) ── */}
       {isFoldersOpen && (

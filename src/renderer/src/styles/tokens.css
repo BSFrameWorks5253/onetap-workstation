@@ -8,15 +8,15 @@
 
 :root {
   /* -- Typography --------------------------------------  */
-  --font-main:    'Inter', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-sans:    'Inter', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-display: 'Outfit', 'Montserrat', 'Plus Jakarta Sans', sans-serif;
+  --font-main:    'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-sans:    'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Outfit', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono:    'Fira Code', 'Cascadia Code', 'Consolas', monospace;
 
-  --text-2xl: 32px;
+  --text-2xl: 30px;
   --text-xl:  22px;
   --text-lg:  16px;
-  --text-md:  14px;
+  --text-md:  13.5px;
   --text-sm:  12px;
   --text-xs:  11px;
 
@@ -170,75 +170,87 @@
   --info:         #0284C7;
   --info-soft:    rgba(2, 132, 199, 0.12);
 
-  /* Page Accents */
-  --accent-dashboard:     #B8860B;
-  --accent-dashboard-hv:  #9A6A12;
-  --accent-dashboard-soft:rgba(184, 134, 11, 0.12);
+  /* Page Accents - Curated High-End Professional Palettes */
+  --accent-dashboard:     #D97706;
+  --accent-dashboard-hv:  #B45309;
+  --accent-dashboard-soft:rgba(217, 119, 6, 0.12);
 
-  --accent-adder:     #C89637;
-  --accent-adder-hv:  #B48A28;
-  --accent-adder-soft:rgba(200, 150, 55, 0.12);
+  --accent-adder:     #6366F1;
+  --accent-adder-hv:  #4F46E5;
+  --accent-adder-soft:rgba(99, 102, 241, 0.12);
 
-  --accent-converter:     #8B5A2B;
-  --accent-converter-hv:  #6E421B;
-  --accent-converter-soft:rgba(139, 90, 43, 0.12);
+  --accent-converter:     #059669;
+  --accent-converter-hv:  #047857;
+  --accent-converter-soft:rgba(5, 150, 105, 0.12);
 
-  --accent-drivesync:     #B8860B;
-  --accent-drivesync-hv:  #9A6A12;
-  --accent-drivesync-soft:rgba(184, 134, 11, 0.12);
+  --accent-drivesync:     #D97706;
+  --accent-drivesync-hv:  #B45309;
+  --accent-drivesync-soft:rgba(217, 119, 6, 0.12);
 
-  --accent-folder:     #6B0D14;
-  --accent-folder-hv:  #500A0F;
-  --accent-folder-soft:rgba(107, 13, 20, 0.12);
+  --accent-folder:     #A21CAF;
+  --accent-folder-hv:  #86198F;
+  --accent-folder-soft:rgba(162, 28, 175, 0.12);
 
-  --accent-notes:     #9E7418;
-  --accent-notes-hv:  #835F12;
-  --accent-notes-soft:rgba(158, 116, 24, 0.12);
+  --accent-notes:     #EA580C;
+  --accent-notes-hv:  #C2410C;
+  --accent-notes-soft:rgba(234, 88, 12, 0.12);
 
-  --accent-settings:     #B8860B;
-  --accent-settings-hv:  #9A6A12;
-  --accent-settings-soft:rgba(184, 134, 11, 0.12);
+  --accent-settings:     #475569;
+  --accent-settings-hv:  #334155;
+  --accent-settings-soft:rgba(71, 85, 105, 0.12);
 
-  --accent-cloud:        #8B5A2B;
-  --accent-cloud-hv:     #6E421B;
-  --accent-cloud-soft:   rgba(139, 90, 43, 0.12);
+  --accent-cloud:        #0284C7;
+  --accent-cloud-hv:     #0369A1;
+  --accent-cloud-soft:   rgba(2, 132, 199, 0.12);
 
-  --accent-stats:        #9A6A12;
-  --accent-stats-hv:     #7D540C;
-  --accent-stats-soft:   rgba(154, 106, 18, 0.12);
+  --accent-stats:        #E11D48;
+  --accent-stats-hv:     #BE123C;
+  --accent-stats-soft:   rgba(225, 29, 72, 0.12);
 
-  --accent-cameratransfer:     #6B0D14;
-  --accent-cameratransfer-hv:  #500A0F;
-  --accent-cameratransfer-soft:rgba(107, 13, 20, 0.12);
+  --accent-cameratransfer:     #059669;
+  --accent-cameratransfer-hv:  #047857;
+  --accent-cameratransfer-soft:rgba(5, 150, 105, 0.12);
 
-  --accent-videotransfer:      #B8860B;
-  --accent-videotransfer-hv:   #9A6A12;
-  --accent-videotransfer-soft: rgba(184, 134, 11, 0.12);
+  --accent-videotransfer:      #8B5CF6;
+  --accent-videotransfer-hv:   #7C3AED;
+  --accent-videotransfer-soft: rgba(139, 92, 246, 0.12);
 
-  --accent-prproj:             #8B5A2B;
-  --accent-prproj-hv:          #6E421B;
-  --accent-prproj-soft:        rgba(139, 90, 43, 0.12);
+  --accent-prproj:             #7C3AED;
+  --accent-prproj-hv:          #6D28D9;
+  --accent-prproj-soft:        rgba(124, 58, 237, 0.12);
 
-  --accent-cleaner:            #6B0D14;
-  --accent-cleaner-hv:         #500A0F;
-  --accent-cleaner-soft:       rgba(107, 13, 20, 0.12);
+  --accent-tracker:            #0284C7;
+  --accent-tracker-hv:         #0369A1;
+  --accent-tracker-soft:       rgba(2, 132, 199, 0.12);
 
-  --accent-pvseparator:        #B8860B;
-  --accent-pvseparator-hv:     #9A6A12;
-  --accent-pvseparator-soft:   rgba(184, 134, 11, 0.12);
+  --accent-archivevault:       #0D9488;
+  --accent-archivevault-hv:    #0F766E;
+  --accent-archivevault-soft:  rgba(13, 148, 136, 0.12);
 
-  --accent-reedit:             #C89637;
-  --accent-reedit-hv:          #B48A28;
-  --accent-reedit-soft:        rgba(200, 150, 55, 0.12);
+  --accent-cleaner:            #DC2626;
+  --accent-cleaner-hv:         #B91C1C;
+  --accent-cleaner-soft:       rgba(220, 38, 38, 0.12);
+
+  --accent-pvseparator:        #059669;
+  --accent-pvseparator-hv:     #047857;
+  --accent-pvseparator-soft:   rgba(5, 150, 105, 0.12);
+
+  --accent-reedit:             #9333EA;
+  --accent-reedit-hv:          #7E22CE;
+  --accent-reedit-soft:        rgba(147, 51, 234, 0.12);
 
   --splash-bg:   #FAF6EE;
   --splash-card: #FAF6EE;
-  --splash-bar:  #B8860B;
+  --splash-bar:  #D97706;
 
-  --shadow-glow: rgba(184, 134, 11, 0.28);
-  --shadow-glow-success: rgba(16, 185, 129, 0.28);
-  --shadow-glow-danger:  rgba(244, 63, 94, 0.28);
-  --shadow-glow-warning: rgba(184, 134, 11, 0.28);
+  --shadow-glow:         rgba(217, 119, 6, 0.28);
+  --shadow-glow-purple:  rgba(124, 58, 237, 0.28);
+  --shadow-glow-cyan:    rgba(2, 132, 199, 0.28);
+  --shadow-glow-pink:    rgba(225, 29, 72, 0.28);
+  --shadow-glow-amber:   rgba(234, 88, 12, 0.28);
+  --shadow-glow-success: rgba(5, 150, 105, 0.28);
+  --shadow-glow-danger:  rgba(220, 38, 38, 0.28);
+  --shadow-glow-warning: rgba(217, 119, 6, 0.28);
 }
 
 /* ============================================================

@@ -9,7 +9,7 @@ import Sidebar from './components/Sidebar'
 import Toolbar from './components/Toolbar'
 import PageLoader from './components/PageLoader'
 import TrayDock from './components/TrayDock'
-import FileViewer from './components/FileViewer/FileViewer'
+import StandaloneViewer from './components/FileViewer/StandaloneViewer'
 import CommandPalette from './components/CommandPalette'
 import EmailBroadcastModal from './components/EmailBroadcast/EmailBroadcastModal'
 import GlobalDropOverlay from './components/GlobalDropOverlay'
@@ -127,6 +127,9 @@ export function normalizePageKey(key: any): PageKey {
 }
 
 function AppInner(): JSX.Element {
+  if (window.location.hash.includes('file-viewer')) {
+    return <StandaloneViewer />
+  }
   if (window.location.hash.includes('dynamic-island')) {
     return <DynamicIsland />
   }
@@ -362,8 +365,8 @@ function AppInner(): JSX.Element {
   const [_prevPage, setPrevPage] = useState<PageKey | null>(null)
   const [pageKey, setPageKey] = useState(0) // forces re-mount for transition
 
-  // ── Universal File Viewer state ──────────────────────────────
-  const [openFilePath, setOpenFilePath] = useState<string | null>(null)
+  // ── Universal File Viewer: Opens exclusively in separate desktop/browser window ──
+  // (In-app overlay removed: all files open in dedicated standalone window)
   const [adderJob, setAdderJob] = useState<{
     running: boolean
     progress: number
@@ -919,7 +922,13 @@ function AppInner(): JSX.Element {
     const api = (window as any).api
     if (!api || !api.viewer) return
     const unsub = api.viewer.onOpenFile((filePath: string) => {
-      setOpenFilePath(filePath)
+      if (api.viewer.openWindow) {
+        api.viewer.openWindow(filePath).catch(() => {
+          window.open(`#file-viewer?file=${encodeURIComponent(filePath)}`, '_blank', 'width=1240,height=840')
+        })
+      } else {
+        window.open(`#file-viewer?file=${encodeURIComponent(filePath)}`, '_blank', 'width=1240,height=840')
+      }
     })
     return () => {
       if (typeof unsub === 'function') unsub()
@@ -1016,7 +1025,17 @@ function AppInner(): JSX.Element {
 
   // Expose file viewer and navigation globally so any page component can use them
   useEffect(() => {
-    (window as any).openFileInViewer = (path: string) => setOpenFilePath(path)
+    (window as any).openFileInViewer = (path: string) => {
+      const api = (window as any).api
+      if (api?.viewer?.openWindow) {
+        api.viewer.openWindow(path).catch((err: any) => {
+          console.warn('[App] openWindow failed, opening popup window:', err)
+          window.open(`#file-viewer?file=${encodeURIComponent(path)}`, '_blank', 'width=1240,height=840')
+        })
+      } else {
+        window.open(`#file-viewer?file=${encodeURIComponent(path)}`, '_blank', 'width=1240,height=840')
+      }
+    }
       ; (window as any).navigateToPage = (page: PageKey | string) => navigate(page)
     const handleNavEvent = (e: any) => {
       if (e?.detail) navigate(e.detail)
@@ -1419,11 +1438,7 @@ function AppInner(): JSX.Element {
         onNavigate={navigate}
       />
 
-      {/* ── Universal File Viewer Overlay ── */}
-      <FileViewer
-        filePath={openFilePath}
-        onClose={() => setOpenFilePath(null)}
-      />
+      {/* File Viewer opens exclusively in its own dedicated standalone window */}
 
       {/* ── Auto Update Release Notes & Progress Modal ── */}
       <AutoUpdateModal

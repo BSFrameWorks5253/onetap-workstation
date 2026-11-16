@@ -127,7 +127,11 @@ export default function InventoryMerger(): JSX.Element {
   }
 
   const handleOpenFile = (filePath: string) => {
-    if (api?.shell?.openFolder) {
+    if ((window as any).openFileInViewer) {
+      (window as any).openFileInViewer(filePath)
+    } else if (api?.viewer?.openWindow) {
+      api.viewer.openWindow(filePath)
+    } else if (api?.shell?.openFolder) {
       api.shell.openFolder(filePath)
     } else {
       showToast({ message: `Cannot open file: ${filePath}`, type: 'info' })

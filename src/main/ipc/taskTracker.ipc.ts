@@ -644,16 +644,87 @@ export function normalizeDateFolderKey(name: string): string {
   return (name || '').toLowerCase().replace(/[\s_-]+/g, ' ').trim()
 }
 
+export function isCameraOrAssetFolder(name: string): boolean {
+  if (!name) return true
+  const clean = name.trim().toLowerCase()
+  if (!clean) return true
+
+  // Camera angles, devices, cards
+  if (/^(?:cam|camera|cams|angle|device)[\s._\-]*(?:\d+|[a-z])?$/i.test(clean)) return true
+  if (/^cam\b/i.test(clean) || /^camera\b/i.test(clean)) return true
+  if (/\b(?:gopro|dji|drone|action[\s._-]?cam|insta360|osmo)\b/i.test(clean)) return true
+  if (/^(?:card|sd[\s._-]?card|cfexpress|cfast|memory[\s._-]?card)[\s._-]*(?:[a-z]|\d+)?$/i.test(clean)) return true
+
+  // Audio / Sound / Microphones
+  if (/^(?:audio|mic|mics|sound|sound[\s._-]?recording|recorder|zoom|tascam|lav|lavalier|wireless|mixer|boom)[\s._\-]*(?:\d+)?$/i.test(clean)) return true
+  if (/\b(?:audio|sound|recording)\b/i.test(clean) && !/\b(?:waaz|majlis|event)\b/i.test(clean)) return true
+
+  // Raw assets, dumps, b-roll, footage
+  if (/^(?:b[-_ ]?roll|broll|footage|raw|raw[\s._-]?footage|dumps?|dump[\s._-]?\d+|clips?|stills?|photos?|pictures?)$/i.test(clean)) return true
+
+  // Render, outputs, export, project files, caches
+  if (/^(?:renders?|rendering|preview|previews|proxies|proxy|final|final[\s._-]?titles|titles|dvd|outputs?|exports?|masters?)$/i.test(clean)) return true
+  if (/^(?:projects?|prproj|premiere|cache|scratch|adobe[\s._-]?premiere[\s._-]?pro[\s._-]?auto[\s._-]?save|auto[\s._-]?save)$/i.test(clean)) return true
+  if (/^(?:assets?|graphics?|music|sfx|fonts?|temps?|tmp|backups?|trash|old)$/i.test(clean)) return true
+
+  // Placeholder or missing date strings
+  if (/^(?:date[\s._-]*(?:not[\s._-]*provided|folder[\s._-]*unavailable)|date[\s._-]*folder|undefined|null)$/i.test(clean)) return true
+
+  // System folders
+  if (clean.startsWith('$') || clean.startsWith('.') || clean === 'system volume information') return true
+
+  return false
+}
+
+export function isProperDateOrSessionFolder(name: string): boolean {
+  if (!name || isCameraOrAssetFolder(name)) return false
+  const clean = name.trim()
+
+  // 1. Matches standard date format with or without session: e.g. "1448-05-08 _01M", "1448-05-08 _02E", "1448-05-08", "2026-11-05"
+  if (/^\d{4}[\s._-]\d{1,2}[\s._-]\d{1,2}/.test(clean)) {
+    return true
+  }
+  // 2. Matches "01-1448-05" or "14-03-1448"
+  if (/^\d{1,2}[\s._-]\d{1,2}[\s._-]\d{2,4}/.test(clean)) {
+    return true
+  }
+  // 3. Matches "Day 01", "Day 1", "Day-02"
+  if (/^day[\s._\-]?\d{1,3}/i.test(clean)) {
+    return true
+  }
+  // 4. Session / Waaz formats: "01 Waaz...", "23-01 Waaz Leicester", "Waaz Day 01", "01-Raipur-Waaz", "02-Bilaspur-Bethak", "01-Bhatapur-QMZ", "04-Takhatpur-QMZ"
+  if (/^\d{1,2}[\s._-]+(?:waaz|majlis|isteqbal|misaaq|urs|ziyarat|event|session|bethak|qmz|ziyafat|qadam|milad|ashara|darees)\b/i.test(clean)) {
+    return true
+  }
+  if (/(?:waaz|majlis|isteqbal|bethak|qmz|ziyafat)[\s._-]+(?:day[\s._-]?)?\d{1,2}/i.test(clean)) {
+    return true
+  }
+  if (/^\d{1,2}[\s._-]+[A-Za-z0-9]+[\s._-]+(?:waaz|majlis|isteqbal|misaaq|urs|ziyarat|event|session|bethak|qmz|ziyafat|qadam|milad|ashara|darees)\b/i.test(clean)) {
+    return true
+  }
+  // 5. Numbered day folders e.g. "01", "02", "1", "2"
+  const numOnly = clean.match(/^(\d{1,2})$/)
+  if (numOnly) {
+    const d = parseInt(numOnly[1], 10)
+    if (d >= 1 && d <= 31) return true
+  }
+  // 6. Named religious or safar sessions containing standard session keywords
+  if (/\b(?:waaz|majlis|isteqbal|misaaq|urs|ziyarat|bethak|qmz|ziyafat|qadam|milad|ashara|darees)\b/i.test(clean)) {
+    return true
+  }
+  return false
+}
+
 export function extractCleanDateFolder(name: string): string | null {
   if (!name) return null
   const clean = name.replace(/\.[a-z\d]{2,6}$/i, '').trim()
-  if (!clean || isSystemIgnored(clean)) return null
-  const lower = clean.toLowerCase()
-  if (['final', 'final titles', 'output', 'outputs', 'export', 'exports', 'dvd', 'titles', 'assets', 'raw', 'temp'].includes(lower) || lower.startsWith('$') || lower.startsWith('.')) return null
+  if (!clean || isSystemIgnored(clean) || isCameraOrAssetFolder(clean)) return null
+
   if (/^(?:intelvga|dptf|mei|realtek|nvidia|amd|driver|drivers|windows|system)/i.test(clean)) return null
   if (/\b(?:safar|istefad[ah]?)\b/i.test(clean)) return null
   if (/^\d{4}[\s\-_.]+\d{1,3}[\s\-_.]+[A-Za-z]/i.test(clean)) return null
-  if (/^\d{1,3}[\s\-_.]+[A-Za-z]{3,}/i.test(clean) && !/^\d{1,2}[\s\-_.]+(?:waaz|majlis|isteqbal|misaaq|ziyarat|event|session|day)\b/i.test(clean)) return null
+
+  if (!isProperDateOrSessionFolder(clean)) return null
 
   // 1. Matches standard date format with or without session: e.g. "1448-05-08 _01M", "1448-05-08 _02E", "1448-05-08", "2026-11-05"
   if (/^\d{4}[\s._-]\d{1,2}[\s._-]\d{1,2}/.test(clean)) {
@@ -669,8 +740,8 @@ export function extractCleanDateFolder(name: string): string | null {
     const d = parseInt(dayMatch[1], 10)
     return `Day ${d < 10 ? '0' + d : d}`
   }
-  // 4. Session / Waaz formats: "01 Waaz...", "23-01 Waaz Leicester", "Waaz Day 01"
-  if (/^\d{1,2}[\s._-]+(?:waaz|majlis|isteqbal|misaaq|ziyarat|event|session)/i.test(clean) || /(?:waaz|majlis|isteqbal)[\s._-]+(?:day[\s._-]?)?\d{1,2}/i.test(clean)) {
+  // 4. Session / Waaz formats: "01 Waaz...", "23-01 Waaz Leicester", "Waaz Day 01", "01-Raipur-Waaz"
+  if (/^\d{1,2}[\s._-]+(?:waaz|majlis|isteqbal|misaaq|urs|ziyarat|event|session|bethak|qmz|ziyafat|qadam|milad|ashara|darees)\b/i.test(clean) || /(?:waaz|majlis|isteqbal|bethak|qmz|ziyafat)[\s._-]+(?:day[\s._-]?)?\d{1,2}/i.test(clean)) {
     return clean
   }
   // 5. Numbered day folders e.g. "01", "02", "1", "2"
@@ -683,14 +754,14 @@ export function extractCleanDateFolder(name: string): string | null {
   if (leadingNumMatch) {
     return clean
   }
-  // 6. Generic session or event folder inside a Safar:
-  if (!/^[A-Za-z]+$/.test(clean) && clean.length >= 2) {
+  if (/\b(?:waaz|majlis|isteqbal|misaaq|urs|ziyarat|bethak|qmz|ziyafat|qadam|milad|ashara|darees)\b/i.test(clean)) {
     return clean
   }
   return null
 }
 
 export function isDateFolder(name: string): boolean {
+  if (!name || isCameraOrAssetFolder(name)) return false
   return extractCleanDateFolder(name) !== null
 }
 
@@ -1253,23 +1324,23 @@ function scanSingleWorkspace(
     for (const entry of safarEntries) {
       if (!entry.isDirectory()) continue
       const lower = entry.name.toLowerCase()
-      if (['final', 'final titles', 'titles', 'assets', 'raw', 'output', 'outputs', 'export', 'exports'].includes(lower)) continue
+      if (['final', 'final titles', 'titles', 'assets', 'raw', 'output', 'outputs', 'export', 'exports'].includes(lower) || isCameraOrAssetFolder(entry.name)) continue
       let cleanDate = extractCleanDateFolder(entry.name)
       if (!cleanDate && entry.name.toLowerCase().startsWith(safarFolderName.toLowerCase())) {
         const remainder = entry.name.slice(safarFolderName.length).replace(/^[\s_-]+/, '').trim()
-        if (remainder) cleanDate = extractCleanDateFolder(remainder) || remainder
+        if (remainder) cleanDate = extractCleanDateFolder(remainder)
       }
       if (!cleanDate && ['footage', 'dates', 'content', 'videos', 'media', 'raw footage', 'sessions'].includes(lower)) {
         try {
           const subEntries = fs.readdirSync(path.join(safarPath, entry.name), { withFileTypes: true })
           for (const sub of subEntries) {
-            if (!sub.isDirectory() || isSystemIgnored(sub.name)) continue
+            if (!sub.isDirectory() || isSystemIgnored(sub.name) || isCameraOrAssetFolder(sub.name)) continue
             let subDate = extractCleanDateFolder(sub.name)
             if (!subDate && sub.name.toLowerCase().startsWith(safarFolderName.toLowerCase())) {
               const rem = sub.name.slice(safarFolderName.length).replace(/^[\s_-]+/, '').trim()
-              if (rem) subDate = extractCleanDateFolder(rem) || rem
+              if (rem) subDate = extractCleanDateFolder(rem)
             }
-            if (!subDate) subDate = sub.name
+            if (!subDate || isCameraOrAssetFolder(subDate)) continue
             const normKey = normalizeDateFolderKey(subDate)
             const checkKey = `${safarFolderName.toLowerCase()}::${normKey}`
             if (!excludedFolderKeys.has(checkKey)) {
@@ -1282,10 +1353,7 @@ function scanSingleWorkspace(
         } catch {}
         continue
       }
-      if (!cleanDate && !isSystemIgnored(entry.name)) {
-        cleanDate = entry.name
-      }
-      if (cleanDate) {
+      if (cleanDate && !isCameraOrAssetFolder(cleanDate)) {
         const normKey = normalizeDateFolderKey(cleanDate)
         const checkKey = `${safarFolderName.toLowerCase()}::${normKey}`
         if (!excludedFolderKeys.has(checkKey)) {
@@ -1301,15 +1369,16 @@ function scanSingleWorkspace(
       try {
         const fSubs = fs.readdirSync(finalDirPath, { withFileTypes: true })
         for (const fsEnt of fSubs) {
+          if (isCameraOrAssetFolder(fsEnt.name)) continue
           let cleanDate = extractCleanDateFolder(fsEnt.name)
           if (!cleanDate && fsEnt.name.toLowerCase().startsWith(safarFolderName.toLowerCase())) {
             const remainder = fsEnt.name.slice(safarFolderName.length).replace(/^[\s_-]+/, '').trim()
-            if (remainder) cleanDate = extractCleanDateFolder(remainder) || remainder.replace(/\.[a-z\d]{2,6}$/i, '')
+            if (remainder) cleanDate = extractCleanDateFolder(remainder)
           }
           if (!cleanDate && !isSystemIgnored(fsEnt.name)) {
-            cleanDate = fsEnt.name.replace(/\.[a-z\d]{2,6}$/i, '').trim()
+            cleanDate = extractCleanDateFolder(fsEnt.name.replace(/\.[a-z\d]{2,6}$/i, '').trim())
           }
-          if (!cleanDate) continue
+          if (!cleanDate || isCameraOrAssetFolder(cleanDate)) continue
           const normKey = normalizeDateFolderKey(cleanDate)
           const checkKey = `${safarFolderName.toLowerCase()}::${normKey}`
           if (excludedFolderKeys.has(checkKey)) continue
@@ -1906,7 +1975,12 @@ export function searchAssets(filter: {
 // ── Core Scanner & Status Computation Engine ──────────────────
 
 function enrichTrackerData(dbSafars: SafarRecord[], dbTasks: TaskRecord[]): { safars: SafarRecord[]; tasks: TaskRecord[] } {
-  const enrichedTasks = dbTasks.map(t => {
+  const filteredTasks = dbTasks.filter(t => {
+    const df = t.dateFolder || ''
+    if (!df || isCameraOrAssetFolder(df) || !isProperDateOrSessionFolder(df)) return false
+    return true
+  })
+  const enrichedTasks = filteredTasks.map(t => {
     let isDriveConnected = false
     let isAvailable = false
     try {
@@ -1978,6 +2052,7 @@ export function deduplicateTasks(tasks: TaskRecord[]): TaskRecord[] {
   const map = new Map<string, TaskRecord>()
   for (const t of tasks) {
     if (!t.safarName || isContainerFolderName(t.safarName) || isSystemIgnored(t.safarName)) continue
+    if (!t.dateFolder || isCameraOrAssetFolder(t.dateFolder) || !isProperDateOrSessionFolder(t.dateFolder)) continue
     const key = `${(t.safarName || '').trim().toLowerCase()}::${normalizeDateFolderKey(t.dateFolder)}`
     if (!map.has(key)) {
       map.set(key, t)
@@ -2301,6 +2376,7 @@ export function exportProductionSummary(data: { safars: SafarRecord[]; tasks: Ta
 
     for (const t of tasks) {
     if (!t.safarName || isContainerFolderName(t.safarName) || isSystemIgnored(t.safarName)) continue
+    if (!t.dateFolder || isCameraOrAssetFolder(t.dateFolder) || !isProperDateOrSessionFolder(t.dateFolder)) continue
       if (t.status === 'editing_pending') pendingCount++
       else if (t.status === 'in_progress') inProgressCount++
       else if (t.status === 'review') reviewCount++

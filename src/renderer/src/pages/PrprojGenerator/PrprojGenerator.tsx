@@ -681,99 +681,38 @@ export default function PrprojGenerator(): JSX.Element {
     <div className="prproj-page anim-fade-in">
       {/* ── Page Header ── */}
       <div className="prproj-header">
-        <div className="prproj-icon">
-          <img src={prLogo} alt="Premiere Pro" style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
+        <div
+          className="prproj-icon"
+          style={{
+            width: '42px',
+            height: '42px',
+            borderRadius: '11px',
+            background: 'linear-gradient(135deg, #00005B 0%, #160738 100%)',
+            border: '1.5px solid rgba(153, 153, 255, 0.45)',
+            boxShadow: '0 4px 14px rgba(153, 153, 255, 0.25)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontWeight: 900,
+            fontSize: '19px',
+            color: '#9999FF',
+            letterSpacing: '-0.5px',
+            flexShrink: 0,
+            userSelect: 'none'
+          }}
+        >
+          Pr
         </div>
         <div>
           <h1 className="prproj-title">Premiere Pro Project Generator</h1>
           <div className="prproj-subtitle">
-            Batch build Adobe Premiere Pro (.prproj) project files and sequence timelines directly from media subfolders. Place clips unnested on V1/A1 with camera marker color routing.
+            Batch build Adobe Premiere Pro (.prproj) project files and sequence timelines directly from media subfolders.
           </div>
         </div>
       </div>
 
-      {/* ── Section Page Navigation Bar (Apple Segmented Bar) ── */}
-      <div className="prproj-section-nav">
-        <button
-          type="button"
-          className={`prproj-section-nav-btn ${activeSection === 'generator' ? 'active' : ''}`}
-          onClick={() => {
-            playTick()
-            setActiveSection('generator')
-          }}
-        >
-          <span style={{ fontSize: '16px' }}>🎞️</span>
-          <span>Project &amp; Sequence Generator</span>
-          <span className="prproj-section-nav-badge">
-            {parentFolder ? (activeMode === 'single' ? 'Single Date' : `${subfolders.length} Folders`) : 'Primary'}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          className={`prproj-section-nav-btn ${activeSection === 'relink' ? 'active' : ''}`}
-          onClick={() => {
-            playTick()
-            setActiveSection('relink')
-          }}
-        >
-          <span style={{ fontSize: '16px' }}>🔗</span>
-          <span>Media Relocation &amp; Relink Excel</span>
-          {manifestStats ? (
-            <span className="prproj-section-nav-badge" style={{ background: 'color-mix(in srgb, #10B981 16%, transparent)', color: '#10B981', borderColor: 'color-mix(in srgb, #10B981 30%, transparent)' }}>
-              ✓ Ready ({manifestStats.totalFiles})
-            </span>
-          ) : (
-            <span className="prproj-section-nav-badge">
-              Relinker
-            </span>
-          )}
-        </button>
-
-        <button
-          type="button"
-          className={`prproj-section-nav-btn ${activeSection === 'logs' ? 'active' : ''}`}
-          onClick={() => {
-            playTick()
-            setActiveSection('logs')
-          }}
-        >
-          <span style={{ fontSize: '16px' }}>📜</span>
-          <span>Engine Status &amp; Logs</span>
-          {logs.length > 0 && (
-            <span className="prproj-section-nav-badge">
-              {logs.length}
-            </span>
-          )}
-        </button>
-      </div>
-
-      {/* ══════════════════════════════════════════════════════════
-          SECTION 1: PROJECT & SEQUENCE GENERATOR
-      ══════════════════════════════════════════════════════════ */}
       {activeSection === 'generator' && (
         <>
-      {/* ── Template & Engine Status Banner ── */}
-      <Card style={{ padding: '14px 20px', borderLeft: '4px solid #9999FF' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontSize: '20px' }}>🎞️</span>
-            <div>
-              <div style={{ fontWeight: '700', fontSize: '14px', color: 'var(--text-primary)' }}>
-                Sequence Generator Engine: Active (Single Date & Master Folder Modes)
-              </div>
-              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                Generates .xml & .prproj files with sequence timeline markers for cameraman folders (Q, BQ, M, BM, MZ, Z, BZ, AQ, N, ID, Waaz). Open .xml in Premiere Pro.
-              </div>
-            </div>
-          </div>
-          <span className="prproj-status-badge badge-new" style={{ textTransform: 'uppercase' }}>
-            {templateInfo?.available ? 'Engine Ready' : 'Ready'}
-          </span>
-        </div>
-      </Card>
-
-
       {/* ── Main Folder Selector Card ── */}
       <Card>
         <CardHeader title="1. Select Directory (Drop Date Folder or Master Folder)" accent="#9999FF" />
@@ -785,7 +724,7 @@ export default function PrprojGenerator(): JSX.Element {
           onDrop={handleDrop}
         >
           <BrowseRow
-            label="Target Directory"
+            label="Safar Directory"
             value={parentFolder}
             placeholder="Drop or select a Date folder (e.g. 2026-07-21) or Master folder (e.g. 1448-01-London)..."
             onBrowse={handleBrowse}
@@ -841,118 +780,7 @@ export default function PrprojGenerator(): JSX.Element {
         </div>
       </Card>
 
-      {/* ── Media Relocation Manifest (.xlsx & .json) Card ── */}
-      <Card>
-        <CardHeader title="3. Media Relocation Manifest (.xlsx & .json) for Premiere Pro" accent="#6366F1" />
-        <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px' }}>
-            <div style={{ flex: 1, minWidth: '280px' }}>
-              <div style={{ fontWeight: '700', fontSize: '14px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span>🔗 Media Relocation & Relink Manifest Generator</span>
-                <span className="prproj-status-badge badge-new" style={{ background: '#6366F1', color: '#FFF' }}>
-                  Saved Near .prproj File
-                </span>
-              </div>
-              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px', lineHeight: 1.5 }}>
-                Generates an Excel relocation manifest (<code>Media_Relink_Manifest_&lt;Date&gt;.xlsx</code> &amp; companion <code>.json</code>) right next to each date folder's <code>.prproj</code> project file. It documents all cameraman subfolders, video filenames, relative paths, file sizes, and metadata so the <strong>One Tap Premiere Pro Extension</strong> can automatically locate, match, and relink missing or moved footage with 100% precision.
-              </div>
-              {parentFolder ? (
-                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', fontFamily: 'monospace', background: 'var(--surface-2)', padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--border-soft)', marginTop: '8px', display: 'inline-block' }}>
-                  Target Folder: {parentFolder}
-                </div>
-              ) : (
-                <div style={{ fontSize: '11px', color: '#6366F1', fontWeight: '650', marginTop: '6px' }}>
-                  ℹ Ready to generate — select a date folder above or click the button below to pick one.
-                </div>
-              )}
-            </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '13px', color: 'var(--text-primary)', background: 'var(--surface-2)', padding: '10px 16px', borderRadius: '10px', border: '1px solid var(--border-soft)', userSelect: 'none' }}>
-                <input
-                  type="checkbox"
-                  checked={enableRelinkManifest}
-                  onChange={e => { playTick(); setEnableRelinkManifest(e.target.checked) }}
-                  style={{ width: '18px', height: '18px', accentColor: '#6366F1', cursor: 'pointer' }}
-                />
-                <span>Auto-Create with Project</span>
-              </label>
-
-              <button
-                className="prproj-action-btn"
-                disabled={generating || generatingRelinkManifest}
-                onClick={handleGenerateRelinkManifest}
-                style={{
-                  background: 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)',
-                  color: '#FFF',
-                  border: 'none',
-                  padding: '10px 18px',
-                  borderRadius: '10px',
-                  fontSize: '13px',
-                  fontWeight: '750',
-                  cursor: (generating || generatingRelinkManifest) ? 'not-allowed' : 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  width: 'auto',
-                  boxShadow: '0 4px 14px rgba(99, 102, 241, 0.35)',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                {generatingRelinkManifest ? (
-                  <span>⏳ Generating Manifest...</span>
-                ) : !parentFolder ? (
-                  <>
-                    <span>📁</span>
-                    <span>Browse Folder &amp; Generate (.xlsx)</span>
-                  </>
-                ) : (
-                  <>
-                    <span>📊</span>
-                    <span>Generate Relink Manifest (.xlsx) Now</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-
-            {/* Generated Manifest Success Banner */}
-            {manifestStats && (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', background: 'rgba(99, 102, 241, 0.10)', border: '1px solid rgba(99, 102, 241, 0.35)', borderRadius: '10px', padding: '12px 16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span style={{ fontSize: '20px' }}>✔</span>
-                  <div>
-                    <div style={{ fontWeight: '750', fontSize: '13px', color: 'var(--text-primary)' }}>
-                      Media Relink Manifest Ready ({manifestStats.totalFiles} video clips indexed)
-                    </div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace', marginTop: '2px' }}>
-                      {manifestStats.excelPath.split(/[\\\/]/).pop()}
-                    </div>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button
-                    className="prproj-btn-sm"
-                    style={{ background: '#6366F1', color: '#FFF', border: 'none', padding: '6px 12px', fontSize: '11px', fontWeight: '700' }}
-                    onClick={() => api?.shell?.openFolder(manifestStats.excelPath)}
-                  >
-                    📂 Open Folder
-                  </button>
-                  <button
-                    className="prproj-btn-sm"
-                    style={{ background: 'var(--surface-card)', color: 'var(--text-primary)', border: '1px solid var(--border)', padding: '6px 12px', fontSize: '11px', fontWeight: '700' }}
-                    onClick={() => {
-                      navigator.clipboard.writeText(manifestStats.excelPath)
-                      showToast({ title: 'Path Copied', message: 'Manifest path copied to clipboard.', type: 'info' })
-                    }}
-                  >
-                    📋 Copy Path
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </Card>
 
       {/* ── Mode Selector & Folder Preview ── */}
       {parentFolder && (
@@ -1247,21 +1075,55 @@ export default function PrprojGenerator(): JSX.Element {
                   />
                   <span>Force Overwrite Existing .prproj & .xml Files</span>
                 </label>
-                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                  {overwriteExisting
-                    ? '⚠️ Will overwrite existing project & sequence files.'
-                    : '🛡️ Skipping date folders that already contain a .prproj file.'}
-                </div>
+                {overwriteExisting && (
+                  <div style={{ fontSize: '12px', color: '#EF4444', fontWeight: 600 }}>
+                    ⚠️ Existing project & sequence files will be overwritten
+                  </div>
+                )}
               </div>
 
               <button
                 className="prproj-action-btn"
                 disabled={!parentFolder || (activeMode === 'master' && activeSubfoldersCount === 0)}
                 onClick={handleGenerate}
+                style={{
+                  height: '48px',
+                  padding: '0 24px',
+                  borderRadius: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '10px',
+                  background: (!parentFolder || (activeMode === 'master' && activeSubfoldersCount === 0))
+                    ? 'var(--surface-sunken, #1e293b)'
+                    : 'linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)',
+                  color: (!parentFolder || (activeMode === 'master' && activeSubfoldersCount === 0))
+                    ? 'var(--text-muted)'
+                    : '#FFFFFF',
+                  fontSize: '14.5px',
+                  fontWeight: 750,
+                  border: (!parentFolder || (activeMode === 'master' && activeSubfoldersCount === 0))
+                    ? '1px solid var(--border)'
+                    : 'none',
+                  boxShadow: (!parentFolder || (activeMode === 'master' && activeSubfoldersCount === 0))
+                    ? 'none'
+                    : '0 4px 18px rgba(99, 102, 241, 0.35)',
+                  cursor: (!parentFolder || (activeMode === 'master' && activeSubfoldersCount === 0))
+                    ? 'not-allowed'
+                    : 'pointer',
+                  transition: 'all 0.18s ease'
+                }}
               >
-                {activeMode === 'single'
-                  ? `🎬 Generate Premiere Project for Date Folder "${parentFolder.split(/[\\\/]/).pop()}"`
-                  : `🎬 Generate Premiere Projects in ${activeSubfoldersCount} Date Subfolders`}
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                  <polygon points="6 3 20 12 6 21 6 3" />
+                </svg>
+                <span>
+                  {!parentFolder
+                    ? 'Select a Safar Date or Master Folder to Generate'
+                    : activeMode === 'single'
+                    ? `Generate Premiere Project & Sequence (${parentFolder.split(/[\\\/]/).filter(Boolean).pop() || ''})`
+                    : `Generate Premiere Projects in ${activeSubfoldersCount} Date Folders`}
+                </span>
               </button>
             </>
           )}
@@ -1353,13 +1215,29 @@ export default function PrprojGenerator(): JSX.Element {
                       {generatedExcelPath.split(/[\\\/]/).pop()}
                     </div>
                   </div>
-                  <button
-                    className="prproj-btn-sm"
-                    style={{ background: '#10B981', color: '#FFF', border: 'none', padding: '8px 14px', fontSize: '12px', fontWeight: '700' }}
-                    onClick={() => api?.shell?.openFolder(generatedExcelPath)}
-                  >
-                    📂 Open Excel Folder
-                  </button>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      className="prproj-btn-sm"
+                      style={{ background: '#059669', color: '#FFF', border: 'none', padding: '8px 14px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
+                      onClick={() => {
+                        if ((window as any).openFileInViewer) {
+                          (window as any).openFileInViewer(generatedExcelPath)
+                        } else if (api?.viewer?.openWindow) {
+                          api.viewer.openWindow(generatedExcelPath)
+                        }
+                      }}
+                      title="View Excel sequence summary in dedicated viewer window"
+                    >
+                      👁 View Report
+                    </button>
+                    <button
+                      className="prproj-btn-sm"
+                      style={{ background: '#10B981', color: '#FFF', border: 'none', padding: '8px 14px', fontSize: '12px', fontWeight: '700' }}
+                      onClick={() => api?.shell?.openFolder(generatedExcelPath)}
+                    >
+                      📂 Open Folder
+                    </button>
+                  </div>
                 </div>
               )}
 

@@ -3455,21 +3455,19 @@ export default function TitleAdder(): JSX.Element {
           <div className="ta-audio-strip anim-scale-in">
             <div className="ta-audio-strip-top">
               <div className="ta-audio-info">
-                <span className="ta-audio-icon">🎵</span>
+                <span className="ta-audio-icon" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                </span>
                 <div>
                   <p className="ta-audio-mode">Audio: {status.split('·')[0] || 'Loading…'}</p>
-                  <p className="ta-audio-pool">{status.includes('·') ? status.split('·')[1] : '—'}</p>
+                  {status.includes('·') && !status.toLowerCase().includes('empty') && (
+                    <p className="ta-audio-pool">{status.split('·')[1].trim()}</p>
+                  )}
                 </div>
               </div>
 
               {/* Dynamic Status Pills for Videos: Found, Completed, Pending & Progress */}
               <div className="ta-dynamic-status-pills">
-                {gpuLabel && (
-                  <div className={`ta-pill ta-pill-gpu ${gpuLabel.includes('GPU') || gpuLabel.includes('NVENC') || gpuLabel.includes('QSV') ? 'is-gpu' : 'is-cpu'}`} title={`Active Video Rendering Engine: ${gpuLabel}`}>
-                    <span className={`ta-pill-dot ${gpuLabel.includes('GPU') || gpuLabel.includes('NVENC') || gpuLabel.includes('QSV') ? 'done' : 'pending'}`} />
-                    <span className="ta-pill-label">{gpuLabel.includes('NVENC') ? '⚡ NVENC GPU' : gpuLabel.includes('QSV') ? '⚡ QSV GPU' : gpuLabel.includes('AMF') ? '⚡ AMF GPU' : '💻 CPU'}</span>
-                  </div>
-                )}
                 <div className="ta-pill ta-pill-found" title="Total videos detected in selected source">
                   <span className="ta-pill-dot found" />
                   <span className="ta-pill-label">Found:</span>
@@ -3537,7 +3535,7 @@ export default function TitleAdder(): JSX.Element {
                   background: storeState.autoStartOnEncoderSignal ? '#10B981' : '#64748B',
                   boxShadow: storeState.autoStartOnEncoderSignal ? '0 0 8px #10B981' : 'none'
                 }} />
-                {storeState.autoStartOnEncoderSignal ? '⚡ Auto Render: ON' : '⏸ Auto Render: OFF'}
+                {storeState.autoStartOnEncoderSignal ? 'Auto Render: ON' : 'Auto Render: OFF'}
               </Button>
               <Button
                 size="sm"
@@ -3552,7 +3550,8 @@ export default function TitleAdder(): JSX.Element {
                   boxShadow: '0 2px 8px rgba(99, 102, 241, 0.3)'
                 }}
               >
-                <span>⚙️</span> Predefine Audio & Rules
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                <span>Predefine Audio & Rules</span>
                 {storeState.alwaysKeepOgAudioKeywords && storeState.alwaysKeepOgAudioKeywords.length > 0 && (
                   <span style={{ background: 'rgba(255,255,255,0.2)', padding: '1px 6px', borderRadius: '10px', fontSize: '10px' }}>
                     {storeState.alwaysKeepOgAudioKeywords.length}
@@ -3568,7 +3567,8 @@ export default function TitleAdder(): JSX.Element {
                 title="View & link Final Titles folder (syncs with Anything)"
                 style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--text-primary)' }}
               >
-                <span>🎬</span> Final Titles ({finalTitlesData?.totalCount ?? 0})
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="15" x="2" y="5" rx="2"/><polyline points="2 10 22 10"/></svg>
+                <span>Final Titles ({finalTitlesData?.totalCount ?? 0})</span>
               </GhostButton>
               <GhostButton
                 size="sm"
@@ -3577,54 +3577,28 @@ export default function TitleAdder(): JSX.Element {
                 className={isLogsPopupOpen ? 'active' : ''}
                 style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--text-primary)' }}
               >
-                <span>📜</span> Logs
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                <span>Logs</span>
                 {lines.length > 0 && <span className="ta-logs-pill-count">{lines.length}</span>}
                 {running && <span className="ta-logs-pulse-dot" style={{ width: '6px', height: '6px' }} />}
               </GhostButton>
-              <GhostButton size="sm" onClick={() => (window as any).showPage('settings')}>⚙ Configure</GhostButton>
+              <GhostButton size="sm" onClick={() => (window as any).showPage('settings')} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                <span>Configure</span>
+              </GhostButton>
             </div>
           </div>
-
-              {/* Segmented Mode Switcher Bar */}
-              <div className="ta-mode-segmented-bar anim-scale-in">
-                <div className="ta-mode-segmented-tabs">
-                  <button
-                    type="button"
-                    className={`ta-mode-segment-btn ${mode === 'batch' ? 'active' : ''}`}
-                    onClick={() => setMode('batch')}
-                  >
-                    <span className="ta-mode-tab-icon">📂</span>
-                    <span className="ta-mode-tab-title">Batch Folders Queue</span>
-                    {batchSources.filter(Boolean).length > 0 && (
-                      <span className="ta-mode-count-badge">{batchSources.filter(Boolean).length}</span>
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    className={`ta-mode-segment-btn ${mode === 'single' ? 'active' : ''}`}
-                    onClick={() => setMode('single')}
-                  >
-                    <span className="ta-mode-tab-icon">🎞</span>
-                    <span className="ta-mode-tab-title">Single / Custom Files</span>
-                    {videoFiles.length > 0 && (
-                      <span className="ta-mode-count-badge">{videoFiles.length}</span>
-                    )}
-                  </button>
-                </div>
-                <div className="ta-mode-bar-status">
-                  <StatusChip
-                    label={cancelled ? 'Job Cancelled' : running ? 'Processing Queue…' : 'Workstation Ready'}
-                    variant={cancelled ? 'danger' : running ? 'warning' : 'muted'}
-                  />
-                </div>
-              </div>
 
               {/* Source Workstation Card */}
               <div className="ta-workstation-card anim-scale-in">
                 <div className="ta-ws-card-header">
                   <div className="ta-ws-card-title-group">
-                    <div className="ta-ws-card-icon-badge" style={{ background: 'rgba(99, 102, 241, 0.15)', color: '#818cf8' }}>
-                      {mode === 'batch' ? '📁' : '🎬'}
+                    <div className="ta-ws-card-icon-badge" style={{ background: 'rgba(99, 102, 241, 0.15)', color: '#818cf8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {mode === 'batch' ? (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                      ) : (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                      )}
                     </div>
                     <div>
                       <h3 className="ta-ws-card-title">
@@ -3646,8 +3620,10 @@ export default function TitleAdder(): JSX.Element {
                         className="ta-add-queue-folder-btn"
                         onClick={() => { void addBatchFolder() }}
                         title="Add another source folder to the batch queue"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                       >
-                        <span>➕</span> Add Folder to Queue
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        <span>Add Folder to Queue</span>
                       </button>
                     </div>
                   )}
@@ -3660,11 +3636,14 @@ export default function TitleAdder(): JSX.Element {
                         className={`ta-queue-empty-dropzone ${isDragActive ? 'active' : ''}`}
                         onClick={() => changeBatchFolder(0)}
                       >
-                        <div className="ta-empty-icon">📁</div>
+                        <div className="ta-empty-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                        </div>
                         <div className="ta-empty-text">No Batch Folders Selected</div>
                         <div className="ta-empty-sub">Click to browse or drag & drop one or more event folders here</div>
-                        <Button size="sm" onClick={(e) => { e.stopPropagation(); changeBatchFolder(0); }} style={{ marginTop: '8px' }}>
-                          📂 Choose Primary Folder
+                        <Button size="sm" onClick={(e) => { e.stopPropagation(); changeBatchFolder(0); }} style={{ marginTop: '8px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                          <span>Choose Primary Folder</span>
                         </Button>
                       </div>
                     ) : (
@@ -3678,8 +3657,7 @@ export default function TitleAdder(): JSX.Element {
                               {/* Order Indicator & Up/Down reorder controls */}
                               <div className="ta-queue-item-order">
                                 <div className={`ta-order-pill ${isFirst ? 'primary' : ''}`}>
-                                  <span className="ta-order-num">#{idx + 1}</span>
-                                  <span className="ta-order-label">{isFirst ? '1st' : idx === 1 ? '2nd' : idx === 2 ? '3rd' : `${idx + 1}th`}</span>
+                                  <span className="ta-order-label">{isFirst ? '1st' : idx === 1 ? '2nd' : idx === 2 ? '3rd' : `#${idx + 1}`}</span>
                                 </div>
                                 {batchSources.length > 1 && (
                                   <div className="ta-reorder-btn-group">
@@ -3707,7 +3685,9 @@ export default function TitleAdder(): JSX.Element {
 
                               {/* Folder Details */}
                               <div className="ta-queue-item-content" onClick={() => changeBatchFolder(idx)} title={src ? `Path: ${src}\nClick to browse / change` : 'Click to select folder'}>
-                                <div className="ta-queue-folder-icon">📂</div>
+                                <div className="ta-queue-folder-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                                </div>
                                 <div className="ta-queue-folder-meta">
                                   <span className="ta-queue-folder-name">{folderName}</span>
                                   <span className="ta-queue-folder-path">{src || 'No folder chosen (Click Browse to select)'}</span>
@@ -3721,8 +3701,10 @@ export default function TitleAdder(): JSX.Element {
                                   className="ta-queue-action-btn browse"
                                   onClick={() => changeBatchFolder(idx)}
                                   title="Browse another folder for this position"
+                                  style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}
                                 >
-                                  📂 Browse
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                                  <span>Browse</span>
                                 </button>
                                 {batchSources.length > 1 && (
                                   <button
@@ -3752,7 +3734,7 @@ export default function TitleAdder(): JSX.Element {
                         <div className="ta-dropzone-icon">{videoFiles.length > 0 ? '➕' : '🎬'}</div>
                         <div className="ta-dropzone-title">{videoFiles.length > 0 ? 'Add more videos (Click or Drop)' : 'Click to Browse or Drag & Drop Video Files'}</div>
                         {videoFiles.length === 0 && (
-                          <div className="ta-dropzone-sub">Supports MP4, MOV, MKV, AVI. You can drop individual videos or an entire folder.</div>
+                          <div className="ta-dropzone-sub">Supports all kind of Video</div>
                         )}
                       </div>
 
@@ -3893,8 +3875,8 @@ export default function TitleAdder(): JSX.Element {
               <div className="ta-workstation-card anim-scale-in" style={{ marginTop: '12px' }}>
                 <div className="ta-ws-card-header compact">
                   <div className="ta-ws-card-title-group">
-                    <div className="ta-ws-card-icon-badge" style={{ background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8' }}>
-                      🎯
+                    <div className="ta-ws-card-icon-badge" style={{ background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><polyline points="12 10 12 16 14 14"/></svg>
                     </div>
                     <div>
                       <h3 className="ta-ws-card-title">Output Destination</h3>
@@ -3913,8 +3895,10 @@ export default function TitleAdder(): JSX.Element {
                       <span
                         className="ta-safar-pill"
                         title={`Safar: ${safarFinalInfo.safarName || 'Detected'}\nTarget: ${safarFinalInfo.targetPath}`}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                       >
-                        <span>🎯 Safar: {safarFinalInfo.targetPath && safarFinalInfo.dateFolder && safarFinalInfo.targetPath.includes(safarFinalInfo.dateFolder) && /final(?: titles)?$/i.test(safarFinalInfo.targetPath.trim()) ? `${safarFinalInfo.dateFolder}\\Final` : `Final\\${safarFinalInfo.dateFolder}`}</span>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+                        <span>Safar: {safarFinalInfo.targetPath && safarFinalInfo.dateFolder && safarFinalInfo.targetPath.includes(safarFinalInfo.dateFolder) && /final(?: titles)?$/i.test(safarFinalInfo.targetPath.trim()) ? `${safarFinalInfo.dateFolder}\\Final` : `Final\\${safarFinalInfo.dateFolder}`}</span>
                         {safarFinalInfo.dateFolderExistsInFinal && <span className="ta-verified-tick">✓</span>}
                       </span>
                       {outputFolder !== safarFinalInfo.targetPath && (
@@ -3962,8 +3946,9 @@ export default function TitleAdder(): JSX.Element {
                     }}
                   />
                   {outputExists === false && (
-                    <div className="ta-output-path-warning anim-scale-in">
-                      ⚠️ Destination folder drive or path does not exist on disk! Please select a valid folder.
+                    <div className="ta-output-path-warning anim-scale-in" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                      <span>Destination folder drive or path does not exist on disk! Please select a valid folder.</span>
                     </div>
                   )}
                 </div>
@@ -3973,8 +3958,10 @@ export default function TitleAdder(): JSX.Element {
               <div className="ta-render-command-bar anim-scale-in" style={{ marginTop: '12px' }}>
                 <div className="ta-dur-field">
                   <label className="ta-field-label">
-                    <span>⏱ Intro/Outro Duration</span>
-                    <span className="ta-field-unit">{duration}s</span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                      <span>Intro/Outro Duration</span>
+                    </span>
                   </label>
                   <div className="ta-dur-input-wrap">
                     <input
@@ -3992,7 +3979,7 @@ export default function TitleAdder(): JSX.Element {
                         }
                       }}
                     />
-                    <span className="ta-dur-suffix">seconds</span>
+                    <span className="ta-dur-suffix">sec</span>
                   </div>
                 </div>
 
@@ -4003,7 +3990,9 @@ export default function TitleAdder(): JSX.Element {
                       className="ta-hero-cancel-btn"
                       onClick={handleCancel}
                     >
-                      <span className="ta-hero-btn-icon">⛔</span>
+                      <span className="ta-hero-btn-icon" style={{ display: 'inline-flex', alignItems: 'center' }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                      </span>
                       <span className="ta-hero-btn-text">Cancel Render Queue</span>
                     </button>
                   ) : (
@@ -4013,7 +4002,13 @@ export default function TitleAdder(): JSX.Element {
                       onClick={handleStartClick}
                       disabled={previewLoading || (!batchSource && videoFiles.length === 0) || !outputFolder}
                     >
-                      <span className="ta-hero-btn-icon">{previewLoading ? '⌛' : '▶'}</span>
+                      <span className="ta-hero-btn-icon" style={{ display: 'inline-flex', alignItems: 'center' }}>
+                        {previewLoading ? (
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'spin 1.5s linear infinite' }}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 14 14"/></svg>
+                        ) : (
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+                        )}
+                      </span>
                       <span className="ta-hero-btn-text">
                         {previewLoading
                           ? 'Analyzing Assets...'
@@ -4026,24 +4021,21 @@ export default function TitleAdder(): JSX.Element {
                 </div>
               </div>
 
-              {/* 3-Tile Options Switch Grid */}
+              {/* 3-Tile Options Switch Grid (Compact Modern Layout) */}
               <div className="ta-options-grid anim-scale-in" style={{ marginTop: '12px' }}>
                 {/* Option 1: Stats */}
                 <div
                   className={`ta-option-card ${addToStats ? 'active' : ''}`}
                   onClick={() => setAddToStats(!addToStats)}
                 >
-                  <div className="ta-opt-top">
-                    <div className="ta-opt-title-wrap">
-                      <span className="ta-opt-icon">📊</span>
-                      <span className="ta-opt-title">Add to Stats</span>
-                    </div>
-                    <div className={`ta-switch ${addToStats ? 'on' : ''}`}>
-                      <span className="ta-switch-handle" />
-                    </div>
+                  <div className="ta-opt-title-wrap">
+                    <span className="ta-opt-icon" style={{ display: 'inline-flex', alignItems: 'center' }}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                    </span>
+                    <span className="ta-opt-title">Add to Stats</span>
                   </div>
-                  <div className="ta-opt-bottom">
-                    <span className="ta-opt-desc">Log render counts & history in Analytics</span>
+                  <div className={`ta-switch ${addToStats ? 'on' : ''}`}>
+                    <span className="ta-switch-handle" />
                   </div>
                 </div>
 
@@ -4060,11 +4052,26 @@ export default function TitleAdder(): JSX.Element {
                     }
                   }}
                 >
-                  <div className="ta-opt-top">
-                    <div className="ta-opt-title-wrap">
-                      <span className="ta-opt-icon">🔇</span>
-                      <span className="ta-opt-title">Mute Original Audio</span>
-                    </div>
+                  <div className="ta-opt-title-wrap">
+                    <span className="ta-opt-icon" style={{ display: 'inline-flex', alignItems: 'center' }}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+                    </span>
+                    <span className="ta-opt-title">Mute Original Audio</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {muteOriginal && availableVideos.length > 0 && (
+                      <button
+                        type="button"
+                        className="ta-opt-sub-btn danger"
+                        onClick={e => {
+                          e.stopPropagation()
+                          setIsMuteOverlayOpen(true)
+                        }}
+                        title="Exclude specific videos from being muted"
+                      >
+                        ⚙ Exclude
+                      </button>
+                    )}
                     <div
                       className={`ta-switch danger ${muteOriginal ? 'on' : ''}`}
                       onClick={e => {
@@ -4081,22 +4088,6 @@ export default function TitleAdder(): JSX.Element {
                       <span className="ta-switch-handle" />
                     </div>
                   </div>
-                  <div className="ta-opt-bottom">
-                    <span className="ta-opt-desc">Remove camera mic audio track</span>
-                    {muteOriginal && availableVideos.length > 0 && (
-                      <button
-                        type="button"
-                        className="ta-opt-sub-btn danger"
-                        onClick={e => {
-                          e.stopPropagation()
-                          setIsMuteOverlayOpen(true)
-                        }}
-                        title="Exclude specific videos from being muted"
-                      >
-                        ⚙ Exclude
-                      </button>
-                    )}
-                  </div>
                 </div>
 
                 {/* Option 3: Watermark */}
@@ -4109,38 +4100,17 @@ export default function TitleAdder(): JSX.Element {
                       setWatermarkedVideos(new Set(availableVideos))
                     } else {
                       setExcludedWatermarks(new Set(availableVideos.flatMap(v => [v, getCanonicalStem(v)])))
-    setWatermarkedVideos(new Set())
-
-
+                      setWatermarkedVideos(new Set())
                     }
                   }}
                 >
-                  <div className="ta-opt-top">
-                    <div className="ta-opt-title-wrap">
-                      <span className="ta-opt-icon">🏷️</span>
-                      <span className="ta-opt-title">Watermark Overlay</span>
-                    </div>
-                    <div
-                      className={`ta-switch brand ${addWatermarkGlobal ? 'on' : ''}`}
-                      onClick={e => {
-                        e.stopPropagation()
-                        const next = !addWatermarkGlobal
-                        setAddWatermarkGlobal(next)
-                        if (next) {
-                          setWatermarkedVideos(new Set(availableVideos))
-                        } else {
-                          setExcludedWatermarks(new Set(availableVideos.flatMap(v => [v, getCanonicalStem(v)])))
-    setWatermarkedVideos(new Set())
-
-
-                        }
-                      }}
-                    >
-                      <span className="ta-switch-handle" />
-                    </div>
+                  <div className="ta-opt-title-wrap">
+                    <span className="ta-opt-icon" style={{ display: 'inline-flex', alignItems: 'center' }}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+                    </span>
+                    <span className="ta-opt-title">Watermark Overlay</span>
                   </div>
-                  <div className="ta-opt-bottom">
-                    <span className="ta-opt-desc">Overlay transparent logo watermark</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     {addWatermarkGlobal && availableVideos.length > 0 && (
                       <button
                         type="button"
@@ -4154,6 +4124,22 @@ export default function TitleAdder(): JSX.Element {
                         ⚙ Exclude
                       </button>
                     )}
+                    <div
+                      className={`ta-switch brand ${addWatermarkGlobal ? 'on' : ''}`}
+                      onClick={e => {
+                        e.stopPropagation()
+                        const next = !addWatermarkGlobal
+                        setAddWatermarkGlobal(next)
+                        if (next) {
+                          setWatermarkedVideos(new Set(availableVideos))
+                        } else {
+                          setExcludedWatermarks(new Set(availableVideos.flatMap(v => [v, getCanonicalStem(v)])))
+                          setWatermarkedVideos(new Set())
+                        }
+                      }}
+                    >
+                      <span className="ta-switch-handle" />
+                    </div>
                   </div>
                 </div>
               </div>

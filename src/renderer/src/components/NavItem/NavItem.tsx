@@ -10,13 +10,28 @@ interface NavItemProps {
   active: boolean
   busy: boolean
   progress?: number | null
+  hasSubmenus?: boolean
+  isSubmenuOpen?: boolean
   onClick: () => void
   onHoverStart?: (el: HTMLElement) => void
   onHoverEnd?: () => void
 }
 
 const NavItem = forwardRef<HTMLDivElement, NavItemProps>(
-  ({ pageKey, active, busy, progress, onClick, onHoverStart, onHoverEnd }, ref) => {
+  (
+    {
+      pageKey,
+      active,
+      busy,
+      progress,
+      hasSubmenus,
+      isSubmenuOpen,
+      onClick,
+      onHoverStart,
+      onHoverEnd
+    },
+    ref
+  ) => {
     const meta = PAGE_META[pageKey]
     const { playTick } = useSound()
     const hasProgress = progress !== undefined && progress !== null && progress > 0 && progress < 100
@@ -35,25 +50,26 @@ const NavItem = forwardRef<HTMLDivElement, NavItemProps>(
         }}
         role="button"
         tabIndex={0}
-        title={meta.label}
-        onKeyDown={e => e.key === 'Enter' && onClick()}
+        title={meta?.label || pageKey}
+        onKeyDown={(e) => e.key === 'Enter' && onClick()}
         aria-current={active ? 'page' : undefined}
         style={{
           position: 'relative',
-          zIndex: 1,  /* Above the sliding indicator background */
-          ['--item-accent' as any]: meta.accent,
-          ['--item-accent-soft' as any]: meta.accentSoft || `color-mix(in srgb, ${meta.accent} 15%, transparent)`
+          zIndex: 1,
+          ['--item-accent' as any]: meta?.accent || 'var(--accent)',
+          ['--item-accent-soft' as any]:
+            meta?.accentSoft || `color-mix(in srgb, ${meta?.accent || 'var(--accent)'} 15%, transparent)`
         }}
       >
         {/* Pro Vector SVG Icon pill */}
         <div className={`nav-item-icon ${active ? 'nav-item-icon--active' : ''}`}>
-          <PageIcon pageKey={pageKey} size={20} color={active ? meta.accent : 'currentColor'} />
+          <PageIcon pageKey={pageKey} size={20} color={active ? (meta?.accent || 'var(--accent)') : 'currentColor'} />
         </div>
 
         {/* Label */}
-        <span className="nav-item-label">{meta.label}</span>
+        <span className="nav-item-label">{meta?.label || pageKey}</span>
 
-        {/* Right side: busy badge OR progress circle OR arrow */}
+        {/* Right side: busy badge OR progress circle OR chevron/arrow */}
         {hasProgress ? (
           <div className="nav-item-progress-circle">
             <svg width="20" height="20" viewBox="0 0 20 20">
@@ -70,7 +86,7 @@ const NavItem = forwardRef<HTMLDivElement, NavItemProps>(
                 cy="10"
                 r="7"
                 fill="none"
-                stroke={meta.accent}
+                stroke={meta?.accent || 'var(--accent)'}
                 strokeWidth="2"
                 strokeDasharray="44"
                 strokeDashoffset={44 - (44 * (progress ?? 0)) / 100}
@@ -78,13 +94,31 @@ const NavItem = forwardRef<HTMLDivElement, NavItemProps>(
                 transform="rotate(-90 10 10)"
                 style={{
                   transition: 'stroke-dashoffset 0.3s ease',
-                  filter: `drop-shadow(0 0 2px ${meta.accent})`
+                  filter: `drop-shadow(0 0 2px ${meta?.accent || 'var(--accent)'})`
                 }}
               />
             </svg>
           </div>
         ) : busy ? (
           <span className="nav-item-badge">RUN</span>
+        ) : hasSubmenus ? (
+          <span
+            className={`nav-item-submenu-indicator ${isSubmenuOpen ? 'nav-item-submenu-indicator--open' : ''}`}
+            title="Hover for options"
+          >
+            <svg
+              width="10"
+              height="10"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </span>
         ) : (
           <span className={`nav-item-arrow ${active ? 'nav-item-arrow--active' : ''}`}>›</span>
         )}

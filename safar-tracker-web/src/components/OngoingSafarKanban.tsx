@@ -24,7 +24,7 @@ import {
   MessageCircle
 } from 'lucide-react';
 import { sendWhatsAppAlert, DEFAULT_WHATSAPP_PHONE } from '../lib/googleAppsScript';
-import { AnimatedNumber } from '../App';
+import { AnimatedNumber, getPublicWebsiteOrigin, isCameraOrAssetFolder, isProperDateOrSessionFolder } from '../App';
 
 const JUNK_SAFAR_REGEX = /^(?:in[\s_-]?process|pending|to[\s_-]?delete|intel|intelvga|amd|nvidia|system|temp|program|windows|\$rec|delivery|renders?|output|exports?|dptf|mei)$/i;
 
@@ -40,7 +40,7 @@ export function isJunkSafarName(name: string): boolean {
 export const DEFAULT_EDITOR = 'Murtaza';
 export const DEFAULT_PHOTO_EDITOR = 'Muffadal Peti';
 
-export type KanbanStage = 'editing' | 'rendering' | 'upload' | 'jameya' | 'completed';
+export type KanbanStage = 'editing_pending' | 'editing' | 'upload_pending' | 'uploaded' | 'jameya';
 export type PhotoStage = 'edited' | 'given_to_murtaza' | 'uploaded';
 
 export interface SafarTaskItem {
@@ -71,44 +71,44 @@ interface ColumnConfig {
 
 const COLUMNS: ColumnConfig[] = [
   {
+    id: 'editing_pending',
+    title: 'Editing Pending',
+    subtitle: 'Awaiting Color & Audio Pass',
+    badgeColor: '#f59e0b',
+    headerBg: 'rgba(245, 158, 11, 0.08)',
+    icon: <Clock size={16} color="#f59e0b" />
+  },
+  {
     id: 'editing',
-    title: 'In Editing',
+    title: 'In Progress',
     subtitle: 'Color & Audio Pass',
-    badgeColor: '#d97706',
-    headerBg: 'rgba(217, 119, 6, 0.08)',
-    icon: <Film size={16} color="#d97706" />
+    badgeColor: '#3b82f6',
+    headerBg: 'rgba(59, 130, 246, 0.08)',
+    icon: <Film size={16} color="#3b82f6" />
   },
   {
-    id: 'rendering',
-    title: 'Rendered',
-    subtitle: 'Ready for Cloud',
-    badgeColor: '#2563eb',
-    headerBg: 'rgba(37, 99, 235, 0.08)',
-    icon: <Kanban size={16} color="#2563eb" />
+    id: 'upload_pending',
+    title: 'Upload Pending',
+    subtitle: 'Render Done · Ready to Push',
+    badgeColor: '#06b6d4',
+    headerBg: 'rgba(6, 182, 212, 0.08)',
+    icon: <Kanban size={16} color="#06b6d4" />
   },
   {
-    id: 'upload',
+    id: 'uploaded',
     title: 'Uploaded',
-    subtitle: 'Cloud Synced',
-    badgeColor: '#059669',
-    headerBg: 'rgba(5, 150, 105, 0.08)',
-    icon: <UploadCloud size={16} color="#059669" />
+    subtitle: 'Cloud Synced & Available',
+    badgeColor: '#10b981',
+    headerBg: 'rgba(16, 185, 129, 0.08)',
+    icon: <UploadCloud size={16} color="#10b981" />
   },
   {
     id: 'jameya',
-    title: 'Al Jamea',
-    subtitle: 'Submission & Review',
-    badgeColor: '#7c3aed',
-    headerBg: 'rgba(124, 58, 237, 0.08)',
-    icon: <FileCheck2 size={16} color="#7c3aed" />
-  },
-  {
-    id: 'completed',
-    title: 'Completed',
-    subtitle: 'All Done',
-    badgeColor: '#0d9488',
-    headerBg: 'rgba(13, 148, 136, 0.08)',
-    icon: <CheckCircle size={16} color="#0d9488" />
+    title: 'AlJamea Done',
+    subtitle: 'Submitted to Al Jamea',
+    badgeColor: '#047857',
+    headerBg: 'rgba(4, 120, 87, 0.08)',
+    icon: <FileCheck2 size={16} color="#047857" />
   }
 ];
 
@@ -176,7 +176,7 @@ export default function OngoingSafarKanban({
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [rescanTriggered, setRescanTriggered] = useState(false);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
-  const [activeMobileStage, setActiveMobileStage] = useState<KanbanStage>('editing');
+  const [activeMobileStage, setActiveMobileStage] = useState<KanbanStage>('editing_pending');
   const [filterChip, setFilterChip] = useState<'all' | 'my_pending' | 'ready_deliver' | 'needs_photo_review'>('all');
   const [isBatchMode, setIsBatchMode] = useState<boolean>(false);
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
@@ -190,7 +190,7 @@ export default function OngoingSafarKanban({
   // Normalized key: remove spaces, dashes, underscores, lowercased
   const safarTasks = useMemo(() => {
     const seen = new Map<string, SafarTaskItem>();
-    const list = tasks.filter(t => t.safarName === selectedSafar);
+    const list = tasks.filter(t => t.safarName === selectedSafar && !isCameraOrAssetFolder(t.dateFolder) && isProperDateOrSessionFolder(t.dateFolder));
 
     for (const t of list) {
       const normKey = (t.dateFolder || '').toLowerCase().replace(/[\s_\-]/g, '');
@@ -209,8 +209,8 @@ export default function OngoingSafarKanban({
 
   // Quick chip counts
   const chipCounts = useMemo(() => {
-    const myPending = safarTasks.filter(t => t.stage === 'editing' || (t.photoStage === 'edited' && !t.photoUploaded)).length;
-    const readyDeliver = safarTasks.filter(t => t.stage === 'rendering' || t.stage === 'upload' || t.photoStage === 'given_to_murtaza').length;
+    const myPending = safarTasks.filter(t => t.stage === 'editing_pending' || t.stage === 'editing' || (t.photoStage === 'edited' && !t.photoUploaded)).length;
+    const readyDeliver = safarTasks.filter(t => t.stage === 'upload_pending' || t.stage === 'uploaded' || t.photoStage === 'given_to_murtaza').length;
     const needsPhotoReview = safarTasks.filter(t => t.photoStage === 'given_to_murtaza' || (t.photoStage !== 'uploaded' && !t.photoUploaded)).length;
     return { myPending, readyDeliver, needsPhotoReview, all: safarTasks.length };
   }, [safarTasks]);
@@ -220,9 +220,9 @@ export default function OngoingSafarKanban({
     let list = safarTasks;
 
     if (filterChip === 'my_pending') {
-      list = list.filter(t => t.stage === 'editing' || (t.photoStage === 'edited' && !t.photoUploaded));
+      list = list.filter(t => t.stage === 'editing_pending' || t.stage === 'editing' || (t.photoStage === 'edited' && !t.photoUploaded));
     } else if (filterChip === 'ready_deliver') {
-      list = list.filter(t => t.stage === 'rendering' || t.stage === 'upload' || t.photoStage === 'given_to_murtaza');
+      list = list.filter(t => t.stage === 'upload_pending' || t.stage === 'uploaded' || t.photoStage === 'given_to_murtaza');
     } else if (filterChip === 'needs_photo_review') {
       list = list.filter(t => t.photoStage === 'given_to_murtaza' || (t.photoStage !== 'uploaded' && !t.photoUploaded));
     }
@@ -261,7 +261,7 @@ export default function OngoingSafarKanban({
     const targets = safarTasks.filter(t => selectedTaskIds.has(t.id));
     if (targets.length === 0) return;
 
-    const photoUpdates = (targetStage === 'upload' || targetStage === 'jameya' || targetStage === 'completed')
+    const photoUpdates = (targetStage === 'uploaded' || targetStage === 'jameya' || (targetStage as any) === 'upload' || (targetStage as any) === 'completed')
       ? { photoStage: 'uploaded' as PhotoStage, photoUploaded: true }
       : {};
 
@@ -271,7 +271,7 @@ export default function OngoingSafarKanban({
       targets.forEach(t => onUpdateTask(t, { stage: targetStage, ...photoUpdates }));
     }
 
-    showToast(`✓ Moved ${targets.length} dates to ${targetStage === 'completed' ? 'Completed' : targetStage}!`);
+    showToast(`✓ Moved ${targets.length} dates to ${targetStage === 'jameya' ? 'AlJamea Done' : targetStage}!`);
     setSelectedTaskIds(new Set());
   };
 
@@ -295,41 +295,49 @@ export default function OngoingSafarKanban({
 
     const updates = targets.map(t => ({
       task: t,
-      changes: { stage: 'completed' as KanbanStage, photoStage: 'uploaded' as PhotoStage, photoUploaded: true }
+      changes: { stage: 'jameya' as KanbanStage, photoStage: 'uploaded' as PhotoStage, photoUploaded: true }
     }));
 
     if (onBatchUpdateTasks) {
       onBatchUpdateTasks(updates);
     } else {
-      targets.forEach(t => onUpdateTask(t, { stage: 'completed', photoStage: 'uploaded', photoUploaded: true }));
+      targets.forEach(t => onUpdateTask(t, { stage: 'jameya', photoStage: 'uploaded', photoUploaded: true }));
     }
 
     const dayName = dayNum !== null ? `Day ${String(dayNum).padStart(2, '0')}` : dayLabelOrFolderName;
-    showToast(`✓ Marked all ${dayName} items (${targets.length}) as Completed!`);
+    showToast(`✓ Marked all ${dayName} items (${targets.length}) as AlJamea Done!`);
   };
 
   // 4. Strict Grouping into 5 Columns with Non-Present constraint
   // "also which arent prsent that should only and only be seen in submitted to jameya"
   const columnTasks = useMemo(() => {
     const map: Record<KanbanStage, SafarTaskItem[]> = {
+      editing_pending: [],
       editing: [],
-      rendering: [],
-      upload: [],
-      jameya: [],
-      completed: []
+      upload_pending: [],
+      uploaded: [],
+      jameya: []
     };
 
     for (const task of filteredTasks) {
       const isMissing = task.isMissing === true || task.isPresent === false || task.is_present === false;
       if (isMissing) {
-        // Must ONLY and ONLY be placed into Stage 4: Submitted to Jameya!
+        // Must ONLY and ONLY be placed into AlJamea Done!
         map['jameya'].push(task);
       } else {
-        const stage = task.stage || 'editing';
-        if (map[stage]) {
-          map[stage].push(task);
-        } else {
+        const stage = String(task.stage || 'editing_pending');
+        if (stage === 'editing_pending') {
+          map['editing_pending'].push(task);
+        } else if (stage === 'editing') {
           map['editing'].push(task);
+        } else if (stage === 'upload_pending' || stage === 'rendering') {
+          map['upload_pending'].push(task);
+        } else if (stage === 'uploaded' || stage === 'upload') {
+          map['uploaded'].push(task);
+        } else if (stage === 'jameya' || stage === 'completed' || stage === 'submitted') {
+          map['jameya'].push(task);
+        } else {
+          map['editing_pending'].push(task);
         }
       }
     }
@@ -346,7 +354,7 @@ export default function OngoingSafarKanban({
 
   // Summary counts
   const totalCount = safarTasks.length;
-  const uploadedCount = safarTasks.filter(t => t.stage === 'upload' || t.stage === 'jameya' || t.stage === 'completed').length;
+  const uploadedCount = safarTasks.filter(t => t.stage === 'uploaded' || t.stage === 'jameya' || (t.stage as any) === 'upload' || (t.stage as any) === 'completed').length;
   const pendingCount = Math.max(0, totalCount - uploadedCount);
 
   // Move stage
@@ -355,20 +363,20 @@ export default function OngoingSafarKanban({
       if ('vibrate' in navigator) navigator.vibrate(15);
     } catch {}
     const isMissing = task.isMissing === true || task.isPresent === false || task.is_present === false;
-    if (isMissing && nextStage !== 'jameya' && nextStage !== 'completed') {
-      showToast(`Cannot move "${task.dateFolder}": missing or unmounted folders stay in Submitted to Jameya archive.`);
+    if (isMissing && nextStage !== 'jameya') {
+      showToast(`Cannot move "${task.dateFolder}": missing or unmounted folders stay in AlJamea Done archive.`);
       return;
     }
 
-    // Cross-sync rule: when video moves to upload, jameya or completed, also mark photo as uploaded!
-    const photoUpdates = (nextStage === 'upload' || nextStage === 'jameya' || nextStage === 'completed')
+    // Cross-sync rule: when video moves to uploaded or jameya, also mark photo as uploaded!
+    const photoUpdates = (nextStage === 'uploaded' || nextStage === 'jameya')
       ? { photoStage: 'uploaded' as PhotoStage, photoUploaded: true }
       : {};
 
     onUpdateTask(task, { stage: nextStage, ...photoUpdates });
 
-    // WhatsApp milestone notification when marked uploaded or jameya or completed
-    if (nextStage === 'upload' || nextStage === 'jameya' || nextStage === 'completed') {
+    // WhatsApp milestone notification when marked uploaded or jameya
+    if (nextStage === 'uploaded' || nextStage === 'jameya') {
       const remaining = Math.max(0, totalCount - (uploadedCount + 1));
       try {
         await sendWhatsAppAlert(
@@ -377,9 +385,9 @@ export default function OngoingSafarKanban({
           remaining,
           window.location.origin
         );
-        showToast(`Moved to ${nextStage === 'completed' ? 'COMPLETED EVERY STAGE' : nextStage.toUpperCase()} · Milestone alert dispatched`);
+        showToast(`Moved to ${nextStage === 'jameya' ? 'ALJAMEA DONE' : nextStage.toUpperCase()} · Milestone alert dispatched`);
       } catch (e) {
-        showToast(`Moved to ${nextStage === 'completed' ? 'COMPLETED EVERY STAGE' : nextStage.toUpperCase()}`);
+        showToast(`Moved to ${nextStage === 'jameya' ? 'ALJAMEA DONE' : nextStage.toUpperCase()}`);
       }
     } else {
       showToast(`Moved "${task.dateFolder}" to ${nextStage}`);
@@ -412,7 +420,6 @@ export default function OngoingSafarKanban({
         <div className="kanban-banner-hero-section">
           <div>
             <span className="kanban-banner-badge">
-              <span className={`status-dot ${connected ? 'online' : ''}`} />
               Active Safar Pipeline
             </span>
             <div className="kanban-banner-selector-row">
@@ -435,10 +442,11 @@ export default function OngoingSafarKanban({
                 type="button"
                 className="kanban-banner-whatsapp-btn"
                 onClick={() => {
+                  const base = getPublicWebsiteOrigin();
                   const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(
                     `📢 *Ongoing Safar Update (${selectedSafar})*\n` +
                     `📍 Progress: ${uploadedCount} of ${totalCount} dates delivered (${totalCount > 0 ? Math.round((uploadedCount / totalCount) * 100) : 0}%)\n` +
-                    `🔗 ${window.location.origin}/kanban?safar=${encodeURIComponent(selectedSafar)}`
+                    `🔗 ${base}/kanban?safar=${encodeURIComponent(selectedSafar)}`
                   )}`;
                   window.open(url, '_blank');
                 }}
@@ -469,15 +477,15 @@ export default function OngoingSafarKanban({
             {totalCount > 0 && (
               <div className="kanban-banner-pipeline-wrap">
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', fontWeight: 700, marginBottom: '4px' }}>
-                  <span style={{ color: '#4f46e5' }}><AnimatedNumber value={Math.round(((columnTasks.editing.length * 20 + columnTasks.rendering.length * 45 + columnTasks.upload.length * 75 + columnTasks.jameya.length * 90 + columnTasks.completed.length * 100) / (totalCount || 1)) / 100 * 100)} />% Pipeline</span>
+                  <span style={{ color: '#4f46e5' }}><AnimatedNumber value={Math.round(((columnTasks.editing_pending.length * 10 + columnTasks.editing.length * 35 + columnTasks.upload_pending.length * 65 + columnTasks.uploaded.length * 90 + columnTasks.jameya.length * 100) / (totalCount || 1)) / 100 * 100)} />% Pipeline</span>
                   <span style={{ color: '#059669' }}><AnimatedNumber value={Math.round((uploadedCount / (totalCount || 1)) * 100)} />% Delivered (<AnimatedNumber value={uploadedCount} />/{totalCount})</span>
                 </div>
                 <div className="multicolor-progress-bar mini" role="progressbar" aria-label={`${selectedSafar} stage progress`}>
-                  {columnTasks.editing.length > 0 && <span className="stage-segment stage-editing" style={{ width: `${(columnTasks.editing.length / (totalCount || 1)) * 100}%` }} title={`Editing: ${columnTasks.editing.length}`} />}
-                  {columnTasks.rendering.length > 0 && <span className="stage-segment stage-rendering" style={{ width: `${(columnTasks.rendering.length / (totalCount || 1)) * 100}%` }} title={`Rendered: ${columnTasks.rendering.length}`} />}
-                  {columnTasks.upload.length > 0 && <span className="stage-segment stage-upload" style={{ width: `${(columnTasks.upload.length / (totalCount || 1)) * 100}%` }} title={`Uploaded: ${columnTasks.upload.length}`} />}
-                  {columnTasks.jameya.length > 0 && <span className="stage-segment stage-jameya" style={{ width: `${(columnTasks.jameya.length / (totalCount || 1)) * 100}%` }} title={`Submitted to Jameya: ${columnTasks.jameya.length}`} />}
-                  {columnTasks.completed.length > 0 && <span className="stage-segment stage-completed" style={{ width: `${(columnTasks.completed.length / (totalCount || 1)) * 100}%` }} title={`Completed Every Stage: ${columnTasks.completed.length}`} />}
+                  {columnTasks.editing_pending.length > 0 && <span className="stage-segment stage-editing_pending" style={{ width: `${(columnTasks.editing_pending.length / (totalCount || 1)) * 100}%` }} title={`Editing Pending: ${columnTasks.editing_pending.length}`} />}
+                  {columnTasks.editing.length > 0 && <span className="stage-segment stage-editing" style={{ width: `${(columnTasks.editing.length / (totalCount || 1)) * 100}%` }} title={`In Progress: ${columnTasks.editing.length}`} />}
+                  {columnTasks.upload_pending.length > 0 && <span className="stage-segment stage-upload_pending" style={{ width: `${(columnTasks.upload_pending.length / (totalCount || 1)) * 100}%` }} title={`Upload Pending: ${columnTasks.upload_pending.length}`} />}
+                  {columnTasks.uploaded.length > 0 && <span className="stage-segment stage-uploaded" style={{ width: `${(columnTasks.uploaded.length / (totalCount || 1)) * 100}%` }} title={`Uploaded: ${columnTasks.uploaded.length}`} />}
+                  {columnTasks.jameya.length > 0 && <span className="stage-segment stage-jameya" style={{ width: `${(columnTasks.jameya.length / (totalCount || 1)) * 100}%` }} title={`AlJamea Done: ${columnTasks.jameya.length}`} />}
                 </div>
               </div>
             )}
@@ -683,7 +691,7 @@ export default function OngoingSafarKanban({
             >
               <span className="mobile-stage-dot" style={{ backgroundColor: col.badgeColor }} />
               <span className="mobile-stage-name">
-                {col.id === 'editing' ? 'Editing' : col.id === 'rendering' ? 'Render' : col.id === 'upload' ? 'Upload' : col.id === 'jameya' ? 'Jameya' : 'Done'}
+                {col.id === 'editing_pending' ? 'Pending' : col.id === 'editing' ? 'In Progress' : col.id === 'upload_pending' ? 'Upload Pend' : col.id === 'uploaded' ? 'Uploaded' : 'AlJamea'}
               </span>
               <span className="mobile-stage-count"><AnimatedNumber value={count} /></span>
             </button>
@@ -699,15 +707,10 @@ export default function OngoingSafarKanban({
             <div
               key={col.id}
               id={`kanban-col-${col.id}`}
-              className="kanban-column"
+              className="kanban-column apple-glass-column"
               style={{
                 display: 'flex',
                 flexDirection: 'column',
-                background: 'var(--surface, #ffffff)',
-                border: '1px solid var(--border, rgba(0,0,0,0.08))',
-                borderRadius: '16px',
-                overflow: 'hidden',
-                boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
                 minHeight: '480px'
               }}
             >
@@ -716,7 +719,7 @@ export default function OngoingSafarKanban({
                 style={{
                   padding: '14px 16px',
                   background: col.headerBg,
-                  borderBottom: '1px solid var(--border, rgba(0,0,0,0.06))',
+                  borderBottom: '1px solid rgba(255, 255, 255, 0.7)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between'
@@ -735,15 +738,6 @@ export default function OngoingSafarKanban({
                     >
                       {col.title}
                     </h3>
-                    <p
-                      style={{
-                        margin: 0,
-                        fontSize: '11px',
-                        color: '#64748b'
-                      }}
-                    >
-                      {col.subtitle}
-                    </p>
                   </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -813,16 +807,13 @@ export default function OngoingSafarKanban({
                     return (
                       <div
                         key={task.id}
+                        className="safar-task-card"
                         style={{
-                          background: isMissing ? 'rgba(241, 245, 249, 0.7)' : 'var(--surface-sunken, #f8fafc)',
-                          border: isMissing ? '1px dashed #cbd5e1' : '1px solid var(--border, #e2e8f0)',
-                          borderRadius: '12px',
-                          padding: '12px 14px',
+                          padding: '14px 16px',
                           display: 'flex',
                           flexDirection: 'column',
-                          gap: '8px',
-                          boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-                          transition: 'transform 0.1s ease, box-shadow 0.1s ease'
+                          gap: '10px',
+                          border: isMissing ? '1px dashed #cbd5e1' : undefined
                         }}
                       >
                         {/* Card Header: Folder Title, Checkbox, 1-Tap Done & Remove */}
@@ -841,9 +832,11 @@ export default function OngoingSafarKanban({
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <span
                                 style={{
-                                  fontSize: '13px',
-                                  fontWeight: 700,
-                                  color: 'var(--text-primary, #0f172a)',
+                                  fontFamily: 'var(--font-display-serif, "Lora", serif)',
+                                  fontSize: '15px',
+                                  fontWeight: 600,
+                                  letterSpacing: '-0.015em',
+                                  color: 'var(--color-ink, #0a0a0a)',
                                   display: 'block',
                                   wordBreak: 'break-word',
                                   overflowWrap: 'break-word'
@@ -852,7 +845,7 @@ export default function OngoingSafarKanban({
                                 {task.dateFolder}
                               </span>
                               {task.hijriDate && (
-                                <span style={{ fontSize: '11px', color: '#64748b' }}>
+                                <span style={{ fontSize: '11px', color: '#737373', fontFamily: 'var(--font-ui-sans, "Inter", sans-serif)' }}>
                                   {task.hijriDate}
                                 </span>
                               )}
@@ -860,11 +853,11 @@ export default function OngoingSafarKanban({
                           </div>
 
                           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            {col.id !== 'completed' && (
+                            {col.id !== 'jameya' && (
                               <button
                                 type="button"
                                 className="day-batch-pill"
-                                title={`Mark all items for this day as Completed in 1 tap`}
+                                title={`Mark all items for this day as AlJamea Done in 1 tap`}
                                 onClick={() => handleMarkDayAllCompleted(task.dateFolder)}
                               >
                                 ⚡ Done
@@ -898,8 +891,8 @@ export default function OngoingSafarKanban({
 
                         {/* Deliverable Cross-Status Badge */}
                         {(() => {
-                          const isPhotoUp = task.photoStage === 'uploaded' || Boolean(task.photoUploaded) || (task.stage === 'upload' || task.stage === 'jameya' || task.stage === 'completed');
-                          const isVideoUp = task.stage === 'upload' || task.stage === 'jameya' || task.stage === 'completed';
+                          const isPhotoUp = task.photoStage === 'uploaded' || Boolean(task.photoUploaded) || (task.stage === 'uploaded' || task.stage === 'jameya' || (task.stage as any) === 'upload' || (task.stage as any) === 'completed');
+                          const isVideoUp = task.stage === 'uploaded' || task.stage === 'jameya' || (task.stage as any) === 'upload' || (task.stage as any) === 'completed';
                           return (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginTop: '2px' }}>
                               {isPhotoUp && isVideoUp ? (
@@ -1016,8 +1009,8 @@ export default function OngoingSafarKanban({
                                 <ArrowRight size={11} />
                               </button>
                             ) : (
-                              <span style={{ fontSize: '11px', color: '#059669', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}>
-                                <CheckCircle size={12} /> Completed
+                              <span style={{ fontSize: '11px', color: '#047857', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                <CheckCircle size={12} /> AlJamea Done
                               </span>
                             )}
                           </div>
@@ -1039,20 +1032,20 @@ export default function OngoingSafarKanban({
             <span>Batch apply stage:</span>
           </div>
           <div className="batch-actions-row">
+            <button type="button" className="batch-btn" onClick={() => handleApplyBatchStage('editing_pending')}>
+              ⏳ 1. Editing Pending
+            </button>
             <button type="button" className="batch-btn" onClick={() => handleApplyBatchStage('editing')}>
-              🎬 In Editing
+              🎬 2. In Progress
             </button>
-            <button type="button" className="batch-btn" onClick={() => handleApplyBatchStage('rendering')}>
-              ⚡ Rendered
+            <button type="button" className="batch-btn" onClick={() => handleApplyBatchStage('upload_pending')}>
+              🌐 3. Upload Pending
             </button>
-            <button type="button" className="batch-btn" onClick={() => handleApplyBatchStage('upload')}>
-              ☁️ Uploaded
+            <button type="button" className="batch-btn" onClick={() => handleApplyBatchStage('uploaded')}>
+              ☁️ 4. Uploaded
             </button>
-            <button type="button" className="batch-btn" onClick={() => handleApplyBatchStage('jameya')}>
-              🏛️ Al Jamea
-            </button>
-            <button type="button" className="batch-btn primary" onClick={() => handleApplyBatchStage('completed')}>
-              ✅ Complete All
+            <button type="button" className="batch-btn primary" onClick={() => handleApplyBatchStage('jameya')}>
+              🏛️ 5. AlJamea Done
             </button>
             <button type="button" className="batch-btn cancel" onClick={() => setSelectedTaskIds(new Set())}>
               ✕ Clear

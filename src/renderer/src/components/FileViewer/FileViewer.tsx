@@ -1,10 +1,20 @@
 import React, {
-  useState, useEffect, useRef, useCallback, useMemo
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo
 } from 'react'
 import './FileViewer.css'
+import CodePane from './CodePane'
+import DocPane from './DocPane'
+import AudioPane from './AudioPane'
+import HexDumpPane from './HexDumpPane'
+import XlsxPane from './XlsxPane'
+import PdfPane from './PdfPane'
 
 // ── Types ────────────────────────────────────────────────────────
-interface FileInfo {
+export interface FileInfo {
   size: number
   modified: number
   ext: string
@@ -12,97 +22,120 @@ interface FileInfo {
   dimensions?: { width: number; height: number } | null
 }
 
-type ViewerMode = 'image' | 'video' | 'pdf' | 'docx' | 'xlsx' | 'markdown' | 'unknown'
+export type ViewerMode =
+  | 'image'
+  | 'video'
+  | 'audio'
+  | 'pdf'
+  | 'doc'
+  | 'spreadsheet'
+  | 'code'
+  | 'markdown'
+  | 'unknown'
 
-interface Props {
+export interface FileViewerProps {
   filePath: string | null
   onClose: () => void
+  isStandaloneWindow?: boolean
 }
 
-// ── Helpers ──────────────────────────────────────────────────────
+// ── Extension Sets ───────────────────────────────────────────────
 const IMAGE_EXTS = new Set([
-  '.jpg','.jpeg','.png','.gif','.webp','.bmp','.tiff','.tif','.heic','.avif','.ico','.svg'
-])
-const RAW_EXTS = new Set([
-  '.cr2','.cr3','.nef','.nrw','.arw','.srf','.sr2','.dng','.orf','.rw2',
-  '.pef','.ptx','.raf','.raw','.3fr','.mef','.mos','.erf','.rwl','.srw',
-  '.x3f','.dcr','.kdc','.mrw'
-])
-const VIDEO_EXTS = new Set([
-  '.mp4','.mkv','.avi','.mov','.webm','.wmv','.flv','.m4v','.ts','.m2ts','.mpg','.mpeg'
+  '.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.tif', '.heic', '.avif', '.ico', '.svg'
 ])
 
-function detectMode(ext: string): ViewerMode {
+const RAW_EXTS = new Set([
+  '.cr2', '.cr3', '.nef', '.nrw', '.arw', '.srf', '.sr2', '.dng', '.orf', '.rw2',
+  '.pef', '.ptx', '.raf', '.raw', '.3fr', '.mef', '.mos', '.erf', '.rwl', '.srw',
+  '.x3f', '.dcr', '.kdc', '.mrw'
+])
+
+const VIDEO_EXTS = new Set([
+  '.mp4', '.mkv', '.avi', '.mov', '.webm', '.wmv', '.flv', '.m4v', '.ts', '.m2ts', '.mpg', '.mpeg'
+])
+
+const AUDIO_EXTS = new Set([
+  '.mp3', '.wav', '.aac', '.flac', '.ogg', '.m4a', '.wma', '.aiff', '.opus'
+])
+
+const SPREADSHEET_EXTS = new Set([
+  '.xlsx', '.xls', '.csv', '.tsv', '.ods'
+])
+
+const CODE_EXTS = new Set([
+  '.txt', '.log', '.json', '.xml', '.html', '.htm', '.css', '.scss', '.js', '.mjs', '.cjs',
+  '.ts', '.tsx', '.jsx', '.py', '.sql', '.ini', '.bat', '.cmd', '.sh', '.ps1', '.psd1',
+  '.psm1', '.yml', '.yaml', '.env', '.config', '.properties', '.java', '.c', '.cpp', '.h',
+  '.hpp', '.cs', '.go', '.rs', '.php', '.rb', '.diff', '.patch', '.reg'
+])
+
+export function detectViewerMode(ext: string): ViewerMode {
   const e = ext.toLowerCase()
-  if (IMAGE_EXTS.has(e)) return 'image'
-  if (RAW_EXTS.has(e))   return 'image' // raw → converted to image
+  if (IMAGE_EXTS.has(e) || RAW_EXTS.has(e)) return 'image'
   if (VIDEO_EXTS.has(e)) return 'video'
-  if (e === '.pdf')       return 'pdf'
-  if (e === '.docx' || e === '.doc') return 'docx'
-  if (e === '.xlsx' || e === '.xls') return 'xlsx'
+  if (AUDIO_EXTS.has(e)) return 'audio'
+  if (e === '.pdf') return 'pdf'
+  if (e === '.docx' || e === '.doc' || e === '.rtf' || e === '.odt') return 'doc'
+  if (SPREADSHEET_EXTS.has(e)) return 'spreadsheet'
   if (e === '.md' || e === '.markdown') return 'markdown'
+  if (CODE_EXTS.has(e)) return 'code'
   return 'unknown'
 }
 
-function fileIcon(mode: ViewerMode, ext: string): string {
-  if (mode === 'video')    return '🎬'
-  if (mode === 'pdf')      return '📄'
-  if (mode === 'docx')     return '📝'
-  if (mode === 'xlsx')     return '📊'
+export function fileViewerIcon(mode: ViewerMode, ext: string): string {
+  if (mode === 'video') return '🎬'
+  if (mode === 'audio') return '🎵'
+  if (mode === 'pdf') return '📄'
+  if (mode === 'doc') return '📝'
+  if (mode === 'spreadsheet') return '📊'
+  if (mode === 'code') return '💻'
   if (mode === 'markdown') return '📋'
   if (RAW_EXTS.has(ext.toLowerCase())) return '📷'
-  return '🖼️'
+  if (mode === 'image') return '🖼️'
+  return '🔍'
 }
 
-function formatSize(bytes: number): string {
-  if (bytes < 1024)          return `${bytes} B`
-  if (bytes < 1024 * 1024)   return `${(bytes / 1024).toFixed(1)} KB`
-  if (bytes < 1024 ** 3)     return `${(bytes / 1024 / 1024).toFixed(2)} MB`
+export function formatFileSize(bytes: number): string {
+  if (!bytes || isNaN(bytes)) return '0 B'
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  if (bytes < 1024 ** 3) return `${(bytes / 1024 / 1024).toFixed(2)} MB`
   return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`
 }
 
-function basename(p: string): string {
+export function fileBasename(p: string): string {
   return p.replace(/\\/g, '/').split('/').pop() ?? p
 }
 
-/**
- * Convert an absolute Windows or POSIX path to a safe local-resource:// URL.
- * Uses encodeURI which preserves : and / but encodes spaces, Unicode, etc.
- */
-function toLocalResourceUrl(absolutePath: string): string {
-  // Normalise backslashes → forward slashes
+export function toLocalResourceUrl(absolutePath: string): string {
   const forward = absolutePath.replace(/\\/g, '/')
-  // encodeURI preserves : / A-Z a-z 0-9 - _ . ~ and URI-reserved chars
-  // but encodes spaces, Unicode, and other special filename characters
   const encoded = encodeURI(forward)
-  // Always use 3 slashes so the path begins with / on the protocol side
-  // e.g. local-resource:///C:/path/to/file.jpg
   return `local-resource:///${encoded.replace(/^\//, '')}`
 }
 
 const api = (): any => (window as any).api
 
-// ── Sub-components ───────────────────────────────────────────────
-
-/** Image Viewer with zoom + pan + rotate */
+// ── Image Viewer Stage ───────────────────────────────────────────
 function ImagePane({ src, info }: { src: string; info: FileInfo | null }) {
-  const stageRef  = useRef<HTMLDivElement>(null)
-  const [zoom, setZoom]     = useState(1)
+  const stageRef = useRef<HTMLDivElement>(null)
+  const [zoom, setZoom] = useState(1)
   const [rotate, setRotate] = useState(0)
   const [offset, setOffset] = useState({ x: 0, y: 0 })
   const [imgLoaded, setImgLoaded] = useState(false)
   const dragStart = useRef<{ mx: number; my: number; ox: number; oy: number } | null>(null)
 
-  // Fit image to viewport on load
   function resetView(): void {
-    setZoom(1); setRotate(0); setOffset({ x: 0, y: 0 }); setImgLoaded(false)
+    setZoom(1)
+    setRotate(0)
+    setOffset({ x: 0, y: 0 })
+    setImgLoaded(false)
   }
   useEffect(resetView, [src])
 
   const handleWheel = useCallback((e: WheelEvent) => {
     e.preventDefault()
     const delta = e.deltaY > 0 ? -0.12 : 0.12
-    setZoom(z => Math.min(Math.max(0.1, z + delta * z), 12))
+    setZoom((z) => Math.min(Math.max(0.1, z + delta * z), 12))
   }, [])
 
   useEffect(() => {
@@ -132,10 +165,8 @@ function ImagePane({ src, info }: { src: string; info: FileInfo | null }) {
 
   const transform = `translate(${offset.x}px, ${offset.y}px) scale(${zoom}) rotate(${rotate}deg)`
 
-  const dimText = info?.dimensions
-    ? `${info.dimensions.width} × ${info.dimensions.height}px`
-    : ''
-  const sizeText = info ? formatSize(info.size) : ''
+  const dimText = info?.dimensions ? `${info.dimensions.width} × ${info.dimensions.height}px` : ''
+  const sizeText = info ? formatFileSize(info.size) : ''
   const infoText = [dimText, sizeText, info?.ext.toUpperCase().slice(1)].filter(Boolean).join('  ·  ')
 
   return (
@@ -159,161 +190,15 @@ function ImagePane({ src, info }: { src: string; info: FileInfo | null }) {
         style={{ transform, opacity: imgLoaded ? 1 : 0, transition: 'opacity 0.3s ease' }}
         draggable={false}
         onLoad={() => setImgLoaded(true)}
-        onError={() => setImgLoaded(true)} // show even on error
+        onError={() => setImgLoaded(true)}
       />
       {infoText && <div className="fv-img-info">{infoText}</div>}
     </div>
   )
 }
 
-/** Excel viewer with sheet tabs */
-function XlsxPane({ base64 }: { base64: string }) {
-  const [sheets, setSheets]       = useState<{ name: string; data: string[][] }[]>([])
-  const [activeIdx, setActiveIdx] = useState(0)
-  const [error, setError]         = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!base64) return
-    ;(async () => {
-      try {
-        // Dynamically load xlsx so it only parses when needed
-        const XLSX = await import('xlsx')
-        const wb = XLSX.read(base64, { type: 'base64' })
-        const parsed = wb.SheetNames.map(name => {
-          const ws = wb.Sheets[name]
-          const data: string[][] = XLSX.utils.sheet_to_json(ws, {
-            header: 1, defval: '', blankrows: false
-          }) as string[][]
-          return { name, data }
-        })
-        setSheets(parsed)
-        setActiveIdx(0)
-      } catch (e: any) {
-        setError(e.message ?? 'Failed to parse Excel file')
-      }
-    })()
-  }, [base64])
-
-  if (error) return <div className="fv-center"><div className="fv-error-icon">⚠️</div><div className="fv-error-msg">{error}</div></div>
-  if (!sheets.length) return <div className="fv-center"><div className="fv-spinner" /></div>
-
-  const sheet = sheets[activeIdx]
-  const headers = sheet.data[0] ?? []
-  const rows    = sheet.data.slice(1)
-
-  return (
-    <div className="fv-xlsx-wrap">
-      {sheets.length > 1 && (
-        <div className="fv-xlsx-tabs">
-          {sheets.map((s, i) => (
-            <button
-              key={s.name}
-              className={`fv-xlsx-tab${i === activeIdx ? ' active' : ''}`}
-              onClick={() => setActiveIdx(i)}
-            >
-              {s.name}
-            </button>
-          ))}
-        </div>
-      )}
-      <div className="fv-xlsx-scroll">
-        <table className="fv-xlsx-table">
-          <thead>
-            <tr>
-              <th className="fv-row-num">#</th>
-              {headers.map((h, i) => <th key={i}>{String(h)}</th>)}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row, ri) => (
-              <tr key={ri}>
-                <td className="fv-row-num">{ri + 1}</td>
-                {headers.map((_h, ci) => (
-                  <td key={ci} title={String(row[ci] ?? '')}>{String(row[ci] ?? '')}</td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  )
-}
-
-/** Markdown / HTML document renderer */
-function DocPane({ html }: { html: string }) {
-  return (
-    <div className="fv-doc-scroll">
-      <div
-        className="fv-doc-paper"
-        // biome-ignore lint: trusted HTML from mammoth/marked
-        dangerouslySetInnerHTML={{ __html: html }}
-      />
-    </div>
-  )
-}
-
-/** Inline PDF viewer using blob URL → <embed> to avoid iframe CSP blocking */
-function PdfPane({ base64, filePath: _filePath }: { base64: string | null; filePath: string; loading: boolean }) {
-  const [blobUrl, setBlobUrl] = useState<string | null>(null)
-  const [_numPages, setNumPages] = useState<number | null>(null)
-
-  useEffect(() => {
-    if (!base64) return
-    // Convert base64 → Uint8Array → Blob → object URL
-    const binary = atob(base64)
-    const bytes = new Uint8Array(binary.length)
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
-    const blob = new Blob([bytes], { type: 'application/pdf' })
-    const url = URL.createObjectURL(blob)
-    setBlobUrl(url)
-    setNumPages(null)
-    return () => { URL.revokeObjectURL(url) }
-  }, [base64])
-
-  if (!blobUrl) {
-    return (
-      <div className="fv-center">
-        <div className="fv-pdf-skeleton">
-          <div className="fv-skeleton-shimmer" />
-        </div>
-        <span style={{ marginTop: 12, opacity: 0.6 }}>Loading PDF…</span>
-      </div>
-    )
-  }
-
-  return (
-    <div className="fv-pdf-wrap">
-      <embed
-        className="fv-pdf-embed"
-        src={blobUrl}
-        type="application/pdf"
-        title="PDF Viewer"
-      />
-      {/* Fallback link if embed doesn't render */}
-      <div className="fv-pdf-fallback-bar">
-        <span>If the PDF doesn't display,</span>
-        <button
-          className="fv-btn"
-          onClick={() => {
-            const link = document.createElement('a')
-            link.href = blobUrl
-            link.target = '_blank'
-            link.click()
-          }}
-        >
-          Open in Browser ↗
-        </button>
-      </div>
-    </div>
-  )
-}
-
-interface VideoPlayerProps {
-  src: string
-}
-
-function CustomVideoPlayer({ src }: VideoPlayerProps): JSX.Element {
+// ── Video Player Component ───────────────────────────────────────
+function CustomVideoPlayer({ src }: { src: string }): JSX.Element {
   const videoRef = useRef<HTMLVideoElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const seekTrackRef = useRef<HTMLDivElement>(null)
@@ -328,7 +213,6 @@ function CustomVideoPlayer({ src }: VideoPlayerProps): JSX.Element {
   const [videoReady, setVideoReady] = useState(false)
   const fadeTimeout = useRef<NodeJS.Timeout | null>(null)
 
-  // ── Video Frame Zoom & Pan State ──
   const [zoom, setZoom] = useState(1)
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = useState(false)
@@ -358,18 +242,16 @@ function CustomVideoPlayer({ src }: VideoPlayerProps): JSX.Element {
     }
   }
 
-  // ── Mouse Wheel Zooming on Video Frame ──
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault()
     const delta = e.deltaY > 0 ? -0.15 : 0.15
-    setZoom(z => {
+    setZoom((z) => {
       const nextZoom = Math.min(Math.max(1, z + delta * z), 6)
       if (nextZoom === 1) setPan({ x: 0, y: 0 })
       return nextZoom
     })
   }
 
-  // ── Pan Video Frame When Zoomed ──
   const handleMouseDown = (e: React.MouseEvent) => {
     if (zoom <= 1) return
     e.preventDefault()
@@ -390,7 +272,6 @@ function CustomVideoPlayer({ src }: VideoPlayerProps): JSX.Element {
     dragStart.current = null
   }
 
-  // ── Step Frame Forward / Backward ──
   const stepFrame = (frames: number) => {
     if (!videoRef.current) return
     videoRef.current.pause()
@@ -401,7 +282,6 @@ function CustomVideoPlayer({ src }: VideoPlayerProps): JSX.Element {
     setCurrentTime(newTime)
   }
 
-  // ── High-Res Video Frame Snapshot ──
   const captureFrame = () => {
     if (!videoRef.current) return
     try {
@@ -425,127 +305,6 @@ function CustomVideoPlayer({ src }: VideoPlayerProps): JSX.Element {
     }
   }
 
-  const formatTimelapseDuration = (secs: number) => {
-    if (!isFinite(secs) || secs <= 0) return ''
-    if (secs < 60) return `${Math.round(secs)}s`
-    const m = Math.floor(secs / 60)
-    const s = Math.round(secs % 60)
-    return `${m}m ${s}s`
-  }
-
-  useEffect(() => {
-    const handleKeys = (e: KeyboardEvent) => {
-      // Check if typing in inputs
-      if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return
-      if (e.key === ' ' || e.code === 'Space') {
-        e.preventDefault()
-        togglePlay()
-      } else if (e.key === 'ArrowLeft' && !isPlaying) {
-        e.preventDefault()
-        stepFrame(-1)
-      } else if (e.key === 'ArrowRight' && !isPlaying) {
-        e.preventDefault()
-        stepFrame(1)
-      }
-    }
-    window.addEventListener('keydown', handleKeys)
-    return () => window.removeEventListener('keydown', handleKeys)
-  }, [isPlaying, duration])
-
-  const handleTimeUpdate = () => {
-    if (videoRef.current) {
-      setCurrentTime(videoRef.current.currentTime)
-    }
-  }
-
-  const handleDurationChange = () => {
-    if (videoRef.current) {
-      setDuration(videoRef.current.duration || 0)
-    }
-  }
-
-  const handleCanPlay = () => {
-    setVideoReady(true)
-    videoRef.current?.play().catch(() => setIsPlaying(false))
-  }
-
-  const handleSeekClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!videoRef.current || !seekTrackRef.current) return
-    const rect = seekTrackRef.current.getBoundingClientRect()
-    const clickX = e.clientX - rect.left
-    const percent = Math.min(Math.max(0, clickX / rect.width), 1)
-    const newTime = percent * duration
-    videoRef.current.currentTime = newTime
-    setCurrentTime(newTime)
-  }
-
-  const handleVolumeChange = (val: number) => {
-    setVolume(val)
-    if (videoRef.current) {
-      videoRef.current.volume = val
-      videoRef.current.muted = val === 0
-    }
-  }
-
-  const toggleMute = () => {
-    if (volume > 0) {
-      handleVolumeChange(0)
-    } else {
-      handleVolumeChange(0.8)
-    }
-  }
-
-  const handleSpeedChange = (val: number) => {
-    setSpeed(val)
-    if (videoRef.current) {
-      videoRef.current.playbackRate = val
-    }
-  }
-
-  const toggleFullscreen = () => {
-    if (!containerRef.current) return
-    if (!document.fullscreenElement) {
-      containerRef.current.requestFullscreen().then(() => {
-        setIsFullscreen(true)
-      }).catch(err => {
-        console.error('Fullscreen failed:', err)
-      })
-    } else {
-      document.exitFullscreen().then(() => {
-        setIsFullscreen(false)
-      }).catch(err => {
-        console.error('Exit fullscreen failed:', err)
-      })
-    }
-  }
-
-  useEffect(() => {
-    const onFsChange = () => {
-      setIsFullscreen(!!document.fullscreenElement)
-    }
-    document.addEventListener('fullscreenchange', onFsChange)
-    return () => document.removeEventListener('fullscreenchange', onFsChange)
-  }, [])
-
-  useEffect(() => {
-    const container = containerRef.current
-    if (!container) return
-    const onMove = () => {
-      setControlsVisible(true)
-      if (fadeTimeout.current) clearTimeout(fadeTimeout.current)
-      fadeTimeout.current = setTimeout(() => {
-        if (isPlaying) setControlsVisible(false)
-      }, 2500)
-    }
-    container.addEventListener('mousemove', onMove)
-    container.addEventListener('mouseenter', onMove)
-    return () => {
-      container.removeEventListener('mousemove', onMove)
-      container.removeEventListener('mouseenter', onMove)
-      if (fadeTimeout.current) clearTimeout(fadeTimeout.current)
-    }
-  }, [isPlaying])
-
   const formatTime = (secs: number): string => {
     if (!isFinite(secs)) return '0:00'
     const m = Math.floor(secs / 60)
@@ -557,7 +316,6 @@ function CustomVideoPlayer({ src }: VideoPlayerProps): JSX.Element {
 
   return (
     <div className="fv-video-container" ref={containerRef}>
-      {/* Video skeleton while loading */}
       {!videoReady && (
         <div className="fv-video-skeleton">
           <div className="fv-skeleton-shimmer" />
@@ -577,9 +335,12 @@ function CustomVideoPlayer({ src }: VideoPlayerProps): JSX.Element {
           cursor: zoom > 1 ? (isDragging ? 'grabbing' : 'grab') : 'default',
           transition: isDragging ? 'none' : 'transform 0.12s ease-out'
         }}
-        onTimeUpdate={handleTimeUpdate}
-        onDurationChange={handleDurationChange}
-        onCanPlay={handleCanPlay}
+        onTimeUpdate={() => videoRef.current && setCurrentTime(videoRef.current.currentTime)}
+        onDurationChange={() => videoRef.current && setDuration(videoRef.current.duration || 0)}
+        onCanPlay={() => {
+          setVideoReady(true)
+          videoRef.current?.play().catch(() => setIsPlaying(false))
+        }}
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
         onEnded={() => setIsPlaying(false)}
@@ -594,50 +355,80 @@ function CustomVideoPlayer({ src }: VideoPlayerProps): JSX.Element {
         onWheel={handleWheel}
       />
 
-      {/* Controls overlay */}
       <div
         className={`fv-video-controls ${controlsVisible ? 'visible' : 'hidden'}`}
-        onClick={e => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
       >
-        {/* Seek bar */}
-        <div className="fv-seek-track" ref={seekTrackRef} onClick={handleSeekClick}>
+        <div
+          className="fv-seek-track"
+          ref={seekTrackRef}
+          onClick={(e) => {
+            if (!videoRef.current || !seekTrackRef.current) return
+            const rect = seekTrackRef.current.getBoundingClientRect()
+            const clickX = e.clientX - rect.left
+            const percent = Math.min(Math.max(0, clickX / rect.width), 1)
+            const newTime = percent * duration
+            videoRef.current.currentTime = newTime
+            setCurrentTime(newTime)
+          }}
+        >
           <div className="fv-seek-fill" style={{ width: `${progressPct}%` }} />
           <div className="fv-seek-thumb" style={{ left: `${progressPct}%` }} />
         </div>
 
         <div className="fv-controls-row">
-          {/* Play/Pause */}
           <button className="fv-ctrl-btn" onClick={togglePlay} title={isPlaying ? 'Pause (Space)' : 'Play (Space)'}>
             {isPlaying ? '⏸' : '▶'}
           </button>
 
-          {/* Time */}
-          <span className="fv-time-label">{formatTime(currentTime)} / {formatTime(duration)}</span>
+          <span className="fv-time-label">
+            {formatTime(currentTime)} / {formatTime(duration)}
+          </span>
 
-          {/* Frame Stepping */}
-          <button className="fv-ctrl-btn" onClick={() => stepFrame(-1)} title="Step 1 Frame Back (Left Arrow)">
+          <button className="fv-ctrl-btn" onClick={() => stepFrame(-1)} title="Step 1 Frame Back">
             ⏮ -1f
           </button>
-          <button className="fv-ctrl-btn" onClick={() => stepFrame(1)} title="Step 1 Frame Forward (Right Arrow)">
+          <button className="fv-ctrl-btn" onClick={() => stepFrame(1)} title="Step 1 Frame Forward">
             +1f ⏭
           </button>
 
-          {/* Video Frame Zoom Controls */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 8, padding: '2px 6px' }}>
-            <button className="fv-ctrl-btn" onClick={() => setZoom(z => { const nz = Math.max(1, z - 0.25); if (nz === 1) setPan({x:0,y:0}); return nz; })} title="Zoom Out (-)">
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+              marginLeft: 6,
+              background: 'rgba(255,255,255,0.06)',
+              borderRadius: 8,
+              padding: '2px 6px'
+            }}
+          >
+            <button
+              className="fv-ctrl-btn"
+              onClick={() =>
+                setZoom((z) => {
+                  const nz = Math.max(1, z - 0.25)
+                  if (nz === 1) setPan({ x: 0, y: 0 })
+                  return nz
+                })
+              }
+              title="Zoom Out"
+            >
               🔍-
             </button>
             <span style={{ fontSize: 11, color: '#a5b4fc', minWidth: 38, textAlign: 'center', fontWeight: 600 }}>
               {Math.round(zoom * 100)}%
             </span>
-            <button className="fv-ctrl-btn" onClick={() => setZoom(z => Math.min(6, z + 0.25))} title="Zoom In (+)">
+            <button className="fv-ctrl-btn" onClick={() => setZoom((z) => Math.min(6, z + 0.25))} title="Zoom In">
               🔍+
             </button>
             {zoom > 1 && (
               <button
                 className="fv-ctrl-btn"
-                onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }) }}
-                title="Reset Zoom to Fit"
+                onClick={() => {
+                  setZoom(1)
+                  setPan({ x: 0, y: 0 })
+                }}
                 style={{ color: '#f59e0b', fontSize: 11, padding: '0 6px' }}
               >
                 Fit
@@ -645,30 +436,9 @@ function CustomVideoPlayer({ src }: VideoPlayerProps): JSX.Element {
             )}
           </div>
 
-          {/* Capture Frame Snapshot */}
-          <button className="fv-ctrl-btn" onClick={captureFrame} title="Capture & Save Current Frame" style={{ marginLeft: 6 }}>
+          <button className="fv-ctrl-btn" onClick={captureFrame} title="Snapshot Current Frame" style={{ marginLeft: 6 }}>
             📸 Snapshot
           </button>
-
-          {/* Timelapse / Duration Badge */}
-          {duration > 0 && (
-            <span
-              style={{
-                fontSize: 11,
-                padding: '2px 8px',
-                borderRadius: 999,
-                background: 'rgba(99, 102, 241, 0.25)',
-                border: '1px solid rgba(129, 140, 248, 0.4)',
-                color: '#c7d2fe',
-                fontWeight: 600,
-                letterSpacing: '0.02em',
-                marginLeft: 6
-              }}
-              title="Duration / Timelapse"
-            >
-              ⏱ {formatTimelapseDuration(duration)}
-            </span>
-          )}
 
           {snapshotMsg && (
             <span style={{ fontSize: 11, color: '#34d399', fontWeight: 600, marginLeft: 4 }}>
@@ -678,32 +448,64 @@ function CustomVideoPlayer({ src }: VideoPlayerProps): JSX.Element {
 
           <div className="fv-controls-spacer" />
 
-          {/* Volume */}
-          <button className="fv-ctrl-btn" onClick={toggleMute} title="Toggle mute">
+          <button
+            className="fv-ctrl-btn"
+            onClick={() => {
+              if (volume > 0) {
+                setVolume(0)
+                if (videoRef.current) videoRef.current.volume = 0
+              } else {
+                setVolume(0.8)
+                if (videoRef.current) videoRef.current.volume = 0.8
+              }
+            }}
+          >
             {volume === 0 ? '🔇' : volume < 0.5 ? '🔉' : '🔊'}
           </button>
+
           <input
             className="fv-volume-slider"
-            type="range" min={0} max={1} step={0.05}
+            type="range"
+            min={0}
+            max={1}
+            step={0.05}
             value={volume}
-            onChange={e => handleVolumeChange(parseFloat(e.target.value))}
-            title="Volume"
+            onChange={(e) => {
+              const val = parseFloat(e.target.value)
+              setVolume(val)
+              if (videoRef.current) videoRef.current.volume = val
+            }}
           />
 
-          {/* Speed */}
           <select
             className="fv-speed-select"
             value={speed}
-            onChange={e => handleSpeedChange(parseFloat(e.target.value))}
-            title="Playback speed"
+            onChange={(e) => {
+              const val = parseFloat(e.target.value)
+              setSpeed(val)
+              if (videoRef.current) videoRef.current.playbackRate = val
+            }}
           >
-            {[0.25, 0.5, 0.75, 1, 1.25, 1.5, 2].map(s => (
-              <option key={s} value={s}>{s}×</option>
+            {[0.25, 0.5, 0.75, 1, 1.25, 1.5, 2].map((s) => (
+              <option key={s} value={s}>
+                {s}×
+              </option>
             ))}
           </select>
 
-          {/* Fullscreen */}
-          <button className="fv-ctrl-btn" onClick={toggleFullscreen} title="Toggle fullscreen">
+          <button
+            className="fv-ctrl-btn"
+            onClick={() => {
+              if (!containerRef.current) return
+              if (!document.fullscreenElement) {
+                containerRef.current.requestFullscreen().catch(console.error)
+                setIsFullscreen(true)
+              } else {
+                document.exitFullscreen().catch(console.error)
+                setIsFullscreen(false)
+              }
+            }}
+          >
             {isFullscreen ? '⊠' : '⛶'}
           </button>
         </div>
@@ -712,8 +514,12 @@ function CustomVideoPlayer({ src }: VideoPlayerProps): JSX.Element {
   )
 }
 
-// ── Main FileViewer component ────────────────────────────────────
-export default function FileViewer({ filePath, onClose }: Props): JSX.Element | null {
+// ── Main Universal FileViewer Component ───────────────────────────
+export default function FileViewer({
+  filePath,
+  onClose,
+  isStandaloneWindow = false
+}: FileViewerProps): JSX.Element | null {
   if (!filePath) return null
 
   const [currentPath, setCurrentPath] = useState<string | null>(filePath)
@@ -729,109 +535,163 @@ export default function FileViewer({ filePath, onClose }: Props): JSX.Element | 
     return dot !== -1 ? currentPath.slice(dot).toLowerCase() : ''
   }, [currentPath])
 
-  const mode = useMemo(() => detectMode(ext), [ext])
-  const name = useMemo(() => currentPath ? basename(currentPath) : '', [currentPath])
+  const mode = useMemo(() => detectViewerMode(ext), [ext])
+  const name = useMemo(() => (currentPath ? fileBasename(currentPath) : ''), [currentPath])
   const isRaw = RAW_EXTS.has(ext)
 
-  // ── State ───────────────────────────────────────────────────
-  const [imgSrc,   setImgSrc]   = useState<string | null>(null)
+  // ── States for file contents ──
+  const [imgSrc, setImgSrc] = useState<string | null>(null)
   const [videoSrc, setVideoSrc] = useState<string | null>(null)
-  const [pdfBase64,setPdfBase64]= useState<string | null>(null)
-  const [docHtml,  setDocHtml]  = useState<string | null>(null)
-  const [xlsxB64,  setXlsxB64] = useState<string | null>(null)
-  const [info,     setInfo]     = useState<FileInfo | null>(null)
-  const [loading,  setLoading]  = useState(true)
-  const [error,    setError]    = useState<string | null>(null)
+  const [audioSrc, setAudioSrc] = useState<string | null>(null)
+  const [pdfBase64, setPdfBase64] = useState<string | null>(null)
+  const [docHtml, setDocHtml] = useState<string | null>(null)
+  const [docText, setDocText] = useState<string | null>(null)
+  const [isLegacyDoc, setIsLegacyDoc] = useState(false)
+  const [xlsxB64, setXlsxB64] = useState<string | null>(null)
+  const [csvText, setCsvText] = useState<string | null>(null)
+  const [codeContent, setCodeContent] = useState<string | null>(null)
+  const [info, setInfo] = useState<FileInfo | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [zoom, setZoom] = useState(1)
 
-  // Zoom state (images only — synced to ImagePane)
-  const [zoom,    setZoom]    = useState(1)
-
-  // ── Fetch siblings list ─────────────────────────────────────
+  // ── Load sibling files for navigation ──
   useEffect(() => {
     if (!currentPath) return
-    api().viewer.getSiblingFiles(currentPath).then((res: any) => {
-      if (res.ok && res.siblings) {
-        setSiblings(res.siblings)
-      }
-    }).catch((err: any) => {
-      console.error('Failed to get sibling files:', err)
-    })
+    const v = api()?.viewer
+    if (v?.getSiblingFiles) {
+      v.getSiblingFiles(currentPath)
+        .then((res: any) => {
+          if (res.ok && Array.isArray(res.siblings)) {
+            setSiblings(res.siblings)
+          }
+        })
+        .catch(console.error)
+    }
   }, [currentPath])
 
-  // ── Load file ───────────────────────────────────────────────
+  // ── Load target file ──
   useEffect(() => {
     if (!currentPath) return
+    let active = true
     setLoading(true)
     setError(null)
     setImgSrc(null)
     setVideoSrc(null)
+    setAudioSrc(null)
     setPdfBase64(null)
     setDocHtml(null)
+    setDocText(null)
+    setIsLegacyDoc(false)
     setXlsxB64(null)
+    setCsvText(null)
+    setCodeContent(null)
     setZoom(1)
 
-    const v = api().viewer
+    const v = api()?.viewer
 
     ;(async () => {
       try {
-        // File info (size, dimensions, etc.) — non-blocking
-        v.getFileInfo(currentPath).then((infoRes: any) => {
-          if (infoRes.ok) setInfo(infoRes)
-        }).catch(() => { /* non-fatal */ })
+        // Fetch file stats
+        if (v?.getFileInfo) {
+          v.getFileInfo(currentPath)
+            .then((res: any) => {
+              if (active && res.ok) setInfo(res)
+            })
+            .catch(() => {})
+        }
 
         if (mode === 'image') {
           if (isRaw) {
-            // RAW → convert via sharp on main process
             const res = await v.readRaw(currentPath)
+            if (!active) return
             if (res.ok) setImgSrc(res.dataUrl)
             else setError(`RAW decode failed: ${res.error}`)
           } else {
             try {
-              if (v.readImageBase64) {
-                const imgRes = await v.readImageBase64(currentPath);
-                if (imgRes && imgRes.ok && imgRes.dataUrl) {
-                  setImgSrc(imgRes.dataUrl);
-                  return;
+              if (v?.readImageBase64) {
+                const imgRes = await v.readImageBase64(currentPath)
+                if (active && imgRes?.ok && imgRes.dataUrl) {
+                  setImgSrc(imgRes.dataUrl)
+                  return
                 }
               }
-            } catch (e) {}
-            setImgSrc(toLocalResourceUrl(currentPath));
+            } catch {}
+            if (active) setImgSrc(toLocalResourceUrl(currentPath))
           }
         } else if (mode === 'video') {
-          // Build a proper local-resource URL — Electron's net.fetch handles Range headers
-          setVideoSrc(toLocalResourceUrl(currentPath))
+          if (active) setVideoSrc(toLocalResourceUrl(currentPath))
+        } else if (mode === 'audio') {
+          if (active) setAudioSrc(toLocalResourceUrl(currentPath))
         } else if (mode === 'pdf') {
-          // Read PDF as base64 → convert to Blob URL in PdfPane to avoid iframe CSP
           const res = await v.readPdfBase64(currentPath)
+          if (!active) return
           if (res.ok) setPdfBase64(res.base64)
           else setError(`PDF read failed: ${res.error}`)
-        } else if (mode === 'docx') {
-          const res = await v.readFileBase64(currentPath)
-          if (!res.ok) throw new Error(res.error)
-          // Parse docx in renderer with mammoth
-          const mammoth = await import('mammoth')
-          const buf = Uint8Array.from(atob(res.base64), c => c.charCodeAt(0)).buffer
-          const result = await mammoth.convertToHtml({ arrayBuffer: buf })
-          setDocHtml(result.value)
-        } else if (mode === 'xlsx') {
-          const res = await v.readFileBase64(currentPath)
-          if (!res.ok) throw new Error(res.error)
-          setXlsxB64(res.base64)
+        } else if (mode === 'doc') {
+          if (ext === '.docx') {
+            const res = await v.readFileBase64(currentPath)
+            if (!active) return
+            if (!res.ok) throw new Error(res.error)
+            const mammoth = await import('mammoth')
+            const buf = Uint8Array.from(atob(res.base64), (c) => c.charCodeAt(0)).buffer
+            const result = await mammoth.convertToHtml({ arrayBuffer: buf })
+            if (active) setDocHtml(result.value)
+          } else {
+            // Legacy .doc / .rtf
+            const res = await v.readDoc(currentPath)
+            if (!active) return
+            if (!res.ok) throw new Error(res.error)
+            if (res.isDocx && res.base64) {
+              const mammoth = await import('mammoth')
+              const buf = Uint8Array.from(atob(res.base64), (c) => c.charCodeAt(0)).buffer
+              const result = await mammoth.convertToHtml({ arrayBuffer: buf })
+              if (active) setDocHtml(result.value)
+            } else {
+              if (active) {
+                setDocText(res.text || '')
+                setIsLegacyDoc(true)
+              }
+            }
+          }
+        } else if (mode === 'spreadsheet') {
+          if (ext === '.csv' || ext === '.tsv') {
+            const res = await v.readText(currentPath)
+            if (!active) return
+            if (!res.ok) throw new Error(res.error)
+            setCsvText(res.text)
+          } else {
+            const res = await v.readFileBase64(currentPath)
+            if (!active) return
+            if (!res.ok) throw new Error(res.error)
+            setXlsxB64(res.base64)
+          }
         } else if (mode === 'markdown') {
           const res = await v.readText(currentPath)
+          if (!active) return
           if (!res.ok) throw new Error(res.error)
           const { marked } = await import('marked')
           const html = await marked(res.text, { gfm: true, breaks: true })
-          setDocHtml(typeof html === 'string' ? html : String(html))
+          if (active) setDocHtml(typeof html === 'string' ? html : String(html))
+        } else if (mode === 'code') {
+          const res = await v.readText(currentPath)
+          if (!active) return
+          if (!res.ok) throw new Error(res.error)
+          setCodeContent(res.text)
         }
-      } catch (e: any) {
-        setError(e.message ?? String(e))
+      } catch (err: any) {
+        if (active) setError(err?.message || String(err))
       } finally {
-        setLoading(false)
+        if (active) setLoading(false)
       }
     })()
-  }, [currentPath, mode, isRaw])
 
+    return () => {
+      active = false
+    }
+  }, [currentPath, mode, ext, isRaw])
+
+  // ── Sibling Navigation ──
   const handlePrev = useCallback(() => {
     if (!currentPath || siblings.length <= 1) return
     const idx = siblings.indexOf(currentPath)
@@ -850,72 +710,115 @@ export default function FileViewer({ filePath, onClose }: Props): JSX.Element | 
     }
   }, [currentPath, siblings])
 
-  // ── Keyboard handling ───────────────────────────────────────
+  // ── Keyboard Shortcuts ──
   useEffect(() => {
     const handler = (e: KeyboardEvent): void => {
       if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return
       if (e.key === 'Escape') {
         onClose()
-      } else if (e.key === 'ArrowLeft') {
+      } else if (e.key === 'ArrowLeft' && mode !== 'video') {
         e.preventDefault()
         handlePrev()
-      } else if (e.key === 'ArrowRight') {
+      } else if (e.key === 'ArrowRight' && mode !== 'video') {
         e.preventDefault()
         handleNext()
       }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [onClose, handlePrev, handleNext])
+  }, [onClose, handlePrev, handleNext, mode])
 
-  // ── Zoom controls (images) ──────────────────────────────────
-  function zoomIn():    void { setZoom(z => Math.min(z + 0.25, 12)) }
-  function zoomOut():   void { setZoom(z => Math.max(z - 0.25, 0.1)) }
-  function zoomReset(): void { setZoom(1) }
-
-  // ── File meta display ───────────────────────────────────────
-  const metaParts: string[] = []
-  if (info) {
-    metaParts.push(formatSize(info.size))
-    if (info.dimensions) metaParts.push(`${info.dimensions.width}×${info.dimensions.height}`)
-    metaParts.push(ext.toUpperCase().slice(1))
+  // Actions
+  const openInDefaultApp = () => {
+    if (!currentPath) return
+    const v = api()?.viewer
+    if (v?.openExternal) {
+      v.openExternal(currentPath)
+    } else if (api()?.shell?.openExternal) {
+      api().shell.openExternal(`file:///${currentPath.replace(/\\/g, '/')}`)
+    }
   }
 
-  // ── Render ──────────────────────────────────────────────────
+  const revealInFolder = () => {
+    if (!currentPath) return
+    const v = api()?.viewer
+    if (v?.showItemInFolder) {
+      v.showItemInFolder(currentPath)
+    }
+  }
+
+  const copyPath = () => {
+    if (currentPath) navigator.clipboard.writeText(currentPath)
+  }
+
+  const metaParts: string[] = []
+  if (info) {
+    metaParts.push(formatFileSize(info.size))
+    if (info.dimensions) metaParts.push(`${info.dimensions.width}×${info.dimensions.height}`)
+    metaParts.push(ext.toUpperCase().slice(1) || 'FILE')
+  }
+
+  const siblingIndex = currentPath ? siblings.indexOf(currentPath) : -1
+
   return (
-    <div className="fv-backdrop" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      {/* ── Toolbar ── */}
+    <div
+      className={`fv-backdrop ${isStandaloneWindow ? 'fv-standalone-mode' : ''}`}
+      onClick={(e) => {
+        if (!isStandaloneWindow && e.target === e.currentTarget) onClose()
+      }}
+    >
+      {/* ── Top Header Toolbar ── */}
       <div className="fv-toolbar">
         <div className="fv-toolbar-left">
-          <span className="fv-file-icon">{fileIcon(mode, ext)}</span>
+          <span className="fv-file-icon">{fileViewerIcon(mode, ext)}</span>
           <div className="fv-file-info">
-            <div className="fv-file-name" title={currentPath ?? ''}>{name}</div>
-            {metaParts.length > 0 && (
-              <div className="fv-file-meta">{metaParts.join('  ·  ')}</div>
-            )}
+            <div className="fv-file-name" title={currentPath ?? ''}>
+              {name}
+            </div>
+            {metaParts.length > 0 && <div className="fv-file-meta">{metaParts.join('  ·  ')}</div>}
           </div>
         </div>
 
-        {/* ── Image zoom controls ── */}
-        {mode === 'image' && !loading && !error && (
-          <div className="fv-toolbar-center">
-            <button className="fv-btn fv-btn-icon" onClick={zoomOut} title="Zoom out">−</button>
-            <span className="fv-zoom-label">{Math.round(zoom * 100)}%</span>
-            <button className="fv-btn fv-btn-icon" onClick={zoomIn}  title="Zoom in">+</button>
-            <button className="fv-btn" onClick={zoomReset} title="Reset zoom">↺ Fit</button>
+        {/* Sibling Counter */}
+        {siblings.length > 1 && siblingIndex !== -1 && (
+          <div className="fv-toolbar-counter">
+            <button className="fv-counter-btn" onClick={handlePrev} title="Previous File (Left Arrow)">
+              ◀
+            </button>
+            <span className="fv-counter-txt">
+              {siblingIndex + 1} / {siblings.length}
+            </span>
+            <button className="fv-counter-btn" onClick={handleNext} title="Next File (Right Arrow)">
+              ▶
+            </button>
           </div>
         )}
 
+        {/* Image Zoom Controls */}
+        {mode === 'image' && !loading && !error && (
+          <div className="fv-toolbar-center">
+            <button className="fv-btn fv-btn-icon" onClick={() => setZoom((z) => Math.max(z - 0.25, 0.1))} title="Zoom out">
+              −
+            </button>
+            <span className="fv-zoom-label">{Math.round(zoom * 100)}%</span>
+            <button className="fv-btn fv-btn-icon" onClick={() => setZoom((z) => Math.min(z + 0.25, 12))} title="Zoom in">
+              +
+            </button>
+            <button className="fv-btn" onClick={() => setZoom(1)} title="Fit to Screen">
+              ↺ Fit
+            </button>
+          </div>
+        )}
+
+        {/* Global Right Actions */}
         <div className="fv-toolbar-right">
-          <button
-            className="fv-btn"
-            onClick={() => {
-              if (currentPath) {
-                ;(window as any).api.shell.openExternal(`file:///${currentPath.replace(/\\/g, '/')}`)
-              }
-            }}
-            title="Open in default app"
-          >
+          <button className="fv-btn" onClick={copyPath} title="Copy absolute file path">
+            📋 Copy Path
+          </button>
+          <button className="fv-btn" onClick={revealInFolder} title="Show in File Explorer">
+            📁 Reveal
+          </button>
+          <button className="fv-btn" onClick={openInDefaultApp} title="Open in Windows Default App">
             ↗ Open With
           </button>
           <div className="fv-divider" />
@@ -925,33 +828,13 @@ export default function FileViewer({ filePath, onClose }: Props): JSX.Element | 
         </div>
       </div>
 
-      {/* ── Sibling navigation buttons ── */}
-      {siblings.length > 1 && (
-        <>
-          <button
-            className="fv-nav-btn fv-nav-left"
-            onClick={e => { e.stopPropagation(); handlePrev() }}
-            title="Previous (Left Arrow)"
-          >
-            ◀
-          </button>
-          <button
-            className="fv-nav-btn fv-nav-right"
-            onClick={e => { e.stopPropagation(); handleNext() }}
-            title="Next (Right Arrow)"
-          >
-            ▶
-          </button>
-        </>
-      )}
-
-      {/* ── Content ── */}
+      {/* ── Main Content Area ── */}
       <div className="fv-content">
         {loading && (
           <div className="fv-center">
             <div className="fv-spinner" />
             <span>
-              {isRaw ? 'Decoding RAW photo…' : mode === 'pdf' ? 'Loading PDF…' : 'Loading…'}
+              {isRaw ? 'Decoding RAW camera image…' : mode === 'pdf' ? 'Loading PDF Document…' : 'Preparing File Preview…'}
             </span>
           </div>
         )}
@@ -960,54 +843,49 @@ export default function FileViewer({ filePath, onClose }: Props): JSX.Element | 
           <div className="fv-center">
             <div className="fv-error-icon">⚠️</div>
             <div className="fv-error-msg">{error}</div>
-            <button
-              className="fv-btn"
-              onClick={() => {
-                if (currentPath) {
-                  ;(window as any).api.shell.openExternal(`file:///${currentPath.replace(/\\/g, '/')}`)
-                }
-              }}
-            >
-              Open in Default App Instead
-            </button>
+            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+              <button className="fv-btn" onClick={openInDefaultApp}>
+                Open in Default Windows App
+              </button>
+              <button className="fv-btn" onClick={revealInFolder}>
+                Reveal in Explorer
+              </button>
+            </div>
           </div>
         )}
 
-        {!loading && !error && mode === 'image' && imgSrc && (
-          <ImagePane src={imgSrc} info={info} />
-        )}
+        {!loading && !error && mode === 'image' && imgSrc && <ImagePane src={imgSrc} info={info} />}
 
-        {!loading && !error && mode === 'video' && videoSrc && (
-          <CustomVideoPlayer src={videoSrc} />
+        {!loading && !error && mode === 'video' && videoSrc && <CustomVideoPlayer src={videoSrc} />}
+
+        {!loading && !error && mode === 'audio' && audioSrc && (
+          <AudioPane src={audioSrc} fileName={name} />
         )}
 
         {!loading && !error && mode === 'pdf' && (
           <PdfPane base64={pdfBase64} filePath={currentPath ?? ''} loading={loading} />
         )}
 
-        {!loading && !error && (mode === 'docx' || mode === 'markdown') && docHtml !== null && (
-          <DocPane html={docHtml} />
+        {!loading && !error && (mode === 'doc' || mode === 'markdown') && (docHtml !== null || docText !== null) && (
+          <DocPane
+            html={docHtml}
+            text={docText}
+            isLegacyDoc={isLegacyDoc}
+            fileName={name}
+          />
         )}
 
-        {!loading && !error && mode === 'xlsx' && xlsxB64 && (
-          <XlsxPane base64={xlsxB64} />
+        {!loading && !error && mode === 'spreadsheet' && (xlsxB64 || csvText) && (
+          <XlsxPane base64={xlsxB64 || undefined} textCsv={csvText || undefined} fileName={name} />
         )}
 
-        {!loading && !error && mode === 'unknown' && (
-          <div className="fv-center">
-            <div className="fv-error-icon">🗂️</div>
-            <span>This file type ({ext || 'unknown'}) is not supported for preview.</span>
-            <button
-              className="fv-btn"
-              onClick={() => {
-                if (currentPath) {
-                  ;(window as any).api.shell.openExternal(`file:///${currentPath.replace(/\\/g, '/')}`)
-                }
-              }}
-            >
-              Open in Default App
-            </button>
-          </div>
+        {!loading && !error && mode === 'code' && codeContent !== null && (
+          <CodePane content={codeContent} ext={ext} filePath={currentPath ?? undefined} />
+        )}
+
+        {/* Universal Fallback Hex Inspector for ANY unknown extension */}
+        {!loading && !error && mode === 'unknown' && currentPath && (
+          <HexDumpPane filePath={currentPath} fileSize={info?.size} ext={ext} />
         )}
       </div>
     </div>
