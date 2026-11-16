@@ -56,10 +56,17 @@ export default function Sidebar({
     const handleSelect = (e: any) => {
       if (e.detail?.safarName) {
         setSelectedTrackerSafar(e.detail.safarName)
+      } else if (e.detail && 'safarName' in e.detail && !e.detail.safarName) {
+        setSelectedTrackerSafar(null)
       }
     }
+    const handleResetOverview = () => setSelectedTrackerSafar(null)
     window.addEventListener('ot-select-safar', handleSelect)
-    return () => window.removeEventListener('ot-select-safar', handleSelect)
+    window.addEventListener('ot-safars-overview', handleResetOverview)
+    return () => {
+      window.removeEventListener('ot-select-safar', handleSelect)
+      window.removeEventListener('ot-safars-overview', handleResetOverview)
+    }
   }, [])
 
   // Load and refresh active unarchived safars
@@ -171,7 +178,7 @@ export default function Sidebar({
           label: 'Batch Mode',
           badge: 'Default',
           subLabel: 'Auto-detect all folder clips',
-          active: activePage === 'adder' && isBatch,
+          active: isBatch,
           onClick: () => {
             titleAdderStore.setState({ mode: 'batch' })
             onNavigate('adder')
@@ -181,7 +188,7 @@ export default function Sidebar({
           id: 'single',
           label: 'Single / Custom',
           subLabel: 'Custom titles & individual trims',
-          active: activePage === 'adder' && !isBatch,
+          active: !isBatch,
           onClick: () => {
             titleAdderStore.setState({ mode: 'single' })
             onNavigate('adder')
@@ -198,7 +205,7 @@ export default function Sidebar({
             label: 'Open Task Tracker',
             subLabel: 'All Safars 100% / Archived',
             badge: '0 Pending',
-            active: activePage === 'tracker',
+            active: true,
             onClick: () => {
               setSelectedTrackerSafar(null)
               onNavigate('tracker')
@@ -212,7 +219,7 @@ export default function Sidebar({
           id: '__overview__',
           label: 'All Active Safars',
           badge: `${activeSafars.length} Active`,
-          active: activePage === 'tracker' && (!selectedTrackerSafar || selectedTrackerSafar === '__overview__'),
+          active: !selectedTrackerSafar || selectedTrackerSafar === '__overview__',
           onClick: () => {
             setSelectedTrackerSafar(null)
             onNavigate('tracker')
@@ -227,7 +234,7 @@ export default function Sidebar({
           label: s.safarName,
           subLabel: s.city || s.currentDrive,
           badge: daysBadge,
-          active: activePage === 'tracker' && selectedTrackerSafar === s.safarName,
+          active: selectedTrackerSafar === s.safarName,
           onClick: () => {
             setSelectedTrackerSafar(s.safarName)
             onNavigate('tracker')
