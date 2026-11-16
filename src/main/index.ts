@@ -74,6 +74,7 @@ import { registerAnyShareIPC } from './ipc/anyshare.ipc'
 import { initAnyShareBridge } from './core/anyshareBridge'
 import { initDynamicIsland } from './core/dynamicIsland'
 import { openViewerWindow } from './core/viewerWindowManager'
+import { initStatsSyncDaemon, flushStatsOnQuit } from './core/statsSyncDaemon'
 import { resolveChildAppLoaderConfig, showChildAppSplash, closeChildAppSplash, ChildAppLoaderConfig } from './core/splash'
 import http from 'http'
 
@@ -1165,6 +1166,7 @@ app.whenReady().then(() => {
   initDynamicIsland(() => mainWindow)
   startDriveWatcherDaemon(() => mainWindow)
   initAnyShareBridge(mainWindow)
+  initStatsSyncDaemon()
 
   // Apply Adobe-style custom folder icon branding to program folder in production
   if (app.isPackaged) {
@@ -1185,6 +1187,7 @@ app.whenReady().then(() => {
   app.on('before-quit', () => {
     ;(app as any).isQuitting = true
     flushSaveSync()
+    flushStatsOnQuit().catch(() => {})
   })
 
 function normalizeFolderPath(folderPath: any): string {

@@ -35,13 +35,15 @@ import {
   Globe,
   Building2,
   FileText,
-  Sparkles
+  Sparkles,
+  BarChart3
 } from 'lucide-react'
 import OngoingSafarKanban, { type SafarTaskItem, isJunkSafarName } from './components/OngoingSafarKanban'
 import PhotoTracker from './components/PhotoTracker'
 import EmailLoginModal from './components/EmailLoginModal'
 import StandaloneWidgetView from './components/StandaloneWidgetView'
 import SafarBriefingView from './components/SafarBriefingView'
+import WorkstationStatsView from './components/WorkstationStatsView'
 import AppLoader from './components/AppLoader'
 import {
   sendWhatsAppAlert,
@@ -65,7 +67,7 @@ export function normalizeStage(raw?: string): Stage {
 export type PhotoStage = 'edited' | 'given_to_murtaza' | 'uploaded'
 export const DEFAULT_EDITOR = 'Murtaza'
 export const DEFAULT_PHOTO_EDITOR = 'Muffadal Peti'
-type View = 'dashboard' | 'ongoing' | 'photos' | 'tracker' | 'archive' | 'editors' | 'pipeline' | 'settings' | 'widget' | 'briefing'
+type View = 'dashboard' | 'ongoing' | 'photos' | 'tracker' | 'archive' | 'editors' | 'pipeline' | 'stats' | 'settings' | 'widget' | 'briefing'
 
 const VIEW_PATHS: Record<View, string> = {
   dashboard: '/',
@@ -75,6 +77,7 @@ const VIEW_PATHS: Record<View, string> = {
   archive: '/archive',
   editors: '/editors',
   pipeline: '/pipeline',
+  stats: '/stats',
   settings: '/settings',
   widget: '/widget',
   briefing: '/briefing'
@@ -97,6 +100,7 @@ function parseUrlRoute(): { view: View; safar?: string } {
     if (candidate === 'archive' || candidate === 'archived') return { view: 'archive', safar: safarParam }
     if (candidate === 'editors' || candidate === 'team') return { view: 'editors', safar: safarParam }
     if (candidate === 'pipeline' || candidate === 'media') return { view: 'pipeline', safar: safarParam }
+    if (candidate === 'stats' || candidate === 'telemetry' || candidate === 'app-stats') return { view: 'stats', safar: safarParam }
     if (candidate === 'settings') return { view: 'settings', safar: safarParam }
     if (candidate === 'widget' || candidate === 'home-widget' || candidate === 'live-widget') return { view: 'widget', safar: safarParam }
   } catch {}
@@ -112,7 +116,7 @@ export function getPublicWebsiteOrigin(): string {
   }
   return 'https://safar-tracker-web.vercel.app'
 }
-type SafarTask = {
+export type SafarTask = {
   id: string
   safarName: string
   dateFolder: string
@@ -1105,6 +1109,7 @@ export default function App(): JSX.Element {
     archive: { title: 'Archived Safars', eyebrow: 'COMPLETED & STORED', description: 'Archived Safars remain available here and can be restored at any time.' },
     editors: { title: 'Editors & assignments', eyebrow: 'TEAM WORKLOAD', description: 'See who is working on each date and where it is in the pipeline.' },
     pipeline: { title: 'Media pipeline', eyebrow: 'PRODUCTION STAGES', description: 'Follow each date from rendering through AlJamea submission.' },
+    stats: { title: 'App & Workstation Stats', eyebrow: 'TELEMETRY & WORKSPACE PERFORMANCE', description: 'Real-time production metrics, team velocity, and 24/7 cloud-synced workstation records.' },
     settings: { title: 'Workspace settings', eyebrow: 'YOUR WORKSPACE', description: 'Manage alerts, login credentials, and check your One Tap sync connection.' },
     widget: { title: 'Live Safar Widget', eyebrow: 'MOBILE HOME SCREEN WIDGET', description: 'High-density live status card for home screens and lock screens.' },
     briefing: { title: 'Safar Status Briefing', eyebrow: 'OFFICIAL PRODUCTION UPDATE', description: 'Verified delivery milestones, stage counts, and date breakdown for this Safar.' }
@@ -1118,6 +1123,7 @@ export default function App(): JSX.Element {
     archive: 'Archive',
     editors: 'Editors',
     pipeline: 'Pipeline',
+    stats: 'Stats',
     settings: 'Settings',
     widget: 'Widget',
     briefing: 'Briefing'
@@ -2428,6 +2434,9 @@ export default function App(): JSX.Element {
           <button type="button" aria-current={view === 'pipeline' ? 'page' : undefined} className={`nav-link ${view === 'pipeline' ? 'active' : ''}`} onClick={() => navigateTo('pipeline')}>
             <Film aria-hidden="true" size={17}/> Media pipeline
           </button>
+          <button type="button" aria-current={view === 'stats' ? 'page' : undefined} className={`nav-link ${view === 'stats' ? 'active' : ''}`} onClick={() => navigateTo('stats')}>
+            <BarChart3 aria-hidden="true" size={17}/> App Stats
+          </button>
         </nav>
 
         <div className="sidebar-bottom">
@@ -3301,6 +3310,22 @@ export default function App(): JSX.Element {
             {view === 'editors' && rows.length > pageSize && <nav className="pagination" aria-label="Editor assignment pages"><button type="button" className="button-secondary" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}>Previous</button><span>Page {currentPage + 1} of {pageCount}</span><button type="button" className="button-secondary" disabled={currentPage + 1 >= pageCount} onClick={() => setPage(currentPage + 1)}>Next</button></nav>}
             <div className={`table-footer ${view === 'pipeline' ? 'hidden-view' : ''}`}><span>Showing <strong>{visibleRows.length}</strong> of <strong>{rows.length}</strong> matching dates</span><span className="footer-sync">{saving ? 'Syncing changes…' : connected ? 'Changes sync in real time' : 'Changes saved on this device'} <span className={`status-dot ${connected ? 'online' : ''}`}/></span></div>
           </section>}
+
+          {/* VIEW: WORKSTATION & APP STATS */}
+          {view === 'stats' && (
+            <WorkstationStatsView
+              tasks={snapshot.tasks}
+              safars={snapshot.safars}
+              activeSafarGroups={activeSafarGroups}
+              lastUpdated={snapshot.updatedAt}
+              connected={connected}
+              onRefresh={requestDesktopSync}
+              onNavigateToSafar={(safar) => {
+                setSelectedSafar(safar)
+                navigateTo('ongoing', safar)
+              }}
+            />
+          )}
 
           {/* VIEW: SETTINGS */}
           {view === 'settings' && <section className="settings-grid">
