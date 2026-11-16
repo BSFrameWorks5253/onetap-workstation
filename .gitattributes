@@ -1,1 +1,21 @@
-* text eol=lf
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.bmp binary
+*.webp binary
+*.mp4 binary
+*.mov binary
+*.zip binary
+*.tar.gz binary
+*.pdf binary
+*.xlsx binary
+*.docx binary
+*.exe binary
+*.dll binary
+*.node binary
+*.pfx binary
+*.cer binary
+

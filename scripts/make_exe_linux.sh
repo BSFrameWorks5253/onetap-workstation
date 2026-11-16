@@ -25,4 +25,4 @@ if ! python3 -c "import tkinter" &>/dev/null; then
 fi
 
 echo "🚀 Launching Uni Desk Windows EXE Builder Studio GUI..."
-python3 scripts/make_exe_gui.py "$@"
+python3 "$SCRIPT_DIR/make_exe_cross.py" "$@"
