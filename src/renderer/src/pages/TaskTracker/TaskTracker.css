@@ -2506,3 +2506,54 @@
 }
 
 
+
+
+/* Auto-Sync & Gaps Detection Styles */
+.tracker-autosync-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: rgba(30, 41, 59, 0.45);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(8px);
+}
+
+.autosync-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #94A3B8;
+}
+
+.autosync-dot.pulsing {
+  background: #10B981;
+  box-shadow: 0 0 8px #10B981;
+  animation: liveDot 2s infinite ease-in-out;
+}
+
+.tracker-autosync-select {
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+  padding: 0 2px;
+}
+
+.tracker-autosync-select option {
+  background: #0f172a;
+  color: #fff;
+}
+
+.safar-gaps-chip {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.safar-gaps-chip:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.35);
+}

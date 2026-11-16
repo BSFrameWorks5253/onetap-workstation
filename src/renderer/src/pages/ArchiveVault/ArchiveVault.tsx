@@ -16,6 +16,7 @@ import { SafarSearchSelect } from '../../components/SafarSearchSelect'
 import { DateSearchSelect, ArchiveDateItem } from '../../components/DateSearchSelect'
 import { EventSearchSelect } from '../../components/EventSearchSelect'
 import { GenerateExcelModal } from './GenerateExcelModal'
+import VideoHoverScrub from '../../components/VideoHoverScrub/VideoHoverScrub'
 import { extractTargetFinalVideo } from '../../utils/safarUtils'
 import type { ScannedArchive, MediaItem, DriveVolume, AuditRecord, AuditSummary, AuditFolderSummary } from '../../types'
 import './ArchiveVault.css'
@@ -2439,19 +2440,34 @@ export default function ArchiveVault(): JSX.Element {
                         onContextMenu={(e) => handleRowContextMenu(e, item)}
                       >
                         <td>
-                          <strong>{isFolder ? `📁 ${item.file_name}` : item.file_name}</strong>
-                          <div style={{ fontSize: '11px', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
-                            <span>{item.safar_name}</span>
-                            {item.archive_id && (
-                              <button
-                                className="vault-btn vault-btn-ghost"
-                                style={{ padding: '0px 5px', fontSize: '10px', height: '18px', lineHeight: '18px', borderRadius: '4px' }}
-                                onClick={() => handleOpenDaysBreakdown(item.archive_id!)}
-                                title="Open Day Count Breakdown Popup"
-                              >
-                                🗓️ Days
-                              </button>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            {item.media_type === 'video' && online && (item.full_path || item.relative_path) && (
+                              <div style={{ width: '56px', height: '34px', flexShrink: 0, borderRadius: '6px', overflow: 'hidden' }}>
+                                <VideoHoverScrub
+                                  src={item.full_path || item.relative_path}
+                                  width="56px"
+                                  height="34px"
+                                  onClick={() => handlePreviewFile(item)}
+                                  title="Hover to scrub timeline, click to open full viewer"
+                                />
+                              </div>
                             )}
+                            <div>
+                              <strong>{isFolder ? `📁 ${item.file_name}` : item.file_name}</strong>
+                              <div style={{ fontSize: '11px', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                                <span>{item.safar_name}</span>
+                                {item.archive_id && (
+                                  <button
+                                    className="vault-btn vault-btn-ghost"
+                                    style={{ padding: '0px 5px', fontSize: '10px', height: '18px', lineHeight: '18px', borderRadius: '4px' }}
+                                    onClick={() => handleOpenDaysBreakdown(item.archive_id!)}
+                                    title="Open Day Count Breakdown Popup"
+                                  >
+                                    🗓️ Days
+                                  </button>
+                                )}
+                              </div>
+                            </div>
                           </div>
                         </td>
                         <td>

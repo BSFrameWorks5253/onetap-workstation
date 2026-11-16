@@ -1556,6 +1556,46 @@ function normalizeFolderPath(folderPath: any): string {
           res.end(JSON.stringify({ error: e?.message || 'Invalid JSON' }))
         }
       })
+    } else if (req.method === 'POST' && req.url === '/update-task-status') {
+      let body = ''
+      req.on('data', chunk => { body += chunk.toString() })
+      req.on('end', () => {
+        try {
+          const parsed = JSON.parse(body || '{}')
+          const { safarName, dateFolder, status = 'upload_pending', sequenceName = '', message = '' } = parsed
+
+          if (mainWindow) {
+            mainWindow.webContents.send('tracker:taskStatusUpdatedFromExtension', {
+              safarName,
+              dateFolder,
+              status,
+              sequenceName,
+              message,
+              timestamp: Date.now()
+            })
+          }
+
+          if (Notification.isSupported()) {
+            new Notification({
+              title: '🎬 Premiere Pro Export Synced',
+              body: `${dateFolder || sequenceName || 'Deliverable'} • Status: ${status}`,
+              silent: false
+            }).show()
+          }
+
+          res.writeHead(200, {
+            'Access-Control-Allow-Origin': '*',
+            'Content-Type': 'application/json'
+          })
+          res.end(JSON.stringify({ success: true, updated: { safarName, dateFolder, status } }))
+        } catch (e: any) {
+          res.writeHead(500, {
+            'Access-Control-Allow-Origin': '*',
+            'Content-Type': 'application/json'
+          })
+          res.end(JSON.stringify({ error: e?.message || 'Failed to update task status' }))
+        }
+      })
     } else if (req.method === 'POST' && req.url === '/parse-manifest') {
       let body = ''
       req.on('data', chunk => { body += chunk.toString() })

@@ -35,6 +35,52 @@ function readSafarNameList(key: string): string[] {
   }
 }
 
+export function analyzeSafarGaps(tasks: TrackerTaskItem[]): string[] {
+  if (!tasks || tasks.length === 0) return []
+  const gaps: string[] = []
+  const dateMap = new Map<string, Set<string>>()
+
+  tasks.forEach((t) => {
+    const raw = (t.dateFolder || '').trim()
+    const match = raw.match(/^(\d{4}-\d{2}-\d{2})/)
+    if (match) {
+      const d = match[1]
+      if (!dateMap.has(d)) dateMap.set(d, new Set())
+      const isMorning = /_01M\b/i.test(raw) || /morning/i.test(raw)
+      const isEvening = /_02E\b/i.test(raw) || /evening/i.test(raw)
+      if (isMorning) dateMap.get(d)!.add('morning')
+      if (isEvening) dateMap.get(d)!.add('evening')
+    }
+  })
+
+  // Detect missing morning or evening in recorded dates
+  dateMap.forEach((sessions, dateStr) => {
+    if (sessions.has('morning') && !sessions.has('evening')) {
+      gaps.push(`${dateStr}: Missing Evening Session (_02E)`)
+    } else if (sessions.has('evening') && !sessions.has('morning')) {
+      gaps.push(`${dateStr}: Missing Morning Session (_01M)`)
+    }
+  })
+
+  // Detect missing calendar dates between sequential days
+  const sortedDates = Array.from(dateMap.keys()).sort()
+  for (let i = 0; i < sortedDates.length - 1; i++) {
+    const currParts = sortedDates[i].split('-').map(Number)
+    const nextParts = sortedDates[i + 1].split('-').map(Number)
+    if (currParts[0] === nextParts[0] && currParts[1] === nextParts[1]) {
+      const diff = nextParts[2] - currParts[2]
+      if (diff === 2) {
+        const missingDay = String(currParts[2] + 1).padStart(2, '0')
+        gaps.push(`Date Gap: Day ${currParts[0]}-${String(currParts[1]).padStart(2, '0')}-${missingDay} is missing between Day ${currParts[2]} and ${nextParts[2]}`)
+      } else if (diff > 2 && diff <= 4) {
+        gaps.push(`Date Gap: ${diff - 1} consecutive days missing between ${sortedDates[i]} and ${sortedDates[i + 1]}`)
+      }
+    }
+  }
+
+  return gaps
+}
+
 const STATUS_ORDER: TaskStatus[] = [
   'editing_pending',
   'editing',
@@ -138,6 +184,12 @@ export default function TaskTracker(): JSX.Element {
   const [deleteSafarConfirm, setDeleteSafarConfirm] = useState<SafarGroupItem | null>(null)
   const [isMoving, setIsMoving] = useState<boolean>(false)
   const [isDeletingSafar, setIsDeletingSafar] = useState(false)
+
+  const [autoSyncMinutes, setAutoSyncMinutes] = useState<number>(() => {
+    return Number(localStorage.getItem('ot_tracker_autosync_mins') || '15')
+  })
+  const [lastSyncedTime, setLastSyncedTime] = useState<number>(Date.now())
+  const lastSelectedTaskRef = useRef<string | null>(null)
 
   // ── Load Drive Configurations from Settings ──
   const loadDrives = async (): Promise<DriveWorkspaceConfig[]> => {
@@ -1020,6 +1072,32 @@ export default function TaskTracker(): JSX.Element {
   const toggleTaskSelection = (safarName: string, dateFolder: string, e?: React.MouseEvent | React.ChangeEvent) => {
     if (e && 'stopPropagation' in e) e.stopPropagation()
     const key = `${safarName}::${dateFolder}`
+    const isShift = (e as React.MouseEvent)?.shiftKey
+
+    if (isShift && lastSelectedTaskRef.current && lastSelectedTaskRef.current.startsWith(`${safarName}::`)) {
+      const safar = safars.find(s => s.safarName === safarName)
+      if (safar) {
+        const taskList = safar.filteredTasks || safar.tasks || []
+        const keys = taskList.map(t => `${safarName}::${t.dateFolder}`)
+        const idxA = keys.indexOf(lastSelectedTaskRef.current)
+        const idxB = keys.indexOf(key)
+        if (idxA !== -1 && idxB !== -1) {
+          const start = Math.min(idxA, idxB)
+          const end = Math.max(idxA, idxB)
+          setSelectedTasks(prev => {
+            const next = { ...prev }
+            for (let i = start; i <= end; i++) {
+              next[keys[i]] = true
+            }
+            return next
+          })
+          lastSelectedTaskRef.current = key
+          return
+        }
+      }
+    }
+
+    lastSelectedTaskRef.current = key
     setSelectedTasks(prev => ({
       ...prev,
       [key]: !prev[key]
@@ -1293,6 +1371,36 @@ export default function TaskTracker(): JSX.Element {
     return () => window.removeEventListener('ot-select-safar', handleSelectSafar)
   }, [])
 
+  // Auto-Sync Background Cron
+  useEffect(() => {
+    if (autoSyncMinutes <= 0) return
+    const timer = setInterval(() => {
+      doScan(false)
+      setLastSyncedTime(Date.now())
+    }, autoSyncMinutes * 60 * 1000)
+    return () => clearInterval(timer)
+  }, [autoSyncMinutes, drives])
+
+  // Real-time synchronization from Premiere Pro CEP Extension timeline export
+  useEffect(() => {
+    if (!api?.taskTracker?.onExtensionTaskUpdate) return
+    const unbind = api.taskTracker.onExtensionTaskUpdate((payload: any) => {
+      if (payload?.safarName && payload?.dateFolder) {
+        playSuccess()
+        showToast({
+          title: '🎬 Premiere Pro Sync',
+          message: `${payload.dateFolder} marked as ${payload.status || 'upload_pending'} from Premiere Pro`,
+          type: 'success'
+        })
+        handleSetManualStatus(
+          { taskKeys: [{ safarName: payload.safarName, dateFolder: payload.dateFolder }] },
+          (payload.status as any) || 'uploaded'
+        )
+      }
+    })
+    return () => unbind()
+  }, [])
+
   // ── Keyboard Navigation Accelerators (/ for search, Up/Down for Safars, Space to expand/collapse) ──
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -1478,6 +1586,34 @@ export default function TaskTracker(): JSX.Element {
           >
             <PageIcon pageKey="cleaner" size={13} style={{ marginRight: 6 }} color="#EF4444" /> Reset & Rescan
           </button>
+          <div
+            className="tracker-autosync-pill"
+            title={`Automatic background sync every ${autoSyncMinutes > 0 ? autoSyncMinutes + ' mins' : 'off'}. Click to adjust interval.`}
+          >
+            <span className={`autosync-dot ${autoSyncMinutes > 0 ? 'pulsing' : ''}`} />
+            <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Auto-Sync:</span>
+            <select
+              className="tracker-autosync-select"
+              value={autoSyncMinutes}
+              onChange={(e) => {
+                const val = Number(e.target.value)
+                setAutoSyncMinutes(val)
+                localStorage.setItem('ot_tracker_autosync_mins', String(val))
+                showToast({
+                  title: 'Auto-Sync Updated',
+                  message: val > 0 ? `Background sync scheduled every ${val} minutes` : 'Auto-sync turned off',
+                  type: 'info'
+                })
+              }}
+            >
+              <option value="0">Off</option>
+              <option value="5">5m</option>
+              <option value="15">15m</option>
+              <option value="30">30m</option>
+              <option value="60">1h</option>
+            </select>
+          </div>
+
           <button
             className="btn-primary-action"
             onClick={() => doScan(true)}
@@ -2015,6 +2151,31 @@ export default function TaskTracker(): JSX.Element {
                           )}
                           {safar.safarSerial && (
                             <span className="safar-serial-chip">#{safar.safarSerial}</span>)}
+                          {(() => {
+                            const gaps = analyzeSafarGaps(safar.tasks || [])
+                            if (gaps.length === 0) return null
+                            return (
+                              <span
+                                className="safar-gaps-chip"
+                                title={`Pipeline Gaps Detected:\n• ${gaps.join('\n• ')}`}
+                                style={{
+                                  background: 'rgba(245, 158, 11, 0.15)',
+                                  color: '#F59E0B',
+                                  border: '1px solid rgba(245, 158, 11, 0.35)',
+                                  padding: '2px 8px',
+                                  borderRadius: '999px',
+                                  fontSize: '11px',
+                                  fontWeight: 600,
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  cursor: 'help'
+                                }}
+                              >
+                                ⚠️ {gaps.length} Gap{gaps.length > 1 ? 's' : ''}
+                              </span>
+                            )
+                          })()}
                             {focusedSafarIndex === index && (
                               <span className="keyboard-focused-hint" title="Press Space to expand or collapse this Safar">
                                 <kbd>Space</kbd> toggle</span>)}{/*

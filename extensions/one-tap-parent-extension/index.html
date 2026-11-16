@@ -2679,6 +2679,60 @@
             } catch(eSb) {}
         }
 
+        function notifyWorkstationTaskStatus(safarName, dateFolder, status, seqName) {
+            status = status || 'upload_pending';
+            seqName = seqName || (document.getElementById('statSequenceName') ? document.getElementById('statSequenceName').innerText : '');
+
+            // Fallback: try extracting dateFolder or safar from seqName if missing
+            if (!dateFolder && seqName) {
+                var m = seqName.match(/\d{4}-\d{2}-\d{2}(?:_\d{2}[ME])?/i);
+                if (m) dateFolder = m[0];
+            }
+
+            // 1. Post to Workstation local server (port 49152)
+            try {
+                var xhrLocal = new XMLHttpRequest();
+                xhrLocal.open("POST", "http://127.0.0.1:49152/update-task-status", true);
+                xhrLocal.setRequestHeader("Content-Type", "application/json");
+                xhrLocal.timeout = 2500;
+                xhrLocal.send(JSON.stringify({
+                    safarName: safarName || '',
+                    dateFolder: dateFolder || '',
+                    status: status,
+                    sequenceName: seqName,
+                    message: 'Sequence ' + (seqName || 'export') + ' marked ' + status + ' from Premiere Pro',
+                    timestamp: new Date().toISOString()
+                }));
+            } catch(e) {}
+
+            // 2. Direct broadcast to Supabase Realtime so Web PWA updates
+            try {
+                var broadcastPayload = {
+                    messages: [{
+                        topic: "anyshare_realtime_nexus",
+                        event: "website_user_notification",
+                        payload: {
+                            type: "task_status_update",
+                            title: "🎬 Premiere Task Exported",
+                            message: "Sequence " + (seqName || '') + " set to " + status,
+                            safarName: safarName,
+                            dateFolder: dateFolder,
+                            status: status,
+                            sequenceName: seqName,
+                            timestamp: new Date().toISOString()
+                        }
+                    }]
+                };
+
+                var xhrSb = new XMLHttpRequest();
+                xhrSb.open("POST", "https://dubscvthmkgkeiqdladp.supabase.co/realtime/v1/api/broadcast", true);
+                xhrSb.setRequestHeader("apikey", "sb_publishable_kYApNvq2_6HAfNwJb8hW1g_7iLMSVyk");
+                xhrSb.setRequestHeader("Content-Type", "application/json");
+                xhrSb.timeout = 3000;
+                xhrSb.send(JSON.stringify(broadcastPayload));
+            } catch(eSb) {}
+        }
+
         function checkAppConnection() {
             var badge = document.getElementById('syncBadge');
             var text = document.getElementById('syncText');
@@ -2764,6 +2818,22 @@
                 }
             };
             xhr.send(payload);
+
+            // Automatically notify workstation and web tracker that export has completed/queued
+            try {
+                var normPath = (cleanedPath || path || '').replace(/\\/g, '/');
+                var pathParts = normPath.split('/');
+                var detectedDate = '';
+                var detectedSafar = '';
+                for (var i = 0; i < pathParts.length; i++) {
+                    var p = pathParts[i];
+                    if (/^\d{4}-\d{2}-\d{2}(?:_\d{2}[ME])?$/i.test(p)) {
+                        detectedDate = p;
+                        if (i > 0) detectedSafar = pathParts[i - 1];
+                    }
+                }
+                notifyWorkstationTaskStatus(detectedSafar, detectedDate, 'upload_pending');
+            } catch(eNotif) {}
         }
 
         var EVENT_MAP = {

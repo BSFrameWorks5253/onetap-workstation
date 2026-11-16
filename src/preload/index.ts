@@ -211,6 +211,11 @@ contextBridge.exposeInMainWorld('api', {
       const sub = (_e: any, d: any): void => cb(d)
       ipcRenderer.on('taskTracker:drives-changed', sub)
       return () => ipcRenderer.removeListener('taskTracker:drives-changed', sub)
+    },
+    onExtensionTaskUpdate: (cb: (payload: any) => void) => {
+      const sub = (_e: any, payload: any): void => cb(payload)
+      ipcRenderer.on('tracker:taskStatusUpdatedFromExtension', sub)
+      return () => ipcRenderer.removeListener('tracker:taskStatusUpdatedFromExtension', sub)
     }
   },
 

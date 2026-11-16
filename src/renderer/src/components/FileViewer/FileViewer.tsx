@@ -12,6 +12,7 @@ import AudioPane from './AudioPane'
 import HexDumpPane from './HexDumpPane'
 import XlsxPane from './XlsxPane'
 import PdfPane from './PdfPane'
+import DualVideoPane from './DualVideoPane'
 
 // ── Types ────────────────────────────────────────────────────────
 export interface FileInfo {
@@ -254,6 +255,7 @@ function CustomVideoPlayer({ src }: { src: string }): JSX.Element {
   const [isDragging, setIsDragging] = useState(false)
   const dragStart = useRef<{ mx: number; my: number; ox: number; oy: number } | null>(null)
   const [snapshotMsg, setSnapshotMsg] = useState<string | null>(null)
+  const [isComparing, setIsComparing] = useState(false)
 
   useEffect(() => {
     setIsPlaying(true)
@@ -349,6 +351,16 @@ function CustomVideoPlayer({ src }: { src: string }): JSX.Element {
   }
 
   const progressPct = duration > 0 ? (currentTime / duration) * 100 : 0
+
+  if (isComparing) {
+    return (
+      <DualVideoPane
+        primarySrc={src}
+        primaryName="Source Video"
+        onClose={() => setIsComparing(false)}
+      />
+    )
+  }
 
   return (
     <div className="fv-video-container" ref={containerRef}>
@@ -474,6 +486,15 @@ function CustomVideoPlayer({ src }: { src: string }): JSX.Element {
 
           <button className="fv-ctrl-btn" onClick={captureFrame} title="Snapshot Current Frame" style={{ marginLeft: 6 }}>
             📸 Snapshot
+          </button>
+
+          <button
+            className="fv-ctrl-btn"
+            onClick={() => setIsComparing(true)}
+            title="Open Dual-Pane Before/After Comparison Inspector"
+            style={{ marginLeft: 6, color: '#60A5FA', borderColor: 'rgba(59, 130, 246, 0.4)' }}
+          >
+            ⚖️ Compare Split
           </button>
 
           {snapshotMsg && (
