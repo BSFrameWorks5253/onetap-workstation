@@ -102,7 +102,7 @@ export default function SafarBriefingView({
             </span>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <div className="briefing-topbar-actions">
             {availableSafars && availableSafars.length > 1 && (
               <select
                 aria-label="Switch Safar"

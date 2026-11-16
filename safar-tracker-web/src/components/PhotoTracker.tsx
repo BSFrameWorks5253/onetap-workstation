@@ -680,7 +680,7 @@ export default function PhotoTracker({
         </div>
 
         {/* Deliverables Cross-Sync Dropdown & Search */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', flex: 1, justifyContent: 'flex-end', maxWidth: '520px' }}>
+        <div className="photo-filter-controls-wrap" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', flex: 1, justifyContent: 'flex-end', maxWidth: '520px' }}>
           <select
             value={syncFilter}
             onChange={e => setSyncFilter(e.target.value as any)}

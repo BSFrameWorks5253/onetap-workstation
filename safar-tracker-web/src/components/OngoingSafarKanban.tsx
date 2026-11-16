@@ -530,20 +530,26 @@ export default function OngoingSafarKanban({
       {isAddOpen && (
         <form
           onSubmit={handleAddNewDate}
+          className="kanban-add-date-form"
           style={{
             display: 'flex',
             alignItems: 'center',
+            flexWrap: 'wrap',
             gap: '10px',
-            padding: '14px 18px',
-            background: '#f1f5f9',
-            border: '1px dashed #cbd5e1',
-            borderRadius: '12px'
+            padding: '12px 14px',
+            background: 'var(--color-surface-sidebar, #f1f5f9)',
+            border: '1px dashed var(--color-hairline, #cbd5e1)',
+            borderRadius: '14px',
+            boxSizing: 'border-box',
+            width: '100%'
           }}
         >
-          <FolderOpen size={18} color="#475569" />
-          <span style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>
-            Add new date folder to <em>{selectedSafar}</em>:
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <FolderOpen size={18} color="#475569" />
+            <span style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>
+              Add date to <em>{selectedSafar}</em>:
+            </span>
+          </div>
           <input
             type="text"
             placeholder="e.g. 1446-02-14 or Day 14"
@@ -551,47 +557,52 @@ export default function OngoingSafarKanban({
             onChange={e => setNewDateInput(e.target.value)}
             autoFocus
             style={{
-              flex: 1,
-              maxWidth: '300px',
-              padding: '6px 12px',
-              fontSize: '13px',
+              flex: '1 1 200px',
+              minWidth: '160px',
+              padding: '8px 12px',
+              fontSize: '14px',
               borderRadius: '8px',
               border: '1px solid #cbd5e1',
               background: '#ffffff',
               color: '#0f172a',
-              outline: 'none'
+              outline: 'none',
+              boxSizing: 'border-box'
             }}
           />
-          <button
-            type="submit"
-            style={{
-              padding: '6px 16px',
-              borderRadius: '8px',
-              background: '#059669',
-              color: '#ffffff',
-              border: 'none',
-              fontSize: '13px',
-              fontWeight: 600,
-              cursor: 'pointer'
-            }}
-          >
-            Save Folder
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsAddOpen(false)}
-            style={{
-              padding: '6px 12px',
-              borderRadius: '8px',
-              background: 'transparent',
-              color: '#64748b',
-              border: 'none',
-              fontSize: '13px',
-              cursor: 'pointer'
-            }}
-          >
-            Cancel
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <button
+              type="submit"
+              style={{
+                padding: '8px 16px',
+                minHeight: '38px',
+                borderRadius: '8px',
+                background: '#059669',
+                color: '#ffffff',
+                border: 'none',
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+            >
+              Save Folder
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsAddOpen(false)}
+              style={{
+                padding: '8px 12px',
+                minHeight: '38px',
+                borderRadius: '8px',
+                background: 'transparent',
+                color: '#64748b',
+                border: 'none',
+                fontSize: '13px',
+                cursor: 'pointer'
+              }}
+            >
+              Cancel
+            </button>
+          </div>
         </form>
       )}
 
