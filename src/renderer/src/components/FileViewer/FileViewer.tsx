@@ -590,6 +590,23 @@ export default function FileViewer({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [zoom, setZoom] = useState(1)
+  const [rotate, setRotate] = useState(0)
+
+  // ── Fallback handler for images (e.g. if local-resource fails) ──
+  const handleImageFallback = useCallback(async () => {
+    if (!currentPath) return
+    const v = api()?.viewer
+    if (v?.readImageBase64) {
+      try {
+        const res = await v.readImageBase64(currentPath)
+        if (res?.ok && res.dataUrl) {
+          setImgSrc(res.dataUrl)
+        }
+      } catch (err) {
+        console.error('[FileViewer] Fallback readImageBase64 failed:', err)
+      }
+    }
+  }, [currentPath])
 
   // ── Load sibling files for navigation ──
   useEffect(() => {
@@ -623,18 +640,18 @@ export default function FileViewer({
     setCsvText(null)
     setCodeContent(null)
     setZoom(1)
+    setRotate(0)
 
     const v = api()?.viewer
 
     ;(async () => {
       try {
-        // Fetch file stats
+        // Fetch file stats first so metadata displays immediately
         if (v?.getFileInfo) {
-          v.getFileInfo(currentPath)
-            .then((res: any) => {
-              if (active && res.ok) setInfo(res)
-            })
-            .catch(() => {})
+          try {
+            const stats = await v.getFileInfo(currentPath)
+            if (active && stats?.ok) setInfo(stats)
+          } catch {}
         }
 
         if (mode === 'image') {
@@ -644,15 +661,7 @@ export default function FileViewer({
             if (res.ok) setImgSrc(res.dataUrl)
             else setError(`RAW decode failed: ${res.error}`)
           } else {
-            try {
-              if (v?.readImageBase64) {
-                const imgRes = await v.readImageBase64(currentPath)
-                if (active && imgRes?.ok && imgRes.dataUrl) {
-                  setImgSrc(imgRes.dataUrl)
-                  return
-                }
-              }
-            } catch {}
+            // High-speed native zero-copy streaming
             if (active) setImgSrc(toLocalResourceUrl(currentPath))
           }
         } else if (mode === 'video') {
@@ -758,6 +767,21 @@ export default function FileViewer({
       } else if (e.key === 'ArrowRight' && mode !== 'video') {
         e.preventDefault()
         handleNext()
+      } else if (mode === 'image') {
+        if (e.key === '+' || e.key === '=') {
+          e.preventDefault()
+          setZoom((z) => Math.min(Math.round((z + 0.25) * 100) / 100, 12))
+        } else if (e.key === '-' || e.key === '_') {
+          e.preventDefault()
+          setZoom((z) => Math.max(Math.round((z - 0.25) * 100) / 100, 0.1))
+        } else if (e.key === '0' || e.key.toLowerCase() === 'f') {
+          e.preventDefault()
+          setZoom(1)
+          setRotate(0)
+        } else if (e.key.toLowerCase() === 'r') {
+          e.preventDefault()
+          setRotate((r) => (r + 90) % 360)
+        }
       }
     }
     window.addEventListener('keydown', handler)
@@ -830,18 +854,40 @@ export default function FileViewer({
           </div>
         )}
 
-        {/* Image Zoom Controls */}
+        {/* Image Zoom & Rotate Controls */}
         {mode === 'image' && !loading && !error && (
           <div className="fv-toolbar-center">
-            <button className="fv-btn fv-btn-icon" onClick={() => setZoom((z) => Math.max(z - 0.25, 0.1))} title="Zoom out">
+            <button
+              className="fv-btn fv-btn-icon"
+              onClick={() => setZoom((z) => Math.max(Math.round((z - 0.25) * 100) / 100, 0.1))}
+              title="Zoom out (-)"
+            >
               −
             </button>
             <span className="fv-zoom-label">{Math.round(zoom * 100)}%</span>
-            <button className="fv-btn fv-btn-icon" onClick={() => setZoom((z) => Math.min(z + 0.25, 12))} title="Zoom in">
+            <button
+              className="fv-btn fv-btn-icon"
+              onClick={() => setZoom((z) => Math.min(Math.round((z + 0.25) * 100) / 100, 12))}
+              title="Zoom in (+)"
+            >
               +
             </button>
-            <button className="fv-btn" onClick={() => setZoom(1)} title="Fit to Screen">
+            <button
+              className="fv-btn"
+              onClick={() => {
+                setZoom(1)
+                setRotate(0)
+              }}
+              title="Reset Zoom & Fit (F)"
+            >
               ↺ Fit
+            </button>
+            <button
+              className="fv-btn fv-btn-icon"
+              onClick={() => setRotate((r) => (r + 90) % 360)}
+              title="Rotate 90° clockwise (R)"
+            >
+              ⟳
             </button>
           </div>
         )}
@@ -857,10 +903,14 @@ export default function FileViewer({
           <button className="fv-btn" onClick={openInDefaultApp} title="Open in Windows Default App">
             ↗ Open With
           </button>
-          <div className="fv-divider" />
-          <button className="fv-btn fv-btn-close fv-btn-icon" onClick={onClose} title="Close (Esc)">
-            ✕
-          </button>
+          {!isStandaloneWindow && (
+            <>
+              <div className="fv-divider" />
+              <button className="fv-btn fv-btn-close fv-btn-icon" onClick={onClose} title="Close (Esc)">
+                ✕
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -890,7 +940,17 @@ export default function FileViewer({
           </div>
         )}
 
-        {!loading && !error && mode === 'image' && imgSrc && <ImagePane src={imgSrc} info={info} />}
+        {!loading && !error && mode === 'image' && imgSrc && (
+          <ImagePane
+            src={imgSrc}
+            info={info}
+            zoom={zoom}
+            setZoom={setZoom}
+            rotate={rotate}
+            setRotate={setRotate}
+            onFallback={handleImageFallback}
+          />
+        )}
 
         {!loading && !error && mode === 'video' && videoSrc && <CustomVideoPlayer src={videoSrc} />}
 

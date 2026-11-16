@@ -164,6 +164,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  background: radial-gradient(circle at center, rgba(30, 41, 59, 0.45) 0%, rgba(10, 15, 26, 0.95) 100%);
 }
 
 .fv-img-stage.dragging {
@@ -171,15 +172,17 @@
 }
 
 .fv-img {
-  max-width: none;
-  max-height: none;
+  max-width: 95%;
+  max-height: 92%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
   display: block;
   transform-origin: center center;
   pointer-events: none;
-  transition: none;
-  image-rendering: auto;
-  border-radius: 4px;
-  box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+  border-radius: 6px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.75), 0 2px 8px rgba(0, 0, 0, 0.4);
+  user-select: none;
 }
 
 /* ── Video viewer ───────────────────────────────────────── */
@@ -826,13 +829,17 @@
 
 /* Standalone Toolbar drag region */
 .fv-standalone-mode .fv-toolbar {
-  padding-right: 140px; /* Leave space for Windows 11 titleBarStyle: 'hidden' caption overlay */
+  padding-right: 148px; /* Leave space for Windows 11 titleBarStyle: 'hidden' caption overlay */
   -webkit-app-region: drag;
+  background: #090d16;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .fv-standalone-mode .fv-toolbar button,
 .fv-standalone-mode .fv-toolbar input,
-.fv-standalone-mode .fv-toolbar select {
+.fv-standalone-mode .fv-toolbar select,
+.fv-standalone-mode .fv-toolbar-counter,
+.fv-standalone-mode .fv-toolbar-center {
   -webkit-app-region: no-drag;
 }
 
