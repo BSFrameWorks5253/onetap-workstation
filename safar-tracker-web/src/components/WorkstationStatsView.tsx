@@ -205,7 +205,7 @@ export default function WorkstationStatsView({
     <div className="stats-view-container anim-fade-in" style={{ paddingBottom: 48 }}>
       {/* ── 24/7 Cloud Sync Banner (Explains Offline Resilience & Zero DB Overload) ── */}
       <section
-        className="glass-card"
+        className="glass-card stats-sync-banner"
         style={{
           padding: '16px 20px',
           marginBottom: 20,
@@ -219,7 +219,7 @@ export default function WorkstationStatsView({
           borderRadius: 16
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div className="stats-banner-left" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div
             style={{
               width: 38,
@@ -236,7 +236,7 @@ export default function WorkstationStatsView({
             <Cloud size={20} />
           </div>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-ink)' }}>
                 24/7 Cloud-Synced Workstation Telemetry
               </span>
@@ -259,33 +259,33 @@ export default function WorkstationStatsView({
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div className="stats-header-actions" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <button
             type="button"
-            className="btn btn-secondary btn-sm"
+            className="apple-secondary-btn btn btn-secondary btn-sm"
             onClick={handleCopySummary}
             title="Copy formatted stats summary"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12 }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, minHeight: 36, padding: '0 14px' }}
           >
             {copied ? <Check size={14} color="#10b981" /> : <Copy size={14} />}
             <span>{copied ? 'Copied' : 'Copy Stats'}</span>
           </button>
           <button
             type="button"
-            className="btn btn-secondary btn-sm"
+            className="apple-secondary-btn btn btn-secondary btn-sm"
             onClick={handleShareWhatsApp}
             title="Share via WhatsApp"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12 }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, minHeight: 36, padding: '0 14px' }}
           >
             <Share2 size={14} />
             <span>Share</span>
           </button>
           <button
             type="button"
-            className="btn btn-primary btn-sm"
+            className="apple-primary-btn btn btn-primary btn-sm"
             onClick={handleRefresh}
             disabled={refreshing}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12 }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, minHeight: 36, padding: '0 14px' }}
           >
             <RefreshCw size={14} className={refreshing ? 'spinning' : ''} />
             <span>Sync Now</span>

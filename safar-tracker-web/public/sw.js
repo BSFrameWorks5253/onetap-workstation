@@ -1,4 +1,4 @@
-const CACHE = 'one-tap-safar-v15-mobile-responsive-final'
+const CACHE = 'one-tap-safar-v16-telemetry-buttons-fixed'
 
 self.addEventListener('install', event => {
   event.waitUntil(

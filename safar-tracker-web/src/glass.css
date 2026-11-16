@@ -4931,12 +4931,68 @@ h1, h2, .page-heading h1, .safar-briefing-title, .hero-title, .display-serif {
 }
 
 /* Apple iOS Spring-Physics Interactive State on All Buttons */
-button, .button-primary, .button-secondary, .icon-button, .kpi-safar-badge-btn, .day-batch-pill {
+button, .button-primary, .button-secondary, .icon-button, .kpi-safar-badge-btn, .day-batch-pill, .btn {
   transition: transform 0.12s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.15s ease, background 0.15s ease !important;
 }
 
-button:active, .button-primary:active, .button-secondary:active, .icon-button:active, .kpi-safar-badge-btn:active, .day-batch-pill:active {
+button:active, .button-primary:active, .button-secondary:active, .icon-button:active, .kpi-safar-badge-btn:active, .day-batch-pill:active, .btn:active {
   transform: scale(0.96) !important;
+}
+
+/* Universal Button Helpers (.btn, .btn-primary, .btn-secondary, .btn-sm) */
+.btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  font-family: var(--font-ui-sans) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  border-radius: 9999px !important;
+  padding: 7px 16px !important;
+  cursor: pointer !important;
+  border: 1px solid transparent !important;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03), inset 0 1px 0 #ffffff !important;
+  line-height: 1.2 !important;
+  text-decoration: none !important;
+  box-sizing: border-box !important;
+}
+
+.btn-sm {
+  min-height: 34px !important;
+  height: 34px !important;
+  padding: 0 14px !important;
+  font-size: 12px !important;
+}
+
+.btn-secondary {
+  background: #ffffff !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border: 1px solid var(--color-hairline) !important;
+  color: var(--color-ink) !important;
+}
+
+.btn-secondary:hover {
+  background: #faf7f2 !important;
+  border-color: #d4d0c8 !important;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.06), inset 0 1px 0 #ffffff !important;
+  transform: translateY(-1px) !important;
+}
+
+.btn-primary {
+  background: var(--color-ink) !important;
+  color: #ffffff !important;
+  border: 1px solid var(--color-ink) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+}
+
+.btn-primary:hover {
+  background: #262626 !important;
+  border-color: #262626 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18) !important;
+  transform: translateY(-1px) !important;
 }
 
 /* Action Button Styles (shadcn/ui + Slash High-Contrast Pill System) */
@@ -6383,6 +6439,40 @@ input[type="text"]:focus, input[type="search"]:focus, select:focus {
     box-sizing: border-box !important;
     padding: 12px !important;
     border-radius: 14px !important;
+  }
+
+  /* ── 17. Workstation Telemetry & Stats Banner Mobile ── */
+  .stats-sync-banner {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    padding: 14px 12px !important;
+    gap: 12px !important;
+    border-radius: 16px !important;
+  }
+
+  .stats-banner-left {
+    width: 100% !important;
+  }
+
+  .stats-header-actions {
+    width: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+  }
+
+  .stats-header-actions button,
+  .stats-header-actions .btn {
+    flex: 1 1 calc(33.333% - 6px) !important;
+    min-width: 0 !important;
+    min-height: 38px !important;
+    padding: 0 8px !important;
+    font-size: 11.5px !important;
+    font-weight: 600 !important;
+    justify-content: center !important;
+    white-space: nowrap !important;
+    border-radius: 9999px !important;
+    box-sizing: border-box !important;
   }
 }
 
