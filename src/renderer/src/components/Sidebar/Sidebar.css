@@ -53,13 +53,30 @@
 
 .sidebar--collapsed .nav-item-label,
 .sidebar--collapsed .nav-item-arrow,
-.sidebar--collapsed .nav-item-badge {
-  display: none;
+.sidebar--collapsed .nav-item-badge,
+.sidebar--collapsed .nav-item-submenu-indicator,
+.sidebar--collapsed .nav-item-progress-circle {
+  display: none !important;
 }
 
 .sidebar--collapsed .nav-item {
-  justify-content: center;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
   padding: 0 6px !important;
+  gap: 0 !important;
+  width: 100% !important;
+  height: 38px !important;
+  box-sizing: border-box !important;
+}
+
+.sidebar--collapsed .nav-item-icon {
+  margin: 0 !important;
+  flex-shrink: 0;
+}
+
+.sidebar--collapsed .sidebar-sep {
+  margin: 6px 4px;
 }
 
 .sidebar--collapsed .nav-item--active::after {

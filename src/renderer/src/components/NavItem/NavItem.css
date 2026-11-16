@@ -69,11 +69,19 @@
 
 /* In collapsed mode: compact luminous indicator bar */
 .sidebar--collapsed .nav-item--active::before {
+  content: '' !important;
+  display: block !important;
+  position: absolute;
   left: 0;
-  top: 6px;
-  bottom: 6px;
-  width: 3px;
-  border-radius: 0 3px 3px 0;
+  top: 7px;
+  bottom: 7px;
+  width: 3.5px;
+  border-radius: 0 4px 4px 0;
+  background: var(--item-accent) !important;
+  box-shadow:
+    0 0 10px color-mix(in srgb, var(--item-accent) 80%, transparent),
+    0 0 3px color-mix(in srgb, var(--item-accent) 60%, transparent) !important;
+  z-index: 2;
 }
 
 /* -- Squircle Icon Badge ------------------------------- */
