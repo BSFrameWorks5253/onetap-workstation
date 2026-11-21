@@ -61,6 +61,7 @@ export default function WhatsAppBriefingModal({
   publicOrigin = 'https://safar-tracker-web.vercel.app'
 }: WhatsAppBriefingModalProps): JSX.Element | null {
   const [activeTab, setActiveTab] = useState<'msg' | 'image'>(initialTab);
+  const [imageTheme, setImageTheme] = useState<'white' | 'dark'>('white');
   const [copiedText, setCopiedText] = useState(false);
   const [copiedImage, setCopiedImage] = useState(false);
   const [imageGenerating, setImageGenerating] = useState(false);
@@ -154,8 +155,8 @@ export default function WhatsAppBriefingModal({
 
   const messageText = generateFormattedMessage();
 
-  // Draw the Infographic Image on HTML5 Canvas
-  const renderInfographicImage = () => {
+  // Draw the Infographic Image on HTML5 Canvas (White Mode by default or Dark Mode)
+  const renderInfographicImage = (theme: 'white' | 'dark' = imageTheme) => {
     setImageGenerating(true);
     const canvas = document.createElement('canvas');
     canvasRef.current = canvas;
@@ -171,32 +172,57 @@ export default function WhatsAppBriefingModal({
     if (!ctx) return;
 
     ctx.scale(2, 2);
+    const isLight = theme === 'white';
 
-    // 1. Background Gradient
-    const bgGradient = ctx.createLinearGradient(0, 0, width, height);
-    bgGradient.addColorStop(0, '#090d16');
-    bgGradient.addColorStop(0.5, '#0f172a');
-    bgGradient.addColorStop(1, '#0b0f19');
-    ctx.fillStyle = bgGradient;
-    ctx.fillRect(0, 0, width, height);
+    // 1. Background
+    if (isLight) {
+      // Crisp White Canvas
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, width, height);
 
-    // Subtle background mesh glow
-    const glow1 = ctx.createRadialGradient(200, 150, 10, 200, 150, 500);
-    glow1.addColorStop(0, is100Done ? 'rgba(16, 185, 129, 0.12)' : 'rgba(79, 70, 229, 0.15)');
-    glow1.addColorStop(1, 'transparent');
-    ctx.fillStyle = glow1;
-    ctx.fillRect(0, 0, width, height);
+      // Top Header Gradient Wash
+      const topGrad = ctx.createLinearGradient(0, 0, width, 260);
+      topGrad.addColorStop(0, '#f8fafc');
+      topGrad.addColorStop(1, '#ffffff');
+      ctx.fillStyle = topGrad;
+      ctx.fillRect(0, 0, width, 260);
 
-    const glow2 = ctx.createRadialGradient(1000, 400, 10, 1000, 400, 450);
-    glow2.addColorStop(0, 'rgba(6, 182, 212, 0.08)');
-    glow2.addColorStop(1, 'transparent');
-    ctx.fillStyle = glow2;
-    ctx.fillRect(0, 0, width, height);
+      // Soft glow
+      const glow1 = ctx.createRadialGradient(200, 150, 10, 200, 150, 480);
+      glow1.addColorStop(0, is100Done ? 'rgba(16, 185, 129, 0.08)' : 'rgba(79, 70, 229, 0.06)');
+      glow1.addColorStop(1, 'transparent');
+      ctx.fillStyle = glow1;
+      ctx.fillRect(0, 0, width, height);
 
-    // Outer border
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(1, 1, width - 2, height - 2);
+      // Outer clean border
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(1, 1, width - 2, height - 2);
+    } else {
+      // Sleek Dark Canvas
+      const bgGradient = ctx.createLinearGradient(0, 0, width, height);
+      bgGradient.addColorStop(0, '#090d16');
+      bgGradient.addColorStop(0.5, '#0f172a');
+      bgGradient.addColorStop(1, '#0b0f19');
+      ctx.fillStyle = bgGradient;
+      ctx.fillRect(0, 0, width, height);
+
+      const glow1 = ctx.createRadialGradient(200, 150, 10, 200, 150, 500);
+      glow1.addColorStop(0, is100Done ? 'rgba(16, 185, 129, 0.12)' : 'rgba(79, 70, 229, 0.15)');
+      glow1.addColorStop(1, 'transparent');
+      ctx.fillStyle = glow1;
+      ctx.fillRect(0, 0, width, height);
+
+      const glow2 = ctx.createRadialGradient(1000, 400, 10, 1000, 400, 450);
+      glow2.addColorStop(0, 'rgba(6, 182, 212, 0.08)');
+      glow2.addColorStop(1, 'transparent');
+      ctx.fillStyle = glow2;
+      ctx.fillRect(0, 0, width, height);
+
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(1, 1, width - 2, height - 2);
+    }
 
     // 2. Top Header Bar
     ctx.fillStyle = '#4f46e5';
@@ -211,47 +237,47 @@ export default function WhatsAppBriefingModal({
 
     // Studio Name
     ctx.font = 'bold 18px system-ui, -apple-system, sans-serif';
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = isLight ? '#0f172a' : '#ffffff';
     ctx.fillText('ONE TAP STUDIO', 96, 58);
 
     ctx.font = 'bold 10px system-ui, -apple-system, sans-serif';
-    ctx.fillStyle = '#818cf8';
+    ctx.fillStyle = isLight ? '#4f46e5' : '#818cf8';
     ctx.fillText('SAFAR MEDIA WORKSTATION · PRODUCTION TELEMETRY', 96, 74);
 
     // Timestamp & Verified Badge right-aligned
     ctx.font = '12px system-ui, -apple-system, sans-serif';
-    ctx.fillStyle = '#94a3b8';
+    ctx.fillStyle = isLight ? '#64748b' : '#94a3b8';
     const dateStr = `Live Snapshot · ${new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} ${new Date().toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`;
     const textWidth = ctx.measureText(dateStr).width;
     ctx.fillText(dateStr, width - 40 - textWidth, 65);
 
     // Divider line
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.strokeStyle = isLight ? '#e2e8f0' : 'rgba(255, 255, 255, 0.08)';
     ctx.beginPath();
     ctx.moveTo(40, 100);
     ctx.lineTo(width - 40, 100);
     ctx.stroke();
 
     // 3. Campaign Hero Banner Card
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
+    ctx.fillStyle = isLight ? '#f8fafc' : 'rgba(255, 255, 255, 0.03)';
     ctx.beginPath();
     drawRoundRect(ctx, 40, 120, width - 80, 140, 16);
     ctx.fill();
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.strokeStyle = isLight ? '#e2e8f0' : 'rgba(255, 255, 255, 0.08)';
     ctx.stroke();
 
     // Campaign Eyebrow
-    ctx.fillStyle = is100Done ? '#10b981' : '#818cf8';
+    ctx.fillStyle = is100Done ? (isLight ? '#059669' : '#10b981') : (isLight ? '#4f46e5' : '#818cf8');
     ctx.font = 'bold 11px system-ui, -apple-system, sans-serif';
     ctx.fillText(is100Done ? '✓ PRODUCTION COMPLETED' : '📍 ACTIVE PRODUCTION CAMPAIGN', 64, 152);
 
     // Campaign Title
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = isLight ? '#0f172a' : '#ffffff';
     ctx.font = 'bold 30px system-ui, -apple-system, sans-serif';
     ctx.fillText(safarName, 64, 192);
 
     // Era & dates subtext
-    ctx.fillStyle = '#94a3b8';
+    ctx.fillStyle = isLight ? '#64748b' : '#94a3b8';
     ctx.font = '14px system-ui, -apple-system, sans-serif';
     ctx.fillText(`Hijri Era: ${safarYear} H · ${total} Scheduled Date Deliverables · Video & Photo Workstation`, 64, 222);
 
@@ -261,7 +287,9 @@ export default function WhatsAppBriefingModal({
     const badgeW = 200;
     const badgeH = 100;
 
-    ctx.fillStyle = is100Done ? 'rgba(16, 185, 129, 0.15)' : 'rgba(79, 70, 229, 0.15)';
+    ctx.fillStyle = is100Done
+      ? (isLight ? '#ecfdf5' : 'rgba(16, 185, 129, 0.15)')
+      : (isLight ? '#eef2ff' : 'rgba(79, 70, 229, 0.15)');
     ctx.beginPath();
     drawRoundRect(ctx, badgeX, badgeY, badgeW, badgeH, 14);
     ctx.fill();
@@ -269,16 +297,20 @@ export default function WhatsAppBriefingModal({
     ctx.lineWidth = 1.5;
     ctx.stroke();
 
-    ctx.fillStyle = is100Done ? '#34d399' : '#818cf8';
+    ctx.fillStyle = is100Done
+      ? (isLight ? '#059669' : '#34d399')
+      : (isLight ? '#4338ca' : '#818cf8');
     ctx.font = 'bold 38px system-ui, -apple-system, sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText(is100Done ? '100%' : `${pct}%`, badgeX + badgeW / 2, badgeY + 48);
 
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = is100Done
+      ? (isLight ? '#047857' : '#ffffff')
+      : (isLight ? '#3730a3' : '#ffffff');
     ctx.font = 'bold 12px system-ui, -apple-system, sans-serif';
-    ctx.fillText(is100Done ? '100% DONE' : 'DELIVERED', badgeX + badgeW / 2, badgeY + 70);
+    ctx.fillText(is100Done ? '🏆 100% DONE' : 'DELIVERED', badgeX + badgeW / 2, badgeY + 70);
 
-    ctx.fillStyle = '#94a3b8';
+    ctx.fillStyle = isLight ? '#64748b' : '#94a3b8';
     ctx.font = '11px system-ui, -apple-system, sans-serif';
     ctx.fillText(is100Done ? 'All Dates Uploaded' : `${delivered} of ${total} Uploaded`, badgeX + badgeW / 2, badgeY + 86);
     ctx.textAlign = 'left';
@@ -289,7 +321,7 @@ export default function WhatsAppBriefingModal({
     const barW = width - 80;
     const barH = 12;
 
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.fillStyle = isLight ? '#e2e8f0' : 'rgba(255, 255, 255, 0.08)';
     ctx.beginPath();
     drawRoundRect(ctx, barX, barY, barW, barH, 6);
     ctx.fill();
@@ -318,29 +350,29 @@ export default function WhatsAppBriefingModal({
     const cardH = 140;
 
     // Card A: Video Pipeline
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
+    ctx.fillStyle = isLight ? '#ffffff' : 'rgba(255, 255, 255, 0.03)';
     ctx.beginPath();
     drawRoundRect(ctx, 40, cardY, colW, cardH, 14);
     ctx.fill();
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.strokeStyle = isLight ? '#e2e8f0' : 'rgba(255, 255, 255, 0.08)';
     ctx.lineWidth = 1;
     ctx.stroke();
 
     ctx.font = 'bold 14px system-ui, -apple-system, sans-serif';
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = isLight ? '#0f172a' : '#ffffff';
     ctx.fillText('🎬 Video Production Pipeline', 60, cardY + 30);
 
     ctx.font = '12px system-ui, -apple-system, sans-serif';
-    ctx.fillStyle = '#94a3b8';
+    ctx.fillStyle = isLight ? '#64748b' : '#94a3b8';
     ctx.fillText(`Delivered: ${delivered}/${total} dates (${is100Done ? '100% Complete' : `${pct}%`})`, 60, cardY + 52);
 
     // Chips inside card A
     const vChips = [
-      { label: `${videoJameya} AlJamea Done`, color: '#10b981' },
-      { label: `${videoUploaded} Uploaded`, color: '#059669' },
-      { label: `${videoUploadPending} Upload Pending`, color: '#06b6d4' },
-      { label: `${videoInProgress} In Progress`, color: '#3b82f6' },
-      { label: `${videoEditingPending} Editing Pending`, color: '#f59e0b' }
+      { label: `${videoJameya} AlJamea Done`, color: isLight ? '#047857' : '#10b981', bg: isLight ? '#ecfdf5' : 'rgba(255, 255, 255, 0.06)', border: isLight ? '#a7f3d0' : 'transparent' },
+      { label: `${videoUploaded} Uploaded`, color: isLight ? '#15803d' : '#059669', bg: isLight ? '#f0fdf4' : 'rgba(255, 255, 255, 0.06)', border: isLight ? '#bbf7d0' : 'transparent' },
+      { label: `${videoUploadPending} Upload Pending`, color: isLight ? '#0891b2' : '#06b6d4', bg: isLight ? '#ecfeff' : 'rgba(255, 255, 255, 0.06)', border: isLight ? '#a5f3fc' : 'transparent' },
+      { label: `${videoInProgress} In Progress`, color: isLight ? '#1d4ed8' : '#3b82f6', bg: isLight ? '#eff6ff' : 'rgba(255, 255, 255, 0.06)', border: isLight ? '#bfdbfe' : 'transparent' },
+      { label: `${videoEditingPending} Editing Pending`, color: isLight ? '#b45309' : '#f59e0b', bg: isLight ? '#fffbeb' : 'rgba(255, 255, 255, 0.06)', border: isLight ? '#fde68a' : 'transparent' }
     ];
 
     let chipX = 60;
@@ -352,36 +384,41 @@ export default function WhatsAppBriefingModal({
         chipX = 60;
         chipY += 28;
       }
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
+      ctx.fillStyle = c.bg;
       ctx.beginPath();
       drawRoundRect(ctx, chipX, chipY, cWidth, 22, 6);
       ctx.fill();
+      if (c.border !== 'transparent') {
+        ctx.strokeStyle = c.border;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
       ctx.fillStyle = c.color;
       ctx.fillText(c.label, chipX + 8, chipY + 15);
       chipX += cWidth + 8;
     });
 
     // Card B: Google Drive Photos
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
+    ctx.fillStyle = isLight ? '#ffffff' : 'rgba(255, 255, 255, 0.03)';
     ctx.beginPath();
     drawRoundRect(ctx, 40 + colW + 20, cardY, colW, cardH, 14);
     ctx.fill();
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.strokeStyle = isLight ? '#e2e8f0' : 'rgba(255, 255, 255, 0.08)';
     ctx.stroke();
 
     ctx.font = 'bold 14px system-ui, -apple-system, sans-serif';
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = isLight ? '#0f172a' : '#ffffff';
     ctx.fillText('📷 Google Drive Photo Delivery', 40 + colW + 40, cardY + 30);
 
     ctx.font = '12px system-ui, -apple-system, sans-serif';
-    ctx.fillStyle = '#94a3b8';
+    ctx.fillStyle = isLight ? '#64748b' : '#94a3b8';
     ctx.fillText(`Drive Sync: ${photoUploaded}/${total} Deliverables Uploaded (${total > 0 ? Math.round((photoUploaded / total) * 100) : 0}%)`, 40 + colW + 40, cardY + 52);
 
     // Chips inside card B
     const pChips = [
-      { label: `${photoUploaded} Uploaded to Drive`, color: '#10b981' },
-      { label: `${photoGiven} With Murtaza (Lead)`, color: '#60a5fa' },
-      { label: `${photoEdited} In Photo Grading`, color: '#a78bfa' }
+      { label: `${photoUploaded} Uploaded to Drive`, color: isLight ? '#15803d' : '#10b981', bg: isLight ? '#f0fdf4' : 'rgba(255, 255, 255, 0.06)', border: isLight ? '#bbf7d0' : 'transparent' },
+      { label: `${photoGiven} With Murtaza (Lead)`, color: isLight ? '#1d4ed8' : '#60a5fa', bg: isLight ? '#eff6ff' : 'rgba(255, 255, 255, 0.06)', border: isLight ? '#bfdbfe' : 'transparent' },
+      { label: `${photoEdited} In Photo Grading`, color: isLight ? '#7e22ce' : '#a78bfa', bg: isLight ? '#faf5ff' : 'rgba(255, 255, 255, 0.06)', border: isLight ? '#e9d5ff' : 'transparent' }
     ];
 
     let pChipX = 40 + colW + 40;
@@ -389,10 +426,15 @@ export default function WhatsAppBriefingModal({
     pChips.forEach(c => {
       ctx.font = 'bold 11px system-ui, -apple-system, sans-serif';
       const cWidth = ctx.measureText(c.label).width + 16;
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
+      ctx.fillStyle = c.bg;
       ctx.beginPath();
       drawRoundRect(ctx, pChipX, pChipY, cWidth, 22, 6);
       ctx.fill();
+      if (c.border !== 'transparent') {
+        ctx.strokeStyle = c.border;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
       ctx.fillStyle = c.color;
       ctx.fillText(c.label, pChipX + 8, pChipY + 15);
       pChipX += cWidth + 8;
@@ -401,7 +443,7 @@ export default function WhatsAppBriefingModal({
     // 6. Date Folders Status Matrix
     const listY = 475;
     ctx.font = 'bold 15px system-ui, -apple-system, sans-serif';
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = isLight ? '#0f172a' : '#ffffff';
     ctx.fillText(`Date Folders Status Matrix (${safarTasks.length} Scheduled Deliverables)`, 40, listY);
 
     ctx.font = '12px system-ui, -apple-system, sans-serif';
@@ -422,44 +464,58 @@ export default function WhatsAppBriefingModal({
         task.stage === 'uploaded' || task.stage === 'jameya' || (task.stage as any) === 'upload' || (task.stage as any) === 'completed';
 
       // Item Box
-      ctx.fillStyle = isDelivered ? 'rgba(16, 185, 129, 0.06)' : 'rgba(255, 255, 255, 0.03)';
+      ctx.fillStyle = isDelivered
+        ? (isLight ? '#f0fdf4' : 'rgba(16, 185, 129, 0.06)')
+        : (isLight ? '#ffffff' : 'rgba(255, 255, 255, 0.03)');
       ctx.beginPath();
       drawRoundRect(ctx, rX, rY, colWidth, rowH, 8);
       ctx.fill();
-      ctx.strokeStyle = isDelivered ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.06)';
+      ctx.strokeStyle = isDelivered
+        ? (isLight ? '#bbf7d0' : 'rgba(16, 185, 129, 0.2)')
+        : (isLight ? '#e2e8f0' : 'rgba(255, 255, 255, 0.06)');
       ctx.stroke();
 
       // Dot
-      ctx.fillStyle = isDelivered ? '#10b981' : task.stage === 'upload_pending' ? '#06b6d4' : task.stage === 'editing' ? '#3b82f6' : '#f59e0b';
+      ctx.fillStyle = isDelivered
+        ? '#10b981'
+        : task.stage === 'upload_pending'
+        ? '#06b6d4'
+        : task.stage === 'editing'
+        ? '#3b82f6'
+        : '#f59e0b';
       ctx.beginPath();
       ctx.arc(rX + 16, rY + rowH / 2, 4.5, 0, Math.PI * 2);
       ctx.fill();
 
       // Title
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '500 12px system-ui, -apple-system, sans-serif';
+      ctx.fillStyle = isDelivered ? (isLight ? '#0f172a' : '#ffffff') : (isLight ? '#334155' : '#ffffff');
+      ctx.font = isDelivered ? '600 12px system-ui, -apple-system, sans-serif' : '500 12px system-ui, -apple-system, sans-serif';
       const folderText = task.dateFolder.length > 36 ? task.dateFolder.slice(0, 34) + '…' : task.dateFolder;
       ctx.fillText(folderText, rX + 28, rY + rowH / 2 + 4);
 
       // Status Tag
-      const tagText = isDelivered ? 'UPLOADED' : task.stage === 'upload_pending' ? 'UPLOAD PEND' : task.stage === 'editing' ? 'IN PROGRESS' : 'PENDING';
+      const tagText = isDelivered ? '✓ UPLOADED' : task.stage === 'upload_pending' ? 'UPLOAD PEND' : task.stage === 'editing' ? 'IN PROGRESS' : '⏳ PENDING';
       ctx.font = 'bold 9px system-ui, -apple-system, sans-serif';
       const tagW = ctx.measureText(tagText).width + 12;
       const tagX = rX + colWidth - tagW - 12;
       const tagY = rY + 7;
 
-      ctx.fillStyle = isDelivered ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)';
+      ctx.fillStyle = isDelivered
+        ? (isLight ? '#dcfce7' : 'rgba(16, 185, 129, 0.15)')
+        : (isLight ? '#fef3c7' : 'rgba(245, 158, 11, 0.15)');
       ctx.beginPath();
       drawRoundRect(ctx, tagX, tagY, tagW, 20, 4);
       ctx.fill();
 
-      ctx.fillStyle = isDelivered ? '#34d399' : '#fbbf24';
+      ctx.fillStyle = isDelivered
+        ? (isLight ? '#15803d' : '#34d399')
+        : (isLight ? '#b45309' : '#fbbf24');
       ctx.fillText(tagText, tagX + 6, tagY + 14);
     });
 
     // 7. Footer Watermark
     const footerY = height - 40;
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.strokeStyle = isLight ? '#e2e8f0' : 'rgba(255, 255, 255, 0.08)';
     ctx.beginPath();
     ctx.moveTo(40, footerY - 15);
     ctx.lineTo(width - 40, footerY - 15);
@@ -470,7 +526,7 @@ export default function WhatsAppBriefingModal({
     ctx.fillText(`Live Interactive Telemetry: ${publicOrigin}/briefing?safar=${encodeURIComponent(safarName)}`, 40, footerY + 8);
 
     ctx.font = 'bold 11px system-ui, -apple-system, sans-serif';
-    ctx.fillStyle = '#818cf8';
+    ctx.fillStyle = isLight ? '#4f46e5' : '#818cf8';
     const verifiedText = '✓ Verified Production Platform by One Tap Studio';
     const vWidth = ctx.measureText(verifiedText).width;
     ctx.fillText(verifiedText, width - 40 - vWidth, footerY + 8);
@@ -495,16 +551,16 @@ export default function WhatsAppBriefingModal({
     if (initialTab) {
       setActiveTab(initialTab);
       if (initialTab === 'image') {
-        setTimeout(() => renderInfographicImage(), 50);
+        setTimeout(() => renderInfographicImage(imageTheme), 50);
       }
     }
   }, [initialTab, isOpen, safarName]);
 
   useEffect(() => {
     if (isOpen && activeTab === 'image' && !generatedImageUrl) {
-      renderInfographicImage();
+      renderInfographicImage(imageTheme);
     }
-  }, [isOpen, activeTab, safarName, safarTasks.length]);
+  }, [isOpen, activeTab, safarName, safarTasks.length, imageTheme]);
 
   if (!isOpen) return null;
 
@@ -860,13 +916,105 @@ export default function WhatsAppBriefingModal({
             </div>
           ) : (
             <div>
-              {/* Infographic Image Generator Preview */}
+              {/* Infographic Image Appearance Switcher */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '14px',
+                  backgroundColor: '#f8fafc',
+                  padding: '10px 14px',
+                  borderRadius: '12px',
+                  border: '1px solid #e2e8f0',
+                  flexWrap: 'wrap',
+                  gap: '10px'
+                }}
+              >
+                <div>
+                  <span style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a', display: 'block' }}>
+                    Infographic Card Style
+                  </span>
+                  <span style={{ fontSize: '11px', color: '#64748b' }}>
+                    {imageTheme === 'white' ? '☀️ Clean Executive White Document (WhatsApp Recommended)' : '🌙 Sleek Night Workstation Dark Mode'}
+                  </span>
+                </div>
+
+                <div
+                  style={{
+                    display: 'inline-flex',
+                    padding: '3px',
+                    borderRadius: '9px',
+                    backgroundColor: '#e2e8f0',
+                    gap: '4px'
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setImageTheme('white');
+                      renderInfographicImage('white');
+                    }}
+                    style={{
+                      padding: '6px 14px',
+                      borderRadius: '7px',
+                      border: 'none',
+                      backgroundColor: imageTheme === 'white' ? '#ffffff' : 'transparent',
+                      color: imageTheme === 'white' ? '#0f172a' : '#64748b',
+                      fontWeight: 700,
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      boxShadow: imageTheme === 'white' ? '0 1px 4px rgba(0,0,0,0.1)' : 'none',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <span>☀️ White Mode</span>
+                    {imageTheme === 'white' && (
+                      <span style={{ fontSize: '9px', background: '#22c55e', color: '#fff', padding: '1px 5px', borderRadius: '4px', fontWeight: 800 }}>ACTIVE</span>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setImageTheme('dark');
+                      renderInfographicImage('dark');
+                    }}
+                    style={{
+                      padding: '6px 14px',
+                      borderRadius: '7px',
+                      border: 'none',
+                      backgroundColor: imageTheme === 'dark' ? '#0f172a' : 'transparent',
+                      color: imageTheme === 'dark' ? '#ffffff' : '#64748b',
+                      fontWeight: 700,
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      boxShadow: imageTheme === 'dark' ? '0 1px 4px rgba(0,0,0,0.2)' : 'none',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <span>🌙 Dark Mode</span>
+                    {imageTheme === 'dark' && (
+                      <span style={{ fontSize: '9px', background: '#6366f1', color: '#fff', padding: '1px 5px', borderRadius: '4px', fontWeight: 800 }}>ACTIVE</span>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Infographic Image Generator Preview Container */}
               <div
                 style={{
                   borderRadius: '14px',
                   overflow: 'hidden',
-                  border: '1px solid #e2e8f0',
-                  backgroundColor: '#090d16',
+                  border: imageTheme === 'white' ? '1.5px solid #cbd5e1' : '1px solid #1e293b',
+                  backgroundColor: imageTheme === 'white' ? '#ffffff' : '#090d16',
+                  boxShadow: imageTheme === 'white' ? '0 6px 24px -4px rgba(15, 23, 42, 0.08)' : '0 6px 24px -4px rgba(0, 0, 0, 0.4)',
                   minHeight: '260px',
                   display: 'flex',
                   alignItems: 'center',
@@ -875,22 +1023,25 @@ export default function WhatsAppBriefingModal({
                 }}
               >
                 {imageGenerating ? (
-                  <div style={{ color: '#ffffff', textAlign: 'center', padding: '40px' }}>
-                    <Sparkles size={28} className="spinning" style={{ margin: '0 auto 12px' }} />
-                    <p style={{ margin: 0, fontSize: '14px', fontWeight: 600 }}>
-                      Rendering High-Resolution Studio Infographic…
+                  <div style={{ color: imageTheme === 'white' ? '#0f172a' : '#ffffff', textAlign: 'center', padding: '50px 20px' }}>
+                    <Sparkles size={28} className="spinning" style={{ margin: '0 auto 12px', color: '#4f46e5' }} />
+                    <p style={{ margin: 0, fontSize: '14px', fontWeight: 700 }}>
+                      Rendering High-Resolution Studio Infographic in {imageTheme === 'white' ? 'White' : 'Dark'} Mode…
                     </p>
+                    <span style={{ fontSize: '12px', color: '#64748b', marginTop: '4px', display: 'block' }}>
+                      Composing pipeline stats & date folder checklist matrix
+                    </span>
                   </div>
                 ) : generatedImageUrl ? (
                   <img
                     src={generatedImageUrl}
-                    alt={`${safarName} Production Briefing`}
-                    style={{ width: '100%', height: 'auto', display: 'block' }}
+                    alt={`${safarName} Production Briefing (${imageTheme} mode)`}
+                    style={{ width: '100%', height: 'auto', display: 'block', maxHeight: '540px', objectFit: 'contain' }}
                   />
                 ) : (
                   <button
                     type="button"
-                    onClick={renderInfographicImage}
+                    onClick={() => renderInfographicImage(imageTheme)}
                     style={{
                       padding: '10px 18px',
                       borderRadius: '8px',
@@ -906,8 +1057,8 @@ export default function WhatsAppBriefingModal({
                 )}
               </div>
 
-              <p style={{ fontSize: '11.5px', color: '#64748b', marginTop: '10px', textAlign: 'center' }}>
-                📸 High-res 2X status infographic showing live progress, stage distribution, and date folders breakdown.
+              <p style={{ fontSize: '11.5px', color: '#64748b', marginTop: '12px', textAlign: 'center' }}>
+                📸 High-res 2X status infographic card · Ready to copy or send directly via WhatsApp.
               </p>
             </div>
           )}
