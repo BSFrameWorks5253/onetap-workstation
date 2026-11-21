@@ -574,6 +574,94 @@ body::before {
   transform: scale(0.98) !important;
 }
 
+.mobile-hero-whatsapp-group {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  flex-wrap: wrap !important;
+}
+
+.mobile-hero-whatsapp-img-btn,
+.whatsapp-opt-img {
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%) !important;
+  box-shadow: 0 2px 10px rgba(79, 70, 229, 0.28) !important;
+}
+
+.mobile-hero-whatsapp-img-btn:hover,
+.whatsapp-opt-img:hover {
+  background: linear-gradient(135deg, #4338ca 0%, #4f46e5 100%) !important;
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.38) !important;
+}
+
+.briefing-action-group {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  flex-wrap: wrap !important;
+}
+
+.briefing-btn-image {
+  background: #eef2ff !important;
+  color: #4338ca !important;
+  border: 1px solid #c7d2fe !important;
+  box-shadow: 0 1px 4px rgba(79, 70, 229, 0.12) !important;
+}
+
+.briefing-btn-image:hover {
+  background: #e0e7ff !important;
+  color: #3730a3 !important;
+  border-color: #a5b4fc !important;
+}
+
+.topbar-whatsapp-group {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+
+.topbar-btn-image {
+  background: #eef2ff !important;
+  color: #4f46e5 !important;
+  border-color: #c7d2fe !important;
+}
+
+.topbar-btn-image:hover {
+  background: #e0e7ff !important;
+  color: #3730a3 !important;
+}
+
+.btn-card-image {
+  background: #f5f3ff !important;
+  color: #6366f1 !important;
+  border-color: #ddd6fe !important;
+}
+
+.btn-card-image:hover {
+  background: #ede9fe !important;
+  color: #4f46e5 !important;
+}
+
+.kanban-banner-whatsapp-group {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  flex-wrap: wrap !important;
+}
+
+.kanban-banner-image-btn {
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%) !important;
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.25) !important;
+}
+
+.kanban-banner-image-btn:hover {
+  background: linear-gradient(135deg, #4338ca 0%, #4f46e5 100%) !important;
+}
+
+.btn-briefing-img {
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%) !important;
+  color: #ffffff !important;
+}
+
 .mobile-hero-actions-grid {
   display: flex !important;
   align-items: center !important;
@@ -627,6 +715,23 @@ body::before {
   .dashboard-hero-actions-container {
     flex-direction: column !important;
     align-items: stretch !important;
+  }
+  .mobile-hero-whatsapp-group {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+  .mobile-hero-whatsapp-group .mobile-hero-whatsapp-btn {
+    width: 100% !important;
+    font-size: 12.5px !important;
+    padding: 10px 8px !important;
+  }
+  .kanban-banner-whatsapp-group {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+    width: 100% !important;
   }
   .mobile-hero-whatsapp-btn {
     width: 100% !important;

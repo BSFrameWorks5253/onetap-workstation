@@ -24,8 +24,30 @@ export interface WhatsAppBriefingModalProps {
   safarName: string;
   safarYear?: string | number;
   tasks: SafarTask[];
+  initialTab?: 'msg' | 'image';
   onDirectShareWhatsApp?: (text: string) => void;
   publicOrigin?: string;
+}
+
+function drawRoundRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number
+) {
+  if (typeof (ctx as any).roundRect === 'function') {
+    (ctx as any).roundRect(x, y, w, h, r);
+  } else {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
 }
 
 export default function WhatsAppBriefingModal({
@@ -34,10 +56,11 @@ export default function WhatsAppBriefingModal({
   safarName,
   safarYear = '1447',
   tasks,
+  initialTab = 'msg',
   onDirectShareWhatsApp,
   publicOrigin = 'https://safar-tracker-web.vercel.app'
 }: WhatsAppBriefingModalProps): JSX.Element | null {
-  const [activeTab, setActiveTab] = useState<'msg' | 'image'>('msg');
+  const [activeTab, setActiveTab] = useState<'msg' | 'image'>(initialTab);
   const [copiedText, setCopiedText] = useState(false);
   const [copiedImage, setCopiedImage] = useState(false);
   const [imageGenerating, setImageGenerating] = useState(false);
@@ -179,7 +202,7 @@ export default function WhatsAppBriefingModal({
     ctx.fillStyle = '#4f46e5';
     // Logo square
     ctx.beginPath();
-    ctx.roundRect(40, 40, 42, 42, 10);
+    drawRoundRect(ctx, 40, 40, 42, 42, 10);
     ctx.fill();
 
     ctx.fillStyle = '#ffffff';
@@ -212,7 +235,7 @@ export default function WhatsAppBriefingModal({
     // 3. Campaign Hero Banner Card
     ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
     ctx.beginPath();
-    ctx.roundRect(40, 120, width - 80, 140, 16);
+    drawRoundRect(ctx, 40, 120, width - 80, 140, 16);
     ctx.fill();
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
     ctx.stroke();
@@ -240,7 +263,7 @@ export default function WhatsAppBriefingModal({
 
     ctx.fillStyle = is100Done ? 'rgba(16, 185, 129, 0.15)' : 'rgba(79, 70, 229, 0.15)';
     ctx.beginPath();
-    ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 14);
+    drawRoundRect(ctx, badgeX, badgeY, badgeW, badgeH, 14);
     ctx.fill();
     ctx.strokeStyle = is100Done ? '#10b981' : '#6366f1';
     ctx.lineWidth = 1.5;
@@ -268,7 +291,7 @@ export default function WhatsAppBriefingModal({
 
     ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
     ctx.beginPath();
-    ctx.roundRect(barX, barY, barW, barH, 6);
+    drawRoundRect(ctx, barX, barY, barW, barH, 6);
     ctx.fill();
 
     // Segments
@@ -278,7 +301,7 @@ export default function WhatsAppBriefingModal({
       const segW = (count / total) * barW;
       ctx.fillStyle = color;
       ctx.beginPath();
-      ctx.roundRect(curX, barY, segW, barH, 4);
+      drawRoundRect(ctx, curX, barY, segW, barH, 4);
       ctx.fill();
       curX += segW;
     };
@@ -297,7 +320,7 @@ export default function WhatsAppBriefingModal({
     // Card A: Video Pipeline
     ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
     ctx.beginPath();
-    ctx.roundRect(40, cardY, colW, cardH, 14);
+    drawRoundRect(ctx, 40, cardY, colW, cardH, 14);
     ctx.fill();
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
     ctx.lineWidth = 1;
@@ -331,7 +354,7 @@ export default function WhatsAppBriefingModal({
       }
       ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
       ctx.beginPath();
-      ctx.roundRect(chipX, chipY, cWidth, 22, 6);
+      drawRoundRect(ctx, chipX, chipY, cWidth, 22, 6);
       ctx.fill();
       ctx.fillStyle = c.color;
       ctx.fillText(c.label, chipX + 8, chipY + 15);
@@ -341,7 +364,7 @@ export default function WhatsAppBriefingModal({
     // Card B: Google Drive Photos
     ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
     ctx.beginPath();
-    ctx.roundRect(40 + colW + 20, cardY, colW, cardH, 14);
+    drawRoundRect(ctx, 40 + colW + 20, cardY, colW, cardH, 14);
     ctx.fill();
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
     ctx.stroke();
@@ -368,7 +391,7 @@ export default function WhatsAppBriefingModal({
       const cWidth = ctx.measureText(c.label).width + 16;
       ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
       ctx.beginPath();
-      ctx.roundRect(pChipX, pChipY, cWidth, 22, 6);
+      drawRoundRect(ctx, pChipX, pChipY, cWidth, 22, 6);
       ctx.fill();
       ctx.fillStyle = c.color;
       ctx.fillText(c.label, pChipX + 8, pChipY + 15);
@@ -401,7 +424,7 @@ export default function WhatsAppBriefingModal({
       // Item Box
       ctx.fillStyle = isDelivered ? 'rgba(16, 185, 129, 0.06)' : 'rgba(255, 255, 255, 0.03)';
       ctx.beginPath();
-      ctx.roundRect(rX, rY, colWidth, rowH, 8);
+      drawRoundRect(ctx, rX, rY, colWidth, rowH, 8);
       ctx.fill();
       ctx.strokeStyle = isDelivered ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.06)';
       ctx.stroke();
@@ -427,7 +450,7 @@ export default function WhatsAppBriefingModal({
 
       ctx.fillStyle = isDelivered ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)';
       ctx.beginPath();
-      ctx.roundRect(tagX, tagY, tagW, 20, 4);
+      drawRoundRect(ctx, tagX, tagY, tagW, 20, 4);
       ctx.fill();
 
       ctx.fillStyle = isDelivered ? '#34d399' : '#fbbf24';
@@ -464,7 +487,21 @@ export default function WhatsAppBriefingModal({
   };
 
   useEffect(() => {
-    if (isOpen && activeTab === 'image') {
+    setGeneratedImageUrl(null);
+    setImageBlob(null);
+  }, [safarName]);
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+      if (initialTab === 'image') {
+        setTimeout(() => renderInfographicImage(), 50);
+      }
+    }
+  }, [initialTab, isOpen, safarName]);
+
+  useEffect(() => {
+    if (isOpen && activeTab === 'image' && !generatedImageUrl) {
       renderInfographicImage();
     }
   }, [isOpen, activeTab, safarName, safarTasks.length]);
@@ -649,38 +686,68 @@ export default function WhatsAppBriefingModal({
           </button>
         </div>
 
-        {/* Tab Switcher: Message vs Image */}
+        {/* Choose Format: Message vs Image */}
         <div
           style={{
-            padding: '12px 24px',
-            backgroundColor: '#ffffff',
-            borderBottom: '1px solid #f1f5f9',
-            display: 'flex',
-            gap: '8px'
+            padding: '14px 24px',
+            backgroundColor: '#f8fafc',
+            borderBottom: '1px solid #e2e8f0',
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '12px'
           }}
         >
           <button
             type="button"
             onClick={() => setActiveTab('msg')}
             style={{
-              flex: 1,
-              padding: '10px 14px',
-              borderRadius: '10px',
-              border: activeTab === 'msg' ? '1.5px solid #25d366' : '1px solid #e2e8f0',
-              backgroundColor: activeTab === 'msg' ? '#f0fdf4' : '#ffffff',
-              color: activeTab === 'msg' ? '#15803d' : '#475569',
-              fontWeight: 700,
-              fontSize: '13px',
+              padding: '12px 16px',
+              borderRadius: '12px',
+              border: activeTab === 'msg' ? '2px solid #25d366' : '1.5px solid #e2e8f0',
+              backgroundColor: activeTab === 'msg' ? '#ffffff' : '#f1f5f9',
+              boxShadow: activeTab === 'msg' ? '0 4px 12px rgba(37, 211, 102, 0.15)' : 'none',
               cursor: 'pointer',
               display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
+              alignItems: 'flex-start',
+              gap: '12px',
+              textAlign: 'left',
               transition: 'all 0.15s ease'
             }}
           >
-            <MessageCircle size={16} />
-            <span>Format 1: WhatsApp Message (Text)</span>
+            <div
+              style={{
+                width: '34px',
+                height: '34px',
+                borderRadius: '8px',
+                backgroundColor: activeTab === 'msg' ? '#dcfce7' : '#e2e8f0',
+                color: activeTab === 'msg' ? '#15803d' : '#64748b',
+                display: 'grid',
+                placeItems: 'center',
+                flexShrink: 0
+              }}
+            >
+              <MessageCircle size={18} />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div
+                style={{
+                  fontWeight: 700,
+                  fontSize: '13px',
+                  color: activeTab === 'msg' ? '#0f172a' : '#475569',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <span>💬 WhatsApp Message</span>
+                {activeTab === 'msg' && (
+                  <span style={{ fontSize: '10px', padding: '1px 6px', borderRadius: '4px', background: '#25d366', color: '#fff', fontWeight: 800 }}>ACTIVE</span>
+                )}
+              </div>
+              <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '2px', lineHeight: 1.3 }}>
+                Formatted text with date checklist, emojis & link
+              </div>
+            </div>
           </button>
 
           <button
@@ -690,24 +757,53 @@ export default function WhatsAppBriefingModal({
               if (!generatedImageUrl) renderInfographicImage();
             }}
             style={{
-              flex: 1,
-              padding: '10px 14px',
-              borderRadius: '10px',
-              border: activeTab === 'image' ? '1.5px solid #4f46e5' : '1px solid #e2e8f0',
-              backgroundColor: activeTab === 'image' ? '#eef2ff' : '#ffffff',
-              color: activeTab === 'image' ? '#4338ca' : '#475569',
-              fontWeight: 700,
-              fontSize: '13px',
+              padding: '12px 16px',
+              borderRadius: '12px',
+              border: activeTab === 'image' ? '2px solid #4f46e5' : '1.5px solid #e2e8f0',
+              backgroundColor: activeTab === 'image' ? '#ffffff' : '#f1f5f9',
+              boxShadow: activeTab === 'image' ? '0 4px 12px rgba(79, 70, 229, 0.15)' : 'none',
               cursor: 'pointer',
               display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
+              alignItems: 'flex-start',
+              gap: '12px',
+              textAlign: 'left',
               transition: 'all 0.15s ease'
             }}
           >
-            <ImageIcon size={16} />
-            <span>Format 2: Infographic Card (Image)</span>
+            <div
+              style={{
+                width: '34px',
+                height: '34px',
+                borderRadius: '8px',
+                backgroundColor: activeTab === 'image' ? '#e0e7ff' : '#e2e8f0',
+                color: activeTab === 'image' ? '#4338ca' : '#64748b',
+                display: 'grid',
+                placeItems: 'center',
+                flexShrink: 0
+              }}
+            >
+              <ImageIcon size={18} />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div
+                style={{
+                  fontWeight: 700,
+                  fontSize: '13px',
+                  color: activeTab === 'image' ? '#0f172a' : '#475569',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <span>🖼️ Infographic Card</span>
+                {activeTab === 'image' && (
+                  <span style={{ fontSize: '10px', padding: '1px 6px', borderRadius: '4px', background: '#4f46e5', color: '#fff', fontWeight: 800 }}>ACTIVE</span>
+                )}
+              </div>
+              <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '2px', lineHeight: 1.3 }}>
+                1200px Retina studio image card with date matrix
+              </div>
+            </div>
           </button>
         </div>
 

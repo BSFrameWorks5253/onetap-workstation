@@ -21,7 +21,8 @@ import {
   Camera,
   CheckCircle2,
   Clock,
-  MessageCircle
+  MessageCircle,
+  Image as ImageIcon
 } from 'lucide-react';
 import { sendWhatsAppAlert, DEFAULT_WHATSAPP_PHONE } from '../lib/googleAppsScript';
 import { AnimatedNumber, getPublicWebsiteOrigin, isCameraOrAssetFolder, isProperDateOrSessionFolder } from '../App';
@@ -147,7 +148,7 @@ export default function OngoingSafarKanban({
   onAddTask: (safarName: string, dateFolder: string, comment?: string) => void;
   onResetAndRescan: () => void;
   onDeleteSafar?: (safarName: string) => void;
-  onOpenBriefingModal?: (safarName: string) => void;
+  onOpenBriefingModal?: (safarName: string, initialTab?: 'msg' | 'image') => void;
   saving?: boolean;
   connected?: boolean;
 }) {
@@ -465,27 +466,43 @@ export default function OngoingSafarKanban({
               ))}
             </select>
 
-            <button
-              type="button"
-              className="kanban-banner-whatsapp-btn"
-              onClick={() => {
-                if (onOpenBriefingModal) {
-                  onOpenBriefingModal(selectedSafar);
-                } else {
-                  const base = getPublicWebsiteOrigin();
-                  const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(
-                    `📢 *Ongoing Safar Update (${selectedSafar})*\n` +
-                    `📍 Progress: ${uploadedCount} of ${totalCount} dates delivered (${totalCount > 0 ? Math.round((uploadedCount / totalCount) * 100) : 0}%)\n` +
-                    `🔗 ${base}/kanban?safar=${encodeURIComponent(selectedSafar)}`
-                  )}`;
-                  window.open(url, '_blank');
-                }
-              }}
-              title={`Open WhatsApp Briefing (Image / Message) for ${selectedSafar}`}
-            >
-              <MessageCircle size={14} />
-              <span>WhatsApp Briefing</span>
-            </button>
+            <div className="kanban-banner-whatsapp-group">
+              <button
+                type="button"
+                className="kanban-banner-whatsapp-btn"
+                onClick={() => {
+                  if (onOpenBriefingModal) {
+                    onOpenBriefingModal(selectedSafar, 'msg');
+                  } else {
+                    const base = getPublicWebsiteOrigin();
+                    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(
+                      `📢 *Ongoing Safar Update (${selectedSafar})*\n` +
+                      `📍 Progress: ${uploadedCount} of ${totalCount} dates delivered (${totalCount > 0 ? Math.round((uploadedCount / totalCount) * 100) : 0}%)\n` +
+                      `🔗 ${base}/kanban?safar=${encodeURIComponent(selectedSafar)}`
+                    )}`;
+                    window.open(url, '_blank');
+                  }
+                }}
+                title={`Open WhatsApp text message briefing for ${selectedSafar}`}
+              >
+                <MessageCircle size={14} />
+                <span>WhatsApp Msg</span>
+              </button>
+
+              <button
+                type="button"
+                className="kanban-banner-whatsapp-btn kanban-banner-image-btn"
+                onClick={() => {
+                  if (onOpenBriefingModal) {
+                    onOpenBriefingModal(selectedSafar, 'image');
+                  }
+                }}
+                title={`Generate visual Infographic Image Card for ${selectedSafar}`}
+              >
+                <ImageIcon size={14} />
+                <span>Image Card</span>
+              </button>
+            </div>
 
             {onDeleteSafar && selectedSafar && selectedSafar !== 'Active Safar' && (
               <button

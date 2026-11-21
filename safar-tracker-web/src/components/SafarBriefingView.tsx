@@ -12,7 +12,9 @@ import {
   Clock,
   ChevronRight,
   ShieldCheck,
-  ArrowRight
+  ArrowRight,
+  MessageCircle,
+  Image as ImageIcon
 } from 'lucide-react'
 import { AnimatedNumber } from '../App'
 
@@ -47,7 +49,7 @@ interface SafarBriefingViewProps {
   onSelectSafar?: (name: string) => void
   onRefresh?: () => void
   onCopyBriefing: () => void
-  onShareWhatsApp: () => void
+  onShareWhatsApp: (format?: 'msg' | 'image') => void
   onOpenTracker: () => void
 }
 
@@ -349,11 +351,21 @@ export default function SafarBriefingView({
           <button
             type="button"
             className="briefing-action-btn btn-whatsapp"
-            onClick={onShareWhatsApp}
-            title="Share this briefing update directly to WhatsApp"
+            onClick={() => onShareWhatsApp('msg')}
+            title="Share formatted WhatsApp text briefing"
           >
-            <Share2 size={14} />
-            <span>Share WhatsApp Briefing</span>
+            <MessageCircle size={14} />
+            <span>WhatsApp Msg</span>
+          </button>
+
+          <button
+            type="button"
+            className="briefing-action-btn btn-whatsapp btn-briefing-img"
+            onClick={() => onShareWhatsApp('image')}
+            title="Generate and share Infographic Card image"
+          >
+            <ImageIcon size={14} />
+            <span>Image Card</span>
           </button>
 
           <button

@@ -31,6 +31,7 @@ import {
   Smartphone,
   Download,
   MessageCircle,
+  Image as ImageIcon,
   Award,
   Globe,
   Building2,
@@ -1173,7 +1174,7 @@ export default function App(): JSX.Element {
   snapshotRef.current = snapshot
 
   const [showScriptableGuide, setShowScriptableGuide] = useState(false)
-  const [briefingModalSafar, setBriefingModalSafar] = useState<string | null>(null)
+  const [briefingModalState, setBriefingModalState] = useState<{ safarName: string; initialTab: 'msg' | 'image' } | null>(null)
 
   // Clear legacy notification keys to avoid stale browser cache
   useEffect(() => {
@@ -2160,10 +2161,10 @@ export default function App(): JSX.Element {
     }
   }
 
-  function shareDailyBriefingWhatsApp(forSafarName?: string) {
+  function shareDailyBriefingWhatsApp(forSafarName?: string, format: 'msg' | 'image' = 'msg') {
     const target = forSafarName || effectiveOngoingSafar || (activeSafarGroups[0]?.safarName ?? '')
     if (target && target !== 'ALL') {
-      setBriefingModalSafar(target)
+      setBriefingModalState({ safarName: target, initialTab: format })
     } else {
       const text = generateDailyBriefingText(forSafarName)
       const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`
@@ -2680,14 +2681,15 @@ export default function App(): JSX.Element {
           }}
           onRefresh={requestDesktopSync}
           onCopyBriefing={() => copyDailyBriefing(ongoingGroup?.safarName || targetSafarName)}
-          onShareWhatsApp={() => shareDailyBriefingWhatsApp(ongoingGroup?.safarName || targetSafarName)}
+          onShareWhatsApp={(format?: 'msg' | 'image') => shareDailyBriefingWhatsApp(ongoingGroup?.safarName || targetSafarName, format || 'msg')}
           onOpenTracker={() => navigateTo('ongoing', ongoingGroup?.safarName || targetSafarName)}
         />
-        {briefingModalSafar && (
+        {briefingModalState && (
           <WhatsAppBriefingModal
-            isOpen={Boolean(briefingModalSafar)}
-            onClose={() => setBriefingModalSafar(null)}
-            safarName={briefingModalSafar}
+            isOpen={Boolean(briefingModalState)}
+            onClose={() => setBriefingModalState(null)}
+            safarName={briefingModalState.safarName}
+            initialTab={briefingModalState.initialTab}
             safarYear={ongoingGroup?.safarYear || '1448'}
             tasks={snapshot.tasks}
             publicOrigin={getPublicWebsiteOrigin()}
@@ -2747,12 +2749,13 @@ export default function App(): JSX.Element {
       />
 
       {/* WhatsApp Briefing Modal (Image Infographic / Formatted Message) */}
-      {briefingModalSafar && (
+      {briefingModalState && (
         <WhatsAppBriefingModal
-          isOpen={Boolean(briefingModalSafar)}
-          onClose={() => setBriefingModalSafar(null)}
-          safarName={briefingModalSafar}
-          safarYear={activeSafarGroups.find(g => g.safarName === briefingModalSafar)?.safarYear || '1448'}
+          isOpen={Boolean(briefingModalState)}
+          onClose={() => setBriefingModalState(null)}
+          safarName={briefingModalState.safarName}
+          initialTab={briefingModalState.initialTab}
+          safarYear={activeSafarGroups.find(g => g.safarName === briefingModalState.safarName)?.safarYear || '1448'}
           tasks={snapshot.tasks}
           publicOrigin={getPublicWebsiteOrigin()}
         />
@@ -2913,17 +2916,28 @@ export default function App(): JSX.Element {
               <span className="topbar-btn-text">Sync</span>
             </button>
 
-            {/* WhatsApp Quick Briefing */}
+            {/* WhatsApp Quick Briefing (Msg & Image Card) */}
             {effectiveOngoingSafar && (
-              <button
-                type="button"
-                className="topbar-btn-whatsapp"
-                onClick={() => shareDailyBriefingWhatsApp(effectiveOngoingSafar)}
-                title={`Send WhatsApp daily briefing for ${effectiveOngoingSafar}`}
-              >
-                <MessageCircle size={13} />
-                <span className="topbar-btn-text">WhatsApp</span>
-              </button>
+              <div className="topbar-whatsapp-group">
+                <button
+                  type="button"
+                  className="topbar-btn-whatsapp"
+                  onClick={() => shareDailyBriefingWhatsApp(effectiveOngoingSafar, 'msg')}
+                  title={`Send WhatsApp text message briefing for ${effectiveOngoingSafar}`}
+                >
+                  <MessageCircle size={13} />
+                  <span className="topbar-btn-text">WhatsApp</span>
+                </button>
+                <button
+                  type="button"
+                  className="topbar-btn-whatsapp topbar-btn-image"
+                  onClick={() => shareDailyBriefingWhatsApp(effectiveOngoingSafar, 'image')}
+                  title={`Generate WhatsApp infographic status card for ${effectiveOngoingSafar}`}
+                >
+                  <ImageIcon size={13} />
+                  <span className="topbar-btn-text">Image Card</span>
+                </button>
+              </div>
             )}
 
             {/* Sample Pipeline Badge / Toggle */}
@@ -3011,7 +3025,7 @@ export default function App(): JSX.Element {
                 onAddTask={(safarName, folder, comment) => void handleAddTask(safarName, folder, comment)}
                 onResetAndRescan={handleResetAndRescan}
                 onDeleteSafar={safarName => void handleDeleteSafar(safarName)}
-                onOpenBriefingModal={safar => setBriefingModalSafar(safar)}
+                onOpenBriefingModal={(safar, format) => shareDailyBriefingWhatsApp(safar, format || 'msg')}
                 saving={saving}
                 connected={connected}
               />
@@ -3107,18 +3121,34 @@ export default function App(): JSX.Element {
                   </div>
 
                   <div className="dashboard-hero-actions-container">
-                    {/* 1-Tap WhatsApp Briefing Trigger */}
-                    <button
-                      type="button"
-                      className="mobile-hero-whatsapp-btn"
-                      onClick={() => {
-                        try { if ('vibrate' in navigator) navigator.vibrate(15) } catch {}
-                        shareDailyBriefingWhatsApp(ongoingGroup.safarName)
-                      }}
-                    >
-                      <MessageCircle size={16} />
-                      <span>Send Daily WhatsApp Briefing</span>
-                    </button>
+                    {/* WhatsApp Briefing Options: Text Message vs Visual Infographic Image Card */}
+                    <div className="mobile-hero-whatsapp-group">
+                      <button
+                        type="button"
+                        className="mobile-hero-whatsapp-btn whatsapp-opt-msg"
+                        onClick={() => {
+                          try { if ('vibrate' in navigator) navigator.vibrate(15) } catch {}
+                          shareDailyBriefingWhatsApp(ongoingGroup.safarName, 'msg')
+                        }}
+                        title="Open formatted WhatsApp text message briefing"
+                      >
+                        <MessageCircle size={16} />
+                        <span>WhatsApp Message</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className="mobile-hero-whatsapp-btn mobile-hero-whatsapp-img-btn whatsapp-opt-img"
+                        onClick={() => {
+                          try { if ('vibrate' in navigator) navigator.vibrate(15) } catch {}
+                          shareDailyBriefingWhatsApp(ongoingGroup.safarName, 'image')
+                        }}
+                        title="Generate high-res Infographic status card image for WhatsApp"
+                      >
+                        <ImageIcon size={16} />
+                        <span>Infographic Image</span>
+                      </button>
+                    </div>
 
                     <div className="mobile-hero-actions-grid">
                       <button
@@ -3178,15 +3208,27 @@ export default function App(): JSX.Element {
 
               {/* Action Buttons */}
               <div className="dashboard-action-buttons">
-                <button
-                  type="button"
-                  className="briefing-btn-whatsapp"
-                  onClick={() => shareDailyBriefingWhatsApp(effectiveOngoingSafar)}
-                  title={`Send Ongoing Safar (${effectiveOngoingSafar}) briefing to WhatsApp`}
-                >
-                  <MessageCircle size={16} />
-                  <span>WhatsApp Briefing ({effectiveOngoingSafar ? effectiveOngoingSafar.split('-').slice(-1)[0].trim() : 'Ongoing'})</span>
-                </button>
+                <div className="briefing-action-group">
+                  <button
+                    type="button"
+                    className="briefing-btn-whatsapp"
+                    onClick={() => shareDailyBriefingWhatsApp(effectiveOngoingSafar, 'msg')}
+                    title={`Send text WhatsApp briefing for Ongoing Safar (${effectiveOngoingSafar})`}
+                  >
+                    <MessageCircle size={15} />
+                    <span>WhatsApp Msg ({effectiveOngoingSafar ? effectiveOngoingSafar.split('-').slice(-1)[0].trim() : 'Ongoing'})</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="briefing-btn-whatsapp briefing-btn-image"
+                    onClick={() => shareDailyBriefingWhatsApp(effectiveOngoingSafar, 'image')}
+                    title={`Generate status infographic image for Ongoing Safar (${effectiveOngoingSafar})`}
+                  >
+                    <ImageIcon size={15} />
+                    <span>Image Card</span>
+                  </button>
+                </div>
 
                 <button
                   type="button"
@@ -3519,11 +3561,19 @@ export default function App(): JSX.Element {
                   <div className="footer-right">
                     <button
                       type="button"
-                      onClick={() => shareDailyBriefingWhatsApp(group.safarName)}
+                      onClick={() => shareDailyBriefingWhatsApp(group.safarName, 'msg')}
                       className="btn-card-whatsapp"
-                      title={`Send WhatsApp status for ${group.safarName}`}
+                      title={`Send WhatsApp text status for ${group.safarName}`}
                     >
-                      <MessageCircle size={13} /> WhatsApp
+                      <MessageCircle size={13} /> Msg
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => shareDailyBriefingWhatsApp(group.safarName, 'image')}
+                      className="btn-card-whatsapp btn-card-image"
+                      title={`Generate WhatsApp infographic card for ${group.safarName}`}
+                    >
+                      <ImageIcon size={13} /> Image
                     </button>
                     <button
                       type="button"
