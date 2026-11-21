@@ -713,6 +713,30 @@ body::before {
   .sidebar-close {
     display: inline-grid !important;
   }
+  .mobile-hero-top {
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+  .mobile-hero-percent-badge {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    flex-direction: row !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 10px 14px !important;
+  }
+  .mobile-hero-title {
+    font-size: 19px !important;
+    word-break: break-word !important;
+  }
+  .mobile-hero-stats-row {
+    flex-direction: row !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+    font-size: 12px !important;
+    gap: 8px !important;
+    flex-wrap: wrap !important;
+  }
   .dashboard-hero-actions-container {
     flex-direction: column !important;
     align-items: stretch !important;
@@ -725,8 +749,8 @@ body::before {
   }
   .mobile-hero-whatsapp-group .mobile-hero-whatsapp-btn {
     width: 100% !important;
-    font-size: 12.5px !important;
-    padding: 10px 8px !important;
+    font-size: 12px !important;
+    padding: 10px 6px !important;
   }
   .kanban-banner-whatsapp-group {
     display: grid !important;
@@ -746,10 +770,29 @@ body::before {
   .mobile-hero-sub-btn {
     width: 100% !important;
   }
-  .mobile-hero-stats-row {
-    flex-direction: column !important;
-    align-items: flex-start !important;
-    gap: 6px !important;
+  .dashboard-action-buttons {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+  .briefing-action-group {
+    grid-column: span 2 !important;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+  .tracker-kpi-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+  }
+  .tracker-kpi-card.kpi-total {
+    grid-column: span 2 !important;
+  }
+  .tracker-kpi-card.kpi-safars-done {
+    grid-column: span 2 !important;
   }
   .topbar-btn-text {
     display: none !important;
@@ -3237,29 +3280,74 @@ body {
   box-shadow: 0 8px 30px rgba(79, 70, 229, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.95) !important;
 }
 .studio-pipeline-badge {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  background: #ffffff;
-  border: 1px solid rgba(226, 232, 240, 0.9);
-  border-radius: 14px;
-  padding: 8px 14px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-end !important;
+  background: #ffffff !important;
+  border: 1.5px solid #e2e8f0 !important;
+  border-radius: 12px !important;
+  padding: 8px 14px !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04) !important;
 }
-.studio-pipeline-badge strong {
-  font-size: 22px;
-  font-weight: 800;
-  color: #4f46e5;
-  font-family: var(--font-display, sans-serif);
-  line-height: 1;
+.studio-pipeline-badge .badge-val-row {
+  display: flex !important;
+  align-items: baseline !important;
+  gap: 2px !important;
 }
-.studio-pipeline-badge span {
-  font-size: 10px;
-  font-weight: 700;
-  color: #059669;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  margin-top: 2px;
+.studio-pipeline-badge .badge-number {
+  font-size: 26px !important;
+  font-weight: 800 !important;
+  color: #4f46e5 !important;
+  line-height: 1 !important;
+  font-variant-numeric: tabular-nums !important;
+}
+.studio-pipeline-badge .badge-pct-sym {
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  color: #6366f1 !important;
+}
+.studio-pipeline-badge .badge-label {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: #059669 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  margin-top: 2px !important;
+}
+
+.safar-all-done-banner {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  background: #ecfdf5 !important;
+  border: 1px solid #a7f3d0 !important;
+  border-radius: 10px !important;
+  padding: 12px 14px !important;
+  color: #065f46 !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  margin: 6px 0 10px !important;
+}
+
+.safar-completed-dates-note {
+  font-size: 11.5px !important;
+  color: #059669 !important;
+  font-weight: 600 !important;
+  padding: 4px 6px !important;
+  margin-top: 4px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+}
+
+.kanban-banner-campaign-title {
+  margin: 0 !important;
+  font-size: 20px !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+  letter-spacing: -0.02em !important;
+  line-height: 1.25 !important;
+  font-family: var(--font-display, sans-serif) !important;
 }
 
 /* Multi-Color Stage Progress Bar Animations & Shimmer */

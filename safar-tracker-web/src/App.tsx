@@ -3415,8 +3415,11 @@ export default function App(): JSX.Element {
                     <p>Live cross-stage status across all {activeSafarGroups.length} campaigns ({studioStats.totalDates} scheduled dates)</p>
                   </div>
                   <div className="studio-pipeline-badge">
-                    <strong><AnimatedNumber value={studioStats.percent} />%</strong>
-                    <span>Delivered</span>
+                    <div className="badge-val-row">
+                      <strong className="badge-number"><AnimatedNumber value={studioStats.percent} /></strong>
+                      <span className="badge-pct-sym">%</span>
+                    </div>
+                    <span className="badge-label">Delivered</span>
                   </div>
                 </div>
                 <div className="multicolor-progress-bar large" role="progressbar" aria-label="Studio-wide pipeline stage distribution">
@@ -3493,50 +3496,83 @@ export default function App(): JSX.Element {
                   <span style={{ color: '#047857', fontWeight: 700 }}>📷 Photos: <AnimatedNumber value={group.photoUploadedCount} />/{group.total} (<AnimatedNumber value={group.photoPercent} />%)</span>
                 </div>
 
-                {group.tasks.length ? <ul className="safar-preview-list safar-preview-list-scrollable">{group.tasks.map(task => {
-                  const isPhotoUp = task.photoStage === 'uploaded' || Boolean(task.photoUploaded) || (task.stage === 'uploaded' || task.stage === 'jameya' || (task.stage as any) === 'upload' || (task.stage as any) === 'completed')
-                  const isVideoUp = task.stage === 'uploaded' || task.stage === 'jameya' || (task.stage as any) === 'upload' || (task.stage as any) === 'completed'
+                {(() => {
+                  const pendingDates = group.tasks.filter(task => {
+                    const isPhotoUp = task.photoStage === 'uploaded' || Boolean(task.photoUploaded) || (task.stage === 'uploaded' || task.stage === 'jameya' || (task.stage as any) === 'upload' || (task.stage as any) === 'completed')
+                    const isVideoUp = task.stage === 'uploaded' || task.stage === 'jameya' || (task.stage as any) === 'upload' || (task.stage as any) === 'completed'
+                    return !(isPhotoUp && isVideoUp)
+                  })
+                  const completedCount = group.tasks.length - pendingDates.length
+
+                  if (group.tasks.length === 0) {
+                    return <p className="safar-preview-empty">Waiting for date folders to sync.</p>
+                  }
+
+                  if (pendingDates.length === 0) {
+                    return (
+                      <div className="safar-all-done-banner">
+                        <CheckCircle2 size={15} color="#059669" />
+                        <span>All {group.total} scheduled date deliverables are 100% completed & uploaded!</span>
+                      </div>
+                    )
+                  }
+
                   return (
-                    <li key={task.id} className="safar-preview-row">
-                      <div className="safar-preview-date">
-                        <span className={`chip-dot dot-${task.stage}`} title={`Stage: ${task.stage}`} />
-                        <strong title={dateFolderName(task)}>{dateFolderName(task)}</strong>
-                      </div>
-                      <div className="safar-preview-status">
-                        {isPhotoUp && isVideoUp ? (
-                          <span className="media-sync-badge both-uploaded" title="Both Photo & Video Uploaded">
-                            <CheckCircle2 size={11} /> Both Uploaded
-                          </span>
-                        ) : isPhotoUp && !isVideoUp ? (
-                          <span className="media-sync-badge photo-only" title="Photo Uploaded · Video Pending">
-                            <Camera size={11} /> Photo Up
-                          </span>
-                        ) : !isPhotoUp && isVideoUp ? (
-                          <span className="media-sync-badge video-only" title="Video Uploaded · Photo Pending">
-                            <Film size={11} /> Video Up
-                          </span>
-                        ) : (
-                          <span className={`stage-tag stage-${task.stage}`}>
-                            {STAGES.find(s => s.id === task.stage)?.label || task.stage}
-                          </span>
-                        )}
-                        <button
-                          type="button"
-                          className="preview-remove-btn"
-                          title={`Exclude ${dateFolderName(task)}`}
-                          onClick={e => {
-                            e.stopPropagation()
-                            if (window.confirm(`Exclude "${dateFolderName(task)}" from tracking?`)) {
-                              void handleRemoveTask(task)
-                            }
-                          }}
-                        >
-                          <Trash2 size={12} />
-                        </button>
-                      </div>
-                    </li>
+                    <>
+                      <ul className="safar-preview-list safar-preview-list-scrollable">
+                        {pendingDates.map(task => {
+                          const isPhotoUp = task.photoStage === 'uploaded' || Boolean(task.photoUploaded) || (task.stage === 'uploaded' || task.stage === 'jameya' || (task.stage as any) === 'upload' || (task.stage as any) === 'completed')
+                          const isVideoUp = task.stage === 'uploaded' || task.stage === 'jameya' || (task.stage as any) === 'upload' || (task.stage as any) === 'completed'
+                          return (
+                            <li key={task.id} className="safar-preview-row">
+                              <div className="safar-preview-date">
+                                <span className={`chip-dot dot-${task.stage}`} title={`Stage: ${task.stage}`} />
+                                <strong title={dateFolderName(task)}>{dateFolderName(task)}</strong>
+                              </div>
+                              <div className="safar-preview-status">
+                                {isPhotoUp && isVideoUp ? (
+                                  <span className="media-sync-badge both-uploaded" title="Both Photo & Video Uploaded">
+                                    <CheckCircle2 size={11} /> Both Uploaded
+                                  </span>
+                                ) : isPhotoUp && !isVideoUp ? (
+                                  <span className="media-sync-badge photo-only" title="Photo Uploaded · Video Pending">
+                                    <Camera size={11} /> Photo Up
+                                  </span>
+                                ) : !isPhotoUp && isVideoUp ? (
+                                  <span className="media-sync-badge video-only" title="Video Uploaded · Photo Pending">
+                                    <Film size={11} /> Video Up
+                                  </span>
+                                ) : (
+                                  <span className={`stage-tag stage-${task.stage}`}>
+                                    {STAGES.find(s => s.id === task.stage)?.label || task.stage}
+                                  </span>
+                                )}
+                                <button
+                                  type="button"
+                                  className="preview-remove-btn"
+                                  title={`Exclude ${dateFolderName(task)}`}
+                                  onClick={e => {
+                                    e.stopPropagation()
+                                    if (window.confirm(`Exclude "${dateFolderName(task)}" from tracking?`)) {
+                                      void handleRemoveTask(task)
+                                    }
+                                  }}
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </div>
+                            </li>
+                          )
+                        })}
+                      </ul>
+                      {completedCount > 0 && (
+                        <div className="safar-completed-dates-note">
+                          <span>✓ {completedCount} 100% completed dates hidden</span>
+                        </div>
+                      )}
+                    </>
                   )
-                })}</ul> : <p className="safar-preview-empty">Waiting for date folders to sync.</p>}
+                })()}
 
                 <div className="dashboard-safar-card-footer">
                   <div className="footer-left">

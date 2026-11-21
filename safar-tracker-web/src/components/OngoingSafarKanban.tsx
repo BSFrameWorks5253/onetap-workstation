@@ -451,20 +451,9 @@ export default function OngoingSafarKanban({
             Active Safar Pipeline
           </span>
           <div className="kanban-banner-selector-row">
-            <select
-              aria-label="Select Ongoing Safar"
-              value={selectedSafar}
-              onChange={e => {
-                const val = e.target.value;
-                setSelectedSafar(val);
-                onSelectSafar?.(val);
-              }}
-              className="kanban-safar-select"
-            >
-              {ongoingSafars.map(s => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
+            <h2 className="kanban-banner-campaign-title" title={`Active Campaign: ${selectedSafar}`}>
+              {selectedSafar}
+            </h2>
 
             <div className="kanban-banner-whatsapp-group">
               <button
@@ -698,58 +687,6 @@ export default function OngoingSafarKanban({
           <span>{actionNotice}</span>
         </div>
       )}
-
-      {/* Mobile Quick Filter Chips */}
-      <div className="quick-chips-scroll" role="group" aria-label="Quick Filter Presets">
-        <button
-          type="button"
-          className={`quick-chip ${filterChip === 'all' ? 'active' : ''}`}
-          onClick={() => setFilterChip('all')}
-        >
-          <span>✨ All Dates</span>
-          <span className="chip-badge">{chipCounts.all}</span>
-        </button>
-
-        <button
-          type="button"
-          className={`quick-chip ${filterChip === 'my_pending' ? 'active' : ''}`}
-          onClick={() => setFilterChip('my_pending')}
-        >
-          <span>⚡ My Pending Edits</span>
-          <span className="chip-badge">{chipCounts.myPending}</span>
-        </button>
-
-        <button
-          type="button"
-          className={`quick-chip ${filterChip === 'ready_deliver' ? 'active' : ''}`}
-          onClick={() => setFilterChip('ready_deliver')}
-        >
-          <span>📦 Ready to Deliver</span>
-          <span className="chip-badge">{chipCounts.readyDeliver}</span>
-        </button>
-
-        <button
-          type="button"
-          className={`quick-chip ${filterChip === 'needs_photo_review' ? 'active' : ''}`}
-          onClick={() => setFilterChip('needs_photo_review')}
-        >
-          <span>📷 Needs Photo Review</span>
-          <span className="chip-badge">{chipCounts.needsPhotoReview}</span>
-        </button>
-
-        <button
-          type="button"
-          className={`quick-chip batch-chip ${isBatchMode ? 'active' : ''}`}
-          onClick={() => {
-            const nextMode = !isBatchMode;
-            setIsBatchMode(nextMode);
-            if (!nextMode) setSelectedTaskIds(new Set());
-          }}
-          title="Toggle Multi-Select Mode to apply batch actions across dates"
-        >
-          <span>☑️ Batch Actions {selectedTaskIds.size > 0 ? `(${selectedTaskIds.size})` : ''}</span>
-        </button>
-      </div>
 
       {/* Mobile Stage Switcher Tabs (Thumb-Friendly Native Navigation) */}
       <div className="mobile-kanban-stage-tabs" role="tablist" aria-label="Kanban stage selector">
