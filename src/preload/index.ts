@@ -68,6 +68,7 @@ contextBridge.exposeInMainWorld('api', {
   // Title Adder
   titleAdder: {
     previewAudioAssignments: (params: object) => ipcRenderer.invoke('titleAdder:previewAudioAssignments', params),
+    scanGroupPhotos: (folderPath: string) => ipcRenderer.invoke('titleAdder:scanGroupPhotos', folderPath),
     start: (params: object) => ipcRenderer.invoke('titleAdder:start', params),
     cancel: (jobId: string) => ipcRenderer.send(`titleAdder:cancel:${jobId}`),
     validatePath: (targetPath: string) => ipcRenderer.invoke('titleAdder:validatePath', targetPath),

@@ -29,7 +29,7 @@ export default function HardwareMonitor(): JSX.Element {
     // Listen for render status
     let unAdder: any, unDone: any
     try {
-      unAdder = api.titleAdder.onProgress(() => setActiveJob(true))
+      unAdder = api.titleAdder.onProgress(() => setActiveJob(prev => prev ? prev : true))
       unDone  = api.titleAdder.onDone(() => setActiveJob(false))
     } catch (e) { console.warn('Monitor listeners failed:', e) }
 

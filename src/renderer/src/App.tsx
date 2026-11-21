@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, Suspense } from 'react'
+import React, { useState, useEffect, useRef, useCallback, Suspense } from 'react'
 import { ThemeProvider, useTheme } from './theme/ThemeContext'
 import { SoundProvider, useSound } from './components/SoundProvider'
 import WelcomeScreen from './components/WelcomeScreen'
@@ -364,6 +364,16 @@ function AppInner(): JSX.Element {
   const [updateError, setUpdateError] = useState('')
   const [_prevPage, setPrevPage] = useState<PageKey | null>(null)
   const [pageKey, setPageKey] = useState(0) // forces re-mount for transition
+
+  const navigate = useCallback((page: PageKey | string): void => {
+    const target = normalizePageKey(page)
+    setActivePage(prev => {
+      if (target === prev) return prev
+      setPrevPage(prev)
+      setPageKey(k => k + 1)
+      return target
+    })
+  }, [])
 
   // ── Universal File Viewer: Opens exclusively in separate desktop/browser window ──
   // (In-app overlay removed: all files open in dedicated standalone window)
@@ -1014,14 +1024,6 @@ function AppInner(): JSX.Element {
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [activePage, orderedNav, textOverrides])
-
-  function navigate(page: PageKey | string): void {
-    const target = normalizePageKey(page)
-    if (target === activePage) return
-    setPrevPage(activePage)
-    setActivePage(target)
-    setPageKey(k => k + 1)
-  }
 
   // Expose file viewer and navigation globally so any page component can use them
   useEffect(() => {

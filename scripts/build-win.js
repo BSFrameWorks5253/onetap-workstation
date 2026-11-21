@@ -52,6 +52,47 @@ function ensureWinSharp() {
   }
 }
 
+function ensureWinCodeSign() {
+  if (process.platform !== 'win32') return
+  const localAppData = process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local')
+  const cacheDir = path.join(localAppData, 'electron-builder', 'Cache', 'winCodeSign')
+  const targetDir = path.join(cacheDir, 'winCodeSign-2.6.0')
+
+  if (fs.existsSync(targetDir) && fs.existsSync(path.join(targetDir, 'rcedit-x64.exe'))) {
+    return
+  }
+
+  if (fs.existsSync(cacheDir)) {
+    const archives = fs.readdirSync(cacheDir).filter(f => f.endsWith('.7z'))
+    const sevenZipBin = path.join(process.cwd(), 'node_modules', '7zip-bin', 'win', 'x64', '7za.exe')
+    if (archives.length > 0 && fs.existsSync(sevenZipBin)) {
+      const srcArchive = path.join(cacheDir, archives[0])
+      log('Unpacking winCodeSign cache excluding Darwin symlinks...')
+      try {
+        execSync(`"${sevenZipBin}" x -bd "${srcArchive}" "-xr!darwin" "-o${targetDir}" -y`, { stdio: 'ignore' })
+        if (fs.existsSync(path.join(targetDir, 'rcedit-x64.exe'))) {
+          logSuccess('winCodeSign-2.6.0 cache successfully configured (bypassed symlink privilege check).')
+        }
+      } catch (err) {
+        logWarn('Could not auto-extract winCodeSign: ' + err.message)
+      }
+    }
+  }
+}
+
+function ensureInstallerNsh() {
+  const buildDir = path.join(process.cwd(), 'build')
+  const nshFile = path.join(buildDir, 'installer.nsh')
+  if (!fs.existsSync(buildDir)) {
+    try { fs.mkdirSync(buildDir, { recursive: true }) } catch {}
+  }
+  if (!fs.existsSync(nshFile)) {
+    try {
+      fs.writeFileSync(nshFile, '; One Tap NSIS Hooks\n!macro customInit\n!macroend\n!macro customInstall\n!macroend\n!macro customUnInstall\n!macroend\n', 'utf-8')
+    } catch {}
+  }
+}
+
 function ensureProcessClosed() {
   if (process.platform === 'win32') {
     try {
@@ -133,17 +174,75 @@ function prepareCustomMsiTemplate() {
   }
 }
 
+function parseArgs() {
+  const args = process.argv.slice(2)
+  const knownTargets = new Set(['setup', 'nsis', 'portable', 'zip', 'msi', 'msix', 'appx', 'dir'])
+  let target = 'setup'
+  let customVersion = process.env.APP_VERSION || process.env.CUSTOM_VERSION || process.env.VERSION || null
+  let skipBuild = false
+  let forceBuild = false
+
+  for (let i = 0; i < args.length; i++) {
+    const raw = args[i].trim()
+    const lower = raw.toLowerCase()
+    if (lower === '--no-build' || lower === '--skip-build') {
+      skipBuild = true
+    } else if (lower === '--build' || lower === '--rebuild') {
+      forceBuild = true
+    } else if (lower.startsWith('--version=')) {
+      customVersion = raw.split('=')[1].trim()
+    } else if (lower === '--version' || lower === '-v') {
+      if (i + 1 < args.length) {
+        customVersion = args[++i].trim()
+      }
+    } else if (knownTargets.has(lower)) {
+      target = lower
+    } else if (/^v?\d+(\.\d+)+/i.test(raw)) {
+      // Positional version argument, e.g. "26.12.01" or "v26.12.01"
+      customVersion = raw
+    }
+  }
+
+  if (customVersion) {
+    customVersion = customVersion.replace(/^[vV]/, '').trim()
+  }
+
+  return { target, customVersion, skipBuild, forceBuild }
+}
+
 async function buildWindows() {
-  const pkg = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package.json'), 'utf-8'))
+  const pkgPath = path.join(process.cwd(), 'package.json')
+  const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'))
   ensureProcessClosed()
   ensureWinSharp()
+  ensureWinCodeSign()
+  ensureInstallerNsh()
   prepareCustomMsiTemplate()
 
-  const requestedTarget = process.argv[2] // e.g. "zip", "nsis", "msi", "msix", "dir"
-  let builderTarget = requestedTarget ? requestedTarget : 'setup'
+  if (!process.env.CSC_LINK && !process.env.WIN_CSC_LINK) {
+    process.env.CSC_IDENTITY_AUTO_DISCOVERY = 'false'
+  }
 
-  if (requestedTarget === 'msix' || requestedTarget === 'appx') {
-    builderTarget = 'appx'
+  const { target: builderTarget, customVersion, skipBuild, forceBuild } = parseArgs()
+  const version = customVersion || pkg.version
+
+  if (customVersion && customVersion !== pkg.version) {
+    log(`Syncing custom version v${version} into package.json (previously v${pkg.version})...`)
+    pkg.version = version
+    fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n', 'utf-8')
+    logSuccess(`package.json updated to v${version}`)
+  }
+
+  const outMainPath = path.join(process.cwd(), 'out', 'main', 'index.js')
+  const needsBuild = forceBuild || !fs.existsSync(outMainPath) || (customVersion && !skipBuild)
+
+  if (needsBuild && !skipBuild) {
+    log(`Compiling fresh production build (electron-vite build) for v${version}...`)
+    execSync('npm run build', { stdio: 'inherit' })
+    logSuccess('Production build completed.')
+  }
+
+  if (builderTarget === 'msix' || builderTarget === 'appx') {
     try {
       const { generateAppxAssets } = require('./generate_appx_assets')
       generateAppxAssets()
@@ -152,11 +251,13 @@ async function buildWindows() {
     }
   }
 
+  const versionFlag = `-c.extraMetadata.version="${version}"`
+
   if (process.platform === 'win32') {
-    log(`Building Windows application natively on Windows (${builderTarget || 'nsis'})...`)
+    log(`Building Windows application natively on Windows (${builderTarget || 'nsis'}) for v${version}...`)
     if (builderTarget === 'setup') {
-      log(`Packaging unpacked Windows binaries for Setup installer (v${pkg.version})...`)
-      execSync('npx electron-builder --win dir', { stdio: 'inherit' })
+      log(`Packaging unpacked Windows binaries for Setup installer (v${version})...`)
+      execSync(`npx electron-builder --win dir ${versionFlag}`, { stdio: 'inherit' })
 
       const isccCandidates = [
         'C:\\Program Files (x86)\\Inno Setup 6\\ISCC.exe',
@@ -164,15 +265,15 @@ async function buildWindows() {
       ]
       const isccPath = isccCandidates.find((p) => fs.existsSync(p))
       if (isccPath) {
-        log(`Compiling Inno Setup installer for v${pkg.version} via ${isccPath}...`)
-        execSync(`"${isccPath}" /DAppVersion="${pkg.version}" /DOutputBaseFilename="OneTap-Setup-V-${pkg.version}" installer\\installer.iss`, { stdio: 'inherit' })
-        logSuccess(`Inno Setup installer created: release/OneTap-Setup-V-${pkg.version}.exe`)
+        log(`Compiling Inno Setup installer for v${version} via ${isccPath}...`)
+        execSync(`"${isccPath}" /DAppVersion="${version}" /DOutputBaseFilename="OneTap-Setup-V-${version}" installer\\installer.iss`, { stdio: 'inherit' })
+        logSuccess(`Inno Setup installer created: release/OneTap-Setup-V-${version}.exe`)
       } else {
         logWarn('Inno Setup ISCC.exe not found on system. Building via electron-builder NSIS...')
-        execSync('npx electron-builder --win nsis', { stdio: 'inherit' })
+        execSync(`npx electron-builder --win nsis ${versionFlag}`, { stdio: 'inherit' })
       }
     } else {
-      execSync(`npx electron-builder --win ${builderTarget}`, { stdio: 'inherit' })
+      execSync(`npx electron-builder --win ${builderTarget} ${versionFlag}`, { stdio: 'inherit' })
     }
     if (builderTarget === 'appx') {
       try {
@@ -198,12 +299,12 @@ async function buildWindows() {
         logWarn('Could not create .msix alias: ' + copyErr.message)
       }
     }
-    logSuccess('Windows compilation finished successfully.')
+    logSuccess(`Windows compilation for v${version} finished successfully.`)
 
     // Automatically organize release version-wise and push to GitHub Releases
     try {
       const { publishRelease } = require('./publish_release')
-      await publishRelease({ version: pkg.version })
+      await publishRelease({ version })
     } catch (pubErr) {
       logWarn('Auto-publish notice: ' + pubErr.message)
     }
@@ -213,14 +314,14 @@ async function buildWindows() {
   // Running on Linux / non-Windows host
   const hasWine = hasCommand('wine') || hasCommand('wine64')
 
-  if (hasWine && requestedTarget === 'nsis') {
-    log('Detected Wine on Linux host. Compiling Windows NSIS installer (.exe)...')
+  if (hasWine && (builderTarget === 'nsis' || builderTarget === 'setup')) {
+    log(`Detected Wine on Linux host. Compiling Windows NSIS installer (.exe) for v${version}...`)
     try {
-      execSync(`npx electron-builder --win nsis`, { stdio: 'inherit' })
-      logSuccess('Windows NSIS installer built successfully in release/')
+      execSync(`npx electron-builder --win nsis ${versionFlag}`, { stdio: 'inherit' })
+      logSuccess(`Windows NSIS installer built successfully in release/ (v${version})`)
       try {
         const { publishRelease } = require('./publish_release')
-        await publishRelease({ version: pkg.version })
+        await publishRelease({ version })
       } catch (pubErr) {
         logWarn('Auto-publish notice: ' + pubErr.message)
       }
@@ -231,11 +332,9 @@ async function buildWindows() {
   }
 
   // Linux host: Build unpacked binaries then compile professional Setup installer
-  const version = pkg.version || '26.10.12'
-
   // Step 1: Build win-unpacked directory
-  log('Packaging Windows unpacked binaries (win-unpacked)...')
-  execSync('npx electron-builder --win dir -c.win.signAndEditExecutable=false', { stdio: 'inherit' })
+  log(`Packaging Windows unpacked binaries (win-unpacked) for v${version}...`)
+  execSync(`npx electron-builder --win dir -c.win.signAndEditExecutable=false ${versionFlag}`, { stdio: 'inherit' })
   logSuccess('Windows unpacked binaries created in release/win-unpacked')
 
   // Step 2: Compile Professional Setup Installer using makensis (if available) or portable
@@ -257,11 +356,11 @@ async function buildWindows() {
   }
 
   // Fallback to portable executable if makensis is not available
-  const target = requestedTarget || 'portable'
-  log(`Building fallback Windows package (target: ${target})...`)
+  const target = builderTarget === 'setup' ? 'portable' : builderTarget
+  log(`Building fallback Windows package (target: ${target}) for v${version}...`)
   const signFlag = !hasWine ? '-c.win.signAndEditExecutable=false' : ''
-  execSync(`npx electron-builder --win ${target} ${signFlag}`, { stdio: 'inherit' })
-  logSuccess('Windows build completed successfully in release/')
+  execSync(`npx electron-builder --win ${target} ${signFlag} ${versionFlag}`, { stdio: 'inherit' })
+  logSuccess(`Windows build completed successfully in release/ (v${version})`)
 
   try {
     const { publishRelease } = require('./publish_release')

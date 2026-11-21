@@ -51,6 +51,10 @@ export interface FFmpegJobParams {
   /** Optional event prefix code (e.g. 'M', 'AQ', 'N', 'TNQ', 'QMZ') for metadata tags */
   prefix?: string
   eventCode?: string
+  /** Optional Group Photo video appended directly after the ceremony video with zero transition */
+  groupPhotoVideo?: string
+  /** Duration in seconds of the attached Group Photo video */
+  groupPhotoDuration?: number
 }
 
 export interface FFmpegEvent {
@@ -133,6 +137,12 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
 
   const vidIdx = nextInputIdx++
   dynamicInputs.push('-hwaccel', 'auto', '-i', videoPath)
+
+  let gpVidIdx = -1
+  if (params.groupPhotoVideo && fs.existsSync(params.groupPhotoVideo)) {
+    gpVidIdx = nextInputIdx++
+    dynamicInputs.push('-hwaccel', 'auto', '-i', params.groupPhotoVideo)
+  }
 
   let endImgIdx = -1
   if (!skipBack && endImg && outroLen > 0) {
@@ -360,6 +370,12 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
   // Preserve 100% of live video content from frame 0 to end (no fade-to-black cutting into speech or action)
   videoFilter += `[${vidIdx}:v]scale=${width}:${height}:force_original_aspect_ratio=decrease:flags=fast_bilinear,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=${fps},format=yuv420p,settb=AVTB,setpts=PTS-STARTPTS[vid_faded];`
   concatSegments.push('[vid_faded]')
+
+  // Direct clean cut to Group Photo video (ZERO transition, ZERO fade, ZERO black frames)
+  if (gpVidIdx >= 0) {
+    videoFilter += `[${gpVidIdx}:v]scale=${width}:${height}:force_original_aspect_ratio=decrease:flags=fast_bilinear,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=${fps},format=yuv420p,settb=AVTB,setpts=PTS-STARTPTS[gp_vid];`
+    concatSegments.push('[gp_vid]')
+  }
 
   if (!skipBack && endImgIdx >= 0) {
     const fadeOutEndStart = Math.max(outroLen - 0.5, 0).toFixed(3)

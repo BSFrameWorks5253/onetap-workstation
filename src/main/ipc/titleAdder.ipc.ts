@@ -29,6 +29,7 @@ import { getFfmpegExePath, getFfprobeExePath } from '../core/gpuDetector'
 import { parseSafarFromPath, extractEventCodeFromPath, SafarParsedInfo, getEventSharafContent, getEventGenre } from '../core/safarHierarchy'
 import { recordRenderFinished } from './taskTracker.ipc'
 import { updateIslandState, onTitleAdderProgressBridge } from '../core/dynamicIsland'
+import { scanGroupPhotosInFolder, buildDefaultGroupPhotoAssignments, GroupPhotoItem } from '../core/groupPhotoAppender'
 
 type WinGetter = () => BrowserWindow | null
 
@@ -1302,11 +1303,38 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
       })
     }
 
+    const availableGroupPhotos: GroupPhotoItem[] = []
+    const seenGpPaths = new Set<string>()
+    for (const srcDir of batchSources) {
+      if (srcDir && fs.existsSync(srcDir)) {
+        try {
+          const gps = await scanGroupPhotosInFolder(srcDir)
+          for (const gp of gps) {
+            if (!seenGpPaths.has(gp.fullPath.toLowerCase())) {
+              seenGpPaths.add(gp.fullPath.toLowerCase())
+              availableGroupPhotos.push(gp)
+            }
+          }
+        } catch {}
+      }
+    }
+
+    const suggestedGroupPhotoAssignments = buildDefaultGroupPhotoAssignments(
+      assignments.map(a => a.videoPath),
+      availableGroupPhotos
+    )
+
     return {
       availableAudio,
       availableTitleImages,
+      availableGroupPhotos,
+      suggestedGroupPhotoAssignments,
       assignments
     }
+  })
+
+  ipcMain.handle('titleAdder:scanGroupPhotos', async (_e, folderPath: string) => {
+    return scanGroupPhotosInFolder(folderPath)
   })
 
   ipcMain.handle('titleAdder:validatePath', async (_e, targetPath: string) => {
@@ -1354,6 +1382,7 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
     watermarkExceptions?: string[]
     audioAssignments?: Record<string, string>
     titleImageAssignments?: Record<string, string>
+    groupPhotoAssignments?: Record<string, string>
     videoMuteSelections?: Record<string, boolean>
     videoWatermarkSelections?: Record<string, boolean>
     fileOutputFolders?: Record<string, string>
@@ -1965,8 +1994,50 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
       const sharafName = getEventSharafContent(prefix)
       const genreName = getEventGenre(prefix)
       send('titleAdder:log', { jobId: params.jobId, message: `  🏷 Title: "${videoTitle}" · 📜 Content: "${sharafName}" · 🎭 Genre: "${genreName}" · 📅 Year: ${detectedYear || '—'} · 👥 Artists & Publishers: "AIN53 and Aljamea-Tus-Saifiyah"`, level: 'info' })
-      const totalLength = (skipFront ? 0 : introDuration) + (transDuration > 0 ? transDuration : 0) + info.duration + (skipBack ? 0 : outroDuration)
-      send('titleAdder:log', { jobId: params.jobId, message: `  ⏱ Total output length: ${totalLength.toFixed(2)}s (${skipFront ? 'no front thumbnail' : introDuration + 's intro'} + ${transDuration > 0 ? transDuration.toFixed(1) + 's buffer + ' : ''}${info.duration.toFixed(2)}s video + ${skipBack ? 'no back thumbnail' : outroDuration + 's outro'})`, level: 'info' })
+
+      // ── Group Photo outro assignment lookup ──────────────────
+      let assignedGpPath =
+        params.groupPhotoAssignments?.[videoPath] ||
+        params.groupPhotoAssignments?.[rawVideoPath] ||
+        params.groupPhotoAssignments?.[path.basename(videoPath)] ||
+        params.groupPhotoAssignments?.[path.basename(rawVideoPath)] ||
+        params.groupPhotoAssignments?.[stem] ||
+        params.groupPhotoAssignments?.[canonicalStem] ||
+        params.groupPhotoAssignments?.[videoPath.replace(/\\/g, '/')] ||
+        params.groupPhotoAssignments?.[rawVideoPath.replace(/\\/g, '/')] ||
+        null
+
+      if (!assignedGpPath && params.groupPhotoAssignments) {
+        for (const [k, v] of Object.entries(params.groupPhotoAssignments)) {
+          const kStem = path.basename(k, path.extname(k)).toLowerCase()
+          const kBase = path.basename(k).toLowerCase()
+          if (
+            getCanonicalStem(k) === canonicalStem ||
+            kBase === path.basename(videoPath).toLowerCase() ||
+            kStem === stem.toLowerCase() ||
+            k.toLowerCase() === videoPath.toLowerCase()
+          ) {
+            assignedGpPath = v
+            break
+          }
+        }
+      }
+
+      let groupPhotoDuration = 0
+      let validGpVideo: string | undefined = undefined
+      if (assignedGpPath && fs.existsSync(assignedGpPath)) {
+        const gpInfo = await getVideoInfo(assignedGpPath)
+        groupPhotoDuration = gpInfo?.duration ?? 15.0
+        validGpVideo = assignedGpPath
+        send('titleAdder:log', {
+          jobId: params.jobId,
+          message: `  📸 Group Photo outro: ${path.basename(assignedGpPath)} (${groupPhotoDuration.toFixed(2)}s) [Direct Hard Cut — 0 transition]`,
+          level: 'info'
+        })
+      }
+
+      const totalLength = (skipFront ? 0 : introDuration) + (transDuration > 0 ? transDuration : 0) + info.duration + groupPhotoDuration + (skipBack ? 0 : outroDuration)
+      send('titleAdder:log', { jobId: params.jobId, message: `  ⏱ Total output length: ${totalLength.toFixed(2)}s (${skipFront ? 'no front thumbnail' : introDuration + 's intro'} + ${transDuration > 0 ? transDuration.toFixed(1) + 's buffer + ' : ''}${info.duration.toFixed(2)}s video + ${groupPhotoDuration > 0 ? groupPhotoDuration.toFixed(2) + 's GP + ' : ''}${skipBack ? 'no back thumbnail' : outroDuration + 's outro'})`, level: 'info' })
 
       await new Promise<void>(resolve => {
         runFFmpegJob({
@@ -1993,6 +2064,8 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
           skipBack,
           transitionFile: customTransition ?? undefined,
           transitionDuration: transDuration,
+          groupPhotoVideo: validGpVideo,
+          groupPhotoDuration,
           prefix
         }, (evt) => {
           if (evt.type === 'progress') {

@@ -311,16 +311,14 @@ html, body {
 }
 
 /* GPU compositing for fast responsive hover feedback */
-button,
-.btn-primary,
-.btn-secondary,
-.btn-primary-action,
-.btn-secondary-action,
-.tracker-drive-tab,
-.action-card,
-.stat-card {
-  will-change: transform, box-shadow;
-  transform: translateZ(0);
+.btn-primary:hover,
+.btn-secondary:hover,
+.btn-primary-action:hover,
+.btn-secondary-action:hover,
+.tracker-drive-tab:hover,
+.action-card:hover,
+.stat-card:hover {
+  will-change: transform;
 }
 
 /* ── Physical Glassmorphism Entrance: Position + Blur(0px -> 20px) ── */

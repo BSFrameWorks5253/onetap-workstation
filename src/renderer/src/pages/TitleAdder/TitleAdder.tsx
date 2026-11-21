@@ -1307,6 +1307,9 @@ export default function TitleAdder(): JSX.Element {
   // Pre-Render Confirmation Popup states
   const [isAudioModalOpen, setIsAudioModalOpen] = useState(false)
   const [isAudioModalFullscreen, setIsAudioModalFullscreen] = useState(true)
+  const [isGpModalOpen, setIsGpModalOpen] = useState(false)
+  const [isGpModalFullscreen, setIsGpModalFullscreen] = useState(true)
+  const [gpSearchFilter, setGpSearchFilter] = useState('')
   const [audioPreviewAssignments, setAudioPreviewAssignments] = useState<Array<{
     videoPath: string
     videoName: string
@@ -1343,6 +1346,58 @@ export default function TitleAdder(): JSX.Element {
   const setUserWatermarkSelections = (selections: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => {
     const next = typeof selections === 'function' ? selections(storeState.userWatermarkSelections || {}) : selections
     setStoreState({ userWatermarkSelections: next })
+  }
+
+  // Group Photo (GP) outro states for preflight assignment
+  const [availableGroupPhotos, setAvailableGroupPhotos] = useState<Array<{
+    gpNum: number
+    fileName: string
+    fullPath: string
+    duration: number
+  }>>([])
+  const [userGroupPhotoSelections, setUserGroupPhotoSelections] = useState<Record<string, string>>({})
+  const [gpRangeInputs, setGpRangeInputs] = useState<Record<number, { from: string; to: string }>>({})
+
+  function extractNikaahNumber(fileNameOrPath: string): number | null {
+    if (!fileNameOrPath) return null
+    const base = fileNameOrPath.split(/[\\/]/).pop() || ''
+    const upper = base.replace(/\.[a-z0-9]{2,5}$/i, '').toUpperCase()
+    if (/\bNAMAZ\b/i.test(upper)) return null
+    const m1 = upper.match(/[-_](\d{1,4})[a-zA-Z]?N(?:[-_]|\b|$)/i)
+    if (m1 && m1[1]) return parseInt(m1[1], 10)
+    const m2 = upper.match(/^(?:.*[\s-_])?(\d{1,4})[\s-_]*N(?:[\s-_]|\b|$)/i)
+    if (m2 && m2[1]) return parseInt(m2[1], 10)
+    const m3 = upper.match(/(?:^|[\s-_])N[\s-_]*(\d{1,4})(?:[\s-_]|\b|$)/i)
+    if (m3 && m3[1]) return parseInt(m3[1], 10)
+    const m4 = upper.match(/\bNIKAA?H[\s-_]*(\d{1,4})\b/i)
+    if (m4 && m4[1]) return parseInt(m4[1], 10)
+    return null
+  }
+
+  const applyGpRanges = () => {
+    const nextSelections: Record<string, string> = { ...userGroupPhotoSelections }
+    audioPreviewAssignments.forEach((item, idx) => {
+      const cerNum = extractNikaahNumber(item.videoName) ?? (idx + 1)
+      const stem = getCanonicalStem(item.videoName)
+      for (const gp of availableGroupPhotos) {
+        const range = gpRangeInputs[gp.gpNum]
+        if (range) {
+          const from = parseInt(range.from, 10)
+          const to = parseInt(range.to, 10)
+          if (!isNaN(from) && !isNaN(to) && cerNum >= from && cerNum <= to) {
+            nextSelections[item.videoPath] = gp.fullPath
+            nextSelections[item.videoName] = gp.fullPath
+            nextSelections[stem] = gp.fullPath
+            break
+          }
+        }
+      }
+    })
+    setUserGroupPhotoSelections(nextSelections)
+  }
+
+  const clearGpAssignments = () => {
+    setUserGroupPhotoSelections({})
   }
 
   const [audioSearchFilter, setAudioSearchFilter] = useState('')
@@ -2043,6 +2098,7 @@ export default function TitleAdder(): JSX.Element {
           customAssignments: initAudioMap,
           titleImageAssignments: initImageMap,
           videoMuteSelections: initMuteMap,
+          groupPhotoAssignments: userGroupPhotoSelections,
           watermarkedVideos: nextWatermarked,
           mutedVideos: nextMuted,
           availableVideos: targetVideos,
@@ -2089,6 +2145,24 @@ export default function TitleAdder(): JSX.Element {
         setUserTitleImageSelections(initImageMap)
         setUserMuteSelections(initMuteMap)
         setWatermarkedVideos(nextWatermarked)
+
+        if (res.availableGroupPhotos) {
+          setAvailableGroupPhotos(res.availableGroupPhotos)
+          if (res.availableGroupPhotos.length > 0) {
+            const totalItems = res.assignments.length
+            const step = Math.ceil(totalItems / res.availableGroupPhotos.length)
+            const initialRanges: Record<number, { from: string; to: string }> = {}
+            res.availableGroupPhotos.forEach((gp: any, gi: number) => {
+              const from = gi * step + 1
+              const to = Math.min((gi + 1) * step, totalItems)
+              initialRanges[gp.gpNum] = { from: String(from), to: String(to) }
+            })
+            setGpRangeInputs(initialRanges)
+          }
+        }
+        if (res.suggestedGroupPhotoAssignments) {
+          setUserGroupPhotoSelections(res.suggestedGroupPhotoAssignments)
+        }
         if (await executeAutoRender(res.assignments.map((a: any) => a.videoName))) return
 
         setIsAudioModalOpen(true)
@@ -2463,10 +2537,12 @@ export default function TitleAdder(): JSX.Element {
     if (!api || !api.titleAdder) return
     unsubs.push(api.titleAdder.onFound((d: any) => { setTotal(d.total); addLine(`📋 Found ${d.total} videos to process`, 'info') }))
     unsubs.push(api.titleAdder.onProgress((d: any) => {
-      setProgress(d.percent ?? 0)
-      setStatus(d.status ?? '')
-      setFps(d.fps ?? '')
-      setSpeed(d.speed ?? '')
+      setStoreState({
+        progress: d.percent ?? 0,
+        status: d.status ?? ''
+      })
+      if (d.fps !== undefined) setFps(d.fps ?? '')
+      if (d.speed !== undefined) setSpeed(d.speed ?? '')
 
       // ETA Calculation
       if (d.status !== lastStatusRef.current) {
@@ -2848,6 +2924,28 @@ export default function TitleAdder(): JSX.Element {
       setUserTitleImageSelections(initImageMap)
       setUserMuteSelections(initMuteMap)
       setUserWatermarkSelections(prev => ({ ...prev, ...initWatermarkMap }))
+
+      if (res.availableGroupPhotos) {
+        setAvailableGroupPhotos(res.availableGroupPhotos)
+        if (res.availableGroupPhotos.length > 0) {
+          const totalItems = res.assignments.length
+          const step = Math.ceil(totalItems / res.availableGroupPhotos.length)
+          const initialRanges: Record<number, { from: string; to: string }> = {}
+          res.availableGroupPhotos.forEach((gp: any, gi: number) => {
+            const from = gi * step + 1
+            const to = Math.min((gi + 1) * step, totalItems)
+            initialRanges[gp.gpNum] = { from: String(from), to: String(to) }
+          })
+          setGpRangeInputs(initialRanges)
+        }
+      }
+      if (res.suggestedGroupPhotoAssignments) {
+        setUserGroupPhotoSelections(prev => ({
+          ...res.suggestedGroupPhotoAssignments,
+          ...prev
+        }))
+      }
+
       setMutedVideos(new Set(
         res.assignments
           .filter((item: any) => initMuteMap[item.videoPath] === true)
@@ -2873,6 +2971,7 @@ export default function TitleAdder(): JSX.Element {
     titleImageAssignments?: Record<string, string>
     videoMuteSelections?: Record<string, boolean>
     videoWatermarkSelections?: Record<string, boolean>
+    groupPhotoAssignments?: Record<string, string>
     availableVideos?: string[]
     mutedVideos?: Set<string>
     watermarkedVideos?: Set<string>
@@ -2919,11 +3018,13 @@ export default function TitleAdder(): JSX.Element {
     const effectiveImages = opts.titleImageAssignments || currentStore.userTitleImageSelections || userTitleImageSelections
     const effectiveMuteSelections = opts.videoMuteSelections || currentStore.userMuteSelections || userMuteSelections
     const effectiveWatermarkSelections = opts.videoWatermarkSelections || currentStore.userWatermarkSelections || userWatermarkSelections
+    const effectiveGp = opts.groupPhotoAssignments || userGroupPhotoSelections || {}
 
     const resolvedMuteSelections: Record<string, boolean> = { ...effectiveMuteSelections }
     const resolvedWatermarkSelections: Record<string, boolean> = { ...effectiveWatermarkSelections }
     const resolvedAudioSelections: Record<string, string> = { ...effectiveAudio }
     const resolvedImageSelections: Record<string, string> = { ...effectiveImages }
+    const resolvedGpSelections: Record<string, string> = { ...effectiveGp }
 
     for (const item of audioPreviewAssignments) {
       const v = item.videoName
@@ -2960,6 +3061,14 @@ export default function TitleAdder(): JSX.Element {
         resolvedImageSelections[v] = userImg
         resolvedImageSelections[vp] = userImg
         resolvedImageSelections[canonical] = userImg
+      }
+
+      // Ensure explicit group photo choice maps across all keys
+      const userGp = effectiveGp[vp] ?? effectiveGp[v] ?? effectiveGp[canonical]
+      if (userGp) {
+        resolvedGpSelections[v] = userGp
+        resolvedGpSelections[vp] = userGp
+        resolvedGpSelections[canonical] = userGp
       }
     }
 
@@ -3021,6 +3130,7 @@ export default function TitleAdder(): JSX.Element {
       titleImageAssignments: resolvedImageSelections,
       videoMuteSelections: resolvedMuteSelections,
       videoWatermarkSelections: resolvedWatermarkSelections,
+      groupPhotoAssignments: resolvedGpSelections,
       thumbnailMode: effectiveThumbMode,
       thumbnailModeSelections: effectiveThumbSelections
     })
@@ -5322,6 +5432,20 @@ export default function TitleAdder(): JSX.Element {
                   {new Set(Object.values(userAudioSelections).filter(Boolean)).size}
                 </strong>
               </div>
+              {availableGroupPhotos.length > 0 && (
+                <div className="ta-audio-summary-badge">
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                    Group Photos:
+                  </span>
+                  <strong>
+                    {audioPreviewAssignments.filter(item => {
+                      const sel = userGroupPhotoSelections[item.videoPath] || userGroupPhotoSelections[item.videoName]
+                      return Boolean(sel)
+                    }).length} / {audioPreviewAssignments.length}
+                  </strong>
+                </div>
+              )}
             </div>
 
             {/* ── Pre-Flight Configuration Deck (Thumbnail Mode Dropdown + Destination Path) ── */}
@@ -5617,6 +5741,7 @@ export default function TitleAdder(): JSX.Element {
                 </button>
               </div>
             </div>
+
             <div>
               <Input
                 placeholder="🔍 Search videos by filename, prefix, or image name..."
@@ -6098,6 +6223,11 @@ export default function TitleAdder(): JSX.Element {
                     <span>⚠️</span>
                     <span>Action required: Destination drive or path does not exist! Please change path before rendering.</span>
                   </span>
+                ) : availableGroupPhotos.length > 0 ? (
+                  <>
+                    <span style={{ color: 'var(--accent)', fontWeight: 700 }}>📸</span>
+                    <span>{availableGroupPhotos.length} Group Photo file(s) ({availableGroupPhotos.map(g => g.fileName).join(', ')}) detected in DVD. Next window will assign them.</span>
+                  </>
                 ) : (
                   <>
                     <span style={{ color: '#10B981', fontWeight: 700 }}>✔</span>
@@ -6132,12 +6262,21 @@ export default function TitleAdder(): JSX.Element {
                       }
                       return
                     }
+
+                    if (availableGroupPhotos.length > 0) {
+                      // Move to dedicated Group Photo Assignment Window!
+                      setIsAudioModalOpen(false)
+                      setIsGpModalOpen(true)
+                      return
+                    }
+
                     setIsAudioModalOpen(false)
                     startJob({
                       customAssignments: userAudioSelections,
                       titleImageAssignments: userTitleImageSelections,
                       videoMuteSelections: userMuteSelections,
                       videoWatermarkSelections: userWatermarkSelections,
+                      groupPhotoAssignments: userGroupPhotoSelections,
                       watermarkedVideos: watermarkedVideos,
                       mutedVideos: mutedVideos,
                       availableVideos: audioPreviewAssignments.map(a => a.videoName),
@@ -6147,7 +6286,447 @@ export default function TitleAdder(): JSX.Element {
                     })
                   }}
                 >
-                  {outputExists === false ? '⚠️ Invalid Output Path' : `✔ Confirm & Render (${audioPreviewAssignments.length} Videos)`}
+                  {outputExists === false
+                    ? '⚠️ Invalid Output Path'
+                    : availableGroupPhotos.length > 0
+                      ? `Next: Assign Group Photos (${availableGroupPhotos.length} in DVD) ➜`
+                      : `✔ Confirm & Render (${audioPreviewAssignments.length} Videos)`}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 📸 Dedicated Group Photo Assignment Window (Step 2 - Only when GP1/GP2 present in DVD) */}
+      {isGpModalOpen && (
+        <div className={`ta-modal-overlay ${isGpModalFullscreen ? 'is-fullscreen' : ''}`} onClick={() => setIsGpModalOpen(false)}>
+          <div
+            className={`ta-modal-card ${isGpModalFullscreen ? 'ta-modal-fullscreen' : 'anim-scale-in'}`}
+            style={isGpModalFullscreen ? undefined : { maxWidth: '1080px' }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="ta-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <div className="ta-modal-header-icon" style={{ background: 'color-mix(in srgb, var(--accent) 15%, transparent)', color: 'var(--accent)' }}>
+                  📸
+                </div>
+                <div>
+                  <h3 className="ta-modal-title">Group Photo Outro Assignment</h3>
+                  <p className="ta-modal-subtitle">
+                    Assign detected Group Photo files ({availableGroupPhotos.map(g => g.fileName).join(', ')}) to ceremony videos with direct hard cuts (zero transition, zero fade).
+                  </p>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <GhostButton
+                  size="sm"
+                  onClick={() => setIsGpModalFullscreen(prev => !prev)}
+                  title={isGpModalFullscreen ? 'Restore Window Size' : 'Maximize to Fullscreen'}
+                  style={{ fontSize: '13px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
+                >
+                  {isGpModalFullscreen ? '🗗' : '🗖'}
+                </GhostButton>
+                <GhostButton
+                  size="sm"
+                  onClick={() => setIsGpModalOpen(false)}
+                  title="Close"
+                  style={{ fontSize: '14px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
+                >
+                  ✕
+                </GhostButton>
+              </div>
+            </div>
+
+            {/* Summary counters */}
+            <div className="ta-audio-summary-bar">
+              <div className="ta-audio-summary-badge">
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect width="15" height="14" x="1" y="5" rx="2"/></svg>
+                  Ceremony Videos:
+                </span>
+                <strong>{audioPreviewAssignments.length}</strong>
+              </div>
+              <div className="ta-audio-summary-badge">
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                  GP Files in DVD:
+                </span>
+                <strong>{availableGroupPhotos.length} ({availableGroupPhotos.map(g => `${g.fileName} [${g.duration.toFixed(1)}s]`).join(', ')})</strong>
+              </div>
+              <div className="ta-audio-summary-badge" style={{ borderColor: 'color-mix(in srgb, var(--accent) 35%, transparent)' }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', color: 'var(--accent)' }}>
+                  📸 Outros Assigned:
+                </span>
+                <strong style={{ color: 'var(--accent)' }}>
+                  {audioPreviewAssignments.filter(item => {
+                    const sel = userGroupPhotoSelections[item.videoPath] || userGroupPhotoSelections[item.videoName]
+                    return Boolean(sel)
+                  }).length} / {audioPreviewAssignments.length} Videos
+                </strong>
+              </div>
+              <div className="ta-audio-summary-badge">
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', color: '#10b981' }}>
+                  ⚡ Cut Mode:
+                </span>
+                <strong style={{ color: '#10b981' }}>Direct Hard Cut (0 Transition / 0 Fade)</strong>
+              </div>
+            </div>
+
+            {/* 📸 Group Photo Quick Range Assignment Deck */}
+            <div
+              style={{
+                padding: '14px 18px',
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, color-mix(in srgb, var(--accent) 8%, var(--surface)) 0%, color-mix(in srgb, var(--accent) 3%, var(--surface-2)) 100%)',
+                border: '1px solid color-mix(in srgb, var(--accent) 35%, var(--border))',
+                boxShadow: '0 2px 10px rgba(0, 0, 0, 0.04)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '18px' }}>📸</span>
+                  <div>
+                    <span style={{ fontSize: '13.5px', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.2px' }}>
+                      Batch Range Assignment
+                    </span>
+                    <span style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)' }}>
+                      Set ceremony / Nikaah video number ranges for each Group Photo clip
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      applyGpRanges()
+                      showToast({ title: 'GP Ranges Applied', message: 'Assigned group photo files across target video ranges.', type: 'info' })
+                    }}
+                    style={{
+                      background: 'var(--accent)',
+                      color: 'var(--accent-text, #ffffff)',
+                      border: 'none',
+                      borderRadius: '8px',
+                      padding: '6px 16px',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 8px color-mix(in srgb, var(--accent) 35%, transparent)'
+                    }}
+                  >
+                    ⚡ Apply Ranges
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      clearGpAssignments()
+                      showToast({ title: 'Cleared', message: 'All Group Photo assignments removed.', type: 'info' })
+                    }}
+                    style={{
+                      background: 'transparent',
+                      color: 'var(--text-secondary)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '8px',
+                      padding: '6px 12px',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Clear All
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
+                {availableGroupPhotos.map(gp => {
+                  const range = gpRangeInputs[gp.gpNum] || { from: '1', to: '1' }
+                  const assignedCount = audioPreviewAssignments.filter(item => {
+                    const sel = userGroupPhotoSelections[item.videoPath] || userGroupPhotoSelections[item.videoName]
+                    return sel === gp.fullPath
+                  }).length
+
+                  return (
+                    <div
+                      key={gp.fullPath}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '8px 14px',
+                        borderRadius: '10px',
+                        background: 'var(--surface)',
+                        border: '1px solid var(--border)',
+                        fontSize: '12.5px',
+                        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
+                      }}
+                    >
+                      <span style={{ fontWeight: 800, color: 'var(--accent)' }}>
+                        {gp.fileName}
+                      </span>
+                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                        ({gp.duration.toFixed(1)}s)
+                      </span>
+                      <span style={{ color: 'var(--text-secondary)', marginLeft: '4px', fontSize: '12px' }}>Videos:</span>
+                      <input
+                        type="number"
+                        min="1"
+                        value={range.from}
+                        onChange={(e) => {
+                          const val = e.target.value
+                          setGpRangeInputs(prev => ({
+                            ...prev,
+                            [gp.gpNum]: { ...(prev[gp.gpNum] || { from: '1', to: '1' }), from: val }
+                          }))
+                        }}
+                        style={{
+                          width: '50px',
+                          height: '28px',
+                          borderRadius: '6px',
+                          border: '1px solid var(--border)',
+                          background: 'var(--surface-2)',
+                          color: 'var(--text-primary)',
+                          textAlign: 'center',
+                          fontSize: '12.5px',
+                          fontWeight: 700
+                        }}
+                      />
+                      <span style={{ color: 'var(--text-muted)' }}>to</span>
+                      <input
+                        type="number"
+                        min="1"
+                        value={range.to}
+                        onChange={(e) => {
+                          const val = e.target.value
+                          setGpRangeInputs(prev => ({
+                            ...prev,
+                            [gp.gpNum]: { ...(prev[gp.gpNum] || { from: '1', to: '1' }), to: val }
+                          }))
+                        }}
+                        style={{
+                          width: '50px',
+                          height: '28px',
+                          borderRadius: '6px',
+                          border: '1px solid var(--border)',
+                          background: 'var(--surface-2)',
+                          color: 'var(--text-primary)',
+                          textAlign: 'center',
+                          fontSize: '12.5px',
+                          fontWeight: 700
+                        }}
+                      />
+                      <span
+                        style={{
+                          fontSize: '11px',
+                          padding: '2px 8px',
+                          borderRadius: '6px',
+                          background: assignedCount > 0 ? 'color-mix(in srgb, #10b981 15%, transparent)' : 'var(--surface-2)',
+                          color: assignedCount > 0 ? '#10b981' : 'var(--text-muted)',
+                          fontWeight: 750,
+                          marginLeft: '4px'
+                        }}
+                      >
+                        {assignedCount} assigned
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Search Filter */}
+            <div>
+              <Input
+                placeholder="🔍 Search videos by filename or ceremony number..."
+                value={gpSearchFilter}
+                onChange={e => setGpSearchFilter(e.target.value)}
+              />
+            </div>
+
+            {/* Video Group Photo Assignment Table */}
+            <div className="ta-audio-table-wrapper" style={{ maxHeight: '420px', overflowY: 'auto' }}>
+              <table className="ta-audio-table">
+                <thead>
+                  <tr>
+                    <th style={{ width: '44px', textAlign: 'center' }}>#</th>
+                    <th style={{ width: '100px', textAlign: 'center' }}>Ceremony #</th>
+                    <th style={{ minWidth: '280px' }}>Video File</th>
+                    <th style={{ width: '140px', textAlign: 'center' }}>Category</th>
+                    <th style={{ width: '260px', minWidth: '220px', textAlign: 'center' }}>Group Photo Outro</th>
+                    <th style={{ width: '160px', textAlign: 'center' }}>Outro Cut Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {audioPreviewAssignments
+                    .filter(item => {
+                      if (!gpSearchFilter.trim()) return true
+                      const q = gpSearchFilter.toLowerCase()
+                      const cer = extractNikaahNumber(item.videoName)
+                      return (
+                        item.videoName.toLowerCase().includes(q) ||
+                        item.prefix.toLowerCase().includes(q) ||
+                        (cer !== null && String(cer).includes(q))
+                      )
+                    })
+                    .map((item, idx) => {
+                      const stem = getCanonicalStem(item.videoName)
+                      const currentGp = userGroupPhotoSelections[item.videoPath]
+                        ?? userGroupPhotoSelections[item.videoName]
+                        ?? userGroupPhotoSelections[stem]
+                        ?? ''
+                      const cerNum = extractNikaahNumber(item.videoName)
+                      const pTheme = getPrefixColorTheme(item.prefix)
+                      const assignedGpItem = availableGroupPhotos.find(g => g.fullPath === currentGp)
+
+                      return (
+                        <tr
+                          key={item.videoPath || idx}
+                          style={currentGp ? { background: 'color-mix(in srgb, var(--accent) 3%, transparent)' } : undefined}
+                        >
+                          <td style={{ opacity: 0.6, fontSize: '12px', fontWeight: 600, textAlign: 'center' }}>{idx + 1}</td>
+                          <td style={{ textAlign: 'center' }}>
+                            {cerNum !== null ? (
+                              <span
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  padding: '2px 8px',
+                                  borderRadius: '6px',
+                                  fontSize: '11px',
+                                  fontWeight: 800,
+                                  background: 'color-mix(in srgb, var(--accent) 15%, transparent)',
+                                  color: 'var(--accent)',
+                                  border: '1px solid color-mix(in srgb, var(--accent) 30%, transparent)'
+                                }}
+                              >
+                                {cerNum}N
+                              </span>
+                            ) : (
+                              <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>#{idx + 1}</span>
+                            )}
+                          </td>
+                          <td style={{ fontWeight: 600 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span>🎬</span>
+                              <span title={item.videoName}>{item.videoName}</span>
+                            </div>
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <span
+                              className="ta-prefix-chip"
+                              style={item.prefix ? {
+                                color: (pTheme as any).text || pTheme.accent,
+                                borderColor: pTheme.accent,
+                                background: pTheme.soft,
+                                fontWeight: 800
+                              } : undefined}
+                            >
+                              {item.prefix || '—'}
+                            </span>
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <select
+                              className="st-select"
+                              style={{
+                                width: '100%',
+                                maxWidth: '240px',
+                                height: '34px',
+                                fontSize: '12px',
+                                padding: '4px 8px',
+                                fontWeight: currentGp ? 700 : 500,
+                                borderColor: currentGp ? 'var(--accent)' : undefined
+                              }}
+                              value={currentGp}
+                              onChange={(e) => {
+                                const val = e.target.value
+                                setUserGroupPhotoSelections(prev => ({
+                                  ...prev,
+                                  [item.videoPath]: val,
+                                  [item.videoName]: val,
+                                  [stem]: val
+                                }))
+                              }}
+                            >
+                              <option value="">None (No GP Outro)</option>
+                              {availableGroupPhotos.map(gp => (
+                                <option key={gp.fullPath} value={gp.fullPath}>
+                                  📸 {gp.fileName} ({gp.duration.toFixed(1)}s)
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            {currentGp ? (
+                              <span
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  padding: '3px 8px',
+                                  borderRadius: '6px',
+                                  fontSize: '11px',
+                                  fontWeight: 750,
+                                  background: 'rgba(16, 185, 129, 0.15)',
+                                  color: '#10b981',
+                                  border: '1px solid rgba(16, 185, 129, 0.3)'
+                                }}
+                              >
+                                ⚡ Direct Cut ({assignedGpItem?.duration ? assignedGpItem.duration.toFixed(1) + 's' : 'GP'})
+                              </span>
+                            ) : (
+                              <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                                — No Outro
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Actions Footer */}
+            <div className="ta-modal-actions">
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ color: '#10B981', fontWeight: 700 }}>✔</span>
+                <span>
+                  Group Photos will be appended to ceremony videos with <strong>Direct Hard Cut</strong> (zero transition, zero fade). Audio remains seamless.
+                </span>
+              </div>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <GhostButton onClick={() => { setIsGpModalOpen(false); setIsAudioModalOpen(true); }}>
+                  ← Back to Preflight Check
+                </GhostButton>
+                <GhostButton onClick={() => setIsGpModalOpen(false)}>
+                  Cancel
+                </GhostButton>
+                <Button
+                  accent={meta.accent}
+                  accentHv={meta.accentHv}
+                  onClick={() => {
+                    setIsGpModalOpen(false)
+                    startJob({
+                      customAssignments: userAudioSelections,
+                      titleImageAssignments: userTitleImageSelections,
+                      videoMuteSelections: userMuteSelections,
+                      videoWatermarkSelections: userWatermarkSelections,
+                      groupPhotoAssignments: userGroupPhotoSelections,
+                      watermarkedVideos: watermarkedVideos,
+                      mutedVideos: mutedVideos,
+                      availableVideos: audioPreviewAssignments.map(a => a.videoName),
+                      batchSource: batchSource,
+                      thumbnailMode: thumbnailMode,
+                      thumbnailModeSelections: userThumbnailModeSelections
+                    })
+                  }}
+                >
+                  ✔ Confirm & Start Render ({audioPreviewAssignments.length} Videos)
                 </Button>
               </div>
             </div>
