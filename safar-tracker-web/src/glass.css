@@ -421,15 +421,21 @@ body::before {
   margin-top: 3px;
 }
 
+/* Sidebar Close Button: Hidden on Desktop */
+.sidebar-close {
+  display: none !important;
+}
+
 /* Dashboard Hero Command Center Card */
-.dashboard-hero-card {
+.dashboard-hero-card,
+.mobile-ongoing-hero-card {
   display: block !important;
   background: #ffffff !important;
   border: 1px solid #e2e8f0 !important;
   border-radius: 16px !important;
-  padding: 22px 24px !important;
-  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05) !important;
-  margin-bottom: 24px !important;
+  padding: 20px 24px !important;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.04) !important;
+  margin-bottom: 22px !important;
 }
 
 .dashboard-hero-card.empty-hero {
@@ -447,21 +453,200 @@ body::before {
   line-height: 1.5;
 }
 
+.mobile-hero-top {
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+  gap: 16px !important;
+}
+
+.mobile-hero-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.05em !important;
+  color: #4f46e5 !important;
+  background: rgba(79, 70, 229, 0.08) !important;
+  padding: 4px 10px !important;
+  border-radius: 6px !important;
+  margin-bottom: 6px !important;
+}
+
+.mobile-hero-title {
+  margin: 4px 0 6px 0 !important;
+  font-size: 22px !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+  font-family: var(--font-display, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif) !important;
+  line-height: 1.25 !important;
+}
+
+.mobile-hero-meta {
+  font-size: 13px !important;
+  color: #64748b !important;
+  font-weight: 500 !important;
+  display: block !important;
+}
+
+.mobile-hero-percent-badge {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-end !important;
+  background: #ffffff !important;
+  border: 1.5px solid #e2e8f0 !important;
+  border-radius: 14px !important;
+  padding: 8px 16px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+  flex-shrink: 0 !important;
+  min-width: 90px !important;
+  text-align: right !important;
+}
+
+.mobile-hero-percent-badge strong {
+  font-size: 24px !important;
+  font-weight: 800 !important;
+  color: #4f46e5 !important;
+  line-height: 1 !important;
+  font-family: var(--font-display, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif) !important;
+}
+
+.mobile-hero-percent-badge span {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: #059669 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.04em !important;
+  margin-top: 3px !important;
+}
+
+.mobile-hero-stats-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 20px !important;
+  font-size: 13px !important;
+  color: #475569 !important;
+  margin: 12px 0 16px 0 !important;
+  font-weight: 500 !important;
+}
+
+.mobile-hero-stats-row strong {
+  color: #0f172a !important;
+  font-weight: 700 !important;
+}
+
 .dashboard-hero-actions-container {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-top: 14px;
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  flex-wrap: wrap !important;
+  margin-top: 14px !important;
+}
+
+.mobile-hero-whatsapp-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  padding: 10px 20px !important;
+  min-height: 42px !important;
+  background: #25d366 !important;
+  color: #ffffff !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  border-radius: 10px !important;
+  border: none !important;
+  box-shadow: 0 2px 10px rgba(37, 211, 102, 0.28) !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  white-space: nowrap !important;
+}
+
+.mobile-hero-whatsapp-btn:hover {
+  background: #20ba59 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 14px rgba(37, 211, 102, 0.38) !important;
+}
+
+.mobile-hero-whatsapp-btn:active {
+  transform: scale(0.98) !important;
+}
+
+.mobile-hero-actions-grid {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  flex-wrap: wrap !important;
+}
+
+.mobile-hero-sub-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  padding: 10px 16px !important;
+  min-height: 42px !important;
+  border-radius: 10px !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  border: 1px solid #cbd5e1 !important;
+  background: #ffffff !important;
+  color: #334155 !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  white-space: nowrap !important;
+}
+
+.mobile-hero-sub-btn:hover {
+  background: #f8fafc !important;
+  border-color: #94a3b8 !important;
+  color: #0f172a !important;
+  transform: translateY(-1px) !important;
+}
+
+.mobile-hero-sub-btn:active {
+  transform: scale(0.98) !important;
+}
+
+.mobile-hero-sub-btn.primary {
+  background: #0f172a !important;
+  color: #ffffff !important;
+  border-color: #0f172a !important;
+}
+
+.mobile-hero-sub-btn.primary:hover {
+  background: #1e293b !important;
 }
 
 @media (max-width: 768px) {
+  .sidebar-close {
+    display: inline-grid !important;
+  }
   .dashboard-hero-actions-container {
-    flex-direction: column;
-    align-items: stretch;
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  .mobile-hero-whatsapp-btn {
+    width: 100% !important;
+  }
+  .mobile-hero-actions-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+  .mobile-hero-sub-btn {
+    width: 100% !important;
+  }
+  .mobile-hero-stats-row {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 6px !important;
   }
   .topbar-btn-text {
-    display: none;
+    display: none !important;
   }
 }
 
@@ -2053,9 +2238,6 @@ body {
 .mobile-kanban-stage-tabs {
   display: none;
 }
-.mobile-ongoing-hero-card {
-  display: none;
-}
 .topbar-mobile-brand {
   display: none;
 }
@@ -2313,13 +2495,11 @@ body {
     display: flex !important;
     flex-direction: column !important;
     padding: 16px !important;
-    border-radius: 18px !important;
-    background: linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(244, 246, 254, 0.92)) !important;
-    border: 1.5px solid rgba(99, 102, 241, 0.25) !important;
-    box-shadow: 0 8px 24px rgba(79, 70, 229, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+    border-radius: 16px !important;
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05) !important;
     margin-bottom: 16px !important;
-    backdrop-filter: blur(20px) !important;
-    -webkit-backdrop-filter: blur(20px) !important;
   }
   .mobile-hero-top {
     display: flex;
