@@ -2302,14 +2302,8 @@ $.runScript.importMediaXml = function(explicitXmlPath) {
                 } catch (e3) {}
             }
         } catch (eImp) {
-            if (true) { $.runScript.showWorkspaceModal("One Tap — XML Import Error", "Import Failed", eImp.toString(), "ERROR");
+            $.runScript.showWorkspaceModal("One Tap — XML Import Error", "Import Failed", eImp.toString(), "ERROR");
             return "ERROR|||Import exception: " + eImp.toString();
-        }
-
-
-
-
-
         }
 
         // Locate the newly imported sequence
@@ -2325,7 +2319,35 @@ $.runScript.importMediaXml = function(explicitXmlPath) {
             }
         }
 
-        // Fallback: match by sequence name or baseName
+        // Fallback: search recursively inside project rootItem bins for the newly imported Sequence
+        if (!targetSeq) {
+            function findSeqInItem(item) {
+                if (!item) return null;
+                if (typeof item.isSequence === "function" && item.isSequence()) {
+                    try {
+                        var sObj = item.getSequence();
+                        if (sObj) {
+                            if (sObj.sequenceID && !existingSeqIDs[sObj.sequenceID]) return sObj;
+                            var sNm = (sObj.name || "").toLowerCase();
+                            var bNm = baseName.toLowerCase();
+                            if (sNm === bNm || sNm.indexOf(bNm) !== -1 || bNm.indexOf(sNm) !== -1) return sObj;
+                        }
+                    } catch(eGetSeq) {}
+                }
+                if (item.children && item.children.numItems > 0) {
+                    for (var ci = 0; ci < item.children.numItems; ci++) {
+                        var res = findSeqInItem(item.children[ci]);
+                        if (res) return res;
+                    }
+                }
+                return null;
+            }
+            try {
+                targetSeq = findSeqInItem(app.project.rootItem);
+            } catch (eBinScan) {}
+        }
+
+        // Fallback: match by sequence name or baseName from global sequences list
         if (!targetSeq) {
             for (var k = 0; k < numSequencesAfter; k++) {
                 var c = app.project.sequences[k];
@@ -2340,27 +2362,13 @@ $.runScript.importMediaXml = function(explicitXmlPath) {
             }
         }
 
-        // Fallback: search recursively inside project rootItem bins for the imported Sequence
-        if (!targetSeq) {
-            function findSeqInItem(item) {
-                if (!item) return null;
-                if (typeof item.isSequence === "function" && item.isSequence()) {
-                    return item;
-                }
-                if (item.children && item.children.numItems > 0) {
-                    for (var ci = 0; ci < item.children.numItems; ci++) {
-                        var res = findSeqInItem(item.children[ci]);
-                        if (res) return res;
-                    }
-                }
-                return null;
-            }
-            try {
-                var seqProjItem = findSeqInItem(app.project.rootItem);
-                if (seqProjItem && seqProjItem.getSequence) {
-                    targetSeq = seqProjItem.getSequence();
-                }
-            } catch (eBinScan) {}
+        if (!importSuccess && !targetSeq) {
+            var failMsg = "Adobe Premiere Pro could not import the XML sequence:\n" + targetXml.fsName + "\n\n" +
+                          "Suggestions:\n" +
+                          "• You can open the companion .prproj project file directly in Premiere Pro.\n" +
+                          "• Or in Premiere Pro, choose File > Import (Ctrl+I) to import this XML file.";
+            $.runScript.showWorkspaceModal("One Tap — XML Import Failed", "Import Did Not Complete", failMsg, "WARNING");
+            return "ERROR|||Premiere Pro could not import XML file '" + targetXml.name + "'.";
         }
 
         if (!targetSeq && numSequencesAfter > 0) {
@@ -2520,22 +2528,12 @@ function findBestTimelineCutPoint(seq, preferredTrack, targetSec, maxToleranceSe
     if (isNaN(Number(targetSec))) return targetSec;
     targetSec = Number(targetSec);
     var fps = getSequenceFps(seq);
-    if (!maxToleranceSec) maxToleranceSec = 0.45; // ~11-13 frames tolerance
+    if (!maxToleranceSec || maxToleranceSec < 1.0) maxToleranceSec = 1.2; // 1.2s (~30 frames tolerance)
 
-    var candidateCuts = [];
-
-    // Prioritize preferredTrack (targetVideoTrack), then other video tracks
-    var tracks = [];
-    if (preferredTrack && preferredTrack.clips) tracks.push(preferredTrack);
-    if (seq.videoTracks) {
-        for (var vi = 0; vi < seq.videoTracks.numTracks; vi++) {
-            var vt = seq.videoTracks[vi];
-            if (vt && vt !== preferredTrack && vt.clips) tracks.push(vt);
-        }
-    }
-
-    for (var ti = 0; ti < tracks.length; ti++) {
-        var trk = tracks[ti];
+    // Helper to evaluate edit cuts on a specific track
+    function getTrackCandidateCuts(trk) {
+        if (!trk || !trk.clips) return [];
+        var cuts = [];
         for (var ci = 0; ci < trk.clips.numItems; ci++) {
             var clip = trk.clips[ci];
             if (!clip) continue;
@@ -2551,11 +2549,14 @@ function findBestTimelineCutPoint(seq, preferredTrack, targetSec, maxToleranceSe
                 var dEnd = Math.abs(cEnd - targetSec);
                 if (dEnd <= maxToleranceSec) {
                     var scoreEnd = dEnd;
-                    // Strongly prioritize snapping to cEnd if targetSec is slightly before cEnd (eliminates 1-2 frames leftover jerk)
-                    if (cEnd >= targetSec && (cEnd - targetSec) <= 0.35) {
+                    // MAXIMUM PRIORITY: If targetSec is at or slightly before cEnd (marker ended in the clip's tail),
+                    // snap directly to cEnd. This permanently prevents slicing 1-5 frames of the previous clip!
+                    if (cEnd >= targetSec && (cEnd - targetSec) <= maxToleranceSec) {
+                        scoreEnd = dEnd * 0.05;
+                    } else if (targetSec > cEnd && (targetSec - cEnd) <= 0.45) {
                         scoreEnd = dEnd * 0.15;
                     }
-                    candidateCuts.push({ time: cEnd, diff: dEnd, score: scoreEnd, type: "end" });
+                    cuts.push({ time: cEnd, diff: dEnd, score: scoreEnd, type: "end" });
                 }
             }
 
@@ -2564,21 +2565,843 @@ function findBestTimelineCutPoint(seq, preferredTrack, targetSec, maxToleranceSe
                 var dStart = Math.abs(cStart - targetSec);
                 if (dStart <= maxToleranceSec) {
                     var scoreStart = dStart;
-                    if (targetSec >= cStart && (targetSec - cStart) <= 0.35) {
+                    if (targetSec >= cStart && (targetSec - cStart) <= 0.45) {
                         scoreStart = dStart * 0.15;
                     }
-                    candidateCuts.push({ time: cStart, diff: dStart, score: scoreStart, type: "start" });
+                    cuts.push({ time: cStart, diff: dStart, score: scoreStart, type: "start" });
+                }
+            }
+        }
+        return cuts;
+    }
+
+    // STEP 1: Search preferredTrack (the destination track for insertClip) FIRST.
+    // An edit cut on preferredTrack MUST ALWAYS be chosen so the clip on preferredTrack is never sliced!
+    if (preferredTrack) {
+        var prefCuts = getTrackCandidateCuts(preferredTrack);
+        if (prefCuts.length > 0) {
+            prefCuts.sort(function(a, b) { return a.score - b.score; });
+            return snapToFrameBoundary(prefCuts[0].time, fps);
+        }
+    }
+
+    // STEP 2: Only if preferredTrack had no candidate cuts within tolerance, search other video tracks
+    if (seq.videoTracks) {
+        var otherCuts = [];
+        for (var vi = 0; vi < seq.videoTracks.numTracks; vi++) {
+            var vt = seq.videoTracks[vi];
+            if (vt && vt !== preferredTrack) {
+                var cList = getTrackCandidateCuts(vt);
+                for (var k = 0; k < cList.length; k++) otherCuts.push(cList[k]);
+            }
+        }
+        if (otherCuts.length > 0) {
+            otherCuts.sort(function(a, b) { return a.score - b.score; });
+            return snapToFrameBoundary(otherCuts[0].time, fps);
+        }
+    }
+
+    // STEP 3: Fallback - snap raw targetSec to sequence frame boundary
+    return snapToFrameBoundary(targetSec, fps);
+}
+
+// ----------------------
+// Ceremony Video Content & Group Photo Placement Engine
+// Guarantees timeline order: [Nikaah marker] -> [video content] -> [Group Photo] -> [next Nikaah marker]
+// ----------------------
+function findCeremonyVideoContentEnd(seq, startSec, nextStartSec) {
+    if (!seq || !seq.videoTracks || seq.videoTracks.numTracks === 0) return null;
+    var s = (typeof startSec === "number" && !isNaN(startSec)) ? startSec : 0;
+    var ns = (typeof nextStartSec === "number" && !isNaN(nextStartSec) && nextStartSec > s) ? nextStartSec : null;
+
+    var latestEnd = null;
+
+    // Check Track V1 first (primary camera footage track for ceremonies)
+    var vTrk0 = seq.videoTracks[0];
+    if (vTrk0 && vTrk0.clips) {
+        for (var ci0 = 0; ci0 < vTrk0.clips.numItems; ci0++) {
+            var c0 = vTrk0.clips[ci0];
+            if (!c0) continue;
+            var cs0 = (c0.start && !isNaN(Number(c0.start.seconds))) ? Number(c0.start.seconds) : -1;
+            var ce0 = (c0.end   && !isNaN(Number(c0.end.seconds)))   ? Number(c0.end.seconds)   : -1;
+            if (cs0 < 0 || ce0 <= cs0) continue;
+
+            var cmt0 = "";
+            try { cmt0 = c0.comment || ""; } catch(eCmt) {}
+            if (cmt0.indexOf("OT_GP") !== -1) continue;
+            var cNm0 = c0.name || (c0.projectItem && c0.projectItem.name) || "";
+            if (isGroupPhotoName(cNm0)) continue;
+
+            if (ce0 > (s + 0.04)) {
+                if (ns !== null && cs0 >= (ns - 0.04)) continue;
+                if (cs0 < (ns !== null ? (ns - 0.04) : (s + 7200.0))) {
+                    var boundedCe0 = (ns !== null && ce0 > ns) ? ns : ce0;
+                    if (latestEnd === null || boundedCe0 > latestEnd) {
+                        latestEnd = boundedCe0;
+                    }
                 }
             }
         }
     }
 
-    if (candidateCuts.length === 0) {
-        return snapToFrameBoundary(targetSec, fps);
+    if (latestEnd !== null) return latestEnd;
+
+    // If Track V1 had no clips, scan other video tracks (V2, V3...)
+    for (var vi = 1; vi < seq.videoTracks.numTracks; vi++) {
+        var vTrk = seq.videoTracks[vi];
+        if (!vTrk || !vTrk.clips) continue;
+
+        for (var ci = 0; ci < vTrk.clips.numItems; ci++) {
+            var c = vTrk.clips[ci];
+            if (!c) continue;
+            var cs = (c.start && !isNaN(Number(c.start.seconds))) ? Number(c.start.seconds) : -1;
+            var ce = (c.end   && !isNaN(Number(c.end.seconds)))   ? Number(c.end.seconds)   : -1;
+            if (cs < 0 || ce <= cs) continue;
+
+            var cmt = "";
+            try { cmt = c.comment || ""; } catch(eCmt) {}
+            if (cmt.indexOf("OT_GP") !== -1) continue;
+            var cNm = c.name || (c.projectItem && c.projectItem.name) || "";
+            if (isGroupPhotoName(cNm)) continue;
+
+            if (ce > (s + 0.04)) {
+                if (ns !== null && cs >= (ns - 0.04)) continue;
+                if (cs < (ns !== null ? (ns - 0.04) : (s + 7200.0))) {
+                    var boundedCe = (ns !== null && ce > ns) ? ns : ce;
+                    if (latestEnd === null || boundedCe > latestEnd) {
+                        latestEnd = boundedCe;
+                    }
+                }
+            }
+        }
     }
 
-    candidateCuts.sort(function(a, b) { return a.score - b.score; });
-    return snapToFrameBoundary(candidateCuts[0].time, fps);
+    if (latestEnd !== null) return latestEnd;
+
+    // Fallback: If no video clips found, inspect primary audio track A1
+    if (seq.audioTracks && seq.audioTracks.numTracks > 0) {
+        var aTrk = seq.audioTracks[0];
+        if (aTrk && aTrk.clips) {
+            for (var aci = 0; aci < aTrk.clips.numItems; aci++) {
+                var ac = aTrk.clips[aci];
+                if (!ac) continue;
+                var acs = (ac.start && !isNaN(Number(ac.start.seconds))) ? Number(ac.start.seconds) : -1;
+                var ace = (ac.end   && !isNaN(Number(ac.end.seconds)))   ? Number(ac.end.seconds)   : -1;
+                if (acs < 0 || ace <= acs) continue;
+                var acCmt = "";
+                try { acCmt = ac.comment || ""; } catch(eAC) {}
+                if (acCmt.indexOf("OT_GP") !== -1) continue;
+                if (ace > (s + 0.04)) {
+                    if (ns !== null && acs >= (ns - 0.04)) continue;
+                    if (acs < (ns !== null ? (ns - 0.04) : (s + 7200.0))) {
+                        var boundedAce = (ns !== null && ace > ns) ? ns : ace;
+                        if (latestEnd === null || boundedAce > latestEnd) {
+                            latestEnd = boundedAce;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return latestEnd;
+}
+
+function calculateCeremonyGroupPhotoPlacement(seq, startSec, nextStartSec, fallbackEndSec, groupDuration) {
+    var fps = getSequenceFps(seq);
+    var dur = (typeof groupDuration === "number" && !isNaN(groupDuration) && groupDuration > 0) ? groupDuration : 15.0;
+    var s = (typeof startSec === "number" && !isNaN(startSec)) ? startSec : 0;
+    var ns = (typeof nextStartSec === "number" && !isNaN(nextStartSec) && nextStartSec > s) ? nextStartSec : null;
+
+    // Inspect tracks for actual ceremony video content clips
+    var contentEnd = findCeremonyVideoContentEnd(seq, s, ns);
+
+    var rawInsertSec;
+
+    if (contentEnd !== null && contentEnd > (s + 0.04)) {
+        // Ceremony content exists: GP MUST ALWAYS start immediately at the end of the ceremony footage!
+        // Never backtrack into ceremony footage (which would cut clips)!
+        rawInsertSec = contentEnd;
+    } else {
+        // No distinct clips detected on tracks:
+        if (typeof fallbackEndSec === "number" && !isNaN(fallbackEndSec) && fallbackEndSec > (s + 0.5)) {
+            rawInsertSec = fallbackEndSec;
+        } else if (ns !== null && ns > (s + 0.5)) {
+            rawInsertSec = ns;
+        } else {
+            rawInsertSec = s;
+        }
+    }
+
+    if (rawInsertSec < s) rawInsertSec = s;
+
+    // Refine to timeline cut point with tight tolerance (0.08s = ~2 frames)
+    // NEVER search backward into footage which would cut the ceremony clips!
+    var insertSec = rawInsertSec;
+    if (contentEnd !== null) {
+        var snappedCut = findBestTimelineCutPoint(seq, seq.videoTracks[0], rawInsertSec, 0.08);
+        if (snappedCut >= (contentEnd - 0.02)) {
+            insertSec = snappedCut;
+        }
+    } else {
+        var snappedCut2 = findBestTimelineCutPoint(seq, seq.videoTracks[0], rawInsertSec, 0.5);
+        if (snappedCut2 >= s) {
+            insertSec = snapToFrameBoundary(snappedCut2, fps);
+        }
+    }
+    insertSec = snapToFrameBoundary(insertSec, fps);
+
+    // Hard safeguard: NEVER allow insertSec to be earlier than contentEnd (preserves 100% of ceremony footage)
+    if (contentEnd !== null && insertSec < (contentEnd - 0.02)) {
+        insertSec = snapToFrameBoundary(contentEnd, fps);
+    }
+    if (insertSec < s) insertSec = s;
+
+    // The boundary for this ceremony marker must extend to include the full Group Photo
+    var boundaryEnd = snapToFrameBoundary(Math.max((ns !== null ? ns : 0), insertSec + dur), fps);
+
+    return {
+        insertSec: insertSec,
+        boundaryEnd: boundaryEnd
+    };
+}
+
+// ----------------------
+// Non-Destructive Timeline Clip Shifter (Preserves all effects, audio sync & cuts)
+// Shifts clip into empty space without overwriting or trimming
+// Supports bidirectional shifting (positive = forward/right, negative = backward/left for Undo)
+// ----------------------
+function shiftTimelineClipCleanly(clip, shiftAmount, fpsRate) {
+    if (!clip || shiftAmount === 0) return false;
+    var fRate = (fpsRate && fpsRate > 0) ? fpsRate : 25.0;
+    var oldStart = (clip.start && !isNaN(Number(clip.start.seconds))) ? Number(clip.start.seconds) : 0;
+    var oldEnd   = (clip.end   && !isNaN(Number(clip.end.seconds)))   ? Number(clip.end.seconds)   : 0;
+    var dur = (oldEnd > oldStart) ? (oldEnd - oldStart) : (clip.duration ? Number(clip.duration.seconds) : 0);
+    if (dur <= 0) return false;
+
+    var targetStart = snapToFrameBoundary(oldStart + shiftAmount, fRate);
+    if (targetStart < 0) targetStart = 0;
+    var targetEnd   = snapToFrameBoundary(targetStart + dur, fRate);
+
+    var tStart = new Time();
+    tStart.seconds = targetStart;
+    var tEnd = new Time();
+    tEnd.seconds = targetEnd;
+
+    var moved = false;
+
+    // 1. Native clip.move(Time) - moves the whole clip preserving duration, keyframes & effects
+    if (typeof clip.move === "function") {
+        try {
+            clip.move(tStart);
+            if (Math.abs(Number(clip.start.seconds) - targetStart) < 0.15) moved = true;
+        } catch (eMv) {}
+    }
+
+    // 2. Set start and end
+    if (!moved) {
+        if (shiftAmount > 0) {
+            // Forward (Right): expand end into empty space first, then shift start
+            try {
+                clip.end = tEnd;
+                clip.start = tStart;
+                if (Math.abs(Number(clip.start.seconds) - targetStart) < 0.15) moved = true;
+            } catch (eEndSt) {}
+            if (!moved) {
+                try {
+                    clip.start = tStart;
+                    clip.end = tEnd;
+                    if (Math.abs(Number(clip.start.seconds) - targetStart) < 0.15) moved = true;
+                } catch (eStEnd) {}
+            }
+        } else {
+            // Backward (Left - Undo): expand start left into empty space first, then contract end
+            try {
+                clip.start = tStart;
+                clip.end = tEnd;
+                if (Math.abs(Number(clip.start.seconds) - targetStart) < 0.15) moved = true;
+            } catch (eStEnd2) {}
+            if (!moved) {
+                try {
+                    clip.end = tEnd;
+                    clip.start = tStart;
+                    if (Math.abs(Number(clip.start.seconds) - targetStart) < 0.15) moved = true;
+                } catch (eEndSt2) {}
+            }
+        }
+    }
+
+    return moved;
+}
+
+// ----------------------
+// Check if downstream clips exist on ANY video or audio track at or after targetSec
+// ----------------------
+function hasDownstreamClips(seq, targetSec) {
+    if (!seq) return false;
+    if (seq.videoTracks) {
+        for (var vi = 0; vi < seq.videoTracks.numTracks; vi++) {
+            var vt = seq.videoTracks[vi];
+            if (!vt || !vt.clips) continue;
+            for (var ci = 0; ci < vt.clips.numItems; ci++) {
+                var c = vt.clips[ci];
+                if (c && c.start && !isNaN(Number(c.start.seconds)) && c.start.seconds >= (targetSec - 0.04)) {
+                    return true;
+                }
+            }
+        }
+    }
+    if (seq.audioTracks) {
+        for (var ai = 0; ai < seq.audioTracks.numTracks; ai++) {
+            var at = seq.audioTracks[ai];
+            if (!at || !at.clips) continue;
+            for (var aci = 0; aci < at.clips.numItems; aci++) {
+                var ac = at.clips[aci];
+                if (ac && ac.start && !isNaN(Number(ac.start.seconds)) && ac.start.seconds >= (targetSec - 0.04)) {
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
+// ----------------------
+// Open Timeline Gap across all video AND audio tracks in 100% lockstep
+// Shifts downstream clips forward (right) into empty space from latest to earliest
+// Prevents any desynchronization or red out-of-sync indicators!
+// ----------------------
+function openTimelineGapAcrossAllTracks(seq, targetSec, gapDuration, fpsRate, backupRecord) {
+    if (!seq || gapDuration <= 0) return;
+    var fRate = (fpsRate && fpsRate > 0) ? fpsRate : 25.0;
+
+    function shiftTrackClips(track) {
+        if (!track || !track.clips) return;
+        var downstream = [];
+        for (var ci = 0; ci < track.clips.numItems; ci++) {
+            var c = track.clips[ci];
+            if (!c) continue;
+            var cs = (c.start && !isNaN(Number(c.start.seconds))) ? Number(c.start.seconds) : -1;
+            if (cs >= (targetSec - 0.04)) {
+                downstream.push(c);
+            }
+        }
+        // DESCENDING SORT: Latest clip on timeline shifts first into empty space!
+        downstream.sort(function(a, b) {
+            return (Number(b.start.seconds) || 0) - (Number(a.start.seconds) || 0);
+        });
+        for (var i = 0; i < downstream.length; i++) {
+            shiftTimelineClipCleanly(downstream[i], gapDuration, fRate);
+        }
+    }
+
+    if (seq.videoTracks) {
+        for (var vi = 0; vi < seq.videoTracks.numTracks; vi++) {
+            shiftTrackClips(seq.videoTracks[vi]);
+        }
+    }
+    if (seq.audioTracks) {
+        for (var ai = 0; ai < seq.audioTracks.numTracks; ai++) {
+            shiftTrackClips(seq.audioTracks[ai]);
+        }
+    }
+}
+
+// ----------------------
+// Close Timeline Gap across all video AND audio tracks in 100% lockstep (for Undo)
+// Shifts downstream clips backward (left) into vacated space from earliest to latest
+// ----------------------
+function closeTimelineGapAcrossAllTracks(seq, targetSec, gapDuration, fpsRate) {
+    if (!seq || gapDuration <= 0) return;
+    var fRate = (fpsRate && fpsRate > 0) ? fpsRate : 25.0;
+
+    function unshiftTrackClips(track) {
+        if (!track || !track.clips) return;
+        var downstream = [];
+        for (var ci = 0; ci < track.clips.numItems; ci++) {
+            var c = track.clips[ci];
+            if (!c) continue;
+            var cs = (c.start && !isNaN(Number(c.start.seconds))) ? Number(c.start.seconds) : -1;
+            if (cs >= (targetSec + gapDuration - 0.05)) {
+                downstream.push(c);
+            }
+        }
+        // ASCENDING SORT: Earliest clip moves left first into the empty gap!
+        downstream.sort(function(a, b) {
+            return (Number(a.start.seconds) || 0) - (Number(b.start.seconds) || 0);
+        });
+        for (var i = 0; i < downstream.length; i++) {
+            shiftTimelineClipCleanly(downstream[i], -gapDuration, fRate);
+        }
+    }
+
+    if (seq.videoTracks) {
+        for (var vi = 0; vi < seq.videoTracks.numTracks; vi++) {
+            unshiftTrackClips(seq.videoTracks[vi]);
+        }
+    }
+    if (seq.audioTracks) {
+        for (var ai = 0; ai < seq.audioTracks.numTracks; ai++) {
+            unshiftTrackClips(seq.audioTracks[ai]);
+        }
+    }
+}
+
+// ----------------------
+// Shift Downstream Markers forward in lockstep with timeline footage
+// Ensures markers stay aligned with ceremony content clips: [Marker] -> [Content] -> [GP]
+// ----------------------
+function shiftDownstreamMarkers(seq, targetSec, shiftAmount, fpsRate, backupRecord) {
+    if (!seq || !seq.markers || shiftAmount <= 0) return;
+    var fps = (fpsRate && fpsRate > 0) ? fpsRate : 25.0;
+
+    var cur = seq.markers.getFirstMarker();
+    while (cur) {
+        var mStart = (cur.start && !isNaN(Number(cur.start.seconds))) ? Number(cur.start.seconds) : 0;
+        var mEnd   = (cur.end   && !isNaN(Number(cur.end.seconds)))   ? Number(cur.end.seconds)   : 0;
+
+        // Shift markers starting at or after targetSec (with small 0.04s threshold)
+        if (mStart >= (targetSec - 0.04)) {
+            var newStart = snapToFrameBoundary(mStart + shiftAmount, fps);
+            var newEnd   = (mEnd > mStart) ? snapToFrameBoundary(mEnd + shiftAmount, fps) : newStart;
+
+            var tStart = new Time();
+            tStart.seconds = newStart;
+            var tEnd = new Time();
+            tEnd.seconds = newEnd;
+
+            try {
+                if (newEnd > newStart) {
+                    try { cur.end = tEnd; } catch(eE1) {}
+                    try { cur.start = tStart; } catch(eS1) {}
+                } else {
+                    try { cur.start = tStart; } catch(eS2) {}
+                    try { cur.end = tEnd; } catch(eE2) {}
+                }
+            } catch(eMShift) {}
+        }
+        cur = seq.markers.getNextMarker(cur);
+    }
+}
+
+// ============================================================================
+// EFFECT & TRANSFORM PRESERVATION HELPERS
+// Ensures clips placed by the extension inherit all user edits made on the timeline:
+// 1. Cut boundaries (inPoint & outPoint trim points)
+// 2. Motion effects (Scale/Zoom, Position [x, y], Rotation, Anchor Point [x, y], Uniform Scale)
+// 3. Opacity (Opacity value, Blend Mode)
+// 4. Crop effect (Left, Top, Right, Bottom, Zoom, Edge Feather)
+// 5. Lumetri color and other custom video/audio components
+// ============================================================================
+
+// Helper: Detect whether a timeline TrackItem instance has user-applied edits
+function hasClipEdits(clip) {
+    if (!clip) return false;
+    try {
+        // 1. Has non-zero cut inPoint or shortened duration
+        if (clip.inPoint && !isNaN(Number(clip.inPoint.seconds)) && Number(clip.inPoint.seconds) > 0.04) {
+            return true;
+        }
+        // 2. Has additional components beyond default Motion and Opacity (e.g. Crop, Lumetri)
+        if (clip.components && clip.components.numItems > 2) {
+            return true;
+        }
+        // 3. Has modified Motion properties (Scale != 100%, non-centered Position) or Crop
+        if (clip.components) {
+            for (var ci = 0; ci < clip.components.numItems; ci++) {
+                var comp = clip.components[ci];
+                if (!comp) continue;
+                var cName = (comp.displayName || "").toLowerCase();
+                var cMatch = (comp.matchName || "").toLowerCase();
+                if (cName.indexOf("crop") !== -1 || cMatch.indexOf("crop") !== -1) {
+                    return true;
+                }
+                if ((cName.indexOf("motion") !== -1 || cMatch.indexOf("motion") !== -1) && comp.properties) {
+                    for (var pi = 0; pi < comp.properties.numItems; pi++) {
+                        var p = comp.properties[pi];
+                        if (!p) continue;
+                        var pName = p.displayName || "";
+                        if (pName === "Scale" && typeof p.getValue === "function") {
+                            var scVal = p.getValue();
+                            if (typeof scVal === "number" && Math.abs(scVal - 100) > 0.1) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    } catch(eEd) {}
+    return false;
+}
+
+// Helper: Locate the most relevant edited timeline TrackItem instance for a ProjectItem or clip name
+function findTimelineInstanceForProjectItem(seq, projectItem, clipName) {
+    if (!seq || !seq.videoTracks) return null;
+
+    // 1. Check active timeline selection first (if user clicked/selected the edited clip)
+    try {
+        if (typeof seq.getSelection === "function") {
+            var sel = seq.getSelection();
+            if (sel && sel.length > 0) {
+                for (var si = 0; si < sel.length; si++) {
+                    var sc = sel[si];
+                    if (!sc) continue;
+                    var scCmt = "";
+                    try { scCmt = sc.comment || ""; } catch(e) {}
+                    if (scCmt.indexOf("OT_GP_INSERTED") !== -1) continue;
+
+                    var isMatch = false;
+                    if (projectItem && sc.projectItem && sc.projectItem === projectItem) isMatch = true;
+                    if (!isMatch && clipName && isClipMatch(getClipCandidateStrings(sc), clipName)) isMatch = true;
+                    if (isMatch) {
+                        return sc;
+                    }
+                }
+            }
+        }
+    } catch(eSel) {}
+
+    // 2. Scan all video tracks, prioritizing clips with detected edits (crop, zoom, cut trims)
+    var fallbackCand = null;
+    for (var ti = 0; ti < seq.videoTracks.numTracks; ti++) {
+        var trk = seq.videoTracks[ti];
+        if (!trk || !trk.clips) continue;
+        for (var ci = 0; ci < trk.clips.numItems; ci++) {
+            var c = trk.clips[ci];
+            if (!c) continue;
+            var cCmt = "";
+            try { cCmt = c.comment || ""; } catch(e) {}
+            if (cCmt.indexOf("OT_GP_INSERTED") !== -1) continue; // Skip previously placed clips
+
+            var match = false;
+            if (projectItem && c.projectItem && c.projectItem === projectItem) match = true;
+            if (!match && clipName && isClipMatch(getClipCandidateStrings(c), clipName)) match = true;
+
+            if (match) {
+                if (hasClipEdits(c)) {
+                    return c; // Immediate return on confirmed edited instance
+                }
+                if (!fallbackCand) {
+                    fallbackCand = c;
+                }
+            }
+        }
+    }
+    return fallbackCand;
+}
+
+function copyTrackItemEffectsAndTransform(sourceClip, targetClip, targetTrackIndex, seq) {
+    if (!sourceClip || !targetClip) return false;
+
+    // Enable QE DOM if available for adding missing effects (e.g. Crop, Lumetri)
+    try {
+        if (typeof app.enableQE === "function") {
+            app.enableQE();
+        }
+    } catch(eQE) {}
+
+    // Resolve active sequence if not provided
+    if (!seq) {
+        try { seq = app.project.activeSequence; } catch(eS) {}
+    }
+
+    // Helper: Find corresponding QE TrackItem for targetClip
+    function findTargetQEClip(tClip, trkIdx) {
+        try {
+            if (typeof qe === "undefined" || !qe || !qe.project) return null;
+            var qSeq = qe.project.getActiveSequence();
+            if (!qSeq || typeof qSeq.getVideoTrackAt !== "function") return null;
+            var tIdx = (typeof trkIdx === "number" && trkIdx >= 0) ? trkIdx : 0;
+            var qTrk = qSeq.getVideoTrackAt(tIdx);
+            if (!qTrk || typeof qTrk.getItemAt !== "function") return null;
+
+            var tTicks = (tClip.start && tClip.start.ticks) ? String(tClip.start.ticks) : null;
+            var tSec = (tClip.start && !isNaN(Number(tClip.start.seconds))) ? Number(tClip.start.seconds) : -1;
+
+            // First pass: match exact ticks or start seconds, skipping Empty items
+            for (var qi = 0; qi < qTrk.numItems; qi++) {
+                var candQ = qTrk.getItemAt(qi);
+                if (!candQ) continue;
+                try {
+                    if (candQ.type === "Empty" || candQ.name === "Empty") continue;
+                } catch(eE) {}
+
+                var qTicks = null;
+                try {
+                    if (candQ.start && candQ.start.ticks) qTicks = String(candQ.start.ticks);
+                    else if (candQ.start && typeof candQ.start.toString === "function") qTicks = candQ.start.toString();
+                } catch(eQT) {}
+
+                if (tTicks && qTicks && tTicks === qTicks) {
+                    return candQ;
+                }
+
+                var qSec = -1;
+                try {
+                    if (candQ.start && candQ.start.secs !== undefined) qSec = Number(candQ.start.secs);
+                    else if (qTicks && !isNaN(Number(qTicks))) qSec = Number(qTicks) / 254016000000;
+                } catch(eQS) {}
+
+                if (tSec >= 0 && qSec >= 0 && Math.abs(qSec - tSec) < 0.35) {
+                    return candQ;
+                }
+            }
+
+            // Second pass: match by name, skipping Empty items
+            var tName = tClip.name || "";
+            if (tName) {
+                for (var qi2 = 0; qi2 < qTrk.numItems; qi2++) {
+                    var candQ2 = qTrk.getItemAt(qi2);
+                    if (!candQ2) continue;
+                    try {
+                        if (candQ2.type === "Empty" || candQ2.name === "Empty") continue;
+                    } catch(eE2) {}
+                    if (candQ2.name === tName) return candQ2;
+                }
+            }
+        } catch(eFQ) {}
+        return null;
+    }
+
+    var targetQEClip = findTargetQEClip(targetClip, targetTrackIndex);
+
+    // 1. Trims (InPoint / OutPoint) via QE DOM if available
+    try {
+        if (targetQEClip) {
+            if (sourceClip.inPoint && sourceClip.inPoint.ticks && typeof targetQEClip.setInPoint === "function") {
+                try { targetQEClip.setInPoint(String(sourceClip.inPoint.ticks)); } catch(eQIn1) {
+                    try { targetQEClip.setInPoint(Number(sourceClip.inPoint.seconds)); } catch(eQIn2) {}
+                }
+            }
+            if (sourceClip.outPoint && sourceClip.outPoint.ticks && typeof targetQEClip.setOutPoint === "function") {
+                try { targetQEClip.setOutPoint(String(sourceClip.outPoint.ticks)); } catch(eQOut1) {
+                    try { targetQEClip.setOutPoint(Number(sourceClip.outPoint.seconds)); } catch(eQOut2) {}
+                }
+            }
+        }
+    } catch(eQTrim) {}
+
+    // Park playhead over targetClip start so component parameter evaluation applies directly to targetClip
+    var origPlayheadTicks = null;
+    try {
+        if (seq && typeof seq.getPlayerPosition === "function" && typeof seq.setPlayerPosition === "function") {
+            var curPos = seq.getPlayerPosition();
+            if (curPos && curPos.ticks) origPlayheadTicks = String(curPos.ticks);
+            if (targetClip.start && targetClip.start.ticks) {
+                seq.setPlayerPosition(String(targetClip.start.ticks));
+            }
+        }
+    } catch(ePlayhead) {}
+
+    // Helper: Safely set a single parameter value
+    function setParamValue(prop, v) {
+        if (v === null || v === undefined) return false;
+        try {
+            // Array values (e.g. Position [x, y], Anchor Point [x, y])
+            if (v instanceof Array || (typeof v === "object" && typeof v.length === "number")) {
+                var arr = [];
+                for (var vi = 0; vi < v.length; vi++) {
+                    arr.push(Number(v[vi]));
+                }
+                try { prop.setValue(arr, true); return true; } catch(e1) {
+                    try { prop.setValue(arr); return true; } catch(e2) {}
+                }
+            }
+            // Boolean values (e.g. Uniform Scale, Crop Zoom)
+            else if (typeof v === "boolean") {
+                try { prop.setValue(v, true); return true; } catch(e1) {
+                    try { prop.setValue(v ? 1 : 0, true); return true; } catch(e2) {
+                        try { prop.setValue(v); return true; } catch(e3) {}
+                    }
+                }
+            }
+            // Numeric values (e.g. Scale, Rotation, Opacity, Crop percentages)
+            else if (typeof v === "number") {
+                try { prop.setValue(Number(v), true); return true; } catch(e1) {
+                    try { prop.setValue(Number(v)); return true; } catch(e2) {}
+                }
+            }
+            // General fallback
+            else {
+                try { prop.setValue(v, true); return true; } catch(e1) {
+                    try { prop.setValue(v); return true; } catch(e2) {}
+                }
+            }
+        } catch(eAll) {}
+        return false;
+    }
+
+    // Helper: copy properties between two Component objects
+    function copyComponentProps(srcComp, dstComp) {
+        if (!srcComp || !dstComp || !srcComp.properties || !dstComp.properties) return 0;
+        var count = 0;
+        for (var sp = 0; sp < srcComp.properties.numItems; sp++) {
+            var sProp = srcComp.properties[sp];
+            if (!sProp) continue;
+            var sName = sProp.displayName || "";
+            if (!sName) continue;
+            var sLower = sName.toLowerCase();
+
+            // Find matching parameter on destination component
+            var dProp = null;
+            for (var dp = 0; dp < dstComp.properties.numItems; dp++) {
+                var cand = dstComp.properties[dp];
+                if (!cand) continue;
+                var cName = cand.displayName || "";
+                if (cName === sName || (cName && cName.toLowerCase() === sLower) || (sProp.matchName && cand.matchName === sProp.matchName)) {
+                    dProp = cand;
+                    break;
+                }
+            }
+
+            if (!dProp) continue;
+
+            try {
+                // Check if parameter has actual keyframes
+                var isKeyframed = false;
+                var keys = null;
+                try {
+                    if (typeof sProp.isTimeVarying === "function" && sProp.isTimeVarying()) {
+                        if (typeof sProp.getKeys === "function") {
+                            keys = sProp.getKeys();
+                            if (keys && keys.length > 0) {
+                                isKeyframed = true;
+                            }
+                        }
+                    }
+                } catch(eTV) {}
+
+                if (isKeyframed && keys && keys.length > 0) {
+                    try {
+                        if (typeof dProp.setTimeVarying === "function") {
+                            dProp.setTimeVarying(true);
+                        }
+                    } catch(eSTV) {}
+
+                    var sStartSec = (sourceClip.start && !isNaN(Number(sourceClip.start.seconds))) ? Number(sourceClip.start.seconds) : 0;
+                    var dStartSec = (targetClip.start && !isNaN(Number(targetClip.start.seconds))) ? Number(targetClip.start.seconds) : 0;
+
+                    for (var ki = 0; ki < keys.length; ki++) {
+                        var kTime = keys[ki];
+                        var kSec = (kTime && !isNaN(Number(kTime.seconds))) ? Number(kTime.seconds) : 0;
+                        var relSec = kSec - sStartSec;
+                        var dKeyTime = new Time();
+                        dKeyTime.seconds = Math.max(0, dStartSec + relSec);
+
+                        try {
+                            var kVal = sProp.getValueAtKey(kTime);
+                            if (typeof dProp.addKey === "function") {
+                                dProp.addKey(dKeyTime);
+                            }
+                            if (typeof dProp.setValueAtKey === "function") {
+                                dProp.setValueAtKey(dKeyTime, kVal, true);
+                            }
+                        } catch(eKeySet) {}
+                    }
+                    count++;
+                } else {
+                    // Static (non-animated) value: Scale, Position, Crop Left/Top/Right/Bottom, etc.
+                    try {
+                        // Ensure target property is NOT time-varying so setValue applies uniformly across clip
+                        if (typeof dProp.setTimeVarying === "function") {
+                            try { dProp.setTimeVarying(false); } catch(eNoTV) {}
+                        }
+                    } catch(eTV2) {}
+
+                    var val = null;
+                    try { val = sProp.getValue(); } catch(eGV) {}
+
+                    if (val !== null && val !== undefined) {
+                        if (setParamValue(dProp, val)) {
+                            count++;
+                        }
+                    }
+                }
+            } catch(ePropErr) {}
+        }
+        return count;
+    }
+
+    // Helper: find component on targetClip or add it via QE if missing (e.g. "Crop", "Lumetri")
+    function getOrAddTargetComponent(compName, matchName) {
+        if (!targetClip.components) return null;
+        var compNameLower = compName ? compName.toLowerCase() : "";
+
+        // 1. Check if targetClip already has this component
+        for (var ci = 0; ci < targetClip.components.numItems; ci++) {
+            var comp = targetClip.components[ci];
+            if (!comp) continue;
+            var cName = comp.displayName || "";
+            if (cName === compName || (cName && cName.toLowerCase() === compNameLower) || (matchName && comp.matchName === matchName)) {
+                return comp;
+            }
+        }
+
+        // 2. If missing, attempt to add via QE DOM
+        try {
+            if (targetQEClip && typeof targetQEClip.addVideoEffect === "function" && typeof qe !== "undefined" && qe && qe.project && typeof qe.project.getVideoEffectByName === "function") {
+                var fx = null;
+                var isCrop = compNameLower.indexOf("crop") !== -1 || (matchName && matchName.toLowerCase().indexOf("crop") !== -1);
+
+                if (isCrop) {
+                    fx = qe.project.getVideoEffectByName("Crop");
+                    if (!fx) fx = qe.project.getVideoEffectByName("ADBE Crop");
+                    if (!fx) fx = qe.project.getVideoEffectByName("AE.ADBE Crop");
+                }
+                if (!fx && compName) {
+                    fx = qe.project.getVideoEffectByName(compName);
+                }
+                if (!fx && matchName) {
+                    fx = qe.project.getVideoEffectByName(matchName);
+                }
+
+                if (fx) {
+                    targetQEClip.addVideoEffect(fx);
+                }
+            }
+        } catch(eAddQe) {}
+
+        // 3. Re-scan targetClip.components after adding
+        if (targetClip.components) {
+            for (var ci2 = 0; ci2 < targetClip.components.numItems; ci2++) {
+                var comp2 = targetClip.components[ci2];
+                if (!comp2) continue;
+                var cName2 = comp2.displayName || "";
+                if (cName2 === compName || (cName2 && cName2.toLowerCase() === compNameLower) || (matchName && comp2.matchName === matchName)) {
+                    return comp2;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    // 3. Copy all components (Motion, Opacity, Crop, Lumetri, etc.)
+    try {
+        if (sourceClip.components) {
+            for (var sci = 0; sci < sourceClip.components.numItems; sci++) {
+                var sComp = sourceClip.components[sci];
+                if (!sComp) continue;
+                var sCompName = sComp.displayName || "";
+                var sCompMatch = sComp.matchName || "";
+
+                var dstComp = getOrAddTargetComponent(sCompName, sCompMatch);
+                if (dstComp) {
+                    copyComponentProps(sComp, dstComp);
+                }
+            }
+        }
+    } catch(eComps) {}
+
+    // Restore original playhead position
+    try {
+        if (seq && origPlayheadTicks && typeof seq.setPlayerPosition === "function") {
+            seq.setPlayerPosition(origPlayheadTicks);
+        }
+    } catch(eRestorePlayhead) {}
+
+    return true;
 }
 
 // ============================================================================
@@ -2633,22 +3456,57 @@ function insertClipAtMarkerEndPoints(targetProjectItem, targetTrackIndex) {
         var insertedCount = 0;
         for (var i = markerEndTimes.length - 1; i >= 0; i--) {
             var rawTime = markerEndTimes[i];
-            var snappedTime = findBestTimelineCutPoint(seq, targetTrack, rawTime, 0.45);
+            var snappedTime = findBestTimelineCutPoint(seq, targetTrack, rawTime, 1.2);
             snappedTime = snapToFrameBoundary(snappedTime, fps);
 
             // Rule 6: Consistent Time Units
             var insertTime = new Time();
             insertTime.seconds = snappedTime;
 
-            // Rule 5: Use Ripple Insert (insertClip) instead of overwriteClip()
+            // If an edited instance exists on timeline, configure In/Out trim boundaries before overwrite
             try {
-                targetTrack.insertClip(targetProjectItem, insertTime);
-                insertedCount++;
+                var preSrcItem = findTimelineInstanceForProjectItem(seq, targetProjectItem, targetProjectItem.name);
+                if (preSrcItem) {
+                    if (preSrcItem.inPoint && preSrcItem.inPoint.ticks && typeof targetProjectItem.setInPoint === "function") {
+                        try { targetProjectItem.setInPoint(String(preSrcItem.inPoint.ticks), 4); } catch(eSI) {}
+                    }
+                    if (preSrcItem.outPoint && preSrcItem.outPoint.ticks && typeof targetProjectItem.setOutPoint === "function") {
+                        try { targetProjectItem.setOutPoint(String(preSrcItem.outPoint.ticks), 4); } catch(eSO) {}
+                    }
+                }
+            } catch(ePreTrim) {}
+
+            // Non-destructive Overwrite methodology: Overwrite clip without rippling or shifting timeline
+            var inserted = false;
+            try {
+                targetTrack.overwriteClip(targetProjectItem, insertTime);
+                inserted = true;
             } catch (e1) {
                 try {
-                    targetTrack.insertClip(targetProjectItem, snappedTime);
-                    insertedCount++;
+                    targetTrack.overwriteClip(targetProjectItem, snappedTime);
+                    inserted = true;
                 } catch (e2) {}
+            }
+            if (inserted) {
+                insertedCount++;
+
+                // Replicate cut trims & motion/effects if source timeline clip exists
+                try {
+                    var placedClip = null;
+                    for (var pci = targetTrack.clips.numItems - 1; pci >= 0; pci--) {
+                        var candPlaced = targetTrack.clips[pci];
+                        if (candPlaced && Math.abs(candPlaced.start.seconds - snappedTime) < 0.35) {
+                            placedClip = candPlaced;
+                            break;
+                        }
+                    }
+                    if (placedClip && seq.videoTracks) {
+                        var srcItem = findTimelineInstanceForProjectItem(seq, targetProjectItem, targetProjectItem.name);
+                        if (srcItem && srcItem !== placedClip) {
+                            copyTrackItemEffectsAndTransform(srcItem, placedClip, targetTrackIndex, seq);
+                        }
+                    }
+                } catch(eSyncP) {}
             }
         }
 
@@ -2757,7 +3615,8 @@ $.runScript.distributeNikahGroupPhoto = function() {
                 nikahSegments.push({
                     name: itemM.name,
                     startSec: s,
-                    endSec: e
+                    endSec: e,
+                    nextStartSec: (mi < allMarkersList.length - 1) ? allMarkersList[mi + 1].startSec : null
                 });
             }
         }
@@ -2888,23 +3747,25 @@ $.runScript.distributeNikahGroupPhoto = function() {
 
                         if (cNm === qLower || pNm === qLower || cStem === qStem || pStem === qStem ||
                             cNm.indexOf(qStem) !== -1 || pNm.indexOf(qStem) !== -1) {
-                            var dur = (cObj.duration && cObj.duration.seconds > 0) ? cObj.duration.seconds : (cObj.end.seconds - cObj.start.seconds);
                             var inP = (cObj.inPoint && !isNaN(Number(cObj.inPoint.seconds))) ? Number(cObj.inPoint.seconds) : 0;
-                            var outP = (cObj.outPoint && !isNaN(Number(cObj.outPoint.seconds))) ? Number(cObj.outPoint.seconds) : (inP + dur);
+                            var outP = (cObj.outPoint && !isNaN(Number(cObj.outPoint.seconds))) ? Number(cObj.outPoint.seconds) : 0;
+                            var dur = (outP > inP) ? (outP - inP) : ((cObj.duration && cObj.duration.seconds > 0) ? cObj.duration.seconds : (cObj.end.seconds - cObj.start.seconds));
+                            if (outP <= inP) outP = inP + dur;
                             return {
                                 projectItem: cObj.projectItem,
                                 name: cObj.name || (cObj.projectItem && cObj.projectItem.name) || cleanQuery,
                                 duration: Math.round(dur * 100) / 100,
                                 inPoint: inP,
                                 outPoint: outP,
-                                trackIndex: tIdx
+                                trackIndex: tIdx,
+                                sourceTrackItem: cObj
                             };
                         }
                     }
                 }
             }
 
-            // B. Search Project Bins recursively
+            // B. Search Project Bins recursively (including nested sequences)
             function searchBinItems(bin) {
                 if (!bin || !bin.children) return null;
                 for (var bi = 0; bi < bin.children.numItems; bi++) {
@@ -2913,22 +3774,44 @@ $.runScript.distributeNikahGroupPhoto = function() {
                     if (bChild.type === 1) { // Bin
                         var sub = searchBinItems(bChild);
                         if (sub) return sub;
-                    } else if (bChild.type === 2 || (bChild.isSequence && bChild.isSequence())) {
-                        continue;
                     } else {
+                        // Skip active sequence itself
+                        if (seq) {
+                            try {
+                                if (bChild === seq.projectItem) continue;
+                                if (typeof bChild.getSequence === "function") {
+                                    var cs = bChild.getSequence();
+                                    if (cs && seq.sequenceID && cs.sequenceID === seq.sequenceID) continue;
+                                }
+                            } catch(eSeq) {}
+                        }
                         var bNm = (bChild.name || "").toLowerCase();
                         var bStem = bNm.replace(/\.[a-z0-9]{2,5}$/i, "");
                         if (bNm === qLower || bStem === qStem || bNm.indexOf(qStem) !== -1) {
-                            var bIn = (bChild.getInPoint && bChild.getInPoint().seconds > 0) ? bChild.getInPoint().seconds : 0;
-                            var bOut = (bChild.getOutPoint && bChild.getOutPoint().seconds > 0) ? bChild.getOutPoint().seconds : 0;
-                            var bDur = (bOut > bIn) ? (bOut - bIn) : 0;
+                            var bDur = 0;
+                            try {
+                                if (typeof bChild.getSequence === "function") {
+                                    var chSeq = bChild.getSequence();
+                                    if (chSeq && chSeq.end && !isNaN(Number(chSeq.end.seconds))) {
+                                        bDur = Number(chSeq.end.seconds);
+                                    }
+                                }
+                            } catch(eSeqDur) {}
+                            try {
+                                var bIn = (bChild.getInPoint && bChild.getInPoint().seconds > 0) ? bChild.getInPoint().seconds : 0;
+                                var bOut = (bChild.getOutPoint && bChild.getOutPoint().seconds > 0) ? bChild.getOutPoint().seconds : 0;
+                                if (bOut > bIn && bDur <= 0) bDur = bOut - bIn;
+                            } catch(ePDur) {}
+                            if (bDur <= 0) bDur = 15.0;
+
                             return {
                                 projectItem: bChild,
                                 name: bChild.name || cleanQuery,
                                 duration: Math.round(bDur * 100) / 100,
-                                inPoint: bIn,
-                                outPoint: bOut,
-                                trackIndex: 0
+                                inPoint: 0,
+                                outPoint: bDur,
+                                trackIndex: 0,
+                                sourceTrackItem: null
                             };
                         }
                     }
@@ -3088,11 +3971,11 @@ $.runScript.distributeNikahGroupPhoto = function() {
             totalCeremonies += asgn.indices.length;
         }
 
-        var confirmMsg = "Nikah Group Photo — Ripple Insertion Summary\n\n" +
+        var confirmMsg = "Nikah Group Photo — Non-Destructive Overwrite Summary\n\n" +
                          confirmLines.join("\n") + "\n\n" +
                          "Total Ceremonies Receiving Group Photos: " + totalCeremonies + "\n" +
-                         "All downstream timeline footage will automatically ripple forward.\n\n" +
-                         "Proceed with Timeline Ripple Insertion?";
+                         "Clips will be cleanly added using non-destructive Overwrite without shifting or rippling any downstream timeline footage.\n\n" +
+                         "Proceed with Non-Destructive Overwrite?";
 
         var userApproved = true;
         try {
@@ -3140,39 +4023,107 @@ $.runScript.distributeNikahGroupPhoto = function() {
             var workItem = insertionWorkList[wi];
             var seg = workItem.seg;
             var clip = workItem.clip;
-            var rawInsertSec = Number(seg.endSec);
-            if (isNaN(rawInsertSec) || rawInsertSec < 0) continue;
-
-            // Zero-Gap Precision Snapping: Snap to exact timeline cut boundary and sequence frame boundary
-            var insertSec = findBestTimelineCutPoint(seq, targetVideoTrack, rawInsertSec, 0.45);
-            insertSec = snapToFrameBoundary(insertSec, fps);
-
             var gpProjectItem = clip.projectItem;
-            var groupDuration = clip.duration;
-            var sourceInPoint = snapToFrameBoundary(clip.inPoint || 0, fps);
-            var sourceOutPoint = snapToFrameBoundary(sourceInPoint + groupDuration, fps);
+            var srcTrackItem = clip.sourceTrackItem || null;
 
-            // Configure projectItem in/out duration so insertClip takes exactly groupDuration
+            var isNestedSeq = false;
             try {
-                if (typeof gpProjectItem.setInPoint === "function") {
-                    gpProjectItem.setInPoint(toTime(sourceInPoint, fps));
+                if (gpProjectItem && (gpProjectItem.type === 2 || (typeof gpProjectItem.isSequence === "function" && gpProjectItem.isSequence()))) {
+                    isNestedSeq = true;
                 }
-                if (typeof gpProjectItem.setOutPoint === "function" && groupDuration > 0) {
-                    gpProjectItem.setOutPoint(toTime(sourceOutPoint, fps));
-                }
-            } catch (eIO) {}
+            } catch(eChkSeqDist) {}
 
-            // Rule 5: Use Ripple Insert (insertClip) instead of overwriteClip()
+            // Locate edited timeline instance (prioritizing active selection & detected edits)
+            if (!isNestedSeq && (!srcTrackItem || !hasClipEdits(srcTrackItem)) && seq && seq.videoTracks) {
+                var foundTlDist = findTimelineInstanceForProjectItem(seq, gpProjectItem, clip.name);
+                if (foundTlDist) {
+                    srcTrackItem = foundTlDist;
+                }
+            }
+
+            // Derive exact cut inPoint, outPoint, and duration from timeline source instance
+            var sourceInPoint = snapToFrameBoundary(clip.inPoint || 0, fps);
+            var groupDuration = clip.duration;
+            var sourceInTicks = null;
+            var sourceOutTicks = null;
+            if (isNestedSeq) {
+                sourceInPoint = 0;
+                if (groupDuration <= 0) groupDuration = 15.0;
+                sourceInTicks = "0";
+                sourceOutTicks = String(Math.round(groupDuration * 254016000000));
+            } else if (srcTrackItem) {
+                if (srcTrackItem.inPoint) {
+                    if (srcTrackItem.inPoint.ticks) sourceInTicks = String(srcTrackItem.inPoint.ticks);
+                    if (!isNaN(Number(srcTrackItem.inPoint.seconds))) {
+                        sourceInPoint = snapToFrameBoundary(Number(srcTrackItem.inPoint.seconds), fps);
+                    }
+                }
+                if (srcTrackItem.outPoint) {
+                    if (srcTrackItem.outPoint.ticks) sourceOutTicks = String(srcTrackItem.outPoint.ticks);
+                    if (!isNaN(Number(srcTrackItem.outPoint.seconds))) {
+                        var sOutSec = Number(srcTrackItem.outPoint.seconds);
+                        if (sOutSec > sourceInPoint) {
+                            groupDuration = snapToFrameBoundary(sOutSec - sourceInPoint, fps);
+                        }
+                    }
+                } else if (srcTrackItem.duration && Number(srcTrackItem.duration.seconds) > 0) {
+                    groupDuration = snapToFrameBoundary(Number(srcTrackItem.duration.seconds), fps);
+                }
+            }
+            if (groupDuration <= 0) groupDuration = 15.0;
+            var sourceOutPoint = snapToFrameBoundary(sourceInPoint + groupDuration, fps);
+            if (!sourceInTicks) sourceInTicks = String(Math.round(sourceInPoint * 254016000000));
+            if (!sourceOutTicks) sourceOutTicks = String(Math.round(sourceOutPoint * 254016000000));
+
+            // Calculate exact placement: [Nikaah marker] -> [video content] -> [Group Photo] -> [next Nikaah marker]
+            var placement = calculateCeremonyGroupPhotoPlacement(seq, seg.startSec, seg.nextStartSec, seg.endSec, groupDuration);
+            var insertSec = placement.insertSec;
+            var placementBoundary = placement.boundaryEnd;
+
+            // Determine safe destination track (collision-safe: preserves surrounding clips)
+            var safeVideoTarget = getSafeTargetVideoTrack(seq, "auto", insertSec, groupDuration);
+            var targetVideoTrack = (safeVideoTarget && safeVideoTarget.track) ? safeVideoTarget.track : seq.videoTracks[0];
+            var targetTrackIndex = (safeVideoTarget && typeof safeVideoTarget.index === "number") ? safeVideoTarget.index : 0;
+
+            // Set In/Out on gpProjectItem using ticks so overwrite takes exact cut duration with zero-gap frame alignment
+            try {
+                if (typeof gpProjectItem.setInPoint === "function" && sourceInTicks) {
+                    try { gpProjectItem.setInPoint(sourceInTicks, 4); } catch(e1) {
+                        try { gpProjectItem.setInPoint(sourceInTicks); } catch(e2) {
+                            try { gpProjectItem.setInPoint(Number(sourceInTicks), 4); } catch(e3) {
+                                try { gpProjectItem.setInPoint(sourceInPoint, 4); } catch(e4) {
+                                    try { gpProjectItem.setInPoint(sourceInPoint); } catch(e5) {}
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (eIO1) {}
+            try {
+                if (typeof gpProjectItem.setOutPoint === "function" && sourceOutTicks) {
+                    try { gpProjectItem.setOutPoint(sourceOutTicks, 4); } catch(e1) {
+                        try { gpProjectItem.setOutPoint(sourceOutTicks); } catch(e2) {
+                            try { gpProjectItem.setOutPoint(Number(sourceOutTicks), 4); } catch(e3) {
+                                try { gpProjectItem.setOutPoint(sourceOutPoint, 4); } catch(e4) {
+                                    try { gpProjectItem.setOutPoint(sourceOutPoint); } catch(e5) {}
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (eIO2) {}
+
+            // Non-Destructive Overwrite: Place clip at exact cut without rippling timeline
             // Rule 6: Consistent Time Units
             try {
                 var insertTime = toTime(insertSec, fps);
                 var insertOk = false;
                 try {
-                    targetVideoTrack.insertClip(gpProjectItem, insertTime);
+                    targetVideoTrack.overwriteClip(gpProjectItem, insertTime);
                     insertOk = true;
                 } catch (eIns1) {
                     try {
-                        targetVideoTrack.insertClip(gpProjectItem, insertSec);
+                        targetVideoTrack.overwriteClip(gpProjectItem, insertSec);
                         insertOk = true;
                     } catch (eIns2) {}
                 }
@@ -3182,26 +4133,109 @@ $.runScript.distributeNikahGroupPhoto = function() {
                     totalExtensionSec += groupDuration;
                     var startFormatted = formatSec(insertSec);
                     var endFormatted = formatSec(insertSec + groupDuration);
-                    timeSummary.unshift("• " + seg.name + ": '" + clip.name + "' inserted at " + startFormatted + " -> " + endFormatted + " (+" + groupDuration + "s ripple)");
+                    timeSummary.unshift("• " + seg.name + ": '" + clip.name + "' placed at " + startFormatted + " -> " + endFormatted + " (Overwrite)");
 
-                    // Create Timeline Marker for this Group Photo segment
-                    try {
-                        var gpMarker = markers.createMarker(insertSec);
-                        if (gpMarker) {
-                            gpMarker.name = seg.name + " - Group Photo";
-                            gpMarker.comments = clip.name + " (" + groupDuration + "s)";
-                            gpMarker.end = toTime(insertSec + groupDuration);
-                            try { gpMarker.setTypeAsChapter(); } catch(eCh) {}
+                    // Locate freshly placed clip on target track
+                    var placedClip = null;
+                    for (var pci = targetVideoTrack.clips.numItems - 1; pci >= 0; pci--) {
+                        var candPlaced = targetVideoTrack.clips[pci];
+                        if (candPlaced && Math.abs(candPlaced.start.seconds - insertSec) < 0.35) {
+                            placedClip = candPlaced;
+                            try { placedClip.comment = "OT_GP_INSERTED|CLIP:" + clip.name + "|NIKAAH:" + seg.seqNum; } catch(eCmt) {}
+                            break;
                         }
-                    } catch (eMk) {}
+                    }
+
+                    // Replicate exact timeline edits: Cut (inPoint/outPoint), Motion (Zoom/Scale, Position, Anchor, Rotation), Opacity & Crop
+                    // (Nested sequences encapsulate all edits natively)
+                    if (placedClip && srcTrackItem && !isNestedSeq) {
+                        copyTrackItemEffectsAndTransform(srcTrackItem, placedClip, targetTrackIndex, seq);
+                    }
+
+                    // Video Sanitation: Remove any extra video channels placed on other tracks (e.g. 2nd video channel)
+                    if (seq.videoTracks) {
+                        for (var dvti = 0; dvti < seq.videoTracks.numTracks; dvti++) {
+                            if (dvti === targetTrackIndex) continue;
+                            var dTrk = seq.videoTracks[dvti];
+                            if (!dTrk || !dTrk.clips) continue;
+                            for (var dci = dTrk.clips.numItems - 1; dci >= 0; dci--) {
+                                var dc = dTrk.clips[dci];
+                                if (!dc) continue;
+                                var dcStart = (dc.start && !isNaN(Number(dc.start.seconds))) ? Number(dc.start.seconds) : -1;
+                                if (Math.abs(dcStart - insertSec) < 0.35) {
+                                    var dcProj = dc.projectItem;
+                                    if (dcProj && gpProjectItem && dcProj === gpProjectItem) {
+                                        try { dc.remove(false, false); } catch(eRDV) {}
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Audio Sanitation: Place or keep on single safe track, clean up extra channels 2-8
+                    if (seq.audioTracks && seq.audioTracks.numTracks > 0 && gpProjectItem) {
+                        try {
+                            var safeAudio = getSafeTargetAudioTrack(seq, insertSec, groupDuration);
+                            var audTrack = (safeAudio && safeAudio.track) ? safeAudio.track : seq.audioTracks[0];
+                            var audIdx = (safeAudio && typeof safeAudio.index === "number") ? safeAudio.index : 0;
+                            var dAudClips = [];
+                            for (var dai = 0; dai < seq.audioTracks.numTracks; dai++) {
+                                var dat = seq.audioTracks[dai];
+                                if (!dat || !dat.clips) continue;
+                                for (var daci = dat.clips.numItems - 1; daci >= 0; daci--) {
+                                    var dac = dat.clips[daci];
+                                    if (dac && Math.abs(dac.start.seconds - insertSec) < 0.35) {
+                                        dAudClips.push({ trackIndex: dai, clip: dac });
+                                        break;
+                                    }
+                                }
+                            }
+                            if (dAudClips.length === 0) {
+                                audTrack.overwriteClip(gpProjectItem, insertTime);
+                                for (var dai2 = 0; dai2 < seq.audioTracks.numTracks; dai2++) {
+                                    var dat2 = seq.audioTracks[dai2];
+                                    if (!dat2 || !dat2.clips) continue;
+                                    for (var daci2 = dat2.clips.numItems - 1; daci2 >= 0; daci2--) {
+                                        var dac2 = dat2.clips[daci2];
+                                        if (dac2 && Math.abs(dac2.start.seconds - insertSec) < 0.35) {
+                                            dAudClips.push({ trackIndex: dai2, clip: dac2 });
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                            for (var dki = 0; dki < dAudClips.length; dki++) {
+                                var dAudItem = dAudClips[dki];
+                                if (dAudItem.trackIndex === audIdx) {
+                                    try { dAudItem.clip.comment = "OT_GP_INSERTED|CLIP:" + clip.name + "|NIKAAH:" + seg.seqNum; } catch(eACmt) {}
+                                } else {
+                                    try { dAudItem.clip.remove(false, false); } catch(eRDA) {}
+                                }
+                            }
+                        } catch (eAudPlc) {}
+                    }
+
+                    // Extend current Nikah marker so it cleanly encloses ceremony + placed Group Photo
+                    // (NOTE: Downstream markers are NOT shifted because Overwrite does not shift footage!)
+                    try {
+                        var curNk = markers.getFirstMarker();
+                        while (curNk) {
+                            var cS = (curNk.start && !isNaN(Number(curNk.start.seconds))) ? Number(curNk.start.seconds) : -1;
+                            if (Math.abs(cS - seg.startSec) < 0.5 && isStrictNikaahMarker(curNk.name || "")) {
+                                try { curNk.end = toTime(placementBoundary, fps); } catch (eExt) {}
+                                break;
+                            }
+                            curNk = markers.getNextMarker(curNk);
+                        }
+                    } catch (eMks) {}
                 }
             } catch (ePlaceGp) {}
         }
 
         totalExtensionSec = Math.round(totalExtensionSec * 10) / 10;
-        var summaryBody = "Successfully ripple-inserted across " + placedCount + " Nikah ceremony section(s) on Track V" + (targetTrackIndex + 1) + ":\n\n" +
-                          "• Total Timeline Extension: +" + totalExtensionSec + "s\n" +
-                          "• All downstream footage & audio tracks rippled forward (0% cuts)\n" +
+        var summaryBody = "Successfully overwritten across " + placedCount + " Nikah ceremony section(s) on Track V" + (targetTrackIndex + 1) + ":\n\n" +
+                          "• Non-destructive Overwrite applied at target locations\n" +
+                          "• Timeline layout and downstream clips 100% preserved (zero ripple)\n" +
                           "• Synchronized timeline markers created\n\n" +
                           timeSummary.join("\n");
 
@@ -3387,6 +4421,9 @@ function detectGroupPhotoSources(seq) {
     var found = [];
     if (!seq) return found;
 
+    var seenGps = {};
+
+    // 1. Scan Sequence Markers for GROUP_PHOTO_N or GP markers
     var allMarkers = [];
     if (seq.markers) {
         var cur = seq.markers.getFirstMarker();
@@ -3409,7 +4446,7 @@ function detectGroupPhotoSources(seq) {
         var bestClip = null;
         var bestDist = 9999999;
 
-        // 1. Time distance check on video tracks
+        // 1a. Time distance check on video tracks
         if (vt) {
             for (var ti = 0; ti < vt.numTracks; ti++) {
                 var trk = vt[ti];
@@ -3417,6 +4454,9 @@ function detectGroupPhotoSources(seq) {
                 for (var ci = 0; ci < trk.clips.numItems; ci++) {
                     var c = trk.clips[ci];
                     if (!c) continue;
+                    var cCmt = "";
+                    try { cCmt = c.comment || ""; } catch(e) {}
+                    if (cCmt.indexOf("OT_GP_INSERTED") !== -1) continue;
                     var cStart = (c.start && !isNaN(Number(c.start.seconds))) ? Number(c.start.seconds) : 0;
                     var cEnd   = (c.end   && !isNaN(Number(c.end.seconds)))   ? Number(c.end.seconds)   : cStart;
                     var dist = Math.abs(cStart - gpm.startSec);
@@ -3429,7 +4469,7 @@ function detectGroupPhotoSources(seq) {
             }
         }
 
-        // 2. If not found by time, check marker comments: "Group Photo Source #N (actual_clip_name)"
+        // 1b. If not found by time, check marker comments: "Group Photo Source #N (actual_clip_name)"
         var commentClipName = "";
         if (!bestClip && gpm.comments) {
             var mComment = gpm.comments.match(/\(([^)]+)\)/);
@@ -3441,6 +4481,9 @@ function detectGroupPhotoSources(seq) {
                     for (var ciComment = 0; ciComment < trkComment.clips.numItems; ciComment++) {
                         var cc = trkComment.clips[ciComment];
                         if (!cc) continue;
+                        var ccCmt = "";
+                        try { ccCmt = cc.comment || ""; } catch(e) {}
+                        if (ccCmt.indexOf("OT_GP_INSERTED") !== -1) continue;
                         var ccCandidates = getClipCandidateStrings(cc);
                         if (isClipMatch(ccCandidates, commentClipName)) {
                             bestClip = cc;
@@ -3452,7 +4495,7 @@ function detectGroupPhotoSources(seq) {
             }
         }
 
-        // 3. If still not found by time or comments, check for clip matching GP number on timeline
+        // 1c. If still not found by time or comments, check for clip matching GP number on timeline
         if (!bestClip && vt) {
             for (var ti2 = 0; ti2 < vt.numTracks; ti2++) {
                 var trk2 = vt[ti2];
@@ -3460,6 +4503,9 @@ function detectGroupPhotoSources(seq) {
                 for (var ci2 = 0; ci2 < trk2.clips.numItems; ci2++) {
                     var c2 = trk2.clips[ci2];
                     if (!c2) continue;
+                    var c2Cmt = "";
+                    try { c2Cmt = c2.comment || ""; } catch(e) {}
+                    if (c2Cmt.indexOf("OT_GP_INSERTED") !== -1) continue;
                     var c2Nm = c2.name || (c2.projectItem && c2.projectItem.name) || "";
                     if (isGroupPhotoName(c2Nm) && extractGpNumber(c2Nm) === gpm.gpNum) {
                         bestClip = c2;
@@ -3470,7 +4516,7 @@ function detectGroupPhotoSources(seq) {
             }
         }
 
-        // 4. If still not found, check project bins for commentClipName or GP number
+        // 1d. If still not found, check project bins for commentClipName or GP number (including nested sequences)
         var projItem = bestClip ? (bestClip.projectItem || null) : null;
         if (!projItem && (commentClipName || gpm.gpNum) && app.project && app.project.rootItem) {
             var searchTarget = commentClipName || ("GP" + gpm.gpNum);
@@ -3482,6 +4528,15 @@ function detectGroupPhotoSources(seq) {
                         if (!child) continue;
                         if (isItemBin(child)) searchProjectForClip(child);
                         else {
+                            if (seq) {
+                                try {
+                                    if (child === seq.projectItem) continue;
+                                    if (typeof child.getSequence === "function") {
+                                        var cs1 = child.getSequence();
+                                        if (cs1 && seq.sequenceID && cs1.sequenceID === seq.sequenceID) continue;
+                                    }
+                                } catch(eSeq1) {}
+                            }
                             var bCandidates = [child.name];
                             try { if (typeof child.getMediaPath === "function") bCandidates.push(child.getMediaPath()); } catch(e) {}
                             if (isClipMatch(bCandidates, searchTarget)) {
@@ -3495,7 +4550,7 @@ function detectGroupPhotoSources(seq) {
             } catch(eProj) {}
         }
 
-        var clipName = "Group Photo " + gpm.gpNum;
+        var clipName = "GP" + gpm.gpNum;
         var rawName = "";
         var clipDuration = 0;
         var clipInPoint = 0;
@@ -3521,6 +4576,16 @@ function detectGroupPhotoSources(seq) {
             clipName = commentClipName;
         }
 
+        if (clipDuration <= 0 && projItem) {
+            try {
+                if (typeof projItem.getSequence === "function") {
+                    var chkSeq = projItem.getSequence();
+                    if (chkSeq && chkSeq.end && !isNaN(Number(chkSeq.end.seconds))) {
+                        clipDuration = Number(chkSeq.end.seconds);
+                    }
+                }
+            } catch(eChkSeqDur) {}
+        }
         if (clipDuration <= 0 && clipOutPoint > clipInPoint) {
             clipDuration = clipOutPoint - clipInPoint;
         }
@@ -3536,23 +4601,10 @@ function detectGroupPhotoSources(seq) {
                 }
             } catch (eDurP) {}
         }
-        if (clipDuration <= 0 && projItem) {
-            try {
-                var meta = projItem.getProjectMetadata ? projItem.getProjectMetadata() : "";
-                var matchMeta = meta.match(/Column\.Intrinsic\.MediaDuration[^\>]*\>([^\<]+)\</i);
-                if (matchMeta && matchMeta[1]) {
-                    var pMeta = matchMeta[1].split(/[:;]/);
-                    if (pMeta.length === 4) {
-                        var totalSecMeta = (parseFloat(pMeta[0]) || 0) * 3600 + (parseFloat(pMeta[1]) || 0) * 60 + (parseFloat(pMeta[2]) || 0) + ((parseFloat(pMeta[3]) || 0) / 25.0);
-                        if (totalSecMeta > 0) clipDuration = totalSecMeta;
-                    }
-                }
-            } catch (eMeta) {}
-        }
         if (clipDuration <= 0) clipDuration = 15.0;
         if (clipOutPoint <= clipInPoint) clipOutPoint = clipInPoint + clipDuration;
 
-        found.push({
+        seenGps[gpm.gpNum] = {
             gpNum: gpm.gpNum,
             markerName: gpm.markerName || ("GROUP_PHOTO_" + gpm.gpNum),
             comments: gpm.comments || "",
@@ -3564,67 +4616,97 @@ function detectGroupPhotoSources(seq) {
             duration: clipDuration,
             inPoint: clipInPoint,
             outPoint: clipOutPoint,
+            sourceTrackItem: bestClip || null,
             hasClip: (projItem !== null)
-        });
+        };
     }
 
-    // FALLBACK 1: If no GP markers found, scan video tracks for GP clips directly
-    if (found.length === 0 && vt) {
-        var seenGps = {};
+    // 2. Scan Sequence Video Tracks for any clip or nested sequence matching GP or Mango/Lavender
+    if (vt) {
         for (var ti3 = 0; ti3 < vt.numTracks; ti3++) {
             var trk3 = vt[ti3];
             if (!trk3 || !trk3.clips) continue;
             for (var ci3 = 0; ci3 < trk3.clips.numItems; ci3++) {
                 var c3 = trk3.clips[ci3];
                 if (!c3) continue;
+                var c3Cmt = "";
+                try { c3Cmt = c3.comment || ""; } catch(e) {}
+                if (c3Cmt.indexOf("OT_GP_INSERTED") !== -1) continue;
                 var c3Nm = c3.name || (c3.projectItem && c3.projectItem.name) || "";
                 var isMango = isMangoOrLavenderColor(c3);
 
                 if (isGroupPhotoName(c3Nm) || isMango) {
                     var gpN = extractGpNumber(c3Nm);
-                    if (!seenGps[gpN]) {
-                        seenGps[gpN] = true;
+                    if (!seenGps[gpN] || !seenGps[gpN].hasClip) {
                         var dur3 = (c3.duration && c3.duration.seconds > 0) ? Number(c3.duration.seconds) : ((c3.start && c3.end) ? (c3.end.seconds - c3.start.seconds) : 0);
                         var in3 = (c3.inPoint && !isNaN(Number(c3.inPoint.seconds))) ? Number(c3.inPoint.seconds) : 0;
                         var out3 = (c3.outPoint && !isNaN(Number(c3.outPoint.seconds))) ? Number(c3.outPoint.seconds) : (in3 + dur3);
-                        found.push({
+                        seenGps[gpN] = {
                             gpNum: gpN,
                             markerName: "GROUP_PHOTO_" + gpN,
                             comments: "",
                             markerStartSec: c3.start ? c3.start.seconds : 0,
-                            clipName: c3Nm || ("Group Photo " + gpN),
+                            clipName: c3Nm || ("GP" + gpN),
                             rawClipName: c3Nm,
                             commentClipName: "",
                             projectItem: c3.projectItem || null,
                             duration: dur3 > 0 ? dur3 : 15.0,
                             inPoint: in3,
                             outPoint: out3,
+                            sourceTrackItem: c3 || null,
                             hasClip: (c3.projectItem !== null)
-                        });
+                        };
                     }
                 }
             }
         }
     }
 
-    // FALLBACK 2: If still no GP found, scan project bin items for GP clips
-    if (found.length === 0 && app.project && app.project.rootItem) {
-        var binGps = {};
+    // 3. Scan Project Panel Bins recursively for GP clips and NESTED SEQUENCES (GP1, GP2, GP 1, GP 2...)
+    if (app.project && app.project.rootItem) {
         function scanBinForGps(bin) {
             if (!bin || !bin.children) return;
             for (var bi = 0; bi < bin.children.numItems; bi++) {
                 var child = bin.children[bi];
                 if (!child) continue;
-                if (child.type === 2 || (child.isSequence && child.isSequence())) continue;
                 if (isItemBin(child)) {
                     scanBinForGps(child);
                 } else {
+                    // Skip active sequence itself
+                    if (seq) {
+                        try {
+                            if (child === seq.projectItem) continue;
+                            if (typeof child.getSequence === "function") {
+                                var cSeq = child.getSequence();
+                                if (cSeq && seq.sequenceID && cSeq.sequenceID === seq.sequenceID) continue;
+                            }
+                        } catch(eSeqSkip) {}
+                    }
+
                     var bNm = child.name || "";
                     if (isGroupPhotoName(bNm)) {
                         var bGpN = extractGpNumber(bNm);
-                        if (!binGps[bGpN]) {
-                            binGps[bGpN] = true;
-                            found.push({
+                        if (!seenGps[bGpN] || !seenGps[bGpN].hasClip) {
+                            var bDur = 0;
+                            // Check duration if it's a nested sequence
+                            try {
+                                if (typeof child.getSequence === "function") {
+                                    var chSeq = child.getSequence();
+                                    if (chSeq && chSeq.end && !isNaN(Number(chSeq.end.seconds))) {
+                                        bDur = Number(chSeq.end.seconds);
+                                    }
+                                }
+                            } catch(eSeqDur) {}
+                            try {
+                                var inP = child.getInPoint ? child.getInPoint() : null;
+                                var outP = child.getOutPoint ? child.getOutPoint() : null;
+                                if (inP && outP && outP.seconds > inP.seconds && bDur <= 0) {
+                                    bDur = outP.seconds - inP.seconds;
+                                }
+                            } catch(ePDur) {}
+                            if (bDur <= 0) bDur = 15.0;
+
+                            seenGps[bGpN] = {
                                 gpNum: bGpN,
                                 markerName: "GROUP_PHOTO_" + bGpN,
                                 comments: "",
@@ -3633,11 +4715,12 @@ function detectGroupPhotoSources(seq) {
                                 rawClipName: bNm,
                                 commentClipName: "",
                                 projectItem: child,
-                                duration: 15.0,
+                                duration: bDur,
                                 inPoint: 0,
-                                outPoint: 15.0,
+                                outPoint: bDur,
+                                sourceTrackItem: null,
                                 hasClip: true
-                            });
+                            };
                         }
                     }
                 }
@@ -3646,7 +4729,12 @@ function detectGroupPhotoSources(seq) {
         scanBinForGps(app.project.rootItem);
     }
 
-    // Sort by gpNum
+    // Convert seenGps to sorted array
+    for (var k in seenGps) {
+        if (seenGps.hasOwnProperty(k)) {
+            found.push(seenGps[k]);
+        }
+    }
     found.sort(function(a, b) { return a.gpNum - b.gpNum; });
     return found;
 }
@@ -3719,13 +4807,13 @@ function collectNikaahMarkers(seq) {
         }
 
         if (nextNikaahStart !== null) {
-            // If marker had no duration, OR was set with 1-2 frame gap deficit (e < nextNikaahStart <= e + 0.28):
+            // If marker had no duration, OR was set with frame gap deficit (e < nextNikaahStart <= e + 1.2s):
             // Snap e to nextNikaahStart so full ceremony content is preserved without missing frames
-            if (e <= s || (e < nextNikaahStart && (nextNikaahStart - e) <= 0.28)) {
+            if (e <= s || (e < nextNikaahStart && (nextNikaahStart - e) <= 1.2)) {
                 e = nextNikaahStart;
             }
         } else if (seqEndSec > s) {
-            if (e <= s || (seqEndSec > e && (seqEndSec - e) <= 0.28)) {
+            if (e <= s || (seqEndSec > e && (seqEndSec - e) <= 1.2)) {
                 e = seqEndSec;
             }
         } else if (e <= s) {
@@ -3741,7 +4829,9 @@ function collectNikaahMarkers(seq) {
             chronologicalIndex: nikahCount,  // 1, 2, 3...
             name: item.name,
             startSec: s,
-            endSec: e
+            endSec: e,
+            nextStartSec: nextNikaahStart,
+            origEndSec: item.endSec
         });
     }
 
@@ -3772,13 +4862,16 @@ function collectNikaahMarkers(seq) {
             for (var cki = 0; cki < clipCandidates.length; cki++) {
                 var cNum = extractNikaahNumber(clipCandidates[cki].name);
                 var cSeq = (cNum !== null && cNum > 0) ? cNum : (cki + 1);
+                var nextClipStart = (cki < clipCandidates.length - 1) ? clipCandidates[cki + 1].startSec : null;
                 nikaahList.push({
                     seqNum: cSeq,
                     ceremonyNum: cNum,
                     chronologicalIndex: cki + 1,
                     name: clipCandidates[cki].name,
                     startSec: clipCandidates[cki].startSec,
-                    endSec: clipCandidates[cki].endSec
+                    endSec: clipCandidates[cki].endSec,
+                    nextStartSec: nextClipStart,
+                    origEndSec: clipCandidates[cki].endSec
                 });
             }
         }
@@ -3850,17 +4943,187 @@ function resolveClipSource(seq, clipId, gpSources) {
     var strId = String(clipId).replace(/^\s+|\s+$/g, "");
     if (!strId) return null;
 
-    // 1. Check if strId represents a GP index: e.g. "1", "GP 1", "GP1", "GROUP_PHOTO_1", "GROUP PHOTO 1"
+    // 0. Active Timeline Selection Priority: If user clicked/selected a clip on the timeline
+    try {
+        if (seq && typeof seq.getSelection === "function") {
+            var curSel = seq.getSelection();
+            if (curSel && curSel.length > 0) {
+                for (var si0 = 0; si0 < curSel.length; si0++) {
+                    var sc0 = curSel[si0];
+                    if (!sc0) continue;
+                    var sc0Cmt = "";
+                    try { sc0Cmt = sc0.comment || ""; } catch(e) {}
+                    if (sc0Cmt.indexOf("OT_GP_INSERTED") !== -1) continue;
+
+                    var s0Candidates = getClipCandidateStrings(sc0);
+                    if (strId.toLowerCase() === "selected" || isClipMatch(s0Candidates, strId)) {
+                        var s0In = (sc0.inPoint && !isNaN(Number(sc0.inPoint.seconds))) ? Number(sc0.inPoint.seconds) : 0;
+                        var s0Out = (sc0.outPoint && !isNaN(Number(sc0.outPoint.seconds))) ? Number(sc0.outPoint.seconds) : 0;
+                        var s0Dur = (s0Out > s0In) ? (s0Out - s0In) : ((sc0.duration && sc0.duration.seconds > 0) ? Number(sc0.duration.seconds) : ((sc0.end && sc0.start) ? (sc0.end.seconds - sc0.start.seconds) : 15));
+                        if (s0Out <= s0In) s0Out = s0In + s0Dur;
+                        return {
+                            gpNum: extractGpNumberFromString(strId) || 1,
+                            clipName: sc0.name || (sc0.projectItem && sc0.projectItem.name) || strId,
+                            rawClipName: sc0.name || "",
+                            projectItem: sc0.projectItem || null,
+                            duration: s0Dur > 0 ? s0Dur : 15.0,
+                            inPoint: s0In,
+                            outPoint: s0Out,
+                            sourceTrackItem: sc0,
+                            hasClip: (sc0.projectItem !== null)
+                        };
+                    }
+                }
+            }
+        }
+    } catch(eSel0) {}
+
+    // 1. Check timeline video tracks for matching clip, prioritizing edited instances (cuts, crop, scale, etc.)
+    try {
+        var tlItem = findTimelineInstanceForProjectItem(seq, null, strId);
+        if (tlItem) {
+            var tIn = (tlItem.inPoint && !isNaN(Number(tlItem.inPoint.seconds))) ? Number(tlItem.inPoint.seconds) : 0;
+            var tOut = (tlItem.outPoint && !isNaN(Number(tlItem.outPoint.seconds))) ? Number(tlItem.outPoint.seconds) : 0;
+            var tDur = (tOut > tIn) ? (tOut - tIn) : ((tlItem.duration && tlItem.duration.seconds > 0) ? Number(tlItem.duration.seconds) : ((tlItem.end && tlItem.start) ? (tlItem.end.seconds - tlItem.start.seconds) : 15));
+            if (tOut <= tIn) tOut = tIn + tDur;
+            return {
+                gpNum: extractGpNumberFromString(strId) || 1,
+                clipName: tlItem.name || (tlItem.projectItem && tlItem.projectItem.name) || strId,
+                rawClipName: tlItem.name || "",
+                projectItem: tlItem.projectItem || null,
+                duration: tDur > 0 ? tDur : 15.0,
+                inPoint: tIn,
+                outPoint: tOut,
+                sourceTrackItem: tlItem,
+                hasClip: (tlItem.projectItem !== null)
+            };
+        }
+    } catch(eTrk) {}
+
+    // 2. Scan Project Bins for projectItem or nested sequence (e.g. "GP1", "GP2") with matching name
+    try {
+        if (app.project && app.project.rootItem) {
+            var matchedItem = null;
+            function searchBin(bin) {
+                if (!bin || !bin.children || matchedItem) return;
+                for (var bi = 0; bi < bin.children.numItems; bi++) {
+                    var ch = bin.children[bi];
+                    if (!ch) continue;
+                    if (isItemBin(ch)) {
+                        searchBin(ch);
+                    } else {
+                        // Skip active sequence itself
+                        if (seq) {
+                            try {
+                                if (ch === seq.projectItem) continue;
+                                if (typeof ch.getSequence === "function") {
+                                    var csRes = ch.getSequence();
+                                    if (csRes && seq.sequenceID && csRes.sequenceID === seq.sequenceID) continue;
+                                }
+                            } catch(eSeqRes) {}
+                        }
+                        var bCandidates = [ch.name];
+                        try {
+                            if (typeof ch.getMediaPath === "function") {
+                                var mp2 = ch.getMediaPath();
+                                if (mp2) bCandidates.push(mp2);
+                            }
+                        } catch(eMP) {}
+                        if (ch.treePath) bCandidates.push(ch.treePath);
+
+                        if (isClipMatch(bCandidates, strId)) {
+                            matchedItem = ch;
+                            return;
+                        }
+                    }
+                }
+            }
+            searchBin(app.project.rootItem);
+            if (matchedItem) {
+                var pDur = 0;
+                try {
+                    if (typeof matchedItem.getSequence === "function") {
+                        var mSeq = matchedItem.getSequence();
+                        if (mSeq && mSeq.end && !isNaN(Number(mSeq.end.seconds))) {
+                            pDur = Number(mSeq.end.seconds);
+                        }
+                    }
+                } catch(eSeqDur) {}
+                try {
+                    var inP = matchedItem.getInPoint ? matchedItem.getInPoint() : null;
+                    var outP = matchedItem.getOutPoint ? matchedItem.getOutPoint() : null;
+                    if (inP && outP && outP.seconds > inP.seconds && pDur <= 0) pDur = outP.seconds - inP.seconds;
+                } catch(eP) {}
+                if (pDur <= 0) pDur = 15.0;
+                return {
+                    gpNum: extractGpNumberFromString(strId) || 1,
+                    clipName: matchedItem.name,
+                    rawClipName: matchedItem.name,
+                    projectItem: matchedItem,
+                    duration: pDur,
+                    inPoint: 0,
+                    outPoint: pDur,
+                    sourceTrackItem: null,
+                    hasClip: true
+                };
+            }
+        }
+    } catch(eBin) {}
+
+    // 3. Scan timeline audio tracks for matching clip
+    try {
+        if (seq && seq.audioTracks) {
+            for (var ai = 0; ai < seq.audioTracks.numTracks; ai++) {
+                var atrk = seq.audioTracks[ai];
+                if (!atrk || !atrk.clips) continue;
+                for (var aci = 0; aci < atrk.clips.numItems; aci++) {
+                    var atc = atrk.clips[aci];
+                    if (!atc) continue;
+                    var atcCandidates = getClipCandidateStrings(atc);
+                    if (isClipMatch(atcCandidates, strId)) {
+                        var aIn = (atc.inPoint && !isNaN(Number(atc.inPoint.seconds))) ? Number(atc.inPoint.seconds) : 0;
+                        var aOut = (atc.outPoint && !isNaN(Number(atc.outPoint.seconds))) ? Number(atc.outPoint.seconds) : 0;
+                        var aDur = (aOut > aIn) ? (aOut - aIn) : ((atc.duration && atc.duration.seconds > 0) ? Number(atc.duration.seconds) : ((atc.end && atc.start) ? (atc.end.seconds - atc.start.seconds) : 15));
+                        if (aOut <= aIn) aOut = aIn + aDur;
+                        return {
+                            gpNum: extractGpNumberFromString(strId) || 1,
+                            clipName: atc.name || (atc.projectItem && atc.projectItem.name) || strId,
+                            rawClipName: atc.name || "",
+                            projectItem: atc.projectItem || null,
+                            duration: aDur > 0 ? aDur : 15.0,
+                            inPoint: aIn,
+                            outPoint: aOut,
+                            sourceTrackItem: atc,
+                            hasClip: (atc.projectItem !== null)
+                        };
+                    }
+                }
+            }
+        }
+    } catch(eATrk) {}
+
+    // 4. Check gpSources (detected markers / GP index fallback)
     var gpIdx = extractGpNumberFromString(strId);
     if (gpIdx !== null && gpSources && gpSources.length > 0) {
         for (var i = 0; i < gpSources.length; i++) {
             if (gpSources[i].gpNum === gpIdx) {
-                if (gpSources[i].hasClip && gpSources[i].projectItem) return gpSources[i];
+                if (gpSources[i].hasClip && gpSources[i].projectItem) {
+                    var gpMatch1 = gpSources[i];
+                    if (!gpMatch1.sourceTrackItem || !hasClipEdits(gpMatch1.sourceTrackItem)) {
+                        var foundTl1 = findTimelineInstanceForProjectItem(seq, gpMatch1.projectItem, gpMatch1.clipName);
+                        if (foundTl1) {
+                            gpMatch1.sourceTrackItem = foundTl1;
+                            if (foundTl1.inPoint && !isNaN(Number(foundTl1.inPoint.seconds))) gpMatch1.inPoint = Number(foundTl1.inPoint.seconds);
+                            if (foundTl1.outPoint && !isNaN(Number(foundTl1.outPoint.seconds))) gpMatch1.outPoint = Number(foundTl1.outPoint.seconds);
+                            if (gpMatch1.outPoint > gpMatch1.inPoint) gpMatch1.duration = gpMatch1.outPoint - gpMatch1.inPoint;
+                        }
+                    }
+                    return gpMatch1;
+                }
             }
         }
     }
 
-    // 2. Check if strId matches any GP source by name, comments, markerName, rawClipName, or projectItem
     if (gpSources && gpSources.length > 0) {
         for (var j = 0; j < gpSources.length; j++) {
             var gp = gpSources[j];
@@ -3883,155 +5146,25 @@ function resolveClipSource(seq, clipId, gpSources) {
                 } catch(eGM) {}
             }
             if (isClipMatch(gCandidates, strId)) {
-                return gp;
+                var gpMatch2 = gp;
+                if (!gpMatch2.sourceTrackItem || !hasClipEdits(gpMatch2.sourceTrackItem)) {
+                    var foundTl2 = findTimelineInstanceForProjectItem(seq, gpMatch2.projectItem, gpMatch2.clipName);
+                    if (foundTl2) {
+                        gpMatch2.sourceTrackItem = foundTl2;
+                        if (foundTl2.inPoint && !isNaN(Number(foundTl2.inPoint.seconds))) gpMatch2.inPoint = Number(foundTl2.inPoint.seconds);
+                        if (foundTl2.outPoint && !isNaN(Number(foundTl2.outPoint.seconds))) gpMatch2.outPoint = Number(foundTl2.outPoint.seconds);
+                        if (gpMatch2.outPoint > gpMatch2.inPoint) gpMatch2.duration = gpMatch2.outPoint - gpMatch2.inPoint;
+                    }
+                }
+                return gpMatch2;
             }
         }
-        // Fallback: if gpIdx was found above, return the gpSource even if hasClip was initially false
         if (gpIdx !== null) {
             for (var k = 0; k < gpSources.length; k++) {
                 if (gpSources[k].gpNum === gpIdx) return gpSources[k];
             }
         }
     }
-
-    // 3. Check active sequence timeline selection (seq.getSelection())
-    try {
-        if (seq && typeof seq.getSelection === "function") {
-            var sel = seq.getSelection();
-            if (sel && sel.length > 0) {
-                for (var si = 0; si < sel.length; si++) {
-                    var sc = sel[si];
-                    if (!sc) continue;
-                    var sCandidates = getClipCandidateStrings(sc);
-                    if (strId.toLowerCase() === "selected" || isClipMatch(sCandidates, strId)) {
-                        var sDur = (sc.duration && sc.duration.seconds > 0) ? Number(sc.duration.seconds) : ((sc.end && sc.start) ? (sc.end.seconds - sc.start.seconds) : 15);
-                        var sIn = (sc.inPoint && !isNaN(Number(sc.inPoint.seconds))) ? Number(sc.inPoint.seconds) : 0;
-                        var sOut = (sc.outPoint && !isNaN(Number(sc.outPoint.seconds))) ? Number(sc.outPoint.seconds) : (sIn + sDur);
-                        return {
-                            gpNum: gpIdx || 1,
-                            clipName: sc.name || (sc.projectItem && sc.projectItem.name) || strId,
-                            rawClipName: sc.name || "",
-                            projectItem: sc.projectItem || null,
-                            duration: sDur > 0 ? sDur : 15.0,
-                            inPoint: sIn,
-                            outPoint: sOut > sIn ? sOut : (sIn + 15.0),
-                            hasClip: (sc.projectItem !== null)
-                        };
-                    }
-                }
-            }
-        }
-    } catch(eSel) {}
-
-    // 4. Scan timeline video tracks for matching clip
-    try {
-        if (seq && seq.videoTracks) {
-            for (var ti = 0; ti < seq.videoTracks.numTracks; ti++) {
-                var trk = seq.videoTracks[ti];
-                if (!trk || !trk.clips) continue;
-                for (var ci = 0; ci < trk.clips.numItems; ci++) {
-                    var tc = trk.clips[ci];
-                    if (!tc) continue;
-                    var tcCandidates = getClipCandidateStrings(tc);
-                    if (isClipMatch(tcCandidates, strId)) {
-                        var tDur = (tc.duration && tc.duration.seconds > 0) ? Number(tc.duration.seconds) : ((tc.end && tc.start) ? (tc.end.seconds - tc.start.seconds) : 15);
-                        var tIn = (tc.inPoint && !isNaN(Number(tc.inPoint.seconds))) ? Number(tc.inPoint.seconds) : 0;
-                        var tOut = (tc.outPoint && !isNaN(Number(tc.outPoint.seconds))) ? Number(tc.outPoint.seconds) : (tIn + tDur);
-                        return {
-                            gpNum: gpIdx || 1,
-                            clipName: tc.name || (tc.projectItem && tc.projectItem.name) || strId,
-                            rawClipName: tc.name || "",
-                            projectItem: tc.projectItem || null,
-                            duration: tDur > 0 ? tDur : 15.0,
-                            inPoint: tIn,
-                            outPoint: tOut > tIn ? tOut : (tIn + 15.0),
-                            hasClip: (tc.projectItem !== null)
-                        };
-                    }
-                }
-            }
-        }
-    } catch(eTrk) {}
-
-    // 4b. Also scan timeline audio tracks
-    try {
-        if (seq && seq.audioTracks) {
-            for (var ai = 0; ai < seq.audioTracks.numTracks; ai++) {
-                var atrk = seq.audioTracks[ai];
-                if (!atrk || !atrk.clips) continue;
-                for (var aci = 0; aci < atrk.clips.numItems; aci++) {
-                    var atc = atrk.clips[aci];
-                    if (!atc) continue;
-                    var atcCandidates = getClipCandidateStrings(atc);
-                    if (isClipMatch(atcCandidates, strId)) {
-                        var aDur = (atc.duration && atc.duration.seconds > 0) ? Number(atc.duration.seconds) : ((atc.end && atc.start) ? (atc.end.seconds - atc.start.seconds) : 15);
-                        var aIn = (atc.inPoint && !isNaN(Number(atc.inPoint.seconds))) ? Number(atc.inPoint.seconds) : 0;
-                        var aOut = (atc.outPoint && !isNaN(Number(atc.outPoint.seconds))) ? Number(atc.outPoint.seconds) : (aIn + aDur);
-                        return {
-                            gpNum: gpIdx || 1,
-                            clipName: atc.name || (atc.projectItem && atc.projectItem.name) || strId,
-                            rawClipName: atc.name || "",
-                            projectItem: atc.projectItem || null,
-                            duration: aDur > 0 ? aDur : 15.0,
-                            inPoint: aIn,
-                            outPoint: aOut > aIn ? aOut : (aIn + 15.0),
-                            hasClip: (atc.projectItem !== null)
-                        };
-                    }
-                }
-            }
-        }
-    } catch(eATrk) {}
-
-    // 5. Scan project bins recursively for projectItem with matching name or mediaPath
-    try {
-        if (app.project && app.project.rootItem) {
-            var matchedItem = null;
-            function searchBin(bin) {
-                if (!bin || !bin.children || matchedItem) return;
-                for (var bi = 0; bi < bin.children.numItems; bi++) {
-                    var ch = bin.children[bi];
-                    if (!ch) continue;
-                    if (isItemBin(ch)) {
-                        searchBin(ch);
-                    } else {
-                        var bCandidates = [ch.name];
-                        try {
-                            if (typeof ch.getMediaPath === "function") {
-                                var mp2 = ch.getMediaPath();
-                                if (mp2) bCandidates.push(mp2);
-                            }
-                        } catch(eMP) {}
-                        if (ch.treePath) bCandidates.push(ch.treePath);
-
-                        if (isClipMatch(bCandidates, strId)) {
-                            matchedItem = ch;
-                            return;
-                        }
-                    }
-                }
-            }
-            searchBin(app.project.rootItem);
-            if (matchedItem) {
-                var pDur = 15.0;
-                try {
-                    var inP = matchedItem.getInPoint ? matchedItem.getInPoint() : null;
-                    var outP = matchedItem.getOutPoint ? matchedItem.getOutPoint() : null;
-                    if (inP && outP && outP.seconds > inP.seconds) pDur = outP.seconds - inP.seconds;
-                } catch(eP) {}
-                return {
-                    gpNum: gpIdx || 1,
-                    clipName: matchedItem.name,
-                    rawClipName: matchedItem.name,
-                    projectItem: matchedItem,
-                    duration: pDur > 0 ? pDur : 15.0,
-                    inPoint: 0,
-                    outPoint: pDur > 0 ? pDur : 15.0,
-                    hasClip: true
-                };
-            }
-        }
-    } catch(eBin) {}
 
     return null;
 }
@@ -4115,7 +5248,16 @@ $.runScript.getSequenceClipNames = function() {
                     if (!child) continue;
                     if (isItemBin(child)) {
                         scanBinNames(child, depth + 1);
-                    } else if (child.type !== 2) {
+                    } else {
+                        if (seq) {
+                            try {
+                                if (child === seq.projectItem) continue;
+                                if (typeof child.getSequence === "function") {
+                                    var sSeq = child.getSequence();
+                                    if (sSeq && seq.sequenceID && sSeq.sequenceID === seq.sequenceID) continue;
+                                }
+                            } catch(eSeq) {}
+                        }
                         addName(child.name);
                     }
                 }
@@ -4380,10 +5522,120 @@ $.runScript.createProjectSnapshot = function() {
 
 // (findBestTimelineCutPoint, getSequenceFps, and snapToFrameBoundary are defined above for global precision alignment)
 
-// ── Execute: ripple-insert with duplicate prevention ─────────────────────────
+// ── Collision & Safe Track Targeting Helpers ─────────────────────────────────
+$.runScript._lastAssignmentBackup = null;
+
+function hasClipCollision(track, startSec, durationSec) {
+    if (!track || !track.clips) return false;
+    var dur = (typeof durationSec === "number" && !isNaN(durationSec) && durationSec > 0) ? durationSec : 15.0;
+    var sSec = (typeof startSec === "number" && !isNaN(startSec) && startSec >= 0) ? startSec : 0;
+    var endSec = sSec + dur;
+    for (var ci = 0; ci < track.clips.numItems; ci++) {
+        var c = track.clips[ci];
+        if (!c) continue;
+        var cStart = (c.start && !isNaN(Number(c.start.seconds))) ? Number(c.start.seconds) : -1;
+        var cEnd   = (c.end   && !isNaN(Number(c.end.seconds)))   ? Number(c.end.seconds)   : -1;
+        if (cStart < 0 || cEnd <= cStart) continue;
+        // Collision if intervals overlap by more than 1 frame (0.04s)
+        if (sSec < (cEnd - 0.04) && endSec > (cStart + 0.04)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function getSafeTargetVideoTrack(seq, userTrackChoice, insertSec, groupDuration) {
+    if (!seq || !seq.videoTracks || seq.videoTracks.numTracks === 0) return null;
+    var numTracks = seq.videoTracks.numTracks;
+    var dur = (typeof groupDuration === "number" && !isNaN(groupDuration) && groupDuration > 0) ? groupDuration : 15.0;
+    var insSec = (typeof insertSec === "number" && !isNaN(insertSec) && insertSec >= 0) ? insertSec : 0;
+
+    // A. Explicit user track choice (0 = V1, 1 = V2, 2 = V3...)
+    if (typeof userTrackChoice === "number" && userTrackChoice >= 0 && userTrackChoice < numTracks) {
+        return { track: seq.videoTracks[userTrackChoice], index: userTrackChoice };
+    }
+
+    // Ensure at least 2 video tracks exist in sequence so overlay Track V2 is always available
+    if (numTracks < 2) {
+        try {
+            if (typeof app.enableQE === "function") app.enableQE();
+            if (typeof qe !== "undefined" && qe && qe.project) {
+                var qSeq = qe.project.getActiveSequence();
+                if (qSeq && typeof qSeq.addTracks === "function") {
+                    qSeq.addTracks(1, 0, 1, 0);
+                    numTracks = seq.videoTracks.numTracks;
+                }
+            }
+        } catch(eAddTrk) {}
+    }
+
+    // B. Auto mode (Safe Non-Destructive):
+    // Check Track V1: ONLY if completely clear of surrounding footage
+    var v1Occupied = hasClipCollision(seq.videoTracks[0], insSec, dur);
+    if (!v1Occupied) {
+        return { track: seq.videoTracks[0], index: 0 };
+    }
+
+    // Track V1 has surrounding clips: Route to Track V2 (Overlay) so V1 is 100% PRESERVED
+    if (numTracks > 1 && !hasClipCollision(seq.videoTracks[1], insSec, dur)) {
+        return { track: seq.videoTracks[1], index: 1 };
+    }
+
+    // If V2 also occupied, check V3 or higher
+    for (var ti = 2; ti < numTracks; ti++) {
+        if (!hasClipCollision(seq.videoTracks[ti], insSec, dur)) {
+            return { track: seq.videoTracks[ti], index: ti };
+        }
+    }
+
+    // Fallback: Track V2 (overlay) is much safer than overwriting V1
+    var fb = numTracks > 1 ? 1 : 0;
+    return { track: seq.videoTracks[fb], index: fb };
+}
+
+function getSafeTargetAudioTrack(seq, insertSec, groupDuration) {
+    if (!seq || !seq.audioTracks || seq.audioTracks.numTracks === 0) return null;
+    var numTracks = seq.audioTracks.numTracks;
+    var dur = (typeof groupDuration === "number" && !isNaN(groupDuration) && groupDuration > 0) ? groupDuration : 15.0;
+    var insSec = (typeof insertSec === "number" && !isNaN(insertSec) && insertSec >= 0) ? insertSec : 0;
+
+    // Ensure at least 2 audio tracks exist so Track A2 is available
+    if (numTracks < 2) {
+        try {
+            if (typeof app.enableQE === "function") app.enableQE();
+            if (typeof qe !== "undefined" && qe && qe.project) {
+                var qSeqA = qe.project.getActiveSequence();
+                if (qSeqA && typeof qSeqA.addTracks === "function") {
+                    qSeqA.addTracks(0, 0, 1, 0);
+                    numTracks = seq.audioTracks.numTracks;
+                }
+            }
+        } catch(eAddATrk) {}
+    }
+
+    // Check Track A2 first if available (keeps primary ceremony audio on Track A1 100% clean)
+    if (numTracks > 1 && !hasClipCollision(seq.audioTracks[1], insSec, dur)) {
+        return { track: seq.audioTracks[1], index: 1 };
+    }
+    // Track A1 fallback if clear
+    if (!hasClipCollision(seq.audioTracks[0], insSec, dur)) {
+        return { track: seq.audioTracks[0], index: 0 };
+    }
+    for (var ai = 2; ai < numTracks; ai++) {
+        if (!hasClipCollision(seq.audioTracks[ai], insSec, dur)) {
+            return { track: seq.audioTracks[ai], index: ai };
+        }
+    }
+    var fb = numTracks > 1 ? 1 : 0;
+    return { track: seq.audioTracks[fb], index: fb };
+}
+
+// ── Execute: Clean Non-Destructive Overwrite with Duplicate Prevention ─────────
 // assignmentsStr same format as preview
+// userTargetTrackChoice: optional track index or "auto"
+// userAudioChoice: "single" (default), "mute", or "stereo"
 // Returns "SUCCESS|||inserted=N|skipped=N|failed=N|||reportLines"
-$.runScript.groupPhotoInserterExecute = function(assignmentsStr) {
+$.runScript.groupPhotoInserterExecute = function(assignmentsStr, userTargetTrackChoice, userAudioChoice) {
     var undoStarted = false;
     try {
         var seq = app.project.activeSequence;
@@ -4392,17 +5644,17 @@ $.runScript.groupPhotoInserterExecute = function(assignmentsStr) {
         // Enable QE DOM if available
         try { if (typeof app.enableQE === "function") app.enableQE(); } catch(eQE) {}
 
-        // Safety 1: Trigger an internal project snapshot before any destructive ripple insert
+        // Safety snapshot before assignment
         try {
             if (app.project && typeof app.project.save === "function") {
                 app.project.save();
             }
         } catch(eSave) {}
 
-        // Safety 2: Group all upcoming operations into a single Undo Boundary so Ctrl+Z restores everything in 1 step
+        // Undo Group Boundary
         try {
             if (typeof app.beginUndoGroup === "function") {
-                app.beginUndoGroup("One Tap Group Photo Ripple Insert");
+                app.beginUndoGroup("One Tap Group Photo Overwrite");
                 undoStarted = true;
             } else if (typeof app.enableUndo === "function") {
                 app.enableUndo(true);
@@ -4422,48 +5674,6 @@ $.runScript.groupPhotoInserterExecute = function(assignmentsStr) {
             var m = Math.floor(total / 60);
             var s = total % 60;
             return (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
-        }
-
-        // Helper: shift a single clip forward by shiftAmount
-        function shiftClipForward(clip, track, shiftAmount) {
-            if (!clip || shiftAmount <= 0) return false;
-            var oldStart = clip.start ? clip.start.seconds : 0;
-            var oldEnd   = clip.end   ? clip.end.seconds   : 0;
-            var dur = (oldEnd > oldStart) ? (oldEnd - oldStart) : (clip.duration ? clip.duration.seconds : 0);
-            var targetStart = oldStart + shiftAmount;
-            var targetEnd   = oldEnd   + shiftAmount;
-            var moved = false;
-
-            if (typeof clip.move === "function") {
-                try { clip.move(toTime(targetStart)); if (Math.abs(clip.start.seconds - targetStart) < 0.2) moved = true; } catch(e) {}
-            }
-            if (!moved) {
-                try { clip.start = toTime(targetStart); if (Math.abs(clip.start.seconds - targetStart) < 0.2) moved = true; } catch(e) {}
-            }
-            if (!moved) {
-                try {
-                    clip.end = toTime(targetEnd);
-                    clip.start = toTime(targetStart);
-                    if (Math.abs(clip.start.seconds - targetStart) < 0.2) moved = true;
-                } catch(e) {}
-            }
-            if (!moved && clip.projectItem) {
-                try {
-                    var pItem = clip.projectItem;
-                    var inSec  = (clip.inPoint  && !isNaN(clip.inPoint.seconds))  ? clip.inPoint.seconds  : 0;
-                    var outSec = (clip.outPoint && !isNaN(clip.outPoint.seconds)) ? clip.outPoint.seconds : (inSec + dur);
-                    track.overwriteClip(pItem, toTime(targetStart));
-                    for (var ci = track.clips.numItems - 1; ci >= 0; ci--) {
-                        var placed = track.clips[ci];
-                        if (placed && Math.abs(placed.start.seconds - targetStart) < 0.25) {
-                            try { placed.inPoint = toTime(inSec); placed.outPoint = toTime(outSec); } catch(e) {}
-                            moved = true;
-                            break;
-                        }
-                    }
-                } catch(e) {}
-            }
-            return moved;
         }
 
         var gpSources = detectGroupPhotoSources(seq);
@@ -4528,7 +5738,33 @@ $.runScript.groupPhotoInserterExecute = function(assignmentsStr) {
         var failedCount = 0;
         var reportLines = [];
 
-        // Rule 3: Collect & Sort Marker End Times First: extract all assignments and sort chronologically
+        // Capture snapshot of original markers before any modifications for 100% exact Undo restoration
+        var originalMarkersSnapshot = [];
+        if (seq.markers) {
+            var mkSnap = seq.markers.getFirstMarker();
+            while (mkSnap) {
+                originalMarkersSnapshot.push({
+                    markerObj: mkSnap,
+                    name: mkSnap.name || "",
+                    startSec: (mkSnap.start && !isNaN(Number(mkSnap.start.seconds))) ? Number(mkSnap.start.seconds) : 0,
+                    endSec: (mkSnap.end && !isNaN(Number(mkSnap.end.seconds))) ? Number(mkSnap.end.seconds) : 0
+                });
+                mkSnap = seq.markers.getNextMarker(mkSnap);
+            }
+        }
+
+        // Prepare backup state for single-step Undo
+        var backupRecord = {
+            sequenceId: (seq && seq.sequenceID) ? seq.sequenceID : (seq ? seq.name : ""),
+            placedVideoClips: [],
+            placedAudioClips: [],
+            modifiedMarkers: [],
+            originalMarkers: originalMarkersSnapshot,
+            gapsOpened: [],
+            deletedGpMarkers: []
+        };
+
+        // Collect & Sort Marker End Times chronologically
         var workList = [];
         for (var nki = 0; nki < nikaahMarkers.length; nki++) {
             var nk = nikaahMarkers[nki];
@@ -4538,11 +5774,13 @@ $.runScript.groupPhotoInserterExecute = function(assignmentsStr) {
         }
 
         workList.sort(function(a, b) {
-            return (Number(a.nk.endSec) || 0) - (Number(b.nk.endSec) || 0);
+            return (Number(a.nk.startSec) || 0) - (Number(b.nk.startSec) || 0);
         });
 
-        // Rule 4: Loop Backward (Reverse Order): Iterate from the last marker to the first
-        for (var wi = workList.length - 1; wi >= 0; wi--) {
+        // Clean forward-order processing:
+        // True non-destructive overwrite does not shift or ripple downstream timeline clips,
+        // so forward order (0 to workList.length - 1) is 100% frame-accurate and predictable!
+        for (var wi = 0; wi < workList.length; wi++) {
             var nk = workList[wi].nk;
             var clipKey = workList[wi].clipKey;
             var asgnNum = workList[wi].asgnNum || 1;
@@ -4560,14 +5798,65 @@ $.runScript.groupPhotoInserterExecute = function(assignmentsStr) {
                 continue;
             }
 
-            var groupDuration = gp.duration;
-            if (groupDuration <= 0) {
-                reportLines.push("✗ Nikaah " + nk.seqNum + " — Clip '" + clipKey + "' duration is 0. Skipped.");
-                skippedCount++;
-                continue;
+            var gpProjectItem = gp.projectItem;
+            var srcTrackItem = gp.sourceTrackItem || null;
+            var fps = getSequenceFps(seq);
+
+            var isNestedSeq = false;
+            try {
+                if (gpProjectItem && (gpProjectItem.type === 2 || (typeof gpProjectItem.isSequence === "function" && gpProjectItem.isSequence()))) {
+                    isNestedSeq = true;
+                }
+            } catch(eChkSeqExec) {}
+
+            // Fallback: If not a nested sequence and sourceTrackItem not attached or unedited, search timeline video tracks
+            if (!isNestedSeq && (!srcTrackItem || !hasClipEdits(srcTrackItem)) && seq && seq.videoTracks) {
+                var foundTlGpi = findTimelineInstanceForProjectItem(seq, gpProjectItem, gp.clipName || clipKey);
+                if (foundTlGpi) {
+                    srcTrackItem = foundTlGpi;
+                }
             }
 
-            // Duplicate prevention: scan target track for clip with OT_GP comment
+            // Derive exact cut inPoint, outPoint, and duration from timeline source instance
+            var sourceIn = snapToFrameBoundary(gp.inPoint || 0, fps);
+            var groupDuration = gp.duration;
+            var sourceInTicks = null;
+            var sourceOutTicks = null;
+            if (isNestedSeq) {
+                sourceIn = 0;
+                if (groupDuration <= 0) groupDuration = 15.0;
+                sourceInTicks = "0";
+                sourceOutTicks = String(Math.round(groupDuration * 254016000000));
+            } else if (srcTrackItem) {
+                if (srcTrackItem.inPoint) {
+                    if (srcTrackItem.inPoint.ticks) sourceInTicks = String(srcTrackItem.inPoint.ticks);
+                    if (!isNaN(Number(srcTrackItem.inPoint.seconds))) {
+                        sourceIn = snapToFrameBoundary(Number(srcTrackItem.inPoint.seconds), fps);
+                    }
+                }
+                if (srcTrackItem.outPoint) {
+                    if (srcTrackItem.outPoint.ticks) sourceOutTicks = String(srcTrackItem.outPoint.ticks);
+                    if (!isNaN(Number(srcTrackItem.outPoint.seconds))) {
+                        var sOutSec2 = Number(srcTrackItem.outPoint.seconds);
+                        if (sOutSec2 > sourceIn) {
+                            groupDuration = snapToFrameBoundary(sOutSec2 - sourceIn, fps);
+                        }
+                    }
+                } else if (srcTrackItem.duration && Number(srcTrackItem.duration.seconds) > 0) {
+                    groupDuration = snapToFrameBoundary(Number(srcTrackItem.duration.seconds), fps);
+                }
+            }
+            if (groupDuration <= 0) groupDuration = 15.0;
+            var sourceOut = snapToFrameBoundary(sourceIn + groupDuration, fps);
+            if (!sourceInTicks) sourceInTicks = String(Math.round(sourceIn * 254016000000));
+            if (!sourceOutTicks) sourceOutTicks = String(Math.round(sourceOut * 254016000000));
+
+            // Calculate exact placement: [Nikaah marker] -> [video content] -> [Group Photo] -> [next Nikaah marker]
+            var placement = calculateCeremonyGroupPhotoPlacement(seq, nk.startSec, nk.nextStartSec, nk.endSec, groupDuration);
+            var insertSec = placement.insertSec;
+            var placementBoundary = placement.boundaryEnd;
+
+            // Duplicate prevention: scan tracks for clip with OT_GP comment or placed at exact insert position
             var dupKey = "OT_GP_INSERTED|CLIP:" + (gp.clipName || clipKey) + "|NIKAAH:" + nk.seqNum;
             var isDuplicate = false;
             try {
@@ -4586,7 +5875,7 @@ $.runScript.groupPhotoInserterExecute = function(assignmentsStr) {
                                 break outer;
                             }
                             var cStart = (c.start && !isNaN(Number(c.start.seconds))) ? Number(c.start.seconds) : -1;
-                            if (Math.abs(cStart - nk.endSec) < 0.35) {
+                            if (Math.abs(cStart - insertSec) < 0.35) {
                                 var cCands = getClipCandidateStrings(c);
                                 if (isClipMatch(cCands, gp.clipName || clipKey)) {
                                     isDuplicate = true;
@@ -4615,150 +5904,272 @@ $.runScript.groupPhotoInserterExecute = function(assignmentsStr) {
             }
 
             if (isDuplicate) {
-                reportLines.push("↷ Nikaah " + nk.seqNum + " — " + (gp.clipName || clipKey) + " already inserted. Skipped (duplicate).");
+                reportLines.push("↷ Nikaah " + nk.seqNum + " — " + (gp.clipName || clipKey) + " already placed. Skipped (duplicate).");
                 skippedCount++;
                 continue;
             }
 
-            // Determine target track safely (Rule 7: Track Targeting Safety)
-            var targetTrackIndex = 0;
-            if (targetTrackIndex >= seq.videoTracks.numTracks) targetTrackIndex = 0;
-            var targetVideoTrack = seq.videoTracks[targetTrackIndex];
-            if (!targetVideoTrack) {
+            // Clean, non-destructive target track routing:
+            // In Auto mode: If Track V1 is clear at [insertSec, insertSec + groupDuration], overwrites directly on V1.
+            // If Track V1 has surrounding clips (or next ceremony footage), routes safely to Track V2 (Overlay)
+            // so surrounding camera footage is NEVER cut or destroyed!
+            // Crucially: NO clips down the line are shifted or rippled (100% timeline layout preservation)!
+            var safeVideoTarget = getSafeTargetVideoTrack(seq, userTargetTrackChoice, insertSec, groupDuration);
+            if (!safeVideoTarget || !safeVideoTarget.track) {
                 failedCount++;
                 reportLines.push("✗ Nikaah " + nk.seqNum + " — No valid target video track.");
                 continue;
             }
+            var targetVideoTrack = safeVideoTarget.track;
+            var targetTrackIndex = safeVideoTarget.index;
 
-            // Snap insertion point to the exact timeline clip boundary / cut point with mathematical frame snapping
-            // This prevents cutting 1-2 frames before the natural edit point, eliminating any jerk/flash
-            var rawInsertSec = nk.endSec;
-            var fps = getSequenceFps(seq);
-            var insertSec = findBestTimelineCutPoint(seq, targetVideoTrack, rawInsertSec, 0.45);
-            insertSec = snapToFrameBoundary(insertSec, fps);
-            var gpProjectItem = gp.projectItem;
-            var sourceIn = snapToFrameBoundary(gp.inPoint || 0, fps);
-            var sourceOut = snapToFrameBoundary(sourceIn + groupDuration, fps);
-
-            // Set In/Out on projectItem so insertClip takes groupDuration with exact zero-gap frame alignment
+            // Set In/Out on gpProjectItem using ticks so overwrite takes exact cut duration with zero-gap frame alignment
             try {
-                if (typeof gpProjectItem.setInPoint === "function") {
-                    gpProjectItem.setInPoint(toTime(sourceIn, fps));
+                if (typeof gpProjectItem.setInPoint === "function" && sourceInTicks) {
+                    try { gpProjectItem.setInPoint(sourceInTicks, 4); } catch(e1) {
+                        try { gpProjectItem.setInPoint(sourceInTicks); } catch(e2) {
+                            try { gpProjectItem.setInPoint(Number(sourceInTicks), 4); } catch(e3) {
+                                try { gpProjectItem.setInPoint(sourceIn, 4); } catch(e4) {
+                                    try { gpProjectItem.setInPoint(sourceIn); } catch(e5) {}
+                                }
+                            }
+                        }
+                    }
                 }
-                if (typeof gpProjectItem.setOutPoint === "function" && groupDuration > 0) {
-                    gpProjectItem.setOutPoint(toTime(sourceOut, fps));
+            } catch(eSetIO1) {}
+            try {
+                if (typeof gpProjectItem.setOutPoint === "function" && sourceOutTicks) {
+                    try { gpProjectItem.setOutPoint(sourceOutTicks, 4); } catch(e1) {
+                        try { gpProjectItem.setOutPoint(sourceOutTicks); } catch(e2) {
+                            try { gpProjectItem.setOutPoint(Number(sourceOutTicks), 4); } catch(e3) {
+                                try { gpProjectItem.setOutPoint(sourceOut, 4); } catch(e4) {
+                                    try { gpProjectItem.setOutPoint(sourceOut); } catch(e5) {}
+                                }
+                            }
+                        }
+                    }
                 }
-            } catch(eSetIO) {}
+            } catch(eSetIO2) {}
 
-            // === RIPPLE INSERT: Place target clip at marker end using native insertClip ===
-            // Rule 5: Use Ripple Insert (insertClip) instead of overwriteClip()
-            // Rule 6: Consistent Time Units
+            // === NON-DESTRUCTIVE OVERWRITE: Place target clip into opened gap at exact spot ===
             var insertOk = false;
             try {
                 var insertTime = toTime(insertSec, fps);
                 try {
-                    targetVideoTrack.insertClip(gpProjectItem, insertTime);
+                    targetVideoTrack.overwriteClip(gpProjectItem, insertTime);
                     insertOk = true;
                 } catch(eIns1) {
                     try {
-                        targetVideoTrack.insertClip(gpProjectItem, insertSec);
+                        targetVideoTrack.overwriteClip(gpProjectItem, insertSec);
                         insertOk = true;
                     } catch(eIns2) {}
                 }
 
                 if (insertOk) {
                     // Tag placed clip with duplicate prevention comment & assignment color label
+                    var placedClip = null;
                     for (var pci = targetVideoTrack.clips.numItems - 1; pci >= 0; pci--) {
-                        var placedClip = targetVideoTrack.clips[pci];
-                        if (placedClip && Math.abs(placedClip.start.seconds - insertSec) < 0.35) {
-                            try { placedClip.comment = dupKey; } catch(eCmt) {}
-                            // Color clip based on assignment number:
-                            // Assignment 1 = Green (13), Assignment 2 = Purple (8), Assignment 3 = Lavender (3), etc.
-                            try {
-                                if (typeof placedClip.setColorLabel === "function") {
-                                    placedClip.setColorLabel(asgnColor);
-                                } else if (placedClip.colorLabel !== undefined) {
-                                    placedClip.colorLabel = asgnColor;
+                        var candPlacedClip = targetVideoTrack.clips[pci];
+                        if (candPlacedClip && Math.abs(candPlacedClip.start.seconds - insertSec) < 0.35) {
+                            placedClip = candPlacedClip;
+                            break;
+                        }
+                    }
+                    if (!placedClip) {
+                        for (var pci2 = targetVideoTrack.clips.numItems - 1; pci2 >= 0; pci2--) {
+                            var candPlacedClip2 = targetVideoTrack.clips[pci2];
+                            if (candPlacedClip2 && Math.abs(candPlacedClip2.start.seconds - insertSec) < 0.8) {
+                                placedClip = candPlacedClip2;
+                                break;
+                            }
+                        }
+                    }
+                    if (placedClip) {
+                        try { placedClip.comment = dupKey; } catch(eCmt) {}
+                        try {
+                            if (typeof placedClip.setColorLabel === "function") {
+                                placedClip.setColorLabel(asgnColor);
+                            } else if (placedClip.colorLabel !== undefined) {
+                                placedClip.colorLabel = asgnColor;
+                            }
+                        } catch(eColClip) {}
+                        try {
+                            if (placedClip.projectItem) {
+                                if (typeof placedClip.projectItem.setColorLabel === "function") {
+                                    placedClip.projectItem.setColorLabel(asgnColor);
+                                } else if (placedClip.projectItem.colorLabel !== undefined) {
+                                    placedClip.projectItem.colorLabel = asgnColor;
                                 }
-                            } catch(eColClip) {}
-                            try {
-                                if (placedClip.projectItem) {
-                                    if (typeof placedClip.projectItem.setColorLabel === "function") {
-                                        placedClip.projectItem.setColorLabel(asgnColor);
-                                    } else if (placedClip.projectItem.colorLabel !== undefined) {
-                                        placedClip.projectItem.colorLabel = asgnColor;
+                            }
+                        } catch(eColProj) {}
+                    }
+
+                    // 1. VIDEO MULTI-TRACK CLEANUP:
+                    // If overwriteClip placed secondary video channels (e.g. 2 video channels from nested sequence):
+                    // Clean up extra video clips on all other video tracks at this exact time!
+                    if (seq.videoTracks) {
+                        for (var vti = 0; vti < seq.videoTracks.numTracks; vti++) {
+                            if (vti === targetTrackIndex) continue;
+                            var otherVTrk = seq.videoTracks[vti];
+                            if (!otherVTrk || !otherVTrk.clips) continue;
+                            for (var oci = otherVTrk.clips.numItems - 1; oci >= 0; oci--) {
+                                var ocClip = otherVTrk.clips[oci];
+                                if (!ocClip) continue;
+                                var ocStart = (ocClip.start && !isNaN(Number(ocClip.start.seconds))) ? Number(ocClip.start.seconds) : -1;
+                                if (Math.abs(ocStart - insertSec) < 0.35) {
+                                    var ocProj = ocClip.projectItem;
+                                    var isSameSource = (ocProj && gpProjectItem && ocProj === gpProjectItem);
+                                    var ocDur = (ocClip.duration && !isNaN(Number(ocClip.duration.seconds))) ? Number(ocClip.duration.seconds) : 0;
+                                    if (isSameSource || Math.abs(ocDur - groupDuration) < 0.5) {
+                                        try {
+                                            if (typeof ocClip.remove === "function") {
+                                                ocClip.remove(false, false);
+                                            }
+                                        } catch(eRemExtraV) {}
                                     }
                                 }
-                            } catch(eColProj) {}
-                            break;
+                            }
+                        }
+                    }
+
+                    // Replicate exact timeline edits: Cut (inPoint/outPoint), Motion (Zoom/Scale, Position, Anchor, Rotation), Opacity & Crop
+                    // (Nested sequences encapsulate all edits natively)
+                    if (placedClip && srcTrackItem && !isNestedSeq) {
+                        copyTrackItemEffectsAndTransform(srcTrackItem, placedClip, targetTrackIndex, seq);
+                    }
+
+                    // Record placed video clip in backup
+                    backupRecord.placedVideoClips.push({
+                        trackIndex: targetTrackIndex,
+                        dupKey: dupKey,
+                        startSec: insertSec,
+                        endSec: insertSec + groupDuration
+                    });
+
+                    // 2. AUDIO SANITATION & CONTROL (Proper single-track or mute - PREVENTS 8 AUDIO CHANNELS!):
+                    var audioMode = String(userAudioChoice || "single").toLowerCase();
+                    var placedAudioList = [];
+                    if (seq.audioTracks) {
+                        for (var ati = 0; ati < seq.audioTracks.numTracks; ati++) {
+                            var aTrk = seq.audioTracks[ati];
+                            if (!aTrk || !aTrk.clips) continue;
+                            for (var aci = aTrk.clips.numItems - 1; aci >= 0; aci--) {
+                                var aCand = aTrk.clips[aci];
+                                if (!aCand) continue;
+                                var acs = (aCand.start && !isNaN(Number(aCand.start.seconds))) ? Number(aCand.start.seconds) : -1;
+                                if (Math.abs(acs - insertSec) < 0.35) {
+                                    placedAudioList.push({ track: aTrk, trackIndex: ati, clip: aCand });
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    if (audioMode === "mute" || audioMode === "none") {
+                        // User chose MUTE / NO AUDIO: Strip ALL placed audio channels
+                        for (var mai = 0; mai < placedAudioList.length; mai++) {
+                            try {
+                                if (typeof placedAudioList[mai].clip.remove === "function") {
+                                    placedAudioList[mai].clip.remove(false, false);
+                                }
+                            } catch(eMuteA) {}
+                        }
+                    } else {
+                        // Keep ONLY single audio channel (prefers Track A2 if present to protect Track A1 camera audio) - PREVENTS 8 AUDIO CHANNELS!
+                        var keptAudioItem = null;
+                        for (var pai = 0; pai < placedAudioList.length; pai++) {
+                            if (placedAudioList[pai].trackIndex === 1) { // Prefer Track A2 to keep Track A1 ceremony audio 100% clean
+                                keptAudioItem = placedAudioList[pai];
+                                break;
+                            }
+                        }
+                        if (!keptAudioItem) {
+                            for (var pai2 = 0; pai2 < placedAudioList.length; pai2++) {
+                                if (placedAudioList[pai2].trackIndex === 0) {
+                                    keptAudioItem = placedAudioList[pai2];
+                                    break;
+                                }
+                            }
+                        }
+                        if (!keptAudioItem && placedAudioList.length > 0) {
+                            keptAudioItem = placedAudioList[0];
+                        }
+
+                        // Remove all other unwanted audio channels (e.g. channels 2 through 8)!
+                        for (var remAi = 0; remAi < placedAudioList.length; remAi++) {
+                            var pAudio = placedAudioList[remAi];
+                            if (audioMode === "stereo" && (pAudio.trackIndex === 0 || pAudio.trackIndex === 1)) {
+                                try { pAudio.clip.comment = dupKey; } catch(eAudCmt) {}
+                                backupRecord.placedAudioClips.push({
+                                    trackIndex: pAudio.trackIndex,
+                                    dupKey: dupKey,
+                                    startSec: insertSec,
+                                    endSec: insertSec + groupDuration
+                                });
+                            } else if (pAudio === keptAudioItem) {
+                                try { pAudio.clip.comment = dupKey; } catch(eAudCmt) {}
+                                backupRecord.placedAudioClips.push({
+                                    trackIndex: pAudio.trackIndex,
+                                    dupKey: dupKey,
+                                    startSec: insertSec,
+                                    endSec: insertSec + groupDuration
+                                });
+                            } else {
+                                try {
+                                    if (typeof pAudio.clip.remove === "function") {
+                                        pAudio.clip.remove(false, false);
+                                    }
+                                } catch(eRemA) {}
+                            }
                         }
                     }
                 } else {
                     failedCount++;
-                    reportLines.push("✗ Nikaah " + nk.seqNum + " — insertClip failed on target track.");
+                    reportLines.push("✗ Nikaah " + nk.seqNum + " — overwriteClip failed on target track.");
                     continue;
                 }
             } catch(ePlc) {
                 failedCount++;
-                reportLines.push("✗ Nikaah " + nk.seqNum + " — insertion failed: " + ePlc.toString());
+                reportLines.push("✗ Nikaah " + nk.seqNum + " — overwrite failed: " + ePlc.toString());
                 continue;
             }
 
-            // === SHIFT: downstream sequence markers forward ===
-            try {
-                var mList = [];
-                var mk = seq.markers.getFirstMarker();
-                while (mk) { mList.push(mk); mk = seq.markers.getNextMarker(mk); }
-                for (var mki = 0; mki < mList.length; mki++) {
-                    var curMk = mList[mki];
-                    if (curMk && curMk.start && curMk.start.seconds >= (insertSec - 0.05)) {
-                        try {
-                            var mkS = curMk.start.seconds;
-                            var mkE = (curMk.end && !isNaN(curMk.end.seconds)) ? curMk.end.seconds : mkS;
-                            var mkD = (mkE > mkS) ? (mkE - mkS) : 0;
-                            curMk.start = toTime(mkS + groupDuration);
-                            if (mkD > 0) curMk.end = toTime(mkE + groupDuration);
-                        } catch(eMkS) {}
-                    }
-                }
-
-                // Extend current Nikaah marker's end to cover the inserted Group Photo (if marker has duration)
-                if (nk.markerObj) {
-                    try {
-                        var nkEnd = (nk.markerObj.end && !isNaN(Number(nk.markerObj.end.seconds))) ? Number(nk.markerObj.end.seconds) : 0;
-                        if (nkEnd > (nk.startSec || 0)) {
-                            nk.markerObj.end = toTime(nkEnd + groupDuration);
-                        }
-                    } catch(eNkEnd) {}
-                }
-
-                // Delete any residual / old insertion markers so they are never treated as separate videos
+            // Extend current Nikaah marker's end to cover the placed Group Photo cleanly
+            // Guarantees layout: [Marker] -> [Content] -> [GP] -> [Next Marker] -> [Next Content]...
+            var gpEndBoundary = snapToFrameBoundary(insertSec + groupDuration, fps);
+            if (nk.markerObj) {
                 try {
-                    var cleanMk = seq.markers.getFirstMarker();
-                    while (cleanMk) {
-                        var cName = cleanMk.name || "";
-                        var cCmt = cleanMk.comments || "";
-                        var cStart = (cleanMk.start && !isNaN(Number(cleanMk.start.seconds))) ? Number(cleanMk.start.seconds) : -1;
-                        if (cCmt.indexOf("OT_GP_INSERTED") !== -1 || (Math.abs(cStart - insertSec) < 0.35 && cName.indexOf(nk.name + " - ") === 0)) {
-                            var toDel = cleanMk;
-                            cleanMk = seq.markers.getNextMarker(cleanMk);
-                            try { seq.markers.deleteMarker(toDel); } catch(eDel) {}
-                        } else {
-                            cleanMk = seq.markers.getNextMarker(cleanMk);
-                        }
-                    }
-                } catch(eClean) {}
+                    backupRecord.modifiedMarkers.push({
+                        name: nk.name,
+                        origStartSec: nk.startSec,
+                        origEndSec: nk.endSec
+                    });
+                    nk.markerObj.end = toTime(gpEndBoundary, fps);
+                } catch(eNkEnd) {}
+            }
 
-                // NOTE: Marker is deliberately NOT created for the inserted Group Photo!
-                // The inserted GP clip is part of the Nikaah video output, avoiding separate video in/out creation.
-            } catch(eMkAll) {}
+            // Delete any residual / old insertion markers so they are never treated as separate videos
+            try {
+                var cleanMk = seq.markers.getFirstMarker();
+                while (cleanMk) {
+                    var cName = cleanMk.name || "";
+                    var cCmt = cleanMk.comments || "";
+                    var cStart = (cleanMk.start && !isNaN(Number(cleanMk.start.seconds))) ? Number(cleanMk.start.seconds) : -1;
+                    if (cCmt.indexOf("OT_GP_INSERTED") !== -1 || (Math.abs(cStart - insertSec) < 0.35 && cName.indexOf(nk.name + " - ") === 0)) {
+                        var toDel = cleanMk;
+                        cleanMk = seq.markers.getNextMarker(cleanMk);
+                        try { seq.markers.deleteMarker(toDel); } catch(eDel) {}
+                    } else {
+                        cleanMk = seq.markers.getNextMarker(cleanMk);
+                    }
+                }
+            } catch(eClean) {}
 
             insertedCount++;
-            reportLines.unshift("✓ Nikaah " + nk.seqNum + " [" + nk.name + "] → " + (gp.clipName || clipKey) + " @ " + formatSec(insertSec) + " (+" + groupDuration + "s)");
+            reportLines.unshift("✓ Nikaah " + nk.seqNum + " [" + nk.name + "] → " + (gp.clipName || clipKey) + " @ " + formatSec(insertSec) + " [V" + (targetTrackIndex + 1) + " Overwrite]");
         }
 
-        // Clean up ONLY the GP recognition markers from the sequence
-        // (leaves all Nikaah markers and other event markers 100% untouched)
+        // Clean up ONLY the GP recognition markers from the sequence (and backup for Undo)
         var deletedGpCount = 0;
         try {
             if (seq.markers) {
@@ -4768,6 +6179,12 @@ $.runScript.groupPhotoInserterExecute = function(assignmentsStr) {
                     var mCmt = curMk.comments || "";
                     var isGpRec = isGroupPhotoName(mName) || /^GROUP_PHOTO_\d+$/i.test(mName) || /^GP\s*\d+$/i.test(mName) || mCmt.indexOf("Group Photo Source") !== -1 || mCmt.indexOf("OT_GP_INSERTED") !== -1;
                     if (isGpRec) {
+                        backupRecord.deletedGpMarkers.push({
+                            name: mName,
+                            startSec: (curMk.start && !isNaN(Number(curMk.start.seconds))) ? Number(curMk.start.seconds) : 0,
+                            endSec: (curMk.end && !isNaN(Number(curMk.end.seconds))) ? Number(curMk.end.seconds) : 0,
+                            comments: mCmt
+                        });
                         var toDel = curMk;
                         curMk = seq.markers.getNextMarker(curMk);
                         try {
@@ -4785,19 +6202,23 @@ $.runScript.groupPhotoInserterExecute = function(assignmentsStr) {
             reportLines.push("✓ Cleaned up " + deletedGpCount + " GP recognition marker(s) from timeline.");
         }
 
+        // Store backup state globally so One-Step Undo can restore everything
+        $.runScript._lastAssignmentBackup = backupRecord;
+
         var statsStr = "inserted=" + insertedCount + "|skipped=" + skippedCount + "|failed=" + failedCount;
         var reportStr = reportLines.join("\n");
 
-        var modalBody = "Group Photo Inserter Complete\n\n" +
-                        "• Inserted: " + insertedCount + "\n" +
+        var modalBody = "Group Photo Overwrite Complete\n\n" +
+                        "• Overwritten: " + insertedCount + "\n" +
                         "• Skipped: " + skippedCount + "\n" +
                         "• Failed: " + failedCount + "\n\n" +
+                        "All surrounding timeline clips preserved intact (zero ripple).\n\n" +
                         reportStr.split("\n").slice(0, 20).join("\n");
 
         try {
             $.runScript.showWorkspaceModal(
                 "One Tap — Group Photo Inserter",
-                insertedCount + " Group Photos Inserted",
+                insertedCount + " Group Photos Placed (Overwrite)",
                 modalBody,
                 insertedCount > 0 ? "SUCCESS" : "WARNING"
             );
@@ -4817,6 +6238,169 @@ $.runScript.groupPhotoInserterExecute = function(assignmentsStr) {
                 }
             } catch(eEndUndo) {}
         }
+    }
+};
+
+// ── One-Step Undo: Reverts Timeline Exactly to State Before Last Assignment ───
+$.runScript.groupPhotoInserterUndo = function() {
+    try {
+        var seq = app.project.activeSequence;
+        if (!seq) return "ERROR|||No active sequence found.";
+
+        var backup = $.runScript._lastAssignmentBackup;
+        var removedCount = 0;
+        var restoredMarkerCount = 0;
+        var fps = getSequenceFps(seq);
+
+        // 1. Remove placed video clips (using non-destructive remove(false, false))
+        if (seq.videoTracks) {
+            for (var vi = 0; vi < seq.videoTracks.numTracks; vi++) {
+                var vTrk = seq.videoTracks[vi];
+                if (!vTrk || !vTrk.clips) continue;
+                for (var ci = vTrk.clips.numItems - 1; ci >= 0; ci--) {
+                    var c = vTrk.clips[ci];
+                    if (!c) continue;
+                    var cmt = "";
+                    try { cmt = c.comment || ""; } catch(eCmt) {}
+                    var shouldRemove = false;
+                    if (cmt.indexOf("OT_GP_INSERTED") !== -1) {
+                        shouldRemove = true;
+                    } else if (backup && backup.placedVideoClips) {
+                        var cStart = (c.start && !isNaN(Number(c.start.seconds))) ? Number(c.start.seconds) : -1;
+                        for (var bvi = 0; bvi < backup.placedVideoClips.length; bvi++) {
+                            var bv = backup.placedVideoClips[bvi];
+                            if (bv.trackIndex === vi && Math.abs(cStart - bv.startSec) < 0.35) {
+                                shouldRemove = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (shouldRemove) {
+                        try {
+                            if (typeof c.remove === "function") {
+                                c.remove(false, false);
+                                removedCount++;
+                            }
+                        } catch(eRemV) {}
+                    }
+                }
+            }
+        }
+
+        // 2. Remove placed audio clips
+        if (seq.audioTracks) {
+            for (var ai = 0; ai < seq.audioTracks.numTracks; ai++) {
+                var aTrk = seq.audioTracks[ai];
+                if (!aTrk || !aTrk.clips) continue;
+                for (var aci = aTrk.clips.numItems - 1; aci >= 0; aci--) {
+                    var ac = aTrk.clips[aci];
+                    if (!ac) continue;
+                    var aCmt = "";
+                    try { aCmt = ac.comment || ""; } catch(eACmt) {}
+                    var shouldRemoveA = false;
+                    if (aCmt.indexOf("OT_GP_INSERTED") !== -1) {
+                        shouldRemoveA = true;
+                    } else if (backup && backup.placedAudioClips) {
+                        var acStart = (ac.start && !isNaN(Number(ac.start.seconds))) ? Number(ac.start.seconds) : -1;
+                        for (var bai = 0; bai < backup.placedAudioClips.length; bai++) {
+                            var ba = backup.placedAudioClips[bai];
+                            if (ba.trackIndex === ai && Math.abs(acStart - ba.startSec) < 0.35) {
+                                shouldRemoveA = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (shouldRemoveA) {
+                        try {
+                            if (typeof ac.remove === "function") {
+                                ac.remove(false, false);
+                            }
+                        } catch(eRemA) {}
+                    }
+                }
+            }
+        }
+
+        // 3. Close opened timeline gaps across all video and audio tracks in LIFO order
+        if (backup && backup.gapsOpened && backup.gapsOpened.length > 0) {
+            // gapsOpened was recorded in reverse chronological order (last ceremony down to first).
+            // Reversing in LIFO order closes the earliest opened gap first, cleanly restoring the original timeline.
+            for (var gi = backup.gapsOpened.length - 1; gi >= 0; gi--) {
+                var gap = backup.gapsOpened[gi];
+                closeTimelineGapAcrossAllTracks(seq, gap.targetSec, gap.gapDuration, fps);
+            }
+        }
+
+        // 4. Restore all markers to their exact original positions
+        if (seq.markers && backup && backup.originalMarkers) {
+            for (var omi = 0; omi < backup.originalMarkers.length; omi++) {
+                var oMk = backup.originalMarkers[omi];
+                if (!oMk || !oMk.markerObj) continue;
+                try {
+                    var tS = new Time();
+                    tS.seconds = snapToFrameBoundary(oMk.startSec, fps);
+                    var tE = new Time();
+                    tE.seconds = snapToFrameBoundary(oMk.endSec, fps);
+                    if (tE.seconds > tS.seconds) {
+                        try { oMk.markerObj.start = tS; } catch(eS) {}
+                        try { oMk.markerObj.end = tE; } catch(eE) {}
+                    } else {
+                        try { oMk.markerObj.end = tE; } catch(eE2) {}
+                        try { oMk.markerObj.start = tS; } catch(eS2) {}
+                    }
+                    restoredMarkerCount++;
+                } catch(eRstAll) {}
+            }
+        } else if (seq.markers && backup && backup.modifiedMarkers) {
+            for (var mi = 0; mi < backup.modifiedMarkers.length; mi++) {
+                var mMod = backup.modifiedMarkers[mi];
+                var mkScan = seq.markers.getFirstMarker();
+                while (mkScan) {
+                    var mkNm = mkScan.name || "";
+                    var mkS = (mkScan.start && !isNaN(Number(mkScan.start.seconds))) ? Number(mkScan.start.seconds) : -1;
+                    if (mkNm === mMod.name && Math.abs(mkS - mMod.origStartSec) < 0.5) {
+                        try {
+                            var tEnd = new Time();
+                            tEnd.seconds = snapToFrameBoundary(mMod.origEndSec, fps);
+                            mkScan.end = tEnd;
+                            restoredMarkerCount++;
+                        } catch(eRst) {}
+                        break;
+                    }
+                    mkScan = seq.markers.getNextMarker(mkScan);
+                }
+            }
+        }
+
+        // 5. Restore any deleted GP recognition markers
+        if (seq.markers && backup && backup.deletedGpMarkers) {
+            for (var dmi = 0; dmi < backup.deletedGpMarkers.length; dmi++) {
+                var dGp = backup.deletedGpMarkers[dmi];
+                try {
+                    var newMk = seq.markers.createMarker(snapToFrameBoundary(dGp.startSec, fps));
+                    if (newMk) {
+                        newMk.name = dGp.name;
+                        newMk.comments = dGp.comments || "";
+                        if (dGp.endSec > dGp.startSec) {
+                            var tE2 = new Time();
+                            tE2.seconds = snapToFrameBoundary(dGp.endSec, fps);
+                            newMk.end = tE2;
+                        }
+                    }
+                } catch(eCre) {}
+            }
+        }
+
+        $.runScript._lastAssignmentBackup = null;
+
+        var msg = "Timeline restored: removed " + removedCount + " placed clip(s), reverted " + restoredMarkerCount + " marker(s).";
+        try {
+            $.runScript.showWorkspaceModal("One Tap — Undo Complete", "Assignment Reverted", msg, "SUCCESS");
+        } catch(eM) {}
+
+        return "SUCCESS|||" + removedCount + "|||" + msg;
+    } catch(err) {
+        return "ERROR|||" + err.toString();
     }
 };
 

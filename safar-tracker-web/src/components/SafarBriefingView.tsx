@@ -75,6 +75,7 @@ export default function SafarBriefingView({
   const [activeTab, setActiveTab] = useState<'all' | 'delivered' | 'pending'>('all')
 
   const remaining = Math.max(0, totalDates - deliveredDates)
+  const is100Done = deliveredPercent === 100 || (totalDates > 0 && deliveredDates >= totalDates)
 
   const handleCopy = () => {
     try { if ('vibrate' in navigator) navigator.vibrate([20, 30]) } catch {}
@@ -144,14 +145,48 @@ export default function SafarBriefingView({
           </p>
         </div>
 
+        {/* Milestone 100% Celebration Banner */}
+        {is100Done && (
+          <div style={{
+            margin: '0 0 16px 0',
+            padding: '12px 18px',
+            borderRadius: '12px',
+            background: 'linear-gradient(135deg, rgba(5, 150, 105, 0.12), rgba(16, 185, 129, 0.05))',
+            border: '1px solid rgba(5, 150, 105, 0.3)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px'
+          }}>
+            <span style={{ fontSize: '24px' }}>🎉</span>
+            <div>
+              <div style={{ fontSize: '13px', fontWeight: 800, color: '#047857' }}>ALL SCHEDULED DATES DELIVERED (100% DONE)</div>
+              <div style={{ fontSize: '12px', color: '#065f46' }}>Every scheduled date folder for this Safar has been uploaded, verified, and completed.</div>
+            </div>
+          </div>
+        )}
+
         {/* Big Progress Gauge Card */}
         <div className="briefing-progress-card">
           <div className="briefing-progress-header">
             <div>
               <span className="briefing-label-muted">OVERALL DELIVERY PROGRESS</span>
-              <div className="briefing-big-percent">
+              <div className="briefing-big-percent" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <AnimatedNumber value={deliveredPercent} />
                 <span className="briefing-percent-symbol">%</span>
+                {is100Done && (
+                  <span style={{
+                    fontSize: '12px',
+                    fontWeight: 800,
+                    padding: '3px 9px',
+                    borderRadius: '6px',
+                    background: 'rgba(5, 150, 105, 0.12)',
+                    color: '#059669',
+                    border: '1px solid rgba(5, 150, 105, 0.3)',
+                    letterSpacing: '0.04em'
+                  }}>
+                    🏆 100% DONE
+                  </span>
+                )}
               </div>
             </div>
             <div className="briefing-stats-summary-box">

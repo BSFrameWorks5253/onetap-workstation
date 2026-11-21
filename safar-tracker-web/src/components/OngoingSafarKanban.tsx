@@ -34,6 +34,14 @@ export function isJunkSafarName(name: string): boolean {
   if (JUNK_SAFAR_REGEX.test(clean)) return true;
   if (clean.includes('intel') || clean.includes('driver') || clean.includes('vga') || clean.includes('dptf') || clean.includes('mei')) return true;
   if (clean.includes('in process') || clean.includes('to delete') || clean.includes('to upload') || clean.includes('uploaded data')) return true;
+
+  // Session / Date deliverables are NEVER Safar roots (e.g. "01-Agra QMZ", "02-Gwalior Waaz", "Day 01", "1448-05-08 _01M")
+  if (/^\d{4}[\s._-]\d{1,2}[\s._-]\d{1,2}\s*_\d{2}[a-z]?/i.test(clean)) return true;
+  if (/^day[\s._-]?\d+$/i.test(clean)) return true;
+  if (/^\d{1,2}$/.test(clean)) return true;
+  if (/^\d{1,2}[\s._-]+(?:[a-z0-9\s._-]+[\s._-]+)?(?:waaz|majlis|isteqbal|misaaq|urs|ziyarat|event|session|bethak|qmz|ziyafat|qadam|milad|ashara|darees|namaz|sermon|aqiqa|nikah|fmb|sharaf|talaqqi|tahneeq|wada|idaraat|mafsuhiyat|zafaf|olda|bm|bq|bz|aq|id|if|ifs|ist|kgs|m|mf|misbah|mkb|mo|mq|mul|myn|mz|n|q|sh|sq|tjr|tq|tnq|tqn|wd|z|zo|oz)\b/i.test(clean)) return true;
+  if (/^(?:waaz|majlis|isteqbal|misaaq|urs|ziyarat|event|session|bethak|qmz|ziyafat|qadam|milad|ashara|darees|namaz|sermon|aqiqa|nikah|fmb|sharaf|talaqqi|tahneeq|wada)\b/i.test(clean)) return true;
+
   return false;
 }
 
@@ -58,6 +66,8 @@ export interface SafarTaskItem {
   isPresent?: boolean;
   isMissing?: boolean;
   is_present?: boolean;
+  notes?: string;
+  comment?: string;
 }
 
 interface ColumnConfig {
@@ -123,6 +133,7 @@ export default function OngoingSafarKanban({
   onAddTask,
   onResetAndRescan,
   onDeleteSafar,
+  onOpenBriefingModal,
   saving,
   connected
 }: {
@@ -133,9 +144,10 @@ export default function OngoingSafarKanban({
   onUpdateTask: (task: SafarTaskItem, changes: Partial<SafarTaskItem>) => void;
   onBatchUpdateTasks?: (items: Array<{ task: SafarTaskItem; changes: Partial<SafarTaskItem> }>) => void;
   onRemoveTask: (task: SafarTaskItem) => void;
-  onAddTask: (safarName: string, dateFolder: string) => void;
+  onAddTask: (safarName: string, dateFolder: string, comment?: string) => void;
   onResetAndRescan: () => void;
   onDeleteSafar?: (safarName: string) => void;
+  onOpenBriefingModal?: (safarName: string) => void;
   saving?: boolean;
   connected?: boolean;
 }) {
@@ -173,6 +185,7 @@ export default function OngoingSafarKanban({
 
   const [search, setSearch] = useState('');
   const [newDateInput, setNewDateInput] = useState('');
+  const [newCommentInput, setNewCommentInput] = useState('');
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [rescanTriggered, setRescanTriggered] = useState(false);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
@@ -412,8 +425,10 @@ export default function OngoingSafarKanban({
     e.preventDefault();
     if (!newDateInput.trim()) return;
     const cleanFolder = newDateInput.trim();
-    onAddTask(selectedSafar, cleanFolder);
+    const cleanComment = newCommentInput.trim();
+    onAddTask(selectedSafar, cleanFolder, cleanComment || undefined);
     setNewDateInput('');
+    setNewCommentInput('');
     setIsAddOpen(false);
     showToast(`Added date folder "${cleanFolder}" to ${selectedSafar}`);
   };
@@ -454,15 +469,19 @@ export default function OngoingSafarKanban({
               type="button"
               className="kanban-banner-whatsapp-btn"
               onClick={() => {
-                const base = getPublicWebsiteOrigin();
-                const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(
-                  `📢 *Ongoing Safar Update (${selectedSafar})*\n` +
-                  `📍 Progress: ${uploadedCount} of ${totalCount} dates delivered (${totalCount > 0 ? Math.round((uploadedCount / totalCount) * 100) : 0}%)\n` +
-                  `🔗 ${base}/kanban?safar=${encodeURIComponent(selectedSafar)}`
-                )}`;
-                window.open(url, '_blank');
+                if (onOpenBriefingModal) {
+                  onOpenBriefingModal(selectedSafar);
+                } else {
+                  const base = getPublicWebsiteOrigin();
+                  const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(
+                    `📢 *Ongoing Safar Update (${selectedSafar})*\n` +
+                    `📍 Progress: ${uploadedCount} of ${totalCount} dates delivered (${totalCount > 0 ? Math.round((uploadedCount / totalCount) * 100) : 0}%)\n` +
+                    `🔗 ${base}/kanban?safar=${encodeURIComponent(selectedSafar)}`
+                  )}`;
+                  window.open(url, '_blank');
+                }
               }}
-              title={`Share WhatsApp update for ${selectedSafar}`}
+              title={`Open WhatsApp Briefing (Image / Message) for ${selectedSafar}`}
             >
               <MessageCircle size={14} />
               <span>WhatsApp Briefing</span>
@@ -490,7 +509,13 @@ export default function OngoingSafarKanban({
             <div className="kanban-banner-pipeline-wrap">
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', fontWeight: 700, marginBottom: '4px' }}>
                 <span style={{ color: '#4f46e5' }}><AnimatedNumber value={Math.round(((columnTasks.editing_pending.length * 10 + columnTasks.editing.length * 35 + columnTasks.upload_pending.length * 65 + columnTasks.uploaded.length * 90 + columnTasks.jameya.length * 100) / (totalCount || 1)) / 100 * 100)} />% Pipeline</span>
-                <span style={{ color: '#059669' }}><AnimatedNumber value={Math.round((uploadedCount / (totalCount || 1)) * 100)} />% Delivered (<AnimatedNumber value={uploadedCount} />/{totalCount})</span>
+                <span style={{ color: '#059669' }}>
+                  {totalCount > 0 && uploadedCount >= totalCount ? (
+                    <strong>🏆 100% DONE (<AnimatedNumber value={uploadedCount} />/{totalCount})</strong>
+                  ) : (
+                    <><AnimatedNumber value={Math.round((uploadedCount / (totalCount || 1)) * 100)} />% Delivered (<AnimatedNumber value={uploadedCount} />/{totalCount})</>
+                  )}
+                </span>
               </div>
               <div className="multicolor-progress-bar mini" role="progressbar" aria-label={`${selectedSafar} stage progress`}>
                 {columnTasks.editing_pending.length > 0 && <span className="stage-segment stage-editing_pending" style={{ width: `${(columnTasks.editing_pending.length / (totalCount || 1)) * 100}%` }} title={`Editing Pending: ${columnTasks.editing_pending.length}`} />}
@@ -568,10 +593,28 @@ export default function OngoingSafarKanban({
             onChange={e => setNewDateInput(e.target.value)}
             autoFocus
             style={{
-              flex: '1 1 200px',
-              minWidth: '160px',
+              flex: '1 1 180px',
+              minWidth: '150px',
               padding: '8px 12px',
               fontSize: '14px',
+              borderRadius: '8px',
+              border: '1px solid #cbd5e1',
+              background: '#ffffff',
+              color: '#0f172a',
+              outline: 'none',
+              boxSizing: 'border-box'
+            }}
+          />
+          <input
+            type="text"
+            placeholder="Optional comment / notes (e.g. Needs re-edit, Nikaah clip)..."
+            value={newCommentInput}
+            onChange={e => setNewCommentInput(e.target.value)}
+            style={{
+              flex: '2 1 240px',
+              minWidth: '180px',
+              padding: '8px 12px',
+              fontSize: '13px',
               borderRadius: '8px',
               border: '1px solid #cbd5e1',
               background: '#ffffff',
@@ -972,6 +1015,28 @@ export default function OngoingSafarKanban({
                             📷 <strong style={{ color: '#4f46e5' }}>{task.photoEditorName?.trim() || DEFAULT_PHOTO_EDITOR}</strong>
                           </span>
                         </div>
+
+                        {/* Comment / Notes Badge */}
+                        {(task.notes || task.comment) && (
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'flex-start',
+                              gap: '5px',
+                              background: '#f8fafc',
+                              border: '1px solid #e2e8f0',
+                              borderRadius: '6px',
+                              padding: '4px 8px',
+                              fontSize: '11px',
+                              color: '#334155',
+                              lineHeight: 1.35
+                            }}
+                            title="Task Comment / Notes"
+                          >
+                            <span style={{ fontSize: '11px', flexShrink: 0 }}>💬</span>
+                            <span style={{ wordBreak: 'break-word', fontWeight: 500 }}>{task.notes || task.comment}</span>
+                          </div>
+                        )}
 
                         {/* Action buttons to change stage */}
                         {!isMissing && (

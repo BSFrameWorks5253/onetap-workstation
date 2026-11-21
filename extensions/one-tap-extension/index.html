@@ -1323,7 +1323,24 @@
             box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
             transform: translateY(-0.5px);
         }
-        .gpi-action-btn:active {
+        .gpi-action-btn.undo {
+            background: rgba(239, 68, 68, 0.08);
+            border: 1px solid rgba(239, 68, 68, 0.35);
+            color: var(--danger);
+        }
+        .gpi-action-btn.undo:hover:not(:disabled) {
+            background: rgba(239, 68, 68, 0.16);
+            border-color: var(--danger);
+            transform: translateY(-0.5px);
+        }
+        .gpi-action-btn.undo:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+            border-color: var(--border);
+            color: var(--text-secondary);
+            transform: none;
+        }
+        .gpi-action-btn:active:not(:disabled) {
             transform: translateY(0) scale(0.98);
         }
         .gpi-warn-box {
@@ -2236,7 +2253,7 @@
                 '</div>';
 
             if (gps.length === 0) {
-                html += '<div class="gpi-warn-box">⚠ No GROUP_PHOTO_N markers found.<br>Add sequence markers named <b>GROUP_PHOTO_1</b>, <b>GROUP_PHOTO_2</b>... or color clips Mango/Lavender on timeline.</div>';
+                html += '<div class="gpi-warn-box">⚠ No GP clips or markers found.<br>Nest your edited clips named <b>GP1</b>, <b>GP2</b>... (or add markers named <b>GROUP_PHOTO_1</b>, <b>GROUP_PHOTO_2</b>... or color clips Mango/Lavender).</div>';
             } else {
                 html += '<div class="gpi-section-label">Detected Sources</div>';
                 gps.forEach(function(g) {
@@ -2251,11 +2268,22 @@
 
             box.innerHTML = html;
 
-            // If no assignments exist yet, auto-add a default assignment
+            // If no assignments exist yet, auto-add assignments
             var list = document.getElementById('gpiAssignmentList');
             if (list && list.children.length === 0) {
-                var firstClip = (gps.length > 0 && gps[0].clipName) ? gps[0].clipName : 'GP 1';
-                gpiAddAssignment(firstClip, 1, nikaahCount || 10);
+                if (gps.length >= 2) {
+                    var totalN = nikaahCount || (gps.length * 5);
+                    var step = Math.ceil(totalN / gps.length);
+                    for (var gi = 0; gi < gps.length; gi++) {
+                        var fN = (gi * step) + 1;
+                        var tN = Math.min((gi + 1) * step, totalN);
+                        if (gi === gps.length - 1) tN = totalN;
+                        gpiAddAssignment(gps[gi].clipName || ('GP' + gps[gi].gpNum), fN, tN);
+                    }
+                } else {
+                    var firstClip = (gps.length > 0 && gps[0].clipName) ? gps[0].clipName : 'GP1';
+                    gpiAddAssignment(firstClip, 1, nikaahCount || 10);
+                }
             }
         }
 
@@ -2499,8 +2527,10 @@
                     var clipVal = (inpClip.value || '').trim();
                     var f = parseInt(inpFrom.value, 10);
                     var t = parseInt(inpTo.value, 10);
-                    if (clipVal && !isNaN(f) && !isNaN(t) && f <= t) {
-                        tokens.push(clipVal + '|' + f + '|' + t);
+                    if (clipVal && !isNaN(f) && !isNaN(t)) {
+                        var minN = Math.min(f, t);
+                        var maxN = Math.max(f, t);
+                        tokens.push(clipVal + '|' + minN + '|' + maxN);
                     }
                 }
             });
@@ -2589,9 +2619,20 @@
                 showStatus('⚠ No assignments configured.', 'var(--warning)');
                 return;
             }
-            showStatus('⏳ Inserting Group Photos — rippling timeline...', 'var(--warning)');
+
+            var trackChoice = 'auto';
+            var trackSel = document.getElementById('gpiTargetTrack');
+            if (trackSel && trackSel.value) trackChoice = trackSel.value;
+            var trackArg = (trackChoice === 'auto') ? '"auto"' : parseInt(trackChoice, 10);
+
+            var audioChoice = 'single';
+            var audioSel = document.getElementById('gpiAudioTrack');
+            if (audioSel && audioSel.value) audioChoice = audioSel.value;
+            var audioArg = '"' + audioChoice + '"';
+
+            showStatus('⏳ Overwriting Group Photos — preserving timeline layout...', 'var(--warning)');
             var escaped = assignmentsStr.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-            cs.evalScript("$.runScript.groupPhotoInserterExecute('" + escaped + "')", function(r) {
+            cs.evalScript("$.runScript.groupPhotoInserterExecute('" + escaped + "', " + trackArg + ", " + audioArg + ")", function(r) {
                 if (!r) { showStatus('❌ No response from Premiere Pro.', 'var(--danger)'); return; }
                 if (r.indexOf('ERROR|||') === 0) {
                     showStatus('❌ ' + r.replace('ERROR|||', '').substring(0, 80), 'var(--danger)');
@@ -2607,15 +2648,39 @@
                 var inserted = statsMap['inserted'] || 0;
                 var skipped = statsMap['skipped'] || 0;
                 var failed = statsMap['failed'] || 0;
-                showStatus('✅ Complete: ' + inserted + ' inserted' + (skipped ? ', ' + skipped + ' skipped' : '') + (failed ? ', ' + failed + ' failed' : '') + '.', 'var(--success)');
+                showStatus('✅ Complete: ' + inserted + ' overwritten' + (skipped ? ', ' + skipped + ' skipped' : '') + (failed ? ', ' + failed + ' failed' : '') + '. Click Undo to revert.', 'var(--success)');
+                
+                var undoBtn = document.getElementById('gpiUndoBtn');
+                if (undoBtn && inserted > 0) {
+                    undoBtn.disabled = false;
+                }
                 fetchTimelineStats();
                 broadcastTimelineSync('group_photos_inserted', {
                     inserted: inserted,
                     skipped: skipped,
                     failed: failed,
                     sequenceName: document.getElementById('statSequenceName') ? document.getElementById('statSequenceName').innerText : '',
-                    summary: '💍 Inserted ' + inserted + ' Group Photos into timeline'
+                    summary: '💍 Overwrote ' + inserted + ' Group Photos into timeline'
                 });
+            });
+        }
+
+        function gpiUndo() {
+            showStatus('⏳ Undoing last Group Photo assignment...', 'var(--warning)');
+            cs.evalScript('$.runScript.groupPhotoInserterUndo()', function(r) {
+                if (!r) { showStatus('❌ No response from Premiere Pro.', 'var(--danger)'); return; }
+                if (r.indexOf('ERROR|||') === 0) {
+                    showStatus('❌ ' + r.replace('ERROR|||', ''), 'var(--danger)');
+                    return;
+                }
+                var parts = r.split('|||');
+                var removedCount = parts[1] || '0';
+                var msg = parts[2] || 'Timeline restored to previous state.';
+                showStatus('✓ ' + msg, 'var(--success)');
+                var undoBtn = document.getElementById('gpiUndoBtn');
+                if (undoBtn) undoBtn.disabled = true;
+                gpiScan();
+                fetchTimelineStats();
             });
         }
 
@@ -2955,6 +3020,22 @@
             });
         }
 
+        function handleXmlImportResult(r) {
+            if (!r) {
+                showStatus("❌ No response received from Premiere Pro.", "var(--danger)");
+                return;
+            }
+            if (r.indexOf("SUCCESS|||") === 0) {
+                var msg = r.replace("SUCCESS|||", "");
+                showStatus("✅ " + msg, "var(--success)");
+            } else if (r.indexOf("ERROR|||") === 0) {
+                var errMsg = r.replace("ERROR|||", "");
+                showStatus("❌ " + errMsg, "var(--danger)");
+            } else {
+                showStatus(r, "var(--accent)");
+            }
+        }
+
         function runImportMediaXml(explicitPath) {
             if (explicitPath) {
                 showStatus("⏳ Importing XML sequence into Premiere Pro...", "var(--accent)");
@@ -2968,19 +3049,7 @@
                     browseAndImportXml();
                     return;
                 }
-                if (!r) {
-                    showStatus("❌ No response received from Premiere Pro.", "var(--danger)");
-                    return;
-                }
-                if (r.indexOf("SUCCESS|||") === 0) {
-                    var msg = r.replace("SUCCESS|||", "");
-                    showStatus("✅ " + msg, "var(--success)");
-                } else if (r.indexOf("ERROR|||") === 0) {
-                    var errMsg = r.replace("ERROR|||", "");
-                    showStatus("❌ " + errMsg, "var(--danger)");
-                } else {
-                    showStatus(r, "var(--accent)");
-                }
+                handleXmlImportResult(r);
             });
         }
 
@@ -3482,15 +3551,36 @@
                     <button class="gpi-add-btn" onclick="gpiAddAssignment()">＋ Add Assignment</button>
                 </div>
 
-                <!-- Step 2 & 3: Action Buttons -->
+                <!-- Step 2 & 3: Action Buttons & Target Track -->
+                <div class="gpi-track-select-row" style="display:flex; align-items:center; justify-content:space-between; margin-top:6px; margin-bottom:2px; font-size:10px;">
+                    <span style="font-weight:700; color:var(--text-secondary);">Target Video Track:</span>
+                    <select id="gpiTargetTrack" class="gpi-num-input" style="width:160px; height:24px; font-size:10px; font-weight:600; padding:1px 4px;">
+                        <option value="auto">Auto (Safe Non-Destructive)</option>
+                        <option value="1">Track V2 (Overlay / Safe)</option>
+                        <option value="0">Track V1 (Direct Overwrite)</option>
+                        <option value="2">Track V3</option>
+                    </select>
+                </div>
+                <div class="gpi-track-select-row" style="display:flex; align-items:center; justify-content:space-between; margin-top:3px; margin-bottom:3px; font-size:10px;">
+                    <span style="font-weight:700; color:var(--text-secondary);">Audio Channels:</span>
+                    <select id="gpiAudioTrack" class="gpi-num-input" style="width:160px; height:24px; font-size:10px; font-weight:600; padding:1px 4px;">
+                        <option value="single">Single Audio Track (Safe / A2)</option>
+                        <option value="mute">Mute / No Audio</option>
+                        <option value="stereo">Track A1/A2 Only (Stereo)</option>
+                    </select>
+                </div>
                 <div class="gpi-action-row" style="flex-shrink:0; margin-top:4px;">
-                    <button class="gpi-action-btn preview" onclick="gpiPreview()" title="Preview planned group photo insertions">
+                    <button class="gpi-action-btn preview" onclick="gpiPreview()" title="Preview planned group photo overwrite assignments">
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="vertical-align:middle;margin-right:3px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                         Preview
                     </button>
-                    <button class="gpi-action-btn execute" onclick="gpiPreviewAndExecute()" title="Execute ripple insertions directly on timeline">
+                    <button class="gpi-action-btn execute" onclick="gpiPreviewAndExecute()" title="Cleanly overwrite clips onto timeline without rippling">
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="vertical-align:middle;margin-right:3px;"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                         Execute
+                    </button>
+                    <button id="gpiUndoBtn" class="gpi-action-btn undo" onclick="gpiUndo()" title="One-step Undo: Restore timeline exactly to state before assignment" disabled>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:3px;"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
+                        Undo
                     </button>
                 </div>
             </div>
@@ -3616,7 +3706,7 @@
 
             <div class="modal-footer" style="margin-top:8px;">
                 <button type="button" onclick="document.getElementById('gpPreviewModal').classList.remove('active')">Cancel</button>
-                <button type="button" class="primary" onclick="gpiExecuteFromModal()">Execute All Insertions</button>
+                <button type="button" class="primary" onclick="gpiExecuteFromModal()">Execute Overwrite</button>
             </div>
         </div>
     </div>

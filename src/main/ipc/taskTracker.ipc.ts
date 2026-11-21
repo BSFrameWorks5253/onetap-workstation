@@ -525,6 +525,17 @@ export function isContainerFolderName(name: string): boolean {
   return false
 }
 
+export function isSessionDeliverableFolder(name: string): boolean {
+  if (!name) return false
+  const clean = name.trim()
+  if (/^\d{4}[\s._-]\d{1,2}[\s._-]\d{1,2}\s*_\d{2}[A-Za-z]?/i.test(clean)) return true
+  if (/^day[\s._-]?\d+$/i.test(clean)) return true
+  if (/^\d{1,2}$/.test(clean)) return true
+  if (/^\d{1,2}[\s._-]+(?:[A-Za-z0-9\s._-]+[\s._-]+)?(?:waaz|majlis|isteqbal|misaaq|urs|ziyarat|event|session|bethak|qmz|ziyafat|qadam|milad|ashara|darees|namaz|sermon|aqiqa|nikah|fmb|sharaf|talaqqi|tahneeq|wada|idaraat|mafsuhiyat|zafaf|olda|bm|bq|bz|aq|id|if|ifs|ist|kgs|m|mf|misbah|mkb|mo|mq|mul|myn|mz|n|q|sh|sq|tjr|tq|tnq|tqn|wd|z|zo|oz)\b/i.test(clean)) return true
+  if (/^(?:waaz|majlis|isteqbal|misaaq|urs|ziyarat|event|session|bethak|qmz|ziyafat|qadam|milad|ashara|darees|namaz|sermon|aqiqa|nikah|fmb|sharaf|talaqqi|tahneeq|wada)\b/i.test(clean)) return true
+  return false
+}
+
 export function isSafarFolder(name: string, dirPath?: string): boolean {
   if (!name) return false
   const clean = name.trim()
@@ -532,12 +543,17 @@ export function isSafarFolder(name: string, dirPath?: string): boolean {
   const rootKey = clean.toUpperCase().replace(/[\s_-]+/g, ' ').trim()
   if (['IN PROCESS', 'TO UPLOAD', 'TO DELETE', 'UPLOADED DATA', 'UPLOADED', 'UPLOAD', 'PENDING', 'SAFARS', 'SAFAR', 'WORKING SAFAR', 'WORKING', 'CLIENT', 'CLIENTS'].includes(rootKey)) return false
   if (/^(?:intelvga|dptf|mei|realtek|nvidia|amd|driver|drivers|windows|system|\$recycle\.bin)/i.test(clean)) return false
+
+  // 0. Exclude individual session deliverables (these are date items inside a Safar, not Safars themselves)
+  // e.g. "01-Agra QMZ", "02-Gwalior Waaz", "01-Raipur-Waaz", "Day 01", "1448-05-08 _01M"
+  if (isSessionDeliverableFolder(clean)) return false
+
   // 1. Primary workspace container parent check: If dirPath sits directly in IN PROCESS, PENDING, TO UPLOAD, TO DELETE
   if (dirPath) {
     try {
       const parentDirName = path.basename(path.dirname(path.resolve(dirPath))).toLowerCase().trim()
       const isParentContainer = /^(?:in[\s_-]?process|pending|to[\s_-]?upload|to[\s_-]?delete|uploaded[\s_-]?data|safars?|working[\s_-]?safar|working)$/i.test(parentDirName)
-      if (isParentContainer && !isSystemIgnored(clean) && !isContainerFolderName(clean)) {
+      if (isParentContainer && !isSystemIgnored(clean) && !isContainerFolderName(clean) && !isSessionDeliverableFolder(clean)) {
         return true
       }
     } catch {}
@@ -564,11 +580,6 @@ export function isSafarFolder(name: string, dirPath?: string): boolean {
     } catch {}
   }
 
-  // 3. Exclude individual session deliverables (these are date items inside a Safar, not Safars themselves)
-  if (/^\d{4}[\s._-]\d{1,2}[\s._-]\d{1,2}\s*_\d{2}[A-Za-z]?/i.test(clean)) return false
-  if (/^day[\s._-]?\d+$/i.test(clean)) return false
-  if (/^\d{1,2}$/.test(clean)) return false
-
   // If it starts with YYYY-MM-DD or YYYY-Serial-Day followed by a City name (e.g. "1448-05-08 Coimbatore", "1448-01-22 Mumbai"):
   if (/^\d{4}[\s._-]\d{1,2}[\s._-]\d{1,2}[\s._-]+[A-Za-z]/i.test(clean)) {
     return true
@@ -579,14 +590,14 @@ export function isSafarFolder(name: string, dirPath?: string): boolean {
 
 
   // Standard Safar folder patterns:
-  // e.g. "1448-03 Mumbai", "1448_03_Mumbai", "1448 - 03 Mumbai", "1448-03-Mumbai", "1448-03"
+  // e.g. "1448-03 Mumbai", "1448_03_Mumbai", "1448 - 03 Mumbai", "1448-03-Mumbai", "1448-03", "1448-18-Bain Al Mazarain Safar Mubarak"
   if (/^\d{4}[\s\-_.]+\d{1,3}(?:[\s\-_.]+[A-Za-z].*)?$/i.test(clean)) return true
   // e.g. "03-Mumbai", "03_Mumbai", "03 Mumbai"
   if (/^\d{1,3}[\s\-_.]+[A-Za-z].*$/i.test(clean)) return true
   // e.g. "1448 Mumbai", "1448-Mumbai"
   if (/^\d{4}[\s\-_.]+[A-Za-z].*$/i.test(clean)) return true
-  // Explicit "Safar" in name e.g. "Safar 1", "Safar_Mumbai"
-  if (/safar|istefad[ah]?|ziyafat|urs|milad|waaz|majlis|isteqbal|misaaq/i.test(clean)) return true
+  // Explicit "Safar" in name e.g. "Safar 1", "Safar_Mumbai", "Bain Al Mazarain Safar Mubarak"
+  if (/\b(?:safar|istefad[ah]?)\b/i.test(clean)) return true
 
   const commonCitiesLower = [
     'mumbai', 'indore', 'surat', 'dumas', 'dummas', 'karachi', 'pune', 'nagpur',
@@ -609,31 +620,43 @@ function parseSafarMetadata(folderName: string): { name: string; year?: number; 
   let serial: string | undefined
   let city = extractCity(folderName) || 'Unassigned'
 
-  // Match e.g. "1448-03 Mumbai", "1448-02 Raipur", "1447-08 Mumbai - Urs Mubarak..."
+  // Match e.g. "1448-03 Mumbai", "1448-02 Raipur", "1447-08 Mumbai - Urs Mubarak...", "1448-18-Bain Al Mazarain Safar Mubarak"
   const m1 = folderName.match(/^(\d{4})[\s\-_]+(\d{1,3})[\s\-_]+(.+)$/)
   if (m1) {
     year = parseInt(m1[1], 10)
     serial = m1[2].padStart(2, '0')
     if (!city || city === 'Unassigned') {
       const rest = m1[3].split(/[-–—]/)[0].trim()
-      if (rest) city = rest
+      const cleanRest = rest.replace(/\b(?:safar|safar[\s_-]+mubarak|mubarak)\b/gi, '').trim()
+      if (cleanRest) city = cleanRest
+      else if (rest) city = rest
     }
   } else {
     // Match "08-Mumbai..."
     const m2 = folderName.match(/^(\d{1,3})[\s\-_]+([A-Za-z].+)$/)
     if (m2) {
       serial = m2[1].padStart(2, '0')
+      if (!city || city === 'Unassigned') {
+        const rest = m2[2].split(/[-–—]/)[0].trim()
+        const cleanRest = rest.replace(/\b(?:safar|safar[\s_-]+mubarak|mubarak)\b/gi, '').trim()
+        if (cleanRest) city = cleanRest
+      }
     } else {
       // Match "1447-Mumbai..."
       const m3 = folderName.match(/^(\d{4})[\s\-_]+([A-Za-z].+)$/)
       if (m3) {
         year = parseInt(m3[1], 10)
+        if (!city || city === 'Unassigned') {
+          const rest = m3[2].split(/[-–—]/)[0].trim()
+          const cleanRest = rest.replace(/\b(?:safar|safar[\s_-]+mubarak|mubarak)\b/gi, '').trim()
+          if (cleanRest) city = cleanRest
+        }
       }
     }
   }
 
   if ((!city || city === 'Unassigned') && /^[A-Za-z\s]+$/.test(folderName.trim()) && folderName.trim().length >= 3) {
-    city = folderName.trim()
+    city = folderName.trim().replace(/\b(?:safar|safar[\s_-]+mubarak|mubarak)\b/gi, '').trim()
   }
   return { name: folderName, year, serial, city }
 }
@@ -692,14 +715,11 @@ export function isProperDateOrSessionFolder(name: string): boolean {
   if (/^day[\s._\-]?\d{1,3}/i.test(clean)) {
     return true
   }
-  // 4. Session / Waaz formats: "01 Waaz...", "23-01 Waaz Leicester", "Waaz Day 01", "01-Raipur-Waaz", "02-Bilaspur-Bethak", "01-Bhatapur-QMZ", "04-Takhatpur-QMZ"
-  if (/^\d{1,2}[\s._-]+(?:waaz|majlis|isteqbal|misaaq|urs|ziyarat|event|session|bethak|qmz|ziyafat|qadam|milad|ashara|darees)\b/i.test(clean)) {
+  // 4. Session / Waaz formats: "01 Waaz...", "23-01 Waaz Leicester", "Waaz Day 01", "01-Raipur-Waaz", "02-Bilaspur-Bethak", "01-Bhatapur-QMZ", "04-Takhatpur-QMZ", "01-Agra QMZ", "01 Agra QMZ"
+  if (/^\d{1,2}[\s._-]+(?:[A-Za-z0-9\s._-]+[\s._-]+)?(?:waaz|majlis|isteqbal|misaaq|urs|ziyarat|event|session|bethak|qmz|ziyafat|qadam|milad|ashara|darees|namaz|sermon|aqiqa|nikah|fmb|sharaf|talaqqi|tahneeq|wada|idaraat|mafsuhiyat|zafaf|olda|bm|bq|bz|aq|id|if|ifs|ist|kgs|m|mf|misbah|mkb|mo|mq|mul|myn|mz|n|q|sh|sq|tjr|tq|tnq|tqn|wd|z|zo|oz)\b/i.test(clean)) {
     return true
   }
-  if (/(?:waaz|majlis|isteqbal|bethak|qmz|ziyafat)[\s._-]+(?:day[\s._-]?)?\d{1,2}/i.test(clean)) {
-    return true
-  }
-  if (/^\d{1,2}[\s._-]+[A-Za-z0-9]+[\s._-]+(?:waaz|majlis|isteqbal|misaaq|urs|ziyarat|event|session|bethak|qmz|ziyafat|qadam|milad|ashara|darees)\b/i.test(clean)) {
+  if (/(?:waaz|majlis|isteqbal|bethak|qmz|ziyafat|qadam|namaz)[\s._-]+(?:day[\s._-]?)?\d{1,2}/i.test(clean)) {
     return true
   }
   // 5. Numbered day folders e.g. "01", "02", "1", "2"
@@ -709,7 +729,7 @@ export function isProperDateOrSessionFolder(name: string): boolean {
     if (d >= 1 && d <= 31) return true
   }
   // 6. Named religious or safar sessions containing standard session keywords
-  if (/\b(?:waaz|majlis|isteqbal|misaaq|urs|ziyarat|bethak|qmz|ziyafat|qadam|milad|ashara|darees)\b/i.test(clean)) {
+  if (/\b(?:waaz|majlis|isteqbal|misaaq|urs|ziyarat|bethak|qmz|ziyafat|qadam|milad|ashara|darees|namaz|sermon|aqiqa|nikah|fmb|sharaf|talaqqi|tahneeq|wada)\b/i.test(clean)) {
     return true
   }
   return false
@@ -740,8 +760,8 @@ export function extractCleanDateFolder(name: string): string | null {
     const d = parseInt(dayMatch[1], 10)
     return `Day ${d < 10 ? '0' + d : d}`
   }
-  // 4. Session / Waaz formats: "01 Waaz...", "23-01 Waaz Leicester", "Waaz Day 01", "01-Raipur-Waaz"
-  if (/^\d{1,2}[\s._-]+(?:waaz|majlis|isteqbal|misaaq|urs|ziyarat|event|session|bethak|qmz|ziyafat|qadam|milad|ashara|darees)\b/i.test(clean) || /(?:waaz|majlis|isteqbal|bethak|qmz|ziyafat)[\s._-]+(?:day[\s._-]?)?\d{1,2}/i.test(clean)) {
+  // 4. Session / Waaz formats: "01 Waaz...", "23-01 Waaz Leicester", "Waaz Day 01", "01-Raipur-Waaz", "01-Agra QMZ"
+  if (/^\d{1,2}[\s._-]+(?:[A-Za-z0-9\s._-]+[\s._-]+)?(?:waaz|majlis|isteqbal|misaaq|urs|ziyarat|event|session|bethak|qmz|ziyafat|qadam|milad|ashara|darees|namaz|sermon|aqiqa|nikah|fmb|sharaf|talaqqi|tahneeq|wada|idaraat|mafsuhiyat|zafaf|olda|bm|bq|bz|aq|id|if|ifs|ist|kgs|m|mf|misbah|mkb|mo|mq|mul|myn|mz|n|q|sh|sq|tjr|tq|tnq|tqn|wd|z|zo|oz)\b/i.test(clean) || /(?:waaz|majlis|isteqbal|bethak|qmz|ziyafat|qadam|namaz)[\s._-]+(?:day[\s._-]?)?\d{1,2}/i.test(clean)) {
     return clean
   }
   // 5. Numbered day folders e.g. "01", "02", "1", "2"
@@ -1975,7 +1995,9 @@ export function searchAssets(filter: {
 // ── Core Scanner & Status Computation Engine ──────────────────
 
 function enrichTrackerData(dbSafars: SafarRecord[], dbTasks: TaskRecord[]): { safars: SafarRecord[]; tasks: TaskRecord[] } {
+  const validSafars = dbSafars.filter(s => s.safarName && !isContainerFolderName(s.safarName) && !isSystemIgnored(s.safarName) && !isSessionDeliverableFolder(s.safarName))
   const filteredTasks = dbTasks.filter(t => {
+    if (!t.safarName || isContainerFolderName(t.safarName) || isSystemIgnored(t.safarName) || isSessionDeliverableFolder(t.safarName)) return false
     const df = t.dateFolder || ''
     if (!df || isCameraOrAssetFolder(df) || !isProperDateOrSessionFolder(df)) return false
     return true
@@ -2006,7 +2028,7 @@ function enrichTrackerData(dbSafars: SafarRecord[], dbTasks: TaskRecord[]): { sa
     tasksBySafar.set(task.safarName, group)
   }
 
-  const groupedSafars = dbSafars.map(s => {
+  const groupedSafars = validSafars.map(s => {
     const matchedTasks = tasksBySafar.get(s.safarName) || []
     const completedDays = matchedTasks.filter(t => t.status === 'uploaded' || t.status === 'submitted').length
     const isSafarDone = matchedTasks.length > 0 && matchedTasks.every(t => t.status === 'uploaded' || t.status === 'submitted')
@@ -2051,7 +2073,7 @@ let lastScanInput: any = null
 export function deduplicateTasks(tasks: TaskRecord[]): TaskRecord[] {
   const map = new Map<string, TaskRecord>()
   for (const t of tasks) {
-    if (!t.safarName || isContainerFolderName(t.safarName) || isSystemIgnored(t.safarName)) continue
+    if (!t.safarName || isContainerFolderName(t.safarName) || isSystemIgnored(t.safarName) || isSessionDeliverableFolder(t.safarName)) continue
     if (!t.dateFolder || isCameraOrAssetFolder(t.dateFolder) || !isProperDateOrSessionFolder(t.dateFolder)) continue
     const key = `${(t.safarName || '').trim().toLowerCase()}::${normalizeDateFolderKey(t.dateFolder)}`
     if (!map.has(key)) {
@@ -2075,7 +2097,7 @@ export function deduplicateTasks(tasks: TaskRecord[]): TaskRecord[] {
 export function deduplicateSafars(safars: SafarRecord[]): SafarRecord[] {
   const map = new Map<string, SafarRecord>()
   for (const s of safars) {
-    if (!s.safarName || isContainerFolderName(s.safarName) || isSystemIgnored(s.safarName)) continue
+    if (!s.safarName || isContainerFolderName(s.safarName) || isSystemIgnored(s.safarName) || isSessionDeliverableFolder(s.safarName)) continue
     const key = (s.safarName || '').trim().toLowerCase()
     if (!map.has(key)) {
       map.set(key, s)

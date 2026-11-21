@@ -26,6 +26,39 @@ function resolveElectronExec() {
   if (isWin) {
     const winExe = path.join(electronDir, 'dist', 'electron.exe')
     if (fs.existsSync(winExe)) return winExe
+
+    // Try auto-extracting cached Windows electron zip if available
+    const winCacheDir = path.join(process.env.LOCALAPPDATA || '', 'electron', 'Cache')
+    if (fs.existsSync(winCacheDir)) {
+      function findWinZips(dir) {
+        let results = []
+        try {
+          const entries = fs.readdirSync(dir, { withFileTypes: true })
+          for (const e of entries) {
+            const full = path.join(dir, e.name)
+            if (e.isDirectory()) results = results.concat(findWinZips(full))
+            else if (e.name.startsWith('electron-') && e.name.includes('win32-x64') && e.name.endsWith('.zip')) results.push(full)
+          }
+        } catch (_) {}
+        return results
+      }
+      const winZips = findWinZips(winCacheDir)
+      if (winZips.length > 0) {
+        console.log(`[CrossPlatform] Extracting cached Windows Electron from ${winZips[0]}...`)
+        try {
+          const targetDir = path.join(electronDir, 'dist')
+          fs.mkdirSync(targetDir, { recursive: true })
+          require('child_process').execSync(`powershell -NoProfile -Command "Expand-Archive -Path '${winZips[0]}' -DestinationPath '${targetDir}' -Force"`)
+          fs.writeFileSync(path.join(electronDir, 'path.txt'), 'electron.exe')
+          if (fs.existsSync(winExe)) {
+            console.log('[CrossPlatform] Extracted Windows Electron successfully.')
+            return winExe
+          }
+        } catch (e) {
+          console.warn('[CrossPlatform] Windows Auto-extract failed:', e.message)
+        }
+      }
+    }
   }
 
   if (isLinux) {
@@ -101,6 +134,10 @@ delete process.env.ELECTRON_RUN_AS_NODE
 
 const execPath = resolveElectronExec()
 process.env.ELECTRON_EXEC_PATH = execPath
+
+if (process.argv.includes('--live')) {
+  process.env.LIVE_EDIT = 'true'
+}
 
 const action = process.argv[2] || 'dev'
 const extraArgs = process.argv.slice(3)

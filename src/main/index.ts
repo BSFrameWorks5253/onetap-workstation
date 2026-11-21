@@ -800,7 +800,8 @@ function createWindow(): void {
   })
 
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    const devUrl = process.env['ELECTRON_RENDERER_URL']
+    const liveEditUrl = process.env['LIVE_EDIT_URL'] || (process.env['LIVE_EDIT'] === 'true' || process.env['LIVE_EDIT'] === '1' ? 'http://localhost:4321' : null)
+    const devUrl = liveEditUrl || process.env['ELECTRON_RENDERER_URL']
     mainWindow.loadURL(devUrl)
     mainWindow.webContents.openDevTools({ mode: 'detach' })
   } else {

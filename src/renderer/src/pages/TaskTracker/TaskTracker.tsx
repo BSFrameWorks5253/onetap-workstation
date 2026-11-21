@@ -177,6 +177,7 @@ export default function TaskTracker(): JSX.Element {
 
   // ── Inspect Modal State ──
   const [inspectTask, setInspectTask] = useState<TrackerTaskItem | null>(null)
+  const [inspectTaskComment, setInspectTaskComment] = useState('')
   const [historyLogs, setHistoryLogs] = useState<TrackerAuditLog[]>([])
   const [generatingTasks, setGeneratingTasks] = useState<Record<string, boolean>>({})
   const [generatingSafars, setGeneratingSafars] = useState<Record<string, boolean>>({})
@@ -801,6 +802,13 @@ export default function TaskTracker(): JSX.Element {
   const handleOpenInspect = async (task: TrackerTaskItem) => {
     playTick()
     setInspectTask(task)
+    let initialComment = task.notes || ''
+    try {
+      const storedNotes = JSON.parse(localStorage.getItem('ot_task_notes') || '{}')
+      const key = `${task.safarName}::${task.dateFolder}`
+      if (storedNotes[key]) initialComment = storedNotes[key]
+    } catch {}
+    setInspectTaskComment(initialComment)
     if (api?.taskTracker) {
       try {
         const logs = await api.taskTracker.getHistory({
@@ -812,6 +820,42 @@ export default function TaskTracker(): JSX.Element {
         setHistoryLogs([])
       }
     }
+  }
+
+  const handleSaveTaskComment = () => {
+    if (!inspectTask) return
+    const key = `${inspectTask.safarName}::${inspectTask.dateFolder}`
+    const cleanComment = inspectTaskComment.trim()
+    try {
+      const stored = JSON.parse(localStorage.getItem('ot_task_notes') || '{}')
+      if (cleanComment) {
+        stored[key] = cleanComment
+      } else {
+        delete stored[key]
+      }
+      localStorage.setItem('ot_task_notes', JSON.stringify(stored))
+    } catch {}
+
+    setInspectTask(prev => prev ? { ...prev, notes: cleanComment } : null)
+    setSafars(prevSafars => {
+      return prevSafars.map(s => {
+        if (s.safarName !== inspectTask.safarName) return s
+        return {
+          ...s,
+          tasks: (s.tasks || []).map(t => {
+            if (t.dateFolder !== inspectTask.dateFolder) return t
+            return { ...t, notes: cleanComment }
+          })
+        }
+      })
+    })
+
+    playSuccess()
+    showToast({
+      title: 'Comment Saved',
+      message: `Comment updated for ${inspectTask.dateFolder}.`,
+      type: 'success'
+    })
   }
 
   // ── 1-Click WhatsApp Formatter ──
@@ -907,13 +951,22 @@ export default function TaskTracker(): JSX.Element {
   const handleAddDateFolder = async (safarName: string) => {
     const dateFolder = window.prompt(`Enter Date / Session folder name to track for "${safarName}" (e.g. 1448-03-14 _01M):`)
     if (!dateFolder || !dateFolder.trim()) return
+    const cleanFolder = dateFolder.trim()
+    const comment = window.prompt(`Optional: Enter comment or notes for "${cleanFolder}" (or leave blank):`)
     try {
-      const res = await api?.taskTracker?.addDateFolder?.({ safarName, dateFolder: dateFolder.trim() })
+      const res = await api?.taskTracker?.addDateFolder?.({ safarName, dateFolder: cleanFolder })
       if (res?.success) {
+        if (comment && comment.trim()) {
+          try {
+            const stored = JSON.parse(localStorage.getItem('ot_task_notes') || '{}')
+            stored[`${safarName}::${cleanFolder}`] = comment.trim()
+            localStorage.setItem('ot_task_notes', JSON.stringify(stored))
+          } catch {}
+        }
         playSuccess()
         showToast({
           title: 'Folder Added',
-          message: `Added "${dateFolder.trim()}" to ${safarName}.`,
+          message: `Added "${cleanFolder}" to ${safarName}.`,
           type: 'success'
         })
         doScan(true)
@@ -2463,6 +2516,32 @@ export default function TaskTracker(): JSX.Element {
                                   Auto
                                 </span>
                               )}
+                              {task.notes && (
+                                <span
+                                  className="date-comment-pill"
+                                  title={`Comment: ${task.notes}`}
+                                  onClick={() => handleOpenInspect(task)}
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '3px',
+                                    fontSize: '10px',
+                                    padding: '2px 7px',
+                                    borderRadius: '10px',
+                                    background: '#FEF3C7',
+                                    color: '#92400E',
+                                    border: '1px solid #FDE68A',
+                                    cursor: 'pointer',
+                                    fontWeight: 500,
+                                    maxWidth: '120px',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap'
+                                  }}
+                                >
+                                  💬 {task.notes}
+                                </span>
+                              )}
                             </div>
 
                             {/* Col 3: Timestamps & Metrics */}
@@ -2630,6 +2709,31 @@ export default function TaskTracker(): JSX.Element {
                           </span>
                         )}
 
+                        {t.notes && (
+                          <div
+                            style={{
+                              fontSize: '11px',
+                              color: '#92400E',
+                              background: '#FEF3C7',
+                              border: '1px solid #FDE68A',
+                              borderRadius: '6px',
+                              padding: '2px 6px',
+                              margin: '2px 0 4px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}
+                            onClick={() => handleOpenInspect(t)}
+                            title={`Comment: ${t.notes}`}
+                          >
+                            <span>💬</span>
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {t.notes}
+                            </span>
+                          </div>
+                        )}
+
                         <div className="board-card-footer">
                           <span style={{ fontSize: '11px', color: '#64748B' }}>
                             {t.renderVideoCount ? `${t.renderVideoCount} vids · ${formatBytes(t.renderSizeBytes)}` : '0 vids'}
@@ -2722,6 +2826,23 @@ export default function TaskTracker(): JSX.Element {
                         <span style={{ cursor: 'pointer', fontWeight: 600, color: 'var(--accent, #6366F1)' }}>
                           {t.dateFolder}
                         </span>
+                        {t.notes && (
+                          <span
+                            title={`Comment: ${t.notes}`}
+                            style={{
+                              marginLeft: '6px',
+                              fontSize: '11px',
+                              cursor: 'pointer',
+                              display: 'inline-block'
+                            }}
+                            onClick={e => {
+                              e.stopPropagation()
+                              handleOpenInspect(t)
+                            }}
+                          >
+                            💬
+                          </span>
+                        )}
                       </td>
                       <td>
                         <span className={`status-badge ${t.status}`}>
@@ -2951,6 +3072,41 @@ export default function TaskTracker(): JSX.Element {
               <div className="detail-row">
                 <span>Total Render Size:</span>
                 <strong>{formatBytes(inspectTask.renderSizeBytes)}</strong>
+              </div>
+            </div>
+
+            {/* Notes & Comments Section */}
+            <div className="detail-section-box">
+              <span className="detail-section-title">💬 Notes & Comments</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
+                <textarea
+                  placeholder="Add notes, special instructions, or comments for this task..."
+                  value={inspectTaskComment}
+                  onChange={e => setInspectTaskComment(e.target.value)}
+                  style={{
+                    width: '100%',
+                    minHeight: '70px',
+                    fontSize: '12px',
+                    padding: '8px 10px',
+                    borderRadius: '8px',
+                    border: '1px solid #CBD5E1',
+                    background: '#F8FAFC',
+                    color: '#0F172A',
+                    resize: 'vertical',
+                    boxSizing: 'border-box',
+                    fontFamily: 'inherit'
+                  }}
+                />
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <button
+                    type="button"
+                    className="btn-secondary-action"
+                    style={{ fontSize: '11px', padding: '5px 12px', fontWeight: 600 }}
+                    onClick={handleSaveTaskComment}
+                  >
+                    Save Comment
+                  </button>
+                </div>
               </div>
             </div>
 

@@ -1290,7 +1290,12 @@ export default function TitleAdder(): JSX.Element {
 
   const [isWatermarkOverlayOpen, setIsWatermarkOverlayOpen] = useState(false)
   const [watermarkSearch, setWatermarkSearch] = useState('')
-  const [excludedWatermarks, setExcludedWatermarks] = useState<Set<string>>(new Set())
+  const excludedWatermarks = useMemo(() => new Set(storeState.excludedWatermarks || []), [storeState.excludedWatermarks])
+  const setExcludedWatermarks = (ex: Set<string> | ((prev: Set<string>) => Set<string>)) => {
+    const current = new Set(storeState.excludedWatermarks || [])
+    const nextSet = typeof ex === 'function' ? ex(current) : ex
+    setStoreState({ excludedWatermarks: Array.from(nextSet) })
+  }
   const [fps, setFps] = useState('')
   const [speed, setSpeed] = useState('')
   const [eta, setEta] = useState('')
@@ -1316,22 +1321,28 @@ export default function TitleAdder(): JSX.Element {
   const [availableAudioOptions, setAvailableAudioOptions] = useState<Array<{ name: string; path: string }>>([])
   const [availableTitleImageOptions, setAvailableTitleImageOptions] = useState<Array<{ name: string; path: string }>>([])
 
-  const userAudioSelections = storeState.userAudioSelections
+  const userAudioSelections = storeState.userAudioSelections || {}
   const setUserAudioSelections = (selections: Record<string, string> | ((prev: Record<string, string>) => Record<string, string>)) => {
-    const next = typeof selections === 'function' ? selections(storeState.userAudioSelections) : selections
+    const next = typeof selections === 'function' ? selections(storeState.userAudioSelections || {}) : selections
     setStoreState({ userAudioSelections: next })
   }
 
-  const userTitleImageSelections = storeState.userTitleImageSelections
+  const userTitleImageSelections = storeState.userTitleImageSelections || {}
   const setUserTitleImageSelections = (selections: Record<string, string> | ((prev: Record<string, string>) => Record<string, string>)) => {
-    const next = typeof selections === 'function' ? selections(storeState.userTitleImageSelections) : selections
+    const next = typeof selections === 'function' ? selections(storeState.userTitleImageSelections || {}) : selections
     setStoreState({ userTitleImageSelections: next })
   }
 
-  const userMuteSelections = storeState.userMuteSelections
+  const userMuteSelections = storeState.userMuteSelections || {}
   const setUserMuteSelections = (selections: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => {
-    const next = typeof selections === 'function' ? selections(storeState.userMuteSelections) : selections
+    const next = typeof selections === 'function' ? selections(storeState.userMuteSelections || {}) : selections
     setStoreState({ userMuteSelections: next })
+  }
+
+  const userWatermarkSelections = storeState.userWatermarkSelections || {}
+  const setUserWatermarkSelections = (selections: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => {
+    const next = typeof selections === 'function' ? selections(storeState.userWatermarkSelections || {}) : selections
+    setStoreState({ userWatermarkSelections: next })
   }
 
   const [audioSearchFilter, setAudioSearchFilter] = useState('')
@@ -1911,13 +1922,18 @@ export default function TitleAdder(): JSX.Element {
     const nextMuted = new Set<string>()
     for (const v of videos) {
       const stem = getCanonicalStem(v)
-      const matchingPrev = Array.from(prevMuted).find(p => getCanonicalStem(p) === stem)
-      if (matchingPrev !== undefined) {
+      const customMute = prevMuteMap[v] ?? prevMuteMap[stem] ?? storeState.predefinedVideoMutes?.[v] ?? storeState.predefinedVideoMutes?.[stem]
+      if (customMute === false) {
+        continue
+      } else if (customMute === true) {
         nextMuted.add(v)
       } else {
-        const wasInAvailable = prevAvailable.some(a => getCanonicalStem(a) === stem)
-        if (!wasInAvailable) {
-          if (!isVideoMuteExcluded(v, [])) {
+        const matchingPrev = Array.from(prevMuted).find(p => getCanonicalStem(p) === stem)
+        if (matchingPrev !== undefined) {
+          nextMuted.add(v)
+        } else {
+          const wasInAvailable = prevAvailable.some(a => getCanonicalStem(a) === stem)
+          if (!wasInAvailable && !isVideoMuteExcluded(v, [])) {
             nextMuted.add(v)
           }
         }
@@ -1926,26 +1942,21 @@ export default function TitleAdder(): JSX.Element {
     setMutedVideos(nextMuted)
 
     // B. Transfer Watermark selections from temp file state to rendered video state
+    const prevWmMap = { ...(currentStore.userWatermarkSelections || userWatermarkSelections) }
     const nextWatermarked = new Set<string>()
     for (const v of videos) {
       const stem = getCanonicalStem(v)
-      const matchingPrev = Array.from(prevWatermarked).find(p => getCanonicalStem(p) === stem)
+      const customWm = prevWmMap[v] ?? prevWmMap[stem]
       const isWmExcluded = excludedWatermarks.has(v) || excludedWatermarks.has(stem)
-      if (matchingPrev !== undefined) {
-        if (!isWmExcluded) nextWatermarked.add(v)
-      } else if (addWatermarkGlobal && !isWmExcluded) {
-        nextWatermarked.add(v)
-      }
-    }
-    if (false)
-    for (const v of videos) {
-      const stem = getCanonicalStem(v)
-      const matchingPrev = Array.from(prevWatermarked).find(p => getCanonicalStem(p) === stem)
-      if (matchingPrev !== undefined) {
+      if (customWm === false || isWmExcluded) {
+        continue
+      } else if (customWm === true) {
         nextWatermarked.add(v)
       } else {
-        const wasInAvailable = prevAvailable.some(a => getCanonicalStem(a) === stem)
-        if (!wasInAvailable) {
+        const matchingPrev = Array.from(prevWatermarked).find(p => getCanonicalStem(p) === stem)
+        if (matchingPrev !== undefined) {
+          nextWatermarked.add(v)
+        } else if (addWatermarkGlobal) {
           nextWatermarked.add(v)
         }
       }
@@ -2821,23 +2832,32 @@ export default function TitleAdder(): JSX.Element {
         }
       })
 
+      const initWatermarkMap: Record<string, boolean> = {}
+      res.assignments.forEach((item: any) => {
+        const canonical = getCanonicalStem(item.videoName)
+        const customWm = stemLookup(userWatermarkSelections, item.videoPath, item.videoName, canonical)
+        const isWm = customWm !== undefined
+          ? customWm
+          : (addWatermarkGlobal && !excludedWatermarks.has(item.videoName) && !excludedWatermarks.has(canonical))
+        initWatermarkMap[item.videoPath] = isWm
+        initWatermarkMap[item.videoName] = isWm
+        initWatermarkMap[canonical] = isWm
+      })
+
       setUserAudioSelections(initAudioMap)
       setUserTitleImageSelections(initImageMap)
       setUserMuteSelections(initMuteMap)
-      setMutedVideos(prev => {
-        const nextSet = new Set(prev)
-        res.assignments.forEach((item: any) => {
-          if (initMuteMap[item.videoPath] === true) {
-            nextSet.add(item.videoName)
-          } else {
-            nextSet.delete(item.videoName)
-          }
-        })
-        return nextSet
-      })
-      if (addWatermarkGlobal && res.assignments.length > 0) {
-        setWatermarkedVideos(new Set(res.assignments.map((a: any) => a.videoName).filter((vn: string) => !excludedWatermarks.has(vn) && !excludedWatermarks.has(getCanonicalStem(vn)))))
-      }
+      setUserWatermarkSelections(prev => ({ ...prev, ...initWatermarkMap }))
+      setMutedVideos(new Set(
+        res.assignments
+          .filter((item: any) => initMuteMap[item.videoPath] === true)
+          .map((item: any) => item.videoName)
+      ))
+      setWatermarkedVideos(new Set(
+        res.assignments
+          .filter((item: any) => initWatermarkMap[item.videoPath] === true)
+          .map((item: any) => item.videoName)
+      ))
       setIsAudioModalOpen(true)
     } catch (err: any) {
       console.error('Failed to preview audio assignments:', err)
@@ -2852,6 +2872,7 @@ export default function TitleAdder(): JSX.Element {
     audioAssignments?: Record<string, string>
     titleImageAssignments?: Record<string, string>
     videoMuteSelections?: Record<string, boolean>
+    videoWatermarkSelections?: Record<string, boolean>
     availableVideos?: string[]
     mutedVideos?: Set<string>
     watermarkedVideos?: Set<string>
@@ -2897,8 +2918,10 @@ export default function TitleAdder(): JSX.Element {
     const effectiveAudio = opts.customAssignments || opts.audioAssignments || currentStore.userAudioSelections || userAudioSelections
     const effectiveImages = opts.titleImageAssignments || currentStore.userTitleImageSelections || userTitleImageSelections
     const effectiveMuteSelections = opts.videoMuteSelections || currentStore.userMuteSelections || userMuteSelections
+    const effectiveWatermarkSelections = opts.videoWatermarkSelections || currentStore.userWatermarkSelections || userWatermarkSelections
 
     const resolvedMuteSelections: Record<string, boolean> = { ...effectiveMuteSelections }
+    const resolvedWatermarkSelections: Record<string, boolean> = { ...effectiveWatermarkSelections }
     const resolvedAudioSelections: Record<string, string> = { ...effectiveAudio }
     const resolvedImageSelections: Record<string, string> = { ...effectiveImages }
 
@@ -2915,6 +2938,13 @@ export default function TitleAdder(): JSX.Element {
       resolvedMuteSelections[v] = finalMute
       resolvedMuteSelections[vp] = finalMute
       resolvedMuteSelections[canonical] = finalMute
+
+      // Ensure explicit watermark choice maps across videoName, full path, and stem
+      const userWmVal = effectiveWatermarkSelections[vp] ?? effectiveWatermarkSelections[v] ?? effectiveWatermarkSelections[canonical]
+      const finalWm = userWmVal !== undefined ? userWmVal : (addWatermarkGlobal && !excludedWatermarks.has(v) && !excludedWatermarks.has(canonical))
+      resolvedWatermarkSelections[v] = finalWm
+      resolvedWatermarkSelections[vp] = finalWm
+      resolvedWatermarkSelections[canonical] = finalWm
 
       // Ensure explicit audio choice maps across all keys
       const userAudio = effectiveAudio[vp] ?? effectiveAudio[v] ?? effectiveAudio[canonical] ?? item.defaultAudioPath
@@ -2941,6 +2971,12 @@ export default function TitleAdder(): JSX.Element {
         const isSpec = isSpecialWaazOrId(v) || isSpecialWaazOrId(canonical) || isSpecialWaazOrId(pfx)
         const finalMute = userMuteVal !== undefined ? userMuteVal : !isSpec
         resolvedMuteSelections[v] = finalMute
+      }
+      if (resolvedWatermarkSelections[v] === undefined) {
+        const canonical = getCanonicalStem(v)
+        const userWmVal = effectiveWatermarkSelections[v] ?? effectiveWatermarkSelections[canonical]
+        const finalWm = userWmVal !== undefined ? userWmVal : (addWatermarkGlobal && !excludedWatermarks.has(v) && !excludedWatermarks.has(canonical))
+        resolvedWatermarkSelections[v] = finalWm
       }
     }
     setRunning(true)
@@ -2972,17 +3008,19 @@ export default function TitleAdder(): JSX.Element {
       jobId: jobIdRef.current, 
       addToStats: addToStats,
       muteOriginal: muteOriginal,
+      addWatermark: addWatermarkGlobal,
       muteExceptions: vids.filter(f => {
         const isMuted = resolvedMuteSelections[f] ?? Array.from(effectiveMuted).some(m => (m as string).toLowerCase() === f.toLowerCase())
         return !isMuted
       }),
       watermarkExceptions: vids.filter(f => {
-        const lowerF = f.toLowerCase()
-        return !Array.from(effectiveWatermarked).some(w => (w as string).toLowerCase() === lowerF)
+        const isWm = resolvedWatermarkSelections[f] ?? Array.from(effectiveWatermarked).some(w => (w as string).toLowerCase() === f.toLowerCase())
+        return !isWm
       }),
       audioAssignments: resolvedAudioSelections,
       titleImageAssignments: resolvedImageSelections,
       videoMuteSelections: resolvedMuteSelections,
+      videoWatermarkSelections: resolvedWatermarkSelections,
       thumbnailMode: effectiveThumbMode,
       thumbnailModeSelections: effectiveThumbSelections
     })
@@ -3105,12 +3143,20 @@ export default function TitleAdder(): JSX.Element {
       const prevArr = Array.from(prev)
       for (const f of list) {
         const stem = getCanonicalStem(f)
-        const match = prevArr.find(p => getCanonicalStem(p) === stem)
-        if (match !== undefined) {
+        const customMute = userMuteSelections[f] ?? userMuteSelections[stem] ?? storeState.predefinedVideoMutes?.[f] ?? storeState.predefinedVideoMutes?.[stem]
+        if (customMute === false) {
+          // Explicitly unmuted by user — keep unmuted
+          continue
+        } else if (customMute === true) {
           next.add(f)
         } else {
-          if (muteOriginal && !isVideoMuteExcluded(f, [])) {
+          const match = prevArr.find(p => getCanonicalStem(p) === stem)
+          if (match !== undefined) {
             next.add(f)
+          } else {
+            if (muteOriginal && !isVideoMuteExcluded(f, [])) {
+              next.add(f)
+            }
           }
         }
       }
@@ -3122,13 +3168,18 @@ export default function TitleAdder(): JSX.Element {
       const prevArr = Array.from(prev)
       for (const f of list) {
         const stem = getCanonicalStem(f)
-        const match = prevArr.find(p => getCanonicalStem(p) === stem)
-        if (match !== undefined) {
+        const customWm = userWatermarkSelections[f] ?? userWatermarkSelections[stem]
+        const isExcluded = excludedWatermarks.has(f) || excludedWatermarks.has(stem)
+        if (customWm === false || isExcluded) {
+          // Explicitly removed by user — keep watermark removed
+          continue
+        } else if (customWm === true) {
           next.add(f)
         } else {
-          const isExcluded = excludedWatermarks.has(f) || excludedWatermarks.has(stem)
-          const wasAvailable = !addWatermarkGlobal || isExcluded
-          if (!wasAvailable) {
+          const match = prevArr.find(p => getCanonicalStem(p) === stem)
+          if (match !== undefined) {
+            next.add(f)
+          } else if (addWatermarkGlobal) {
             next.add(f)
           }
         }
@@ -4241,6 +4292,20 @@ export default function TitleAdder(): JSX.Element {
                   <GhostButton
                     size="sm"
                     onClick={() => {
+                      const newMuteMap: Record<string, boolean> = { ...(storeState.userMuteSelections || {}) }
+                      const newPreMap: Record<string, boolean> = { ...(storeState.predefinedVideoMutes || {}) }
+                      availableVideos.forEach(v => {
+                        newMuteMap[v] = true
+                        newMuteMap[getCanonicalStem(v)] = true
+                        newPreMap[v] = true
+                        newPreMap[getCanonicalStem(v)] = true
+                      })
+                      setUserMuteSelections(newMuteMap)
+                      setStoreState({ predefinedVideoMutes: newPreMap })
+                      const api = (window as any).api
+                      if (api?.titleAutomode?.saveSettings) {
+                        api.titleAutomode.saveSettings({ predefinedVideoMutes: newPreMap })
+                      }
                       setMutedVideos(new Set(availableVideos))
                       playTick()
                     }}
@@ -4250,6 +4315,20 @@ export default function TitleAdder(): JSX.Element {
                   <GhostButton
                     size="sm"
                     onClick={() => {
+                      const newMuteMap: Record<string, boolean> = { ...(storeState.userMuteSelections || {}) }
+                      const newPreMap: Record<string, boolean> = { ...(storeState.predefinedVideoMutes || {}) }
+                      availableVideos.forEach(v => {
+                        newMuteMap[v] = false
+                        newMuteMap[getCanonicalStem(v)] = false
+                        newPreMap[v] = false
+                        newPreMap[getCanonicalStem(v)] = false
+                      })
+                      setUserMuteSelections(newMuteMap)
+                      setStoreState({ predefinedVideoMutes: newPreMap })
+                      const api = (window as any).api
+                      if (api?.titleAutomode?.saveSettings) {
+                        api.titleAutomode.saveSettings({ predefinedVideoMutes: newPreMap })
+                      }
                       setMutedVideos(new Set())
                       playTick()
                     }}
@@ -4270,10 +4349,29 @@ export default function TitleAdder(): JSX.Element {
                           type="checkbox"
                           checked={isMuted}
                           onChange={() => {
-                            const next = new Set(mutedVideos)
-                            if (next.has(f)) next.delete(f)
-                            else next.add(f)
-                            setMutedVideos(next)
+                            const nextVal = !isMuted
+                            const stem = getCanonicalStem(f)
+                            setUserMuteSelections(prev => ({
+                              ...prev,
+                              [f]: nextVal,
+                              [stem]: nextVal
+                            }))
+                            const updatedPre = {
+                              ...(storeState.predefinedVideoMutes || {}),
+                              [f]: nextVal,
+                              [stem]: nextVal
+                            }
+                            setStoreState({ predefinedVideoMutes: updatedPre })
+                            const api = (window as any).api
+                            if (api?.titleAutomode?.saveSettings) {
+                              api.titleAutomode.saveSettings({ predefinedVideoMutes: updatedPre })
+                            }
+                            setMutedVideos(prev => {
+                              const next = new Set(prev)
+                              if (nextVal) next.add(f)
+                              else next.delete(f)
+                              return next
+                            })
                             playTick()
                           }}
                         />
@@ -4351,6 +4449,13 @@ export default function TitleAdder(): JSX.Element {
                   <GhostButton
                     size="sm"
                     onClick={() => {
+                      const newWmMap: Record<string, boolean> = { ...(storeState.userWatermarkSelections || {}) }
+                      availableVideos.forEach(v => {
+                        newWmMap[v] = true
+                        newWmMap[getCanonicalStem(v)] = true
+                      })
+                      setUserWatermarkSelections(newWmMap)
+                      setExcludedWatermarks(new Set())
                       setWatermarkedVideos(new Set(availableVideos))
                       playTick()
                     }}
@@ -4360,10 +4465,14 @@ export default function TitleAdder(): JSX.Element {
                   <GhostButton
                     size="sm"
                     onClick={() => {
+                      const newWmMap: Record<string, boolean> = { ...(storeState.userWatermarkSelections || {}) }
+                      availableVideos.forEach(v => {
+                        newWmMap[v] = false
+                        newWmMap[getCanonicalStem(v)] = false
+                      })
+                      setUserWatermarkSelections(newWmMap)
                       setExcludedWatermarks(new Set(availableVideos.flatMap(v => [v, getCanonicalStem(v)])))
-    setWatermarkedVideos(new Set())
-
-
+                      setWatermarkedVideos(new Set())
                       playTick()
                     }}
                   >
@@ -4383,13 +4492,16 @@ export default function TitleAdder(): JSX.Element {
                           type="checkbox"
                           checked={isWatermarked}
                           onChange={() => {
-                            const next = new Set(watermarkedVideos)
+                            const nextVal = !isWatermarked
                             const stem = getCanonicalStem(f)
-                            if (next.has(f)) {
-                              next.delete(f)
+                            setUserWatermarkSelections(prev => ({
+                              ...prev,
+                              [f]: nextVal,
+                              [stem]: nextVal
+                            }))
+                            if (!nextVal) {
                               setExcludedWatermarks(prev => new Set([...prev, f, stem]))
                             } else {
-                              next.add(f)
                               setExcludedWatermarks(prev => {
                                 const s = new Set(prev)
                                 s.delete(f)
@@ -4397,11 +4509,9 @@ export default function TitleAdder(): JSX.Element {
                                 return s
                               })
                             }
-                            setWatermarkedVideos(next)
-                            playTick()
-                            if (false)
-                            if (next.has(f)) next.delete(f)
-                            else next.add(f)
+                            const next = new Set(watermarkedVideos)
+                            if (nextVal) next.add(f)
+                            else next.delete(f)
                             setWatermarkedVideos(next)
                             playTick()
                           }}
@@ -4580,7 +4690,13 @@ export default function TitleAdder(): JSX.Element {
                           ...Object.keys(storeState.predefinedVideoMutes || {}),
                           ...Object.keys(storeState.predefinedTitleImages || {})
                         ]))
-                        setExcludedWatermarks(new Set(availableVideos.flatMap(v => [v, getCanonicalStem(v)])))
+                        const newWmMap: Record<string, boolean> = { ...(storeState.userWatermarkSelections || {}) }
+                        allVids.forEach(v => {
+                          newWmMap[v] = true
+                          newWmMap[getCanonicalStem(v)] = true
+                        })
+                        setUserWatermarkSelections(newWmMap)
+                        setExcludedWatermarks(new Set())
                         setWatermarkedVideos(new Set(allVids))
                         showToast({ title: 'Watermark All', message: 'Watermark enabled for all predefined videos', type: 'info' })
                       }}
@@ -4608,6 +4724,12 @@ export default function TitleAdder(): JSX.Element {
                           ...Object.keys(storeState.predefinedVideoMutes || {}),
                           ...Object.keys(storeState.predefinedTitleImages || {})
                         ]))
+                        const newWmMap: Record<string, boolean> = { ...(storeState.userWatermarkSelections || {}) }
+                        allVids.forEach(v => {
+                          newWmMap[v] = false
+                          newWmMap[getCanonicalStem(v)] = false
+                        })
+                        setUserWatermarkSelections(newWmMap)
                         setExcludedWatermarks(new Set(allVids.flatMap(v => [v, getCanonicalStem(v)])))
                         setWatermarkedVideos(new Set())
                         showToast({ title: 'Remove All WM', message: 'Watermark removed for all predefined videos', type: 'info' })
@@ -4712,6 +4834,11 @@ export default function TitleAdder(): JSX.Element {
                                   type="button"
                                   onClick={() => {
                                     const nextVal = !isWm
+                                    setUserWatermarkSelections(prev => ({
+                                      ...prev,
+                                      [vid]: nextVal,
+                                      [stem]: nextVal
+                                    }))
                                     setExcludedWatermarks(prev => {
                                       const nextSet = new Set(prev)
                                       if (!nextVal) {
@@ -5356,6 +5483,14 @@ export default function TitleAdder(): JSX.Element {
                   type="button"
                   onClick={() => {
                     const allNames = audioPreviewAssignments.map(a => a.videoName)
+                    const updatedWm: Record<string, boolean> = { ...userWatermarkSelections }
+                    audioPreviewAssignments.forEach(a => {
+                      const stem = getCanonicalStem(a.videoName)
+                      updatedWm[a.videoPath] = true
+                      updatedWm[a.videoName] = true
+                      updatedWm[stem] = true
+                    })
+                    setUserWatermarkSelections(updatedWm)
                     setExcludedWatermarks(new Set())
                     setWatermarkedVideos(new Set(allNames))
                     showToast({ title: 'Watermark Applied', message: `Watermark enabled for all ${allNames.length} videos`, type: 'info' })
@@ -5378,6 +5513,14 @@ export default function TitleAdder(): JSX.Element {
                   type="button"
                   onClick={() => {
                     const allNames = audioPreviewAssignments.map(a => a.videoName)
+                    const updatedWm: Record<string, boolean> = { ...userWatermarkSelections }
+                    audioPreviewAssignments.forEach(a => {
+                      const stem = getCanonicalStem(a.videoName)
+                      updatedWm[a.videoPath] = false
+                      updatedWm[a.videoName] = false
+                      updatedWm[stem] = false
+                    })
+                    setUserWatermarkSelections(updatedWm)
                     setExcludedWatermarks(new Set(allNames.flatMap(n => [n, getCanonicalStem(n)])))
                     setWatermarkedVideos(new Set())
                     showToast({ title: 'Watermark Removed', message: `Watermark removed for all ${allNames.length} videos`, type: 'info' })
@@ -5400,13 +5543,23 @@ export default function TitleAdder(): JSX.Element {
                   type="button"
                   onClick={() => {
                     const updatedMute: Record<string, boolean> = { ...userMuteSelections }
+                    const updatedPre: Record<string, boolean> = { ...(storeState.predefinedVideoMutes || {}) }
                     const nextMuted = new Set(mutedVideos)
                     audioPreviewAssignments.forEach(a => {
+                      const stem = getCanonicalStem(a.videoName)
                       updatedMute[a.videoPath] = false
                       updatedMute[a.videoName] = false
+                      updatedMute[stem] = false
+                      updatedPre[a.videoName] = false
+                      updatedPre[stem] = false
                       nextMuted.delete(a.videoName)
                     })
                     setUserMuteSelections(updatedMute)
+                    setStoreState({ predefinedVideoMutes: updatedPre })
+                    const api = (window as any).api
+                    if (api?.titleAutomode?.saveSettings) {
+                      api.titleAutomode.saveSettings({ predefinedVideoMutes: updatedPre })
+                    }
                     setMutedVideos(nextMuted)
                     showToast({ title: 'Original Audio Kept', message: 'Original audio enabled for all videos (Unmuted)', type: 'info' })
                   }}
@@ -5428,13 +5581,23 @@ export default function TitleAdder(): JSX.Element {
                   type="button"
                   onClick={() => {
                     const updatedMute: Record<string, boolean> = { ...userMuteSelections }
+                    const updatedPre: Record<string, boolean> = { ...(storeState.predefinedVideoMutes || {}) }
                     const nextMuted = new Set(mutedVideos)
                     audioPreviewAssignments.forEach(a => {
+                      const stem = getCanonicalStem(a.videoName)
                       updatedMute[a.videoPath] = true
                       updatedMute[a.videoName] = true
+                      updatedMute[stem] = true
+                      updatedPre[a.videoName] = true
+                      updatedPre[stem] = true
                       nextMuted.add(a.videoName)
                     })
                     setUserMuteSelections(updatedMute)
+                    setStoreState({ predefinedVideoMutes: updatedPre })
+                    const api = (window as any).api
+                    if (api?.titleAutomode?.saveSettings) {
+                      api.titleAutomode.saveSettings({ predefinedVideoMutes: updatedPre })
+                    }
                     setMutedVideos(nextMuted)
                     showToast({ title: 'Muted All', message: 'Original audio muted for all videos', type: 'info' })
                   }}
@@ -5594,8 +5757,14 @@ export default function TitleAdder(): JSX.Element {
                         ?? userMuteSelections[item.videoName]
                         ?? userMuteSelections[getCanonicalStem(item.videoName)]
                         ?? (!isSpecial)
-                      const isStemExcluded = excludedWatermarks.has(item.videoName) || excludedWatermarks.has(getCanonicalStem(item.videoName))
-                      const isWatermarked = !isStemExcluded && (watermarkedVideos.has(item.videoName) || (addWatermarkGlobal && !excludedWatermarks.has(item.videoName)))
+                      const stem = getCanonicalStem(item.videoName)
+                      const customWm = userWatermarkSelections[item.videoPath]
+                        ?? userWatermarkSelections[item.videoName]
+                        ?? userWatermarkSelections[stem]
+                      const isStemExcluded = excludedWatermarks.has(item.videoName) || excludedWatermarks.has(stem) || (item.videoPath && excludedWatermarks.has(item.videoPath))
+                      const isWatermarked = customWm !== undefined
+                        ? customWm
+                        : (!isStemExcluded && (watermarkedVideos.has(item.videoName) || (addWatermarkGlobal && !excludedWatermarks.has(item.videoName))))
                       const pTheme = getPrefixColorTheme(item.prefix)
                       const curThumbMode = userThumbnailModeSelections[item.videoPath]
                         ?? userThumbnailModeSelections[item.videoName]
@@ -5853,14 +6022,22 @@ export default function TitleAdder(): JSX.Element {
                               onClick={() => {
                                 const nextVal = !isWatermarked
                                 const stem = getCanonicalStem(item.videoName)
+                                setUserWatermarkSelections(prev => ({
+                                  ...prev,
+                                  [item.videoPath]: nextVal,
+                                  [item.videoName]: nextVal,
+                                  [stem]: nextVal
+                                }))
                                 setExcludedWatermarks(prev => {
                                   const nextSet = new Set(prev)
                                   if (!nextVal) {
                                     nextSet.add(item.videoName)
                                     nextSet.add(stem)
+                                    if (item.videoPath) nextSet.add(item.videoPath)
                                   } else {
                                     nextSet.delete(item.videoName)
                                     nextSet.delete(stem)
+                                    if (item.videoPath) nextSet.delete(item.videoPath)
                                   }
                                   return nextSet
                                 })
@@ -5960,6 +6137,7 @@ export default function TitleAdder(): JSX.Element {
                       customAssignments: userAudioSelections,
                       titleImageAssignments: userTitleImageSelections,
                       videoMuteSelections: userMuteSelections,
+                      videoWatermarkSelections: userWatermarkSelections,
                       watermarkedVideos: watermarkedVideos,
                       mutedVideos: mutedVideos,
                       availableVideos: audioPreviewAssignments.map(a => a.videoName),

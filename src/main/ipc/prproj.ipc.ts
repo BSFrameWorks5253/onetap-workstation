@@ -1244,14 +1244,12 @@ async function buildXmemlXmlNode(sequenceName: string, videoInputs: Array<string
 
     if (markerName && markerKey !== currentMarkerKey) {
       currentMarkerKey = markerKey
-      const color = getMarkerColorForFolder(entry.eventCategory !== 'OTHER' ? entry.eventCategory : entry.folderName)
       markersXml += `
     <marker>
       <name>${escapeXml(markerName)}</name>
       <comment>${escapeXml(markerDescription)}</comment>
       <in>${startFrame}</in>
-      <out>${startFrame}</out>
-      <color>${escapeXml(color.standardMarkerColor || color.name || 'White')}</color>
+      <out>-1</out>
     </marker>`
     }
 
@@ -1300,6 +1298,7 @@ async function buildXmemlXmlNode(sequenceName: string, videoInputs: Array<string
             <mediatype>audio</mediatype>
             <trackindex>1</trackindex>
             <clipindex>${aClipIndex}</clipindex>
+            <groupindex>1</groupindex>
           </link>` : ''
 
     vClipsXml += `
@@ -1346,13 +1345,6 @@ async function buildXmemlXmlNode(sequenceName: string, videoInputs: Array<string
     currentFrame = endFrame
   }
 
-  // Generate V1 (clips) + V2 (empty overlay track for Nikah group photo/titles)
-  const emptyVTrackXml = `
-        <track>
-          <enabled>TRUE</enabled>
-          <locked>FALSE</locked>
-        </track>`
-
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE xmeml>
 <xmeml version="4">
@@ -1371,6 +1363,7 @@ ${markersXml}
       <video>
         <format>
           <samplecharacteristics>
+            <rate><timebase>${seqTb}</timebase><ntsc>${seqNtscStr}</ntsc></rate>
             <width>${seqWidth}</width>
             <height>${seqHeight}</height>
             <pixelaspectratio>square</pixelaspectratio>
@@ -1379,7 +1372,6 @@ ${markersXml}
         <track>
           ${vClipsXml}
         </track>
-${emptyVTrackXml}
       </video>
       <audio>
         <numOutputChannels>2</numOutputChannels>

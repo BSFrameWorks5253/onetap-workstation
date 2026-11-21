@@ -297,7 +297,12 @@ export function extractSafarFromContainerPath(fullPath: string): {
       }
 
       const detectedCity = extractCity(res.safarName) || extractCity(candidate)
-      res.city = (detectedCity && detectedCity !== 'Unassigned') ? detectedCity : res.safarName
+      if (detectedCity && detectedCity !== 'Unassigned') {
+        res.city = detectedCity
+      } else {
+        const cleanRest = res.safarName.replace(/\b(?:safar|safar[\s_-]+mubarak|mubarak)\b/gi, '').trim()
+        res.city = cleanRest || res.safarName
+      }
 
       return res
     }
@@ -440,10 +445,12 @@ export function parseSafarFromPath(fullPath: string): SafarParsedInfo {
         if (!result.dateFolder) result.dateFolder = seg
         continue
       }
-      if (/^\d{1,3}[-_][A-Za-z]+[-_](?:Bethak|QMZ|Majlis|Namaz|Ziyarat|Sermon)$/i.test(seg)) {
-        continue
-      }
-      if (/^(?:Bethak|QMZ|Majlis|Namaz|Ziyarat|Waaz|Sermon)$/i.test(seg)) {
+      const isSessionFolder =
+        /^\d{1,3}[\s-_]+(?:[A-Za-z0-9\s-_]+[\s-_]+)?(?:waaz|majlis|isteqbal|misaaq|urs|ziyarat|event|session|bethak|qmz|ziyafat|qadam|milad|ashara|darees|namaz|sermon|aqiqa|nikah|fmb|sharaf|talaqqi|tahneeq|wada|idaraat|mafsuhiyat|zafaf|olda|bm|bq|bz|aq|id|if|ifs|ist|kgs|m|mf|misbah|mkb|mo|mq|mul|myn|mz|n|q|sh|sq|tjr|tq|tnq|tqn|wd|z|zo|oz)\b/i.test(seg) ||
+        /^(?:Bethak|QMZ|Majlis|Namaz|Ziyarat|Waaz|Sermon|Ziyafat|Qadam|Isteqbal|Misaaq|Urs|Darees|Milad|Ashara|Aqiqa|Nikah|Tahneeq|Talaqqi|Wada)\b/i.test(seg)
+
+      if (isSessionFolder) {
+        if (!result.dateFolder) result.dateFolder = seg
         continue
       }
 
@@ -455,7 +462,13 @@ export function parseSafarFromPath(fullPath: string): SafarParsedInfo {
           result.safarYear = parseInt(p1[1])
           result.safarSerial = p1[2].padStart(2, '0')
           result.safarName = name
-          result.city = extractCity(result.safarName) || extractCity(seg) || 'Unassigned'
+          const detectedCity = extractCity(result.safarName) || extractCity(seg)
+          if (detectedCity && detectedCity !== 'Unassigned') {
+            result.city = detectedCity
+          } else {
+            const cleanRest = name.replace(/\b(?:safar|safar[\s_-]+mubarak|mubarak)\b/gi, '').trim()
+            result.city = cleanRest || name
+          }
           continue
         }
       }
@@ -464,8 +477,9 @@ export function parseSafarFromPath(fullPath: string): SafarParsedInfo {
       if (p2) {
         const name = p2[2].trim()
         const isClip = /^[A-Za-z]{1,4}(?:[-_]\d+)?$/i.test(name) || ['Z', 'AQ', 'N', 'ID', 'QMZ', 'BM', 'BQ', 'BZ', 'H', 'WAAZ', 'NAMAZ', 'ZO', 'MZ', 'Q', 'MF'].includes(name.toUpperCase())
+        const isSessionDeliverable = /^(?:[A-Za-z0-9\s-_]+[\s-_]+)?(?:waaz|majlis|isteqbal|misaaq|urs|ziyarat|event|session|bethak|qmz|ziyafat|qadam|milad|ashara|darees|namaz|sermon|aqiqa|nikah|fmb|sharaf|talaqqi|tahneeq|wada|idaraat|mafsuhiyat|zafaf|olda|bm|bq|bz|aq|id|if|ifs|ist|kgs|m|mf|misbah|mkb|mo|mq|mul|myn|mz|n|q|sh|sq|tjr|tq|tnq|tqn|wd|z|zo|oz)$/i.test(name)
         const detectedCity = extractCity(name) || extractCity(seg)
-        if (!isClip && (detectedCity || (name.length >= 4 && !/^\d+/.test(name)))) {
+        if (!isClip && !isSessionDeliverable && (detectedCity || (name.length >= 4 && !/^\d+/.test(name)))) {
           result.safar = seg
           result.safarSerial = p2[1].padStart(2, '0')
           result.safarName = name

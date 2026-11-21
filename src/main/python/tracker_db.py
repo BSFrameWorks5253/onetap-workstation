@@ -212,6 +212,22 @@ def is_camera_or_asset_folder(name: str) -> bool:
         return True
     return False
 
+def is_session_deliverable_name(name: str) -> bool:
+    if not name:
+        return False
+    clean = name.strip()
+    if re.match(r'^\d{4}[\s._-]\d{1,2}[\s._-]\d{1,2}\s*_\d{2}[a-z]?', clean, re.I):
+        return True
+    if re.match(r'^day[\s._-]?\d+$', clean, re.I):
+        return True
+    if re.match(r'^\d{1,2}$', clean):
+        return True
+    if re.match(r'^\d{1,2}[\s._-]+(?:[A-Za-z0-9\s._-]+[\s._-]+)?(?:waaz|majlis|isteqbal|misaaq|urs|ziyarat|event|session|bethak|qmz|ziyafat|qadam|milad|ashara|darees|namaz|sermon|aqiqa|nikah|fmb|sharaf|talaqqi|tahneeq|wada|idaraat|mafsuhiyat|zafaf|olda|bm|bq|bz|aq|id|if|ifs|ist|kgs|m|mf|misbah|mkb|mo|mq|mul|myn|mz|n|q|sh|sq|tjr|tq|tnq|tqn|wd|z|zo|oz)\b', clean, re.I):
+        return True
+    if re.match(r'^(?:waaz|majlis|isteqbal|misaaq|urs|ziyarat|event|session|bethak|qmz|ziyafat|qadam|milad|ashara|darees|namaz|sermon|aqiqa|nikah|fmb|sharaf|talaqqi|tahneeq|wada)\b', clean, re.I):
+        return True
+    return False
+
 def is_proper_date_or_session_folder(name: str) -> bool:
     if not name or is_camera_or_asset_folder(name):
         return False
@@ -225,13 +241,11 @@ def is_proper_date_or_session_folder(name: str) -> bool:
     m_num = re.match(r'^(\d{1,2})$', clean)
     if m_num and 1 <= int(m_num.group(1)) <= 31:
         return True
-    if re.match(r'^\d{1,2}[\s._-]+(?:waaz|majlis|isteqbal|misaaq|urs|ziyarat|event|session|bethak|qmz|ziyafat|qadam|milad|ashara|darees)\b', clean, re.I):
+    if re.match(r'^\d{1,2}[\s._-]+(?:[A-Za-z0-9\s._-]+[\s._-]+)?(?:waaz|majlis|isteqbal|misaaq|urs|ziyarat|event|session|bethak|qmz|ziyafat|qadam|milad|ashara|darees|namaz|sermon|aqiqa|nikah|fmb|sharaf|talaqqi|tahneeq|wada|idaraat|mafsuhiyat|zafaf|olda|bm|bq|bz|aq|id|if|ifs|ist|kgs|m|mf|misbah|mkb|mo|mq|mul|myn|mz|n|q|sh|sq|tjr|tq|tnq|tqn|wd|z|zo|oz)\b', clean, re.I):
         return True
-    if re.search(r'(?:waaz|majlis|isteqbal|bethak|qmz|ziyafat)[\s._-]+(?:day[\s._-]?)?\d{1,2}', clean, re.I):
+    if re.search(r'(?:waaz|majlis|isteqbal|bethak|qmz|ziyafat|qadam|namaz)[\s._-]+(?:day[\s._-]?)?\d{1,2}', clean, re.I):
         return True
-    if re.match(r'^\d{1,2}[\s._-]+[A-Za-z0-9]+[\s._-]+(?:waaz|majlis|isteqbal|misaaq|urs|ziyarat|event|session|bethak|qmz|ziyafat|qadam|milad|ashara|darees)\b', clean, re.I):
-        return True
-    if re.search(r'\b(?:waaz|majlis|isteqbal|misaaq|urs|ziyarat|bethak|qmz|ziyafat|qadam|milad|ashara|darees)\b', clean, re.I):
+    if re.search(r'\b(?:waaz|majlis|isteqbal|misaaq|urs|ziyarat|bethak|qmz|ziyafat|qadam|milad|ashara|darees|namaz|sermon|aqiqa|nikah|fmb|sharaf|talaqqi|tahneeq|wada)\b', clean, re.I):
         return True
     return False
 
@@ -242,7 +256,7 @@ def upsert_tasks(conn, tasks):
 
     for t in tasks:
         safar_name = t.get('safarName') or t.get('safar_name') or 'Unassigned'
-        if not safar_name or safar_name.lower().startswith(('intelvga', 'dptf', 'mei')) or safar_name.lower() in ('in process', 'to upload', 'to delete', 'uploaded data', 'pending', 'client'):
+        if not safar_name or is_session_deliverable_name(safar_name) or safar_name.lower().startswith(('intelvga', 'dptf', 'mei')) or safar_name.lower() in ('in process', 'to upload', 'to delete', 'uploaded data', 'pending', 'client'):
             continue
         date_folder = t.get('dateFolder') or t.get('date_folder') or ''
         if not date_folder or is_camera_or_asset_folder(date_folder) or not is_proper_date_or_session_folder(date_folder):
@@ -378,7 +392,7 @@ def upsert_safars(conn, safars_data):
     cursor = conn.cursor()
     for s in safars_data:
         name = s.get('safarName') or s.get('safar_name')
-        if not name or name.lower().startswith(('intelvga', 'dptf', 'mei')) or name.lower() in ('in process', 'to upload', 'to delete', 'uploaded data', 'pending', 'client'):
+        if not name or is_session_deliverable_name(name) or name.lower().startswith(('intelvga', 'dptf', 'mei')) or name.lower() in ('in process', 'to upload', 'to delete', 'uploaded data', 'pending', 'client'):
             continue
         if False:
             continue
@@ -747,6 +761,12 @@ def reset_and_clean_tracker(conn, preserve_submitted=True, allowed_drives=None):
     cursor.execute("DELETE FROM tracker_tasks WHERE LOWER(safar_name) LIKE 'intelvga%' OR LOWER(safar_name) LIKE 'dptf%' OR LOWER(safar_name) = 'in process' OR LOWER(safar_name) LIKE 'mei%'")
     cursor.execute("DELETE FROM safars WHERE LOWER(safar_name) LIKE 'intelvga%' OR LOWER(safar_name) LIKE 'dptf%' OR LOWER(safar_name) = 'in process' OR LOWER(safar_name) LIKE 'mei%'")
     cursor.execute("DELETE FROM tracker_tasks WHERE LOWER(date_folder) LIKE 'cam%' OR LOWER(date_folder) LIKE 'camera%' OR LOWER(date_folder) LIKE 'audio%' OR LOWER(date_folder) LIKE 'mic%' OR LOWER(date_folder) LIKE 'b-roll%' OR LOWER(date_folder) LIKE 'raw%' OR LOWER(date_folder) LIKE 'footage%' OR LOWER(date_folder) LIKE 'date not provided%' OR LOWER(date_folder) LIKE 'date folder unavailable%'")
+    cursor.execute("SELECT safar_name FROM safars")
+    for (s_name,) in cursor.fetchall():
+        if is_session_deliverable_name(s_name):
+            cursor.execute("DELETE FROM safars WHERE safar_name = ?", (s_name,))
+            cursor.execute("DELETE FROM tracker_tasks WHERE safar_name = ?", (s_name,))
+            cursor.execute("DELETE FROM tracker_media_resources WHERE safar_name = ?", (s_name,))
     if preserve_submitted:
         cursor.execute("DELETE FROM tracker_tasks WHERE status != 'submitted'")
         cursor.execute("DELETE FROM tracker_media_resources WHERE date_folder NOT IN (SELECT date_folder FROM tracker_tasks)")

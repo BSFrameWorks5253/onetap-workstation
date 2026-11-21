@@ -8,28 +8,28 @@ html, body {
 :root {
   /* ── SYNTHESIS DESIGN SYSTEM TOKENS (Craft Docs + shadcn/ui + Slash) ── */
   /* Surfaces & Canvas */
-  --color-canvas: #fbf9f6;          /* Craft warm paper + shadcn clean base */
-  --color-card-paper: #ffffff;      /* shadcn Paper + Craft pure surface */
-  --color-surface-sidebar: #faf7f2; /* shadcn Surface Alt + Craft Linen */
-  --color-ink: #0a0a0a;             /* shadcn/Slash deep ink black */
-  --color-ink-soft: #171717;        /* shadcn filled button / high contrast */
-  --color-mid-gray: #737373;        /* shadcn/Slash muted body / helper */
-  --color-hairline: #e8e5df;        /* shadcn 1px hairline border */
-  --color-copper: #cc9166;          /* Slash signature warm copper accent */
-  --color-gilded: #ae9357;          /* Slash gilded ledger accent */
-  --gradient-gilded: linear-gradient(103deg, rgb(174, 147, 87), rgb(255, 240, 204) 40%, rgb(174, 147, 87) 70%, rgba(189, 157, 79, 0.85));
+  --color-canvas: #f8fafc;          /* Modern crisp slate canvas */
+  --color-card-paper: #ffffff;      /* Pure crisp white surface */
+  --color-surface-sidebar: #ffffff; /* Clean white sidebar */
+  --color-ink: #0f172a;             /* Deep slate-900 primary text */
+  --color-ink-soft: #1e293b;        /* High contrast button text */
+  --color-mid-gray: #64748b;        /* Muted slate-500 helper */
+  --color-hairline: #e2e8f0;        /* 1px crisp border */
+  --color-copper: #4f46e5;          /* Modern indigo accent */
+  --color-gilded: #4338ca;          /* Refined indigo accent */
+  --gradient-gilded: linear-gradient(103deg, #4f46e5, #818cf8 40%, #4f46e5 70%, #3730a3);
   
-  /* Craft Docs tactile pastels */
-  --color-mint: #9bd8a9;
-  --color-marigold: #fde99b;
-  --color-periwinkle: #b8caf5;
-  --color-sky: #9ed4ef;
-  --color-papaya: #ff4500;
-  --color-ember: #e7000b;           /* shadcn destructive red */
+  /* Status Accent Tokens */
+  --color-mint: #10b981;
+  --color-marigold: #f59e0b;
+  --color-periwinkle: #6366f1;
+  --color-sky: #06b6d4;
+  --color-papaya: #ea580c;
+  --color-ember: #ef4444;           /* Destructive red */
 
-  /* Typographic Collision Engine (Craft Docs + Slash Serif / shadcn Sans) */
-  --font-display-serif: 'Lora', 'Ivy Presto', 'UntitledSerifFont', Georgia, Cambria, serif;
-  --font-ui-sans: 'Inter', 'Geist', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  /* Typographic Pairing Engine */
+  --font-display-serif: "Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-ui-sans: "Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 
   /* Strict Radii System */
   --radius-card: 24px;              /* shadcn 24px container */
@@ -73,27 +73,13 @@ body {
 }
 
 body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background:
-    radial-gradient(48rem 40rem at 12% 10%, rgba(155, 216, 169, 0.16), transparent 62%),
-    radial-gradient(42rem 36rem at 88% 14%, rgba(253, 233, 155, 0.18), transparent 60%),
-    radial-gradient(50rem 44rem at 48% 78%, rgba(184, 202, 245, 0.15), transparent 65%),
-    radial-gradient(54rem 46rem at 92% 90%, rgba(204, 145, 102, 0.10), transparent 65%),
-    radial-gradient(38rem 32rem at 8% 86%, rgba(158, 212, 239, 0.14), transparent 60%);
+  display: none !important;
 }
 
 .sidebar {
-  background: var(--color-surface-sidebar);
-  border-right: 1px solid var(--color-hairline);
-  backdrop-filter: blur(28px);
-  -webkit-backdrop-filter: blur(28px);
+  background: var(--surface, #ffffff);
+  border-right: 1px solid var(--border, #e2e8f0);
 }
-.sidebar-close { display: none; }
-.sidebar-overlay { display: none; }
 
 .brand-mark {
   border: 1px solid rgba(0, 0, 0, 0.08);
@@ -208,6 +194,275 @@ body::before {
   gap: 8px !important;
   margin-left: auto !important;
   flex-shrink: 0 !important;
+}
+
+/* Responsive Hamburger Menu Toggle Button */
+.menu-toggle {
+  display: none;
+}
+@media (max-width: 1024px) {
+  .menu-toggle {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: 1px solid var(--border, #e2e8f0);
+    background: #ffffff;
+    color: var(--text-primary, #0f172a);
+    cursor: pointer;
+    flex-shrink: 0;
+    margin-right: 6px;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+  .menu-toggle:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+  }
+}
+
+.topbar-brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.topbar-brand-sub {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.brand-badge {
+  display: inline-block;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  color: #64748b;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+/* Topbar Status Pill */
+.topbar-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #334155;
+  transition: all 0.15s ease;
+}
+
+.topbar-status-pill.online {
+  border-color: rgba(16, 185, 129, 0.3);
+  background: rgba(16, 185, 129, 0.08);
+  color: #065f46;
+}
+
+.topbar-status-pill.offline {
+  border-color: rgba(100, 116, 139, 0.25);
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.status-dot-pulse {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25);
+}
+
+.topbar-status-pill.offline .status-dot-pulse {
+  background: #94a3b8;
+  box-shadow: none;
+}
+
+/* Topbar Secondary Buttons */
+.topbar-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  border-radius: 8px;
+  border: 1px solid var(--border, #e2e8f0);
+  background: #ffffff;
+  color: var(--text-primary, #0f172a);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.topbar-btn-secondary:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.topbar-btn-whatsapp {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  background: rgba(16, 185, 129, 0.1);
+  color: #047857;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.topbar-btn-whatsapp:hover {
+  background: #10b981;
+  color: #ffffff;
+  border-color: #10b981;
+}
+
+.topbar-sample-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  background: rgba(245, 158, 11, 0.1);
+  color: #b45309;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.topbar-sample-badge:hover {
+  background: rgba(245, 158, 11, 0.2);
+}
+
+.topbar-sample-badge.load {
+  border-color: rgba(79, 70, 229, 0.35);
+  background: rgba(79, 70, 229, 0.1);
+  color: #4f46e5;
+}
+
+.topbar-sample-badge.load:hover {
+  background: rgba(79, 70, 229, 0.2);
+}
+
+.topbar-btn-login {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  background: #0f172a;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.topbar-btn-login:hover {
+  background: #1e293b;
+}
+
+.topbar-user-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.topbar-logout-btn {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+}
+
+.topbar-logout-btn:hover {
+  color: #ef4444;
+  background: #fee2e2;
+}
+
+/* Sidebar Engine Card */
+.sidebar-engine-card {
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--surface-2, #f8fafc);
+  border: 1px solid var(--border, #e2e8f0);
+}
+
+.engine-status-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--text-primary, #0f172a);
+}
+
+.engine-subtext {
+  display: block;
+  font-size: 10px;
+  color: var(--text-secondary, #64748b);
+  margin-top: 3px;
+}
+
+/* Dashboard Hero Command Center Card */
+.dashboard-hero-card {
+  display: block !important;
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 16px !important;
+  padding: 22px 24px !important;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05) !important;
+  margin-bottom: 24px !important;
+}
+
+.dashboard-hero-card.empty-hero {
+  border-style: dashed !important;
+  border-color: #cbd5e1 !important;
+  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%) !important;
+  text-align: left;
+}
+
+.empty-hero-desc {
+  font-size: 13.5px;
+  color: #64748b;
+  margin: 6px 0 0;
+  max-width: 580px;
+  line-height: 1.5;
+}
+
+.dashboard-hero-actions-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+@media (max-width: 768px) {
+  .dashboard-hero-actions-container {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .topbar-btn-text {
+    display: none;
+  }
 }
 
 .safar-preview-list-scrollable {
@@ -4799,23 +5054,23 @@ body, button, input, select, textarea {
   -moz-osx-font-smoothing: grayscale !important;
 }
 
-h1, h2, .page-heading h1, .safar-briefing-title, .hero-title, .display-serif {
-  font-family: var(--font-display-serif) !important;
+h1, h2, h3, .page-heading h1, .safar-briefing-title, .hero-title, .display-serif {
+  font-family: var(--font-ui-sans), "Plus Jakarta Sans", system-ui, sans-serif !important;
   letter-spacing: -0.024em !important;
-  font-weight: 500 !important;
-  color: var(--color-ink) !important;
+  font-weight: 700 !important;
+  color: var(--text-primary, #0f172a) !important;
 }
 
-/* Slash Signature Copper Category Eyebrow */
+/* Category Eyebrow Badge */
 .eyebrow, .category-eyebrow, .kanban-banner-badge {
   font-family: var(--font-ui-sans) !important;
   font-size: 11px !important;
-  font-weight: 600 !important;
+  font-weight: 700 !important;
   text-transform: uppercase !important;
   letter-spacing: 0.08em !important;
-  color: var(--color-copper) !important;
-  background: rgba(204, 145, 102, 0.1) !important;
-  border: 1px solid rgba(204, 145, 102, 0.28) !important;
+  color: #4f46e5 !important;
+  background: rgba(79, 70, 229, 0.08) !important;
+  border: 1px solid rgba(79, 70, 229, 0.2) !important;
   border-radius: 9999px !important;
   padding: 3px 10px !important;
   display: inline-flex !important;

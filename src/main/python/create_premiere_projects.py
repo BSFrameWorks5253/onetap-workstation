@@ -483,12 +483,14 @@ def build_xmeml_xml(sequence_name, video_inputs):
 
     fmt = ET.SubElement(video, 'format')
     sc = ET.SubElement(fmt, 'samplecharacteristics')
+    v_rate = ET.SubElement(sc, 'rate')
+    ET.SubElement(v_rate, 'timebase').text = str(seq_tb)
+    ET.SubElement(v_rate, 'ntsc').text = seq_ntsc
     ET.SubElement(sc, 'width').text = str(seq_width)
     ET.SubElement(sc, 'height').text = str(seq_height)
     ET.SubElement(sc, 'pixelaspectratio').text = 'square'
 
-    v_tracks = [ET.SubElement(video, 'track') for _ in range(7)]
-    v_track = v_tracks[0]
+    v_track = ET.SubElement(video, 'track')
 
     audio = ET.SubElement(media, 'audio')
     ET.SubElement(audio, 'numOutputChannels').text = '2'
@@ -497,8 +499,7 @@ def build_xmeml_xml(sequence_name, video_inputs):
     ET.SubElement(asc, 'depth').text = '16'
     ET.SubElement(asc, 'samplerate').text = '48000'
 
-    a_tracks = [ET.SubElement(audio, 'track') for _ in range(7)]
-    a_track = a_tracks[0]
+    a_track = ET.SubElement(audio, 'track')
 
     current_frame = 0
     current_marker_key = ''
@@ -537,11 +538,7 @@ def build_xmeml_xml(sequence_name, video_inputs):
             ET.SubElement(marker, 'name').text = marker_name
             ET.SubElement(marker, 'comment').text = marker_desc
             ET.SubElement(marker, 'in').text = str(start_frame)
-            ET.SubElement(marker, 'out').text = str(start_frame)
-            c_idx = color.get("colorIndex", 5) if isinstance(color, dict) else 5
-            std_colors = ['Green', 'Red', 'Purple', 'Orange', 'Yellow', 'White', 'Blue', 'Cyan']
-            c_name = std_colors[c_idx] if (0 <= c_idx < len(std_colors)) else 'White'
-            ET.SubElement(marker, 'color').text = c_name
+            ET.SubElement(marker, 'out').text = '-1'
 
             media_idx = list(sequence).index(media)
             sequence.insert(media_idx, marker)
@@ -586,6 +583,7 @@ def build_xmeml_xml(sequence_name, video_inputs):
             ET.SubElement(l2, 'mediatype').text = 'audio'
             ET.SubElement(l2, 'trackindex').text = '1'
             ET.SubElement(l2, 'clipindex').text = str(audio_clip_count)
+            ET.SubElement(l2, 'groupindex').text = '1'
 
         # Video Clip Item (full file element)
         v_clip = ET.SubElement(v_track, 'clipitem', id=v_clip_id)

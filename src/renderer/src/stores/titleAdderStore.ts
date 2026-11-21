@@ -28,6 +28,8 @@ export interface TitleAdderState {
   userAudioSelections: Record<string, string>
   userTitleImageSelections: Record<string, string>
   userMuteSelections: Record<string, boolean>
+  userWatermarkSelections: Record<string, boolean>
+  excludedWatermarks: string[]
   lastReceivedPayload: any
   hasReceivedExtensionPath: boolean
   expectedVideos: string[]
@@ -123,6 +125,8 @@ const initialState: TitleAdderState = {
   userAudioSelections: JSON.parse(safeGet('ot_ta_user_audio_selections', '{}')),
   userTitleImageSelections: JSON.parse(safeGet('ot_ta_user_image_selections', '{}')),
   userMuteSelections: JSON.parse(safeGet('ot_ta_user_mute_selections', '{}')),
+  userWatermarkSelections: JSON.parse(safeGet('ot_ta_user_watermark_selections', '{}')),
+  excludedWatermarks: JSON.parse(safeGet('ot_ta_excluded_watermarks', '[]')),
   lastReceivedPayload: null,
   hasReceivedExtensionPath: false,
   expectedVideos: JSON.parse(safeGet('ot_ta_expected_videos', '[]')),
@@ -241,6 +245,10 @@ class TitleAdderStoreManager {
                 const lowerF = f.toLowerCase()
                 const dotIdx = lowerF.lastIndexOf('.')
                 const stemF = dotIdx > 0 ? lowerF.substring(0, dotIdx) : lowerF
+                // If user explicitly unmuted this video in userMuteSelections or predefinedVideoMutes, keep unmuted
+                if (this.state.userMuteSelections[f] === false || this.state.userMuteSelections[stemF] === false || this.state.predefinedVideoMutes[f] === false || this.state.predefinedVideoMutes[stemF] === false) {
+                  return false
+                }
                 // ID and WAAZ videos default to keeping original audio (not muted)
                 if (isSpecialWaazOrId(f) || isSpecialWaazOrId(stemF)) {
                   return false
@@ -250,10 +258,23 @@ class TitleAdderStoreManager {
             } else {
               muted = []
             }
+            // For watermark: default to all videos EXCEPT those explicitly excluded/removed by user
+            const wmList = list.filter((f: string) => {
+              const lowerF = f.toLowerCase()
+              const dotIdx = lowerF.lastIndexOf('.')
+              const stemF = dotIdx > 0 ? lowerF.substring(0, dotIdx) : lowerF
+              if (this.state.userWatermarkSelections[f] === false || this.state.userWatermarkSelections[stemF] === false) {
+                return false
+              }
+              if (this.state.excludedWatermarks.includes(f) || this.state.excludedWatermarks.includes(stemF)) {
+                return false
+              }
+              return true
+            })
             this.setState({
               availableVideos: list,
               mutedVideos: muted,
-              watermarkedVideos: list
+              watermarkedVideos: wmList
             })
           }).catch((err: any) => console.error('[titleAdderStore] Error auto-scanning batchSource:', err))
         }
@@ -305,6 +326,15 @@ class TitleAdderStoreManager {
     }
     if (nextPartial.userAudioSelections !== undefined) {
       safeSet('ot_ta_user_audio_selections', JSON.stringify(this.state.userAudioSelections))
+    }
+    if (nextPartial.userMuteSelections !== undefined) {
+      safeSet('ot_ta_user_mute_selections', JSON.stringify(this.state.userMuteSelections))
+    }
+    if (nextPartial.userWatermarkSelections !== undefined) {
+      safeSet('ot_ta_user_watermark_selections', JSON.stringify(this.state.userWatermarkSelections))
+    }
+    if (nextPartial.excludedWatermarks !== undefined) {
+      safeSet('ot_ta_excluded_watermarks', JSON.stringify(this.state.excludedWatermarks))
     }
     if (nextPartial.duration !== undefined) {
       safeSet('ot_ta_duration', this.state.duration)

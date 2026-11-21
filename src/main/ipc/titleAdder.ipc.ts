@@ -78,8 +78,6 @@ export function isGroupPhotoVideo(filenameOrPath: string): boolean {
 }
 
 export function findTransitionFile(titlesFolder: string): string | null {
-  // Title Adder strictly presents ONLY the assigned title thumbnail without unwanted black or transition inserts
-  return null
   const candidates = [
     'transition.mp4', 'transition.mov', 'transition.mkv', 'transition.avi', 'transition.webm',
     'black.mp4', 'black.mov', 'black_frame.mp4', 'black_transition.mp4',
@@ -943,8 +941,6 @@ function getBatchVideos(batchSource: string): string[] {
 // Returns the path to "special1.mp3" (or .wav/.m4a/.aac) in the titles folder.
 // Used as default audio for WAAZ and ID prefixed videos.
 function getSpecial1AudioPath(titlesFolder: string): string | null {
-  // Title Adder strictly presents ONLY the assigned title thumbnail without unwanted black or transition inserts
-  return null
   const AUDIO_EXTS_LIST = ['.mp3', '.wav', '.m4a', '.aac']
   // Check main titles folder first, then Special subfolder
   for (const dir of [titlesFolder, path.join(titlesFolder, 'Special')]) {
@@ -1353,11 +1349,13 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
     jobId: string
     addToStats: boolean
     muteOriginal: boolean
+    addWatermark?: boolean
     muteExceptions?: string[]
     watermarkExceptions?: string[]
     audioAssignments?: Record<string, string>
     titleImageAssignments?: Record<string, string>
     videoMuteSelections?: Record<string, boolean>
+    videoWatermarkSelections?: Record<string, boolean>
     fileOutputFolders?: Record<string, string>
     thumbnailMode?: 'default' | 'front_only' | 'back_only' | 'both'
     thumbnailModeSelections?: Record<string, 'default' | 'front_only' | 'back_only' | 'both'>
@@ -1734,13 +1732,46 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
         shouldMute = isWaazId ? false : (params.muteOriginal !== false && !isExcluded)
       }
 
+      // Check user explicit per-video watermark selection
+      let explicitWm =
+        params.videoWatermarkSelections?.[videoPath] ??
+        params.videoWatermarkSelections?.[rawVideoPath] ??
+        params.videoWatermarkSelections?.[path.basename(videoPath)] ??
+        params.videoWatermarkSelections?.[path.basename(rawVideoPath)] ??
+        params.videoWatermarkSelections?.[stem] ??
+        params.videoWatermarkSelections?.[canonicalStem] ??
+        params.videoWatermarkSelections?.[videoPath.replace(/\\/g, '/')] ??
+        params.videoWatermarkSelections?.[rawVideoPath.replace(/\\/g, '/')]
+
+      if (explicitWm === undefined && params.videoWatermarkSelections) {
+        for (const [k, v] of Object.entries(params.videoWatermarkSelections)) {
+          const kStem = path.basename(k, path.extname(k)).toLowerCase()
+          const kBase = path.basename(k).toLowerCase()
+          if (
+            getCanonicalStem(k) === canonicalStem ||
+            kBase === path.basename(videoPath).toLowerCase() ||
+            kStem === stem.toLowerCase() ||
+            k.toLowerCase() === videoPath.toLowerCase()
+          ) {
+            explicitWm = v
+            break
+          }
+        }
+      }
+
       const isWatermarkExcluded = params.watermarkExceptions?.some(ex => {
         const lowerEx = ex.toLowerCase()
         const exStem = path.basename(lowerEx, path.extname(lowerEx))
         const exCanonical = getCanonicalStem(ex)
         return lowerEx === videoFilename || exStem === videoStem || exCanonical === canonicalStem
       }) ?? false
-      const shouldAddWatermark = !isWatermarkExcluded
+
+      let shouldAddWatermark = true
+      if (typeof explicitWm === 'boolean') {
+        shouldAddWatermark = explicitWm
+      } else {
+        shouldAddWatermark = (params.addWatermark !== false) && !isWatermarkExcluded
+      }
       const hasAudio = await hasAudioStream(videoPath)
 
       let primary: string | null = null
