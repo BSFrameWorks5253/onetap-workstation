@@ -3085,97 +3085,160 @@ export default function App(): JSX.Element {
                 )
               }
               const total = Math.max(ongoingGroup.total, 1)
+              const videoDeliveredCount = ongoingGroup.uploadCount + ongoingGroup.jameyaCount + ongoingGroup.completedCount
+              const videoDeliveredPct = Math.min(100, Math.round((videoDeliveredCount / total) * 100))
+              const photoDeliveredPct = Math.min(100, Math.round((ongoingGroup.photoUploadedCount / total) * 100))
+              const isAllDone = ongoingGroup.deliveredPercent === 100
+
               return (
-                <div className="dashboard-hero-card mobile-ongoing-hero-card">
-                  <div className="mobile-hero-top">
-                    <div>
-                      <span className="mobile-hero-badge">📍 ACTIVE ONGOING CAMPAIGN</span>
-                      <h2 className="mobile-hero-title">{ongoingGroup.safarName}</h2>
-                      <span className="mobile-hero-meta">
-                        {hijriYearLabel(ongoingGroup.safarYear)} · {ongoingGroup.total} Scheduled Dates
+                <div className={`dashboard-hero-card executive-hero-command ${isAllDone ? 'is-complete' : ''}`}>
+                  {/* Top Bar: Eyebrow + Title + Large Metric */}
+                  <div className="hero-command-header">
+                    <div className="hero-command-info">
+                      <div className="hero-status-pill-row">
+                        <span className={`hero-status-pill ${isAllDone ? 'done' : 'active'}`}>
+                          <span className="hero-status-pulse-dot" />
+                          {isAllDone ? 'CAMPAIGN COMPLETED' : 'ACTIVE ONGOING CAMPAIGN'}
+                        </span>
+                        <span className="hero-meta-chip">
+                          <CalendarDays size={13} />
+                          <span>{hijriYearLabel(ongoingGroup.safarYear)}</span>
+                        </span>
+                        <span className="hero-meta-chip">
+                          <Clock size={13} />
+                          <span>{ongoingGroup.total} Scheduled Dates</span>
+                        </span>
+                      </div>
+                      <h2 className="hero-campaign-title">{ongoingGroup.safarName}</h2>
+                      <p className="hero-campaign-subtitle">
+                        Direct pipeline tracking · Video deliverables & Google Drive photos
+                      </p>
+                    </div>
+
+                    <div className={`hero-executive-badge ${isAllDone ? 'badge-all-done' : ''}`}>
+                      <div className="hero-badge-val-row">
+                        <span className="hero-badge-number">{ongoingGroup.deliveredPercent}</span>
+                        <span className="hero-badge-symbol">%</span>
+                      </div>
+                      <span className="hero-badge-caption">
+                        {isAllDone ? '🏆 100% COMPLETE' : 'DELIVERED & SYNCED'}
                       </span>
                     </div>
-                    <div className="mobile-hero-percent-badge" style={ongoingGroup.deliveredPercent === 100 ? { borderColor: 'rgba(5, 150, 105, 0.4)', background: 'rgba(5, 150, 105, 0.08)' } : undefined}>
-                      <strong style={ongoingGroup.deliveredPercent === 100 ? { color: '#059669' } : undefined}>
-                        {ongoingGroup.deliveredPercent}%
-                      </strong>
-                      <span style={ongoingGroup.deliveredPercent === 100 ? { color: '#047857', fontWeight: 700 } : undefined}>
-                        {ongoingGroup.deliveredPercent === 100 ? '🏆 100% DONE' : 'Delivered'}
-                      </span>
+                  </div>
+
+                  {/* Multi-stage Progress bar with labels */}
+                  <div className="hero-progress-section">
+                    <div className="hero-progress-header">
+                      <span className="hero-progress-label">Pipeline Milestone Progress</span>
+                      <span className="hero-progress-fraction"><strong>{videoDeliveredCount}</strong> of <strong>{ongoingGroup.total}</strong> Dates Completed</span>
+                    </div>
+                    <div className="multicolor-progress-bar hero-progress-bar" style={{ height: '11px', borderRadius: '999px', overflow: 'hidden' }}>
+                      {ongoingGroup.editingCount > 0 && <span className="stage-segment stage-editing" style={{ width: `${(ongoingGroup.editingCount / total) * 100}%` }} title={`In Progress: ${ongoingGroup.editingCount}`} />}
+                      {ongoingGroup.renderingCount > 0 && <span className="stage-segment stage-rendering" style={{ width: `${(ongoingGroup.renderingCount / total) * 100}%` }} title={`Render/Upload Pending: ${ongoingGroup.renderingCount}`} />}
+                      {ongoingGroup.uploadCount > 0 && <span className="stage-segment stage-upload" style={{ width: `${(ongoingGroup.uploadCount / total) * 100}%` }} title={`Uploaded: ${ongoingGroup.uploadCount}`} />}
+                      {ongoingGroup.jameyaCount > 0 && <span className="stage-segment stage-jameya" style={{ width: `${(ongoingGroup.jameyaCount / total) * 100}%` }} title={`AlJamea Done: ${ongoingGroup.jameyaCount}`} />}
+                      {ongoingGroup.completedCount > 0 && <span className="stage-segment stage-completed" style={{ width: `${(ongoingGroup.completedCount / total) * 100}%` }} title={`Completed: ${ongoingGroup.completedCount}`} />}
                     </div>
                   </div>
 
-                  {/* Multi-stage Progress bar */}
-                  <div className="multicolor-progress-bar" style={{ height: '9px', margin: '14px 0 10px 0', borderRadius: '999px', overflow: 'hidden' }}>
-                    {ongoingGroup.editingCount > 0 && <span className="stage-segment stage-editing" style={{ width: `${(ongoingGroup.editingCount / total) * 100}%` }} title={`In Progress: ${ongoingGroup.editingCount}`} />}
-                    {ongoingGroup.renderingCount > 0 && <span className="stage-segment stage-rendering" style={{ width: `${(ongoingGroup.renderingCount / total) * 100}%` }} title={`Render/Upload Pending: ${ongoingGroup.renderingCount}`} />}
-                    {ongoingGroup.uploadCount > 0 && <span className="stage-segment stage-upload" style={{ width: `${(ongoingGroup.uploadCount / total) * 100}%` }} title={`Uploaded: ${ongoingGroup.uploadCount}`} />}
-                    {ongoingGroup.jameyaCount > 0 && <span className="stage-segment stage-jameya" style={{ width: `${(ongoingGroup.jameyaCount / total) * 100}%` }} title={`AlJamea Done: ${ongoingGroup.jameyaCount}`} />}
-                    {ongoingGroup.completedCount > 0 && <span className="stage-segment stage-completed" style={{ width: `${(ongoingGroup.completedCount / total) * 100}%` }} title={`Completed: ${ongoingGroup.completedCount}`} />}
-                  </div>
-
-                  {/* Status Chips */}
-                  <div className="mobile-hero-stats-row">
-                    <span>🎬 <strong>{ongoingGroup.uploadCount + ongoingGroup.jameyaCount + ongoingGroup.completedCount}/{ongoingGroup.total}</strong> Video Delivered</span>
-                    <span>📷 <strong>{ongoingGroup.photoUploadedCount}/{ongoingGroup.total}</strong> Photos in Drive</span>
-                  </div>
-
-                  <div className="dashboard-hero-actions-container">
-                    {/* WhatsApp Briefing Options: Text Message vs Visual Infographic Image Card */}
-                    <div className="mobile-hero-whatsapp-group">
-                      <button
-                        type="button"
-                        className="mobile-hero-whatsapp-btn whatsapp-opt-msg"
-                        onClick={() => {
-                          try { if ('vibrate' in navigator) navigator.vibrate(15) } catch {}
-                          shareDailyBriefingWhatsApp(ongoingGroup.safarName, 'msg')
-                        }}
-                        title="Open formatted WhatsApp text message briefing"
-                      >
-                        <MessageCircle size={16} />
-                        <span>WhatsApp Message</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        className="mobile-hero-whatsapp-btn mobile-hero-whatsapp-img-btn whatsapp-opt-img"
-                        onClick={() => {
-                          try { if ('vibrate' in navigator) navigator.vibrate(15) } catch {}
-                          shareDailyBriefingWhatsApp(ongoingGroup.safarName, 'image')
-                        }}
-                        title="Generate high-res Infographic status card image for WhatsApp"
-                      >
-                        <ImageIcon size={16} />
-                        <span>Infographic Image</span>
-                      </button>
+                  {/* 3-Column Metric Spotlight */}
+                  <div className="hero-metric-spotlight-grid">
+                    <div className="hero-spotlight-card">
+                      <div className="hero-spotlight-header">
+                        <div className="hero-spotlight-icon video"><Film size={16} /></div>
+                        <span className="hero-spotlight-label">VIDEO DELIVERABLES</span>
+                      </div>
+                      <div className="hero-spotlight-val-row">
+                        <strong className="hero-spotlight-num">{videoDeliveredCount} <span className="hero-spotlight-total">/ {ongoingGroup.total}</span></strong>
+                        <span className="hero-spotlight-pct">{videoDeliveredPct}%</span>
+                      </div>
+                      <span className="hero-spotlight-note">{ongoingGroup.uploadCount} Uploaded · {ongoingGroup.jameyaCount} AlJamea</span>
                     </div>
 
-                    <div className="mobile-hero-actions-grid">
-                      <button
-                        type="button"
-                        className="mobile-hero-sub-btn"
-                        onClick={() => {
-                          try { if ('vibrate' in navigator) navigator.vibrate(10) } catch {}
-                          copyDailyBriefing(ongoingGroup.safarName)
-                        }}
-                      >
-                        <Share2 size={14} />
-                        <span>Copy Status</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        className="mobile-hero-sub-btn primary"
-                        onClick={() => {
-                          try { if ('vibrate' in navigator) navigator.vibrate(10) } catch {}
-                          setSelectedSafar(ongoingGroup.safarName)
-                          navigateTo('ongoing', ongoingGroup.safarName)
-                        }}
-                      >
-                        <Kanban size={14} />
-                        <span>Open Kanban →</span>
-                      </button>
+                    <div className="hero-spotlight-card">
+                      <div className="hero-spotlight-header">
+                        <div className="hero-spotlight-icon photo"><Camera size={16} /></div>
+                        <span className="hero-spotlight-label">PHOTOS IN DRIVE</span>
+                      </div>
+                      <div className="hero-spotlight-val-row">
+                        <strong className="hero-spotlight-num">{ongoingGroup.photoUploadedCount} <span className="hero-spotlight-total">/ {ongoingGroup.total}</span></strong>
+                        <span className="hero-spotlight-pct">{photoDeliveredPct}%</span>
+                      </div>
+                      <span className="hero-spotlight-note">{ongoingGroup.total - ongoingGroup.photoUploadedCount === 0 ? '✓ All albums synced' : `${ongoingGroup.total - ongoingGroup.photoUploadedCount} albums pending`}</span>
                     </div>
+
+                    <div className="hero-spotlight-card">
+                      <div className="hero-spotlight-header">
+                        <div className="hero-spotlight-icon studio"><CheckCircle2 size={16} /></div>
+                        <span className="hero-spotlight-label">STUDIO STATUS</span>
+                      </div>
+                      <div className="hero-spotlight-val-row">
+                        <strong className="hero-spotlight-num">{isAllDone ? '100% Ready' : `${ongoingGroup.total - videoDeliveredCount} Remaining`}</strong>
+                      </div>
+                      <span className="hero-spotlight-note">{isAllDone ? 'All deliverables safe & archived' : 'Active production in progress'}</span>
+                    </div>
+                  </div>
+
+                  {/* Actions Toolbar: Primary WhatsApp Triggers + Quick Navigation */}
+                  <div className="hero-command-actions">
+                    <button
+                      type="button"
+                      className="hero-action-btn hero-action-whatsapp-msg"
+                      onClick={() => {
+                        try { if ('vibrate' in navigator) navigator.vibrate(15) } catch {}
+                        shareDailyBriefingWhatsApp(ongoingGroup.safarName, 'msg')
+                      }}
+                      title="Open formatted WhatsApp text message briefing"
+                    >
+                      <MessageCircle size={18} />
+                      <div className="hero-action-text-group">
+                        <span className="hero-action-title">WhatsApp Message</span>
+                        <span className="hero-action-subtitle">Executive Text Report</span>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      className="hero-action-btn hero-action-whatsapp-img"
+                      onClick={() => {
+                        try { if ('vibrate' in navigator) navigator.vibrate(15) } catch {}
+                        shareDailyBriefingWhatsApp(ongoingGroup.safarName, 'image')
+                      }}
+                      title="Generate high-res Infographic status card image for WhatsApp"
+                    >
+                      <ImageIcon size={18} />
+                      <div className="hero-action-text-group">
+                        <span className="hero-action-title">Infographic Image Card</span>
+                        <span className="hero-action-subtitle">High-Res Shareable Visual</span>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      className="hero-utility-btn"
+                      onClick={() => {
+                        try { if ('vibrate' in navigator) navigator.vibrate(10) } catch {}
+                        copyDailyBriefing(ongoingGroup.safarName)
+                      }}
+                      title="Copy formatted briefing text to clipboard"
+                    >
+                      <Share2 size={15} />
+                      <span>Copy Status</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className="hero-utility-btn primary-nav"
+                      onClick={() => {
+                        try { if ('vibrate' in navigator) navigator.vibrate(10) } catch {}
+                        setSelectedSafar(ongoingGroup.safarName)
+                        navigateTo('ongoing', ongoingGroup.safarName)
+                      }}
+                      title="Open interactive Kanban Board for this campaign"
+                    >
+                      <Kanban size={15} />
+                      <span>Open Kanban Board →</span>
+                    </button>
                   </div>
                 </div>
               )
@@ -3187,66 +3250,18 @@ export default function App(): JSX.Element {
                   <h2 id="dashboard-safars-title">Safars in production</h2>
                   <p>Multi-stage pipeline and completion across all campaigns.</p>
                 </div>
-
-                {/* Active Ongoing Safar Selector */}
-                {activeSafarGroups.length > 0 && (
-                  <div className="ongoing-safar-selector-pill">
-                    <span className="selector-label">📍 Ongoing Safar:</span>
-                    <select
-                      value={effectiveOngoingSafar}
-                      onChange={e => handleSetOngoingSafar(e.target.value)}
-                      className="ongoing-select"
-                      title="Set active ongoing safar for WhatsApp updates"
-                    >
-                      {activeSafarGroups.map(g => (
-                        <option key={g.safarName} value={g.safarName}>{g.safarName}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
               </div>
 
               {/* Action Buttons */}
               <div className="dashboard-action-buttons">
-                <div className="briefing-action-group">
-                  <button
-                    type="button"
-                    className="briefing-btn-whatsapp"
-                    onClick={() => shareDailyBriefingWhatsApp(effectiveOngoingSafar, 'msg')}
-                    title={`Send text WhatsApp briefing for Ongoing Safar (${effectiveOngoingSafar})`}
-                  >
-                    <MessageCircle size={15} />
-                    <span>WhatsApp Msg ({effectiveOngoingSafar ? effectiveOngoingSafar.split('-').slice(-1)[0].trim() : 'Ongoing'})</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    className="briefing-btn-whatsapp briefing-btn-image"
-                    onClick={() => shareDailyBriefingWhatsApp(effectiveOngoingSafar, 'image')}
-                    title={`Generate status infographic image for Ongoing Safar (${effectiveOngoingSafar})`}
-                  >
-                    <ImageIcon size={15} />
-                    <span>Image Card</span>
-                  </button>
-                </div>
-
                 <button
                   type="button"
                   className="briefing-btn-copy"
-                  onClick={() => copyDailyBriefing(effectiveOngoingSafar)}
-                  title={`Copy Ongoing Safar (${effectiveOngoingSafar}) briefing to clipboard`}
-                >
-                  <Share2 size={16} />
-                  <span>Copy Ongoing Briefing</span>
-                </button>
-
-                <button
-                  type="button"
-                  className="button-secondary briefing-btn-secondary"
                   onClick={() => copyDailyBriefing('ALL')}
                   title="Copy full summary of all active Safars to clipboard"
                 >
-                  <span>Copy All Safars</span>
+                  <Share2 size={16} />
+                  <span>Copy All Safars Summary</span>
                 </button>
 
                 <button
