@@ -1,5 +1,13 @@
 [
   {
+    "version": "26.11.29",
+    "date": "2026-11-22",
+    "whats_new": "* Title Adder Rendering & Group Photo Outro Pipeline v26.11.29: Bulletproof ceremony video rendering with automatic title image fallbacks, dedicated Group Photo modal routing, and non-blocking background audio handling.\n* Automatic Pure Video Mode: If intro title cards are unavailable, ceremony rendering proceeds smoothly without stalling or skipping.\n* Recursive Group Photo Outro Scanning: Automatically discovers Group Photos in DVD subfolders, sibling directories, or user-selected file paths.",
+    "release_notes": "UniDesk Studio v26.11.29 delivers critical fixes for Title Adder rendering execution, automated Group Photo outro discovery and assignment, and robust FFmpeg stream synthesis.",
+    "bugs_fixed": "* Fixed Title Adder Rendering Not Starting: Eliminated strict continue skips when title images or background audio tracks were absent.\n* Fixed Group Photo Modal Not Showing: Rewrote group photo scanner to recursively explore DVD and subdirectories up to 3 levels deep.\n* Fixed VideoFiles Drop Filter: Ensured Group Photo video files are preserved in state when dropped or loaded.",
+    "improvements": "* UI Controls: Added direct '+ Add GP Video' and 'Group Photos ➜' shortcut buttons in Preflight Check and Outro Assignment windows.\n* Theme & Design Consistency: Preserved surface and border tokens across both extensions."
+  },
+  {
     "version": "26.11.28",
     "date": "2026-11-22",
     "whats_new": "* Hierarchical Codebase Analysis Engine: Automatically mirrors folder structure in .code-analysis/ with minute details (exports, types, hooks, IPC channels) saving ~888,000+ AI context tokens.\n* Windows Taskbar Live Previews: Hovering over sidebar navigation items renders real-time thumbnail previews simulating native Windows taskbar popovers.\n* Islamic Welcome Screen & Arabic Typography: Centered Arabic calligraphy (أَهْلًا وَسَهْلًا) with kinetic typography wave animations and docked preloader without redundant branding.\n* Animated Arabic Greeting in Email Studio: Embedded ONTO wave calligraphy greeting banner for luxury client announcements.\n* Multi-Folder Batch Queue & Reordering: Support for rendering N batches with dynamic priority reordering and automated photo transfer.",
