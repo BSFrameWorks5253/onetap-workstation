@@ -15,7 +15,7 @@
 import { spawn, spawnSync, ChildProcess } from 'child_process'
 import path from 'path'
 import fs from 'fs'
-import { getVideoEncoder, getFfmpegExePath } from './gpuDetector'
+import { getVideoEncoder, forceCpuEncoder, getFfmpegExePath } from './gpuDetector'
 import { extractEventCodeFromPath, getEventGenre, getEventSharafContent } from './safarHierarchy'
 
 export interface FFmpegJobParams {
@@ -72,6 +72,7 @@ export interface FFmpegEvent {
 type EventCallback = (event: FFmpegEvent) => void
 
 const _activeJobs = new Map<string, ChildProcess>()
+const _cancelledJobs = new Set<string>()
 
 export function hasActiveFFmpegJobs(): boolean {
   return _activeJobs.size > 0
@@ -131,17 +132,17 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
     if (isTransImg) {
       dynamicInputs.push('-loop', '1', '-framerate', fps, '-t', String(transLen), '-i', params.transitionFile)
     } else {
-      dynamicInputs.push('-hwaccel', 'auto', '-t', String(transLen), '-i', params.transitionFile)
+      dynamicInputs.push('-t', String(transLen), '-i', params.transitionFile)
     }
   }
 
   const vidIdx = nextInputIdx++
-  dynamicInputs.push('-hwaccel', 'auto', '-i', videoPath)
+  dynamicInputs.push('-i', videoPath)
 
   let gpVidIdx = -1
   if (params.groupPhotoVideo && fs.existsSync(params.groupPhotoVideo)) {
     gpVidIdx = nextInputIdx++
-    dynamicInputs.push('-hwaccel', 'auto', '-i', params.groupPhotoVideo)
+    dynamicInputs.push('-i', params.groupPhotoVideo)
   }
 
   let endImgIdx = -1
@@ -437,97 +438,211 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
   // +faststart so the moov atom is placed at the start of the MP4 file for instant, crystal-clear thumbnail generation.
   const hasCoverArt = !skipFront && startImgIdx >= 0 && !!startImg && fs.existsSync(startImg)
 
-  const ffmpegExe = getFfmpegExePath()
-  const cmd = [
-    ffmpegExe, '-y',
-    '-threads', '0',
-    ...dynamicInputs,
-    ...audioInputs,
-    '-filter_complex', audioFilter + videoFilter,
-    '-map', '[final_video]', '-map', '[final_audio]',
-    ...(hasCoverArt ? ['-map', `${startImgIdx}:v`] : []),
-    ...enc.flags,
-    ...(hasCoverArt ? ['-c:v:1', 'mjpeg', '-disposition:v:1', 'attached_pic'] : []),
-    '-c:a', 'aac', '-b:a', '192k', '-threads', '0',
-    '-movflags', '+faststart',
-    ...metadataArgs,
-    outputPath, '-hide_banner', '-stats'
-  ]
+  const executeAttempt = (activeEnc: ReturnType<typeof getVideoEncoder>, tryCoverArt: boolean, isRetry: boolean): void => {
+    if (_cancelledJobs.has(jobId)) {
+      _cancelledJobs.delete(jobId)
+      onEvent({ type: 'done', jobId, success: false, message: '⛔ Job was cancelled by user.' })
+      return
+    }
 
-  onEvent({ type: 'log', jobId, message: `⚙ Encoding → ${path.basename(outputPath)} [${enc.label}]` })
+    const attachCoverArt = tryCoverArt && hasCoverArt
+    const ffmpegExe = getFfmpegExePath()
+    const cmd = [
+      ffmpegExe, '-y',
+      '-threads', '0',
+      ...dynamicInputs,
+      ...audioInputs,
+      '-filter_complex', audioFilter + videoFilter,
+      '-map', '[final_video]', '-map', '[final_audio]',
+      ...(attachCoverArt ? ['-map', `${startImgIdx}:v`] : []),
+      ...activeEnc.flags,
+      ...(attachCoverArt ? ['-c:v:1', 'mjpeg', '-pix_fmt:v:1', 'yuvj420p', '-disposition:v:1', 'attached_pic', '-vframes:v:1', '1'] : []),
+      '-c:a', 'aac', '-b:a', '192k', '-threads', '0',
+      '-movflags', '+faststart',
+      ...metadataArgs,
+      outputPath, '-hide_banner', '-stats'
+    ]
 
-  const proc = spawn(cmd[0], cmd.slice(1), {
-    windowsHide: true,
-    env: process.env,
-    stdio: ['ignore', 'pipe', 'pipe']
-  })
-  _activeJobs.set(jobId, proc)
+    onEvent({
+      type: 'log',
+      jobId,
+      message: `⚙ ${isRetry ? '[Auto-Fallback] ' : ''}Encoding → ${path.basename(outputPath)} [${activeEnc.label}${attachCoverArt ? ' + CoverArt' : ''}]`
+    })
 
-  let lastProgressEmit = 0
-  const handleOutput = (data: Buffer): void => {
-    const text = data.toString('utf8', 0, data.length)
-    
-    const matchTime  = text.match(/time=(\d+:\d+:\d+\.\d+)/)
-    const matchFps   = text.match(/fps=\s*([\d.]+)/)
-    const matchSpeed = text.match(/speed=\s*([\d.x]+)/)
+    const proc = spawn(cmd[0], cmd.slice(1), {
+      windowsHide: true,
+      env: process.env,
+      stdio: ['ignore', 'pipe', 'pipe']
+    })
+    _activeJobs.set(jobId, proc)
 
-    if (matchTime) {
-      const cur = timeToSeconds(matchTime[1])
-      const percent = Math.min((cur / Math.max(totalLength, 1)) * 100, 100)
-      const now = Date.now()
+    const stderrLines: string[] = []
+    let lastProgressEmit = 0
 
-      // Throttle progress events to at most once every 200ms unless complete (prevents IPC & render flooding)
-      if (percent < 100 && now - lastProgressEmit < 200) {
+    const handleOutput = (data: Buffer): void => {
+      const text = data.toString('utf8', 0, data.length)
+      const lines = text.split(/\r?\n/)
+      for (const l of lines) {
+        const trimmed = l.trim()
+        if (trimmed) {
+          stderrLines.push(trimmed)
+          if (stderrLines.length > 30) stderrLines.shift()
+        }
+      }
+
+      const matchTime  = text.match(/time=(\d+:\d+:\d+\.\d+)/)
+      const matchFps   = text.match(/fps=\s*([\d.]+)/)
+      const matchSpeed = text.match(/speed=\s*([\d.x]+)/)
+
+      if (matchTime) {
+        const cur = timeToSeconds(matchTime[1])
+        const percent = Math.min((cur / Math.max(totalLength, 1)) * 100, 100)
+        const now = Date.now()
+
+        // Throttle progress events to at most once every 200ms unless complete (prevents IPC & render flooding)
+        if (percent < 100 && now - lastProgressEmit < 200) {
+          return
+        }
+        lastProgressEmit = now
+
+        onEvent({ 
+          type: 'progress', 
+          jobId, 
+          percent, 
+          status: `${path.basename(videoPath)}: ${Math.round(percent)}%`,
+          fps: matchFps ? matchFps[1] : undefined,
+          speed: matchSpeed ? matchSpeed[1] : undefined
+        })
+      }
+    }
+
+    proc.stdout?.on('data', handleOutput)
+    proc.stderr?.on('data', handleOutput)
+
+    let doneEmitted = false
+
+    proc.on('error', (err) => {
+      if (doneEmitted) return
+      doneEmitted = true
+      _activeJobs.delete(jobId)
+
+      if (_cancelledJobs.has(jobId)) {
+        _cancelledJobs.delete(jobId)
+        onEvent({ type: 'done', jobId, success: false, message: '⛔ Job was cancelled by user.' })
         return
       }
-      lastProgressEmit = now
-      
-      onEvent({ 
-        type: 'progress', 
-        jobId, 
-        percent, 
-        status: `${path.basename(videoPath)}: ${Math.round(percent)}%`,
-        fps: matchFps ? matchFps[1] : undefined,
-        speed: matchSpeed ? matchSpeed[1] : undefined
+
+      // Check if we can fallback from GPU to CPU
+      if (!isRetry && activeEnc.label.includes('(GPU)')) {
+        onEvent({
+          type: 'log',
+          jobId,
+          message: `⚠ GPU process error (${err.message}). Auto-switching to CPU encoder (libx264)...`,
+          level: 'warn'
+        })
+        const cpuEnc = forceCpuEncoder()
+        executeAttempt(cpuEnc, attachCoverArt, true)
+        return
+      }
+
+      onEvent({
+        type: 'done',
+        jobId,
+        success: false,
+        message: `✖ FFmpeg Process Error: ${err.message}`
       })
-    }
+    })
+
+    proc.on('close', (code) => {
+      if (doneEmitted) return
+      doneEmitted = true
+      _activeJobs.delete(jobId)
+
+      if (_cancelledJobs.has(jobId)) {
+        _cancelledJobs.delete(jobId)
+        onEvent({ type: 'done', jobId, success: false, message: '⛔ Job was cancelled by user.' })
+        return
+      }
+
+      const exists = fs.existsSync(outputPath)
+      const size = exists ? fs.statSync(outputPath).size : 0
+      const success = code === 0 && exists && size > 1024
+
+      if (success) {
+        onEvent({
+          type: 'done',
+          jobId,
+          success: true,
+          message: `✔ Done: ${path.basename(outputPath)}`
+        })
+        return
+      }
+
+      // Extract most meaningful error message from captured stderr lines
+      const errKeywords = /error|failed|invalid|cannot|impossible|unknown|unsupported|conversion failed/i
+      const reversed = [...stderrLines].reverse()
+      const matchedErr = reversed.find(l => errKeywords.test(l)) || reversed[0] || `exit code ${code}`
+
+      // Retry 1: Fallback from GPU to CPU if GPU encoder failed
+      if (!isRetry && activeEnc.label.includes('(GPU)')) {
+        onEvent({
+          type: 'log',
+          jobId,
+          message: `⚠ GPU encoder [${activeEnc.label}] failed (${matchedErr}). Automatically falling back to CPU encoder (libx264)...`,
+          level: 'warn'
+        })
+        try {
+          if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath)
+        } catch {}
+        const cpuEnc = forceCpuEncoder()
+        executeAttempt(cpuEnc, attachCoverArt, true)
+        return
+      }
+
+      // Retry 2: If cover art caused failure, retry without cover art
+      if (attachCoverArt && !isRetry) {
+        onEvent({
+          type: 'log',
+          jobId,
+          message: `⚠ Encoding with cover art failed (${matchedErr}). Retrying without embedded cover art...`,
+          level: 'warn'
+        })
+        try {
+          if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath)
+        } catch {}
+        executeAttempt(activeEnc, false, true)
+        return
+      }
+
+      // Retry 3: If CPU retry with cover art failed, retry CPU clean without cover art
+      if (attachCoverArt && isRetry) {
+        onEvent({
+          type: 'log',
+          jobId,
+          message: `⚠ CPU encoding with cover art failed (${matchedErr}). Retrying clean render without cover art...`,
+          level: 'warn'
+        })
+        try {
+          if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath)
+        } catch {}
+        executeAttempt(activeEnc, false, true)
+        return
+      }
+
+      onEvent({
+        type: 'done',
+        jobId,
+        success: false,
+        message: `✖ FAILED (exit ${code}): ${path.basename(outputPath)} — ${matchedErr}`
+      })
+    })
   }
 
-  proc.stdout?.on('data', handleOutput)
-  proc.stderr?.on('data', handleOutput)
-
-  let doneEmitted = false
-
-  proc.on('error', (err) => {
-    if (doneEmitted) return
-    doneEmitted = true
-    _activeJobs.delete(jobId)
-    onEvent({
-      type: 'done',
-      jobId,
-      success: false,
-      message: `✖ FFmpeg Process Error: ${err.message}`
-    })
-  })
-
-  proc.on('close', (code) => {
-    if (doneEmitted) return
-    doneEmitted = true
-    _activeJobs.delete(jobId)
-    const exists = fs.existsSync(outputPath)
-    const size = exists ? fs.statSync(outputPath).size : 0
-    const success = code === 0 && exists && size > 1024
-    onEvent({
-      type: 'done', jobId,
-      success,
-      message: success
-        ? `✔ Done: ${path.basename(outputPath)}`
-        : `✖ FAILED (exit ${code}): ${path.basename(outputPath)}`
-    })
-  })
+  executeAttempt(enc, true, false)
 }
 
 export function cancelJob(jobId: string): void {
+  _cancelledJobs.add(jobId)
   const proc = _activeJobs.get(jobId)
   if (proc) {
     if (process.platform === 'win32' && proc.pid) {

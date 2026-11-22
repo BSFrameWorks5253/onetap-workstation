@@ -1,8 +1,8 @@
 import fs from 'fs'
 import path from 'path'
-import { execFile } from 'child_process'
+import { execFile, spawnSync } from 'child_process'
 import { promisify } from 'util'
-import { getFfprobeExePath } from './gpuDetector'
+import { getFfprobeExePath, getFfmpegExePath } from './gpuDetector'
 
 const execFileAsync = promisify(execFile)
 
@@ -134,6 +134,27 @@ export async function probeVideoDuration(filePath: string): Promise<number> {
     const durStr = parsed.format?.duration
     if (durStr && !isNaN(parseFloat(durStr))) {
       return Math.round(parseFloat(durStr) * 100) / 100
+    }
+  } catch {}
+
+  // Fallback: probe via ffmpeg -i
+  try {
+    const ffmpegExe = getFfmpegExePath()
+    const res = spawnSync(ffmpegExe, ['-hide_banner', '-i', filePath], {
+      timeout: 8000,
+      windowsHide: true,
+      env: process.env
+    })
+    const out = (res.stderr || '').toString() + (res.stdout || '').toString()
+    const durMatch = out.match(/Duration:\s*(\d+):(\d+):([\d.]+)/)
+    if (durMatch) {
+      const hours = parseFloat(durMatch[1])
+      const mins = parseFloat(durMatch[2])
+      const secs = parseFloat(durMatch[3])
+      const dur = hours * 3600 + mins * 60 + secs
+      if (!isNaN(dur) && dur > 0) {
+        return Math.round(dur * 100) / 100
+      }
     }
   } catch {}
 

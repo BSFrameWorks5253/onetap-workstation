@@ -531,21 +531,69 @@ function resolveVideoThumbnail(
 async function getVideoInfo(filePath: string): Promise<{
   width: number; height: number; duration: number; fps: string
 } | null> {
+  // Method 1: ffprobe JSON probe
   try {
     const ffprobeExe = getFfprobeExePath()
     const { stdout } = await execFileAsync(ffprobeExe, [
       '-v', 'error', '-select_streams', 'v:0',
-      '-show_entries', 'stream=width,height,duration,r_frame_rate',
+      '-show_entries', 'stream=width,height,duration,r_frame_rate:format=duration',
       '-of', 'json', filePath
     ], { windowsHide: true, env: process.env, timeout: 10000 })
-    const s = JSON.parse(stdout.toString()).streams[0]
-    return {
-      width: parseInt(s.width),
-      height: parseInt(s.height),
-      duration: parseFloat(s.duration ?? '0'),
-      fps: s.r_frame_rate ?? '30/1'
+    const parsed = JSON.parse(stdout.toString())
+    const streams = parsed.streams || []
+    const s = streams.find((st: any) => st.width && st.height) || streams[0]
+    if (s) {
+      const width = parseInt(s.width) || 1920
+      const height = parseInt(s.height) || 1080
+      let duration = parseFloat(s.duration ?? '0')
+      if (isNaN(duration) || duration <= 0) {
+        duration = parseFloat(parsed.format?.duration ?? '0')
+      }
+      const fps = s.r_frame_rate && s.r_frame_rate !== '0/0' ? s.r_frame_rate : '30/1'
+      if (!isNaN(duration) && duration > 0) {
+        return { width, height, duration, fps }
+      }
     }
-  } catch { return null }
+  } catch {}
+
+  // Method 2: ffmpeg -i banner fallback (works even if ffprobe is missing or fails on container)
+  try {
+    const ffmpegExe = getFfmpegExePath()
+    const res = spawnSync(ffmpegExe, ['-hide_banner', '-i', filePath], {
+      timeout: 10000,
+      windowsHide: true,
+      env: process.env
+    })
+    const out = (res.stderr || '').toString() + (res.stdout || '').toString()
+
+    let duration = 0
+    const durMatch = out.match(/Duration:\s*(\d+):(\d+):([\d.]+)/)
+    if (durMatch) {
+      const hours = parseFloat(durMatch[1])
+      const mins = parseFloat(durMatch[2])
+      const secs = parseFloat(durMatch[3])
+      duration = hours * 3600 + mins * 60 + secs
+    }
+
+    let width = 1920
+    let height = 1080
+    let fps = '30/1'
+    const vidMatch = out.match(/Stream.*Video:.*?(\d{2,5})x(\d{2,5})/)
+    if (vidMatch) {
+      width = parseInt(vidMatch[1], 10)
+      height = parseInt(vidMatch[2], 10)
+    }
+    const fpsMatch = out.match(/(\d+(?:\.\d+)?)\s*fps/)
+    if (fpsMatch) {
+      fps = `${fpsMatch[1]}/1`
+    }
+
+    if (!isNaN(duration) && duration > 0) {
+      return { width, height, duration, fps }
+    }
+  } catch {}
+
+  return null
 }
 
 async function hasAudioStream(filePath: string): Promise<boolean> {
@@ -557,8 +605,22 @@ async function hasAudioStream(filePath: string): Promise<boolean> {
       '-of', 'json', filePath
     ], { windowsHide: true, env: process.env, timeout: 10000 })
     const parsed = JSON.parse(stdout.toString())
-    return !!(parsed.streams && parsed.streams.length > 0)
-  } catch { return false }
+    if (parsed.streams && parsed.streams.length > 0) return true
+  } catch {}
+
+  // Fallback: check with ffmpeg -i
+  try {
+    const ffmpegExe = getFfmpegExePath()
+    const res = spawnSync(ffmpegExe, ['-hide_banner', '-i', filePath], {
+      timeout: 10000,
+      windowsHide: true,
+      env: process.env
+    })
+    const out = (res.stderr || '').toString() + (res.stdout || '').toString()
+    return /Stream #\d+:\d+.*Audio:/i.test(out)
+  } catch {
+    return false
+  }
 }
 
 function getAudioSamples(filePath: string): number {
@@ -566,26 +628,19 @@ function getAudioSamples(filePath: string): number {
   try {
     const out = execFileSync(ffprobeExe, [
       '-v', 'error', '-select_streams', 'a:0',
-      '-show_entries', 'stream=duration,sample_rate',
+      '-show_entries', 'stream=duration,sample_rate:format=duration',
       '-of', 'json', filePath
     ], { windowsHide: true, env: process.env, timeout: 10000 }).toString()
     const parsed = JSON.parse(out)
     const stream = parsed.streams?.[0]
-    if (stream) {
-      const duration = parseFloat(stream.duration ?? '0')
-      const sampleRate = parseInt(stream.sample_rate ?? '48000')
+    let duration = parseFloat(stream?.duration ?? '0')
+    if (isNaN(duration) || duration <= 0) {
+      duration = parseFloat(parsed.format?.duration ?? '0')
+    }
+    const sampleRate = parseInt(stream?.sample_rate ?? '48000') || 48000
+    if (!isNaN(duration) && duration > 0) {
       return Math.round(duration * sampleRate)
     }
-  } catch {}
-  try {
-    const out = execFileSync(ffprobeExe, [
-      '-v', 'error',
-      '-show_entries', 'format=duration',
-      '-of', 'json', filePath
-    ], { windowsHide: true, env: process.env, timeout: 10000 }).toString()
-    const parsed = JSON.parse(out)
-    const duration = parseFloat(parsed.format?.duration ?? '0')
-    return Math.round(duration * 48000)
   } catch {}
   return 0
 }

@@ -28,6 +28,7 @@ const ffprobeBinary = isWin ? 'ffprobe.exe' : 'ffprobe'
 
 let _cache: EncoderResult | null = null
 let _discoveredFfmpegDir: string | null = null
+let _discoveredFfprobePath: string | null = null
 
 export function findAndEnsureFfmpegPath(): string | null {
   if (_discoveredFfmpegDir && fs.existsSync(path.join(_discoveredFfmpegDir, ffmpegBinary))) {
@@ -49,7 +50,26 @@ export function findAndEnsureFfmpegPath(): string | null {
     }
   } catch {}
 
-  // 2. Check standard PATH lookup first
+  // 2. Query where.exe / which to find the exact binary location
+  try {
+    const locator = isWin ? 'where.exe' : 'which'
+    const res = spawnSync(locator, ['ffmpeg'], { timeout: 3000, windowsHide: true, env: process.env })
+    if (res.status === 0 && res.stdout) {
+      const lines = res.stdout.toString().split(/\r?\n/).map(l => l.trim()).filter(Boolean)
+      for (const line of lines) {
+        if (fs.existsSync(line)) {
+          const dir = path.dirname(line)
+          if (!process.env.PATH?.toLowerCase().includes(dir.toLowerCase())) {
+            process.env.PATH = `${dir}${path.delimiter}${process.env.PATH || ''}`
+          }
+          _discoveredFfmpegDir = dir
+          return dir
+        }
+      }
+    }
+  } catch {}
+
+  // 3. Check standard PATH lookup fallback
   try {
     const res = spawnSync(ffmpegBinary, ['-version'], { timeout: 3000, windowsHide: true, env: process.env })
     if (res.status === 0) {
@@ -57,7 +77,7 @@ export function findAndEnsureFfmpegPath(): string | null {
     }
   } catch {}
 
-  // 3. Standard candidates to search
+  // 4. Standard candidates to search
   const userProfile = process.env.USERPROFILE || ''
   const localAppData = process.env.LOCALAPPDATA || ''
   const programData = process.env.PROGRAMDATA || ''
@@ -103,26 +123,62 @@ export function findAndEnsureFfmpegPath(): string | null {
       'C:\\ffmpeg',
       'D:\\ffmpeg\\bin',
       'D:\\ffmpeg',
+      'E:\\ffmpeg\\bin',
+      'E:\\ffmpeg',
       'C:\\Program Files\\ffmpeg\\bin',
+      'C:\\Program Files\\ffmpeg',
       'C:\\Program Files (x86)\\ffmpeg\\bin',
+      'C:\\Program Files (x86)\\ffmpeg',
       'C:\\tools\\ffmpeg\\bin',
       path.join(programData, 'chocolatey', 'bin'),
+      path.join(programData, 'chocolatey', 'lib', 'ffmpeg', 'tools', 'ffmpeg', 'bin'),
+      path.join(localAppData, 'Microsoft', 'WinGet', 'Links'),
+      path.join(userProfile, 'scoop', 'shims'),
+      path.join(userProfile, 'scoop', 'apps', 'ffmpeg', 'current', 'bin'),
       path.join(localAppData, 'bin'),
       path.join(localAppData, 'ffmpeg', 'bin'),
       path.join(userProfile, 'ffmpeg', 'bin'),
-      path.join(localAppData, 'Programs', 'ffmpeg', 'bin')
+      path.join(userProfile, 'ffmpeg'),
+      path.join(localAppData, 'Programs', 'ffmpeg', 'bin'),
+      path.join(localAppData, 'Programs', 'ffmpeg')
     )
+
+    // Check WinGet packages directories dynamically
+    const wingetPkgDir = path.join(localAppData, 'Microsoft', 'WinGet', 'Packages')
+    try {
+      if (fs.existsSync(wingetPkgDir)) {
+        const pkgs = fs.readdirSync(wingetPkgDir, { withFileTypes: true })
+        for (const pkg of pkgs) {
+          if (pkg.isDirectory() && (pkg.name.toLowerCase().includes('ffmpeg') || pkg.name.toLowerCase().includes('gyan'))) {
+            const pkgPath = path.join(wingetPkgDir, pkg.name)
+            candidates.push(pkgPath)
+            candidates.push(path.join(pkgPath, 'bin'))
+            // Subdirectories like ffmpeg-7.1-full_build
+            try {
+              const subs = fs.readdirSync(pkgPath, { withFileTypes: true })
+              for (const sub of subs) {
+                if (sub.isDirectory()) {
+                  candidates.push(path.join(pkgPath, sub.name, 'bin'))
+                  candidates.push(path.join(pkgPath, sub.name))
+                }
+              }
+            } catch {}
+          }
+        }
+      }
+    } catch {}
 
     // Check standard root folder candidates and dynamic ffmpeg-* build directories
     const rootCandidates = [
       'C:\\ffmpeg', 'C:\\ffmpeg\\bin',
-      'D:\\ffmpeg', 'D:\\ffmpeg\\bin'
+      'D:\\ffmpeg', 'D:\\ffmpeg\\bin',
+      'E:\\ffmpeg', 'E:\\ffmpeg\\bin'
     ]
     for (const rc of rootCandidates) {
       if (fs.existsSync(rc)) candidates.push(rc)
     }
     try {
-      for (const drive of ['C:\\', 'D:\\']) {
+      for (const drive of ['C:\\', 'D:\\', 'E:\\']) {
         if (fs.existsSync(drive)) {
           const entries = fs.readdirSync(drive, { withFileTypes: true })
           for (const ent of entries) {
@@ -172,11 +228,36 @@ export function getFfmpegExePath(): string {
 }
 
 export function getFfprobeExePath(): string {
-  const dir = findAndEnsureFfmpegPath()
-  if (dir && dir !== 'PATH') {
-    const p = path.join(dir, ffprobeBinary)
-    if (fs.existsSync(p)) return p
+  if (_discoveredFfprobePath && fs.existsSync(_discoveredFfprobePath)) {
+    return _discoveredFfprobePath
   }
+
+  // 1. Check if ffprobe lives alongside ffmpeg
+  const ffmpegDir = findAndEnsureFfmpegPath()
+  if (ffmpegDir && ffmpegDir !== 'PATH') {
+    const p = path.join(ffmpegDir, ffprobeBinary)
+    if (fs.existsSync(p)) {
+      _discoveredFfprobePath = p
+      return p
+    }
+  }
+
+  // 2. Query where.exe / which for ffprobe
+  try {
+    const locator = isWin ? 'where.exe' : 'which'
+    const res = spawnSync(locator, ['ffprobe'], { timeout: 3000, windowsHide: true, env: process.env })
+    if (res.status === 0 && res.stdout) {
+      const lines = res.stdout.toString().split(/\r?\n/).map(l => l.trim()).filter(Boolean)
+      for (const line of lines) {
+        if (fs.existsSync(line)) {
+          _discoveredFfprobePath = line
+          return line
+        }
+      }
+    }
+  } catch {}
+
+  // 3. Fallback to binary name on PATH
   return ffprobeBinary
 }
 
@@ -200,19 +281,19 @@ export function getVideoEncoder(): EncoderResult {
   const candidates: EncoderResult[] = [
     {
       label: 'NVENC (GPU)',
-      flags: ['-c:v', 'h264_nvenc', '-preset', 'p4', '-tune', 'hq', '-cq', '18', '-pix_fmt', 'yuv420p']
+      flags: ['-c:v:0', 'h264_nvenc', '-preset', 'p4', '-tune', 'hq', '-cq', '18', '-pix_fmt:v:0', 'yuv420p']
     },
     {
       label: 'NVENC Legacy (GPU)',
-      flags: ['-c:v', 'h264_nvenc', '-preset', 'fast', '-cq', '18', '-pix_fmt', 'yuv420p']
+      flags: ['-c:v:0', 'h264_nvenc', '-preset', 'fast', '-cq', '18', '-pix_fmt:v:0', 'yuv420p']
     },
     {
       label: 'QSV (GPU)',
-      flags: ['-c:v', 'h264_qsv', '-preset', 'faster', '-global_quality', '18', '-pix_fmt', 'yuv420p']
+      flags: ['-c:v:0', 'h264_qsv', '-preset', 'faster', '-global_quality', '18', '-pix_fmt:v:0', 'yuv420p']
     },
     {
       label: 'AMD AMF (GPU)',
-      flags: ['-c:v', 'h264_amf', '-rc', 'cqp', '-qp_i', '18', '-qp_p', '18', '-pix_fmt', 'yuv420p']
+      flags: ['-c:v:0', 'h264_amf', '-rc', 'cqp', '-qp_i', '18', '-qp_p', '18', '-pix_fmt:v:0', 'yuv420p']
     }
   ]
 
@@ -225,7 +306,15 @@ export function getVideoEncoder(): EncoderResult {
 
   _cache = {
     label: 'libx264 (CPU)',
-    flags: ['-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-pix_fmt', 'yuv420p']
+    flags: ['-c:v:0', 'libx264', '-preset', 'veryfast', '-crf', '18', '-pix_fmt:v:0', 'yuv420p']
+  }
+  return _cache
+}
+
+export function forceCpuEncoder(): EncoderResult {
+  _cache = {
+    label: 'libx264 (CPU)',
+    flags: ['-c:v:0', 'libx264', '-preset', 'veryfast', '-crf', '18', '-pix_fmt:v:0', 'yuv420p']
   }
   return _cache
 }
