@@ -72,11 +72,17 @@ export function isGroupPhotoVideo(filenameOrPath: string): boolean {
     .replace(/\.[^/.]+$/, '')
     .trim()
   if (/group[_\s-]?photo/i.test(stem)) return true
-  // Matches "GP", "GP1", "GP 1", "GP_1", "GP-1", "GP01", "GP1_Final", "GP_Outro", "1448_GP1", etc.
-  if (/(?:^|[\s_.-])gp(?:\d+|[_\s-]+\d+)?(?:[\s_.-]|$|[a-z])/i.test(stem)) {
+  // Matches "GP", "GP1", "GP 1", "GP_1", "GP-1", "GP01", "GP1_Final", "GP_Outro", "1448_GP1", "43-16N-GP1", etc.
+  if (/(?:^|[\s_.-])gp(?:\d+|[_\s-]+\d+)?(?:[\s_.-]|$|_?outro|_?final|[a-z])/i.test(stem)) {
     if (/^gp[a-z]{2,}/i.test(stem)) return false
     return true
   }
+  try {
+    const dirName = path.basename(path.dirname(filenameOrPath)).toLowerCase()
+    if (dirName === 'gp' || dirName === 'group photo' || dirName === 'group photos' || dirName === 'group_photo' || dirName === 'outro') {
+      return true
+    }
+  } catch {}
   return false
 }
 
@@ -1557,6 +1563,12 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
     }
     videos = videos.filter(v => !isGroupPhotoVideo(v))
 
+    if (videos.length === 0) {
+      send('titleAdder:log', { jobId: params.jobId, message: "✖ No ceremony video files found to render in selected folder(s).", level: 'error' })
+      send('titleAdder:done', { jobId: params.jobId, success: false, error: 'No ceremony video files found to render' })
+      return
+    }
+
     send('titleAdder:log', { jobId: params.jobId, message: `📋 Processing ${videos.length} video(s)`, level: 'info' })
     send('titleAdder:found', { jobId: params.jobId, total: videos.length })
 
@@ -1737,17 +1749,21 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
         send('titleAdder:log', { jobId: params.jobId, message: `  🖼 [User Selected] Title image: ${path.basename(titleImg)}`, level: 'info' })
       } else {
         titleImg = findTitleImageForVideo(titlesFolder, prefix, videoPath, availableTitleImages)
-        if (!titleImg && skipFront && skipBack) {
-          send('titleAdder:log', { jobId: params.jobId, message: `  ℹ [Pure Video] No title image found for "${prefix}", but front & back thumbnails are skipped — proceeding without title image.`, level: 'info' })
-        } else
-        if (!titleImg) {
-          send('titleAdder:log', { jobId: params.jobId, message: `  ✖ SKIP — No title image found for prefix "${prefix}" in: ${titlesFolder}`, level: 'warn' })
-          send('titleAdder:log', { jobId: params.jobId, message: `       Expected "${prefix}.jpg", "ID.jpg", or "Title.jpg" in: ${titlesFolder}`, level: 'warn' })
-          continue
-        } else {
+        if (!titleImg && availableTitleImages.length > 0) {
+          titleImg = availableTitleImages[0].path
+          send('titleAdder:log', { jobId: params.jobId, message: `  🖼 [Fallback] No exact title image for "${prefix}" — using available project title: ${path.basename(titleImg)}`, level: 'info' })
+        }
+        if (titleImg) {
           send('titleAdder:log', { jobId: params.jobId, message: `  🖼 Title image: ${path.basename(titleImg)}`, level: 'info' })
+        } else if (skipFront) {
+          send('titleAdder:log', { jobId: params.jobId, message: `  ℹ [Pure Video] No title image found for "${prefix}", but front thumbnail is skipped — proceeding without front title image.`, level: 'info' })
+        } else {
+          send('titleAdder:log', { jobId: params.jobId, message: `  ℹ No title image found on disk for "${prefix}" — proceeding with video render (front intro thumbnail excluded).`, level: 'info' })
         }
       }
+
+      const finalSkipFront = skipFront || !titleImg
+      const finalSkipBack = skipBack || (!end && !titleImg)
 
       // Find next video in queue
       let currentNextVideoName = ''
@@ -1928,13 +1944,12 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
 
       if (!isUserSelectedAudio) {
         if (isNikah) {
-          primary = nikahAudio
+          primary = nikahAudio || (pool.length > 0 ? pool[0] : null)
           if (primary) {
-            send('titleAdder:log', { jobId: params.jobId, message: `  🎵 [Nikah] Using dedicated N-audio → ${path.basename(primary)}`, level: 'info' })
+            send('titleAdder:log', { jobId: params.jobId, message: `  🎵 [Nikah] Using ${nikahAudio ? 'dedicated N-audio' : 'fallback audio'} → ${path.basename(primary)}`, level: 'info' })
           } else {
-            send('titleAdder:log', { jobId: params.jobId, message: `  ✖ SKIP — [Nikah] No N-audio file found in titles folder.`, level: 'error' })
-            send('titleAdder:log', { jobId: params.jobId, message: `       Expected: N_A.mp3 / Nikah Audio.mp3 / NikahAudio.mp3 in: ${titlesFolder}`, level: 'error' })
-            continue
+            send('titleAdder:log', { jobId: params.jobId, message: `  ℹ [Nikah] No background audio found — preserving original ceremony audio.`, level: 'info' })
+            shouldMute = false
           }
         } else if (isWaazId && special1AudioPath) {
           // WAAZ and ID prefixes use special1.mp3 by default (user may override in popup)
@@ -1948,10 +1963,9 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
       }
 
       if (!primary && shouldMute) {
-        // Skip if no audio AND not a WAAZ/ID (which keeps OG audio) AND not a mute exception
-        send('titleAdder:log', { jobId: params.jobId, message: `  ✖ SKIP — No audio found for prefix "${prefix}". Pool has ${pool.length} file(s).`, level: 'warn' })
-        send('titleAdder:log', { jobId: params.jobId, message: `       Add "Audio 1.mp3" (or more) to: ${titlesFolder}`, level: 'warn' })
-        continue
+        // Do NOT skip the video! If no background audio was provided in pool, keep original video audio instead of muting!
+        send('titleAdder:log', { jobId: params.jobId, message: `  ℹ No audio found for prefix "${prefix}" — preserving original ceremony audio instead of muting.`, level: 'info' })
+        shouldMute = false
       }
 
 
@@ -2117,19 +2131,19 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
         })
       }
 
-      const totalLength = (skipFront ? 0 : introDuration) + (transDuration > 0 ? transDuration : 0) + info.duration + groupPhotoDuration + (skipBack ? 0 : outroDuration)
-      send('titleAdder:log', { jobId: params.jobId, message: `  ⏱ Total output length: ${totalLength.toFixed(2)}s (${skipFront ? 'no front thumbnail' : introDuration + 's intro'} + ${transDuration > 0 ? transDuration.toFixed(1) + 's buffer + ' : ''}${info.duration.toFixed(2)}s video + ${groupPhotoDuration > 0 ? groupPhotoDuration.toFixed(2) + 's GP + ' : ''}${skipBack ? 'no back thumbnail' : outroDuration + 's outro'})`, level: 'info' })
+      const totalLength = (finalSkipFront ? 0 : introDuration) + (transDuration > 0 ? transDuration : 0) + info.duration + groupPhotoDuration + (finalSkipBack ? 0 : outroDuration)
+      send('titleAdder:log', { jobId: params.jobId, message: `  ⏱ Total output length: ${totalLength.toFixed(2)}s (${finalSkipFront ? 'no front thumbnail' : introDuration + 's intro'} + ${transDuration > 0 ? transDuration.toFixed(1) + 's buffer + ' : ''}${info.duration.toFixed(2)}s video + ${groupPhotoDuration > 0 ? groupPhotoDuration.toFixed(2) + 's GP + ' : ''}${finalSkipBack ? 'no back thumbnail' : outroDuration + 's outro'})`, level: 'info' })
 
       await new Promise<void>(resolve => {
         runFFmpegJob({
           jobId: params.jobId,
           videoPath, 
           outputPath: tempOutputPath,
-          startImg: titleImg,
-          endImg: end ?? titleImg,
+          startImg: titleImg || undefined,
+          endImg: (end ?? titleImg) || undefined,
           watermark: wm ?? titleImg,
           audioPrimary: primary ?? undefined,
-          useNikahLogic: isNikah,
+          useNikahLogic: isNikah && !!primary,
           duration: params.duration,
           totalLength,
           nonSilentSegs,
@@ -2141,8 +2155,8 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
           addWatermark: shouldAddWatermark,
           isWaazId: isWaazId && !shouldMute,
           hasAudio,
-          skipFront,
-          skipBack,
+          skipFront: finalSkipFront,
+          skipBack: finalSkipBack,
           transitionFile: customTransition ?? undefined,
           transitionDuration: transDuration,
           groupPhotoVideo: validGpVideo,

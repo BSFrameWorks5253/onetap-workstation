@@ -22,8 +22,8 @@ export interface FFmpegJobParams {
   jobId: string
   videoPath: string
   outputPath: string
-  startImg: string       // intro image
-  endImg: string         // outro image
+  startImg?: string      // intro image
+  endImg?: string        // outro image
   watermark: string
   audioPrimary?: string  // single audio track (used for bg music or fill for WAAZ/ID)
   useNikahLogic: boolean

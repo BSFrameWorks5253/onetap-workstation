@@ -93,7 +93,7 @@ function ensureInstallerNsh() {
   }
 }
 
-function ensureProcessClosed() {
+function ensureProcessClosed(builderTarget) {
   if (process.platform === 'win32') {
     try {
       execSync('powershell -NoProfile -Command "Stop-Process -Name \'Uni Desk\', \'One Tap\' -Force -ErrorAction SilentlyContinue"', { stdio: 'ignore' })
@@ -106,11 +106,13 @@ function ensureProcessClosed() {
       } catch {}
     }
 
-    const unpackedDir = path.join(process.cwd(), 'release', 'win-unpacked')
-    if (fs.existsSync(unpackedDir)) {
-      try {
-        fs.rmSync(unpackedDir, { recursive: true, force: true })
-      } catch {}
+    if (builderTarget === 'setup' || builderTarget === 'dir') {
+      const unpackedDir = path.join(process.cwd(), 'release', 'win-unpacked')
+      if (fs.existsSync(unpackedDir)) {
+        try {
+          fs.rmSync(unpackedDir, { recursive: true, force: true })
+        } catch {}
+      }
     }
   }
 }
@@ -213,7 +215,8 @@ function parseArgs() {
 async function buildWindows() {
   const pkgPath = path.join(process.cwd(), 'package.json')
   const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'))
-  ensureProcessClosed()
+  const { target: builderTarget, customVersion, skipBuild, forceBuild } = parseArgs()
+  ensureProcessClosed(builderTarget)
   ensureWinSharp()
   ensureWinCodeSign()
   ensureInstallerNsh()
@@ -223,7 +226,6 @@ async function buildWindows() {
     process.env.CSC_IDENTITY_AUTO_DISCOVERY = 'false'
   }
 
-  const { target: builderTarget, customVersion, skipBuild, forceBuild } = parseArgs()
   const version = customVersion || pkg.version
 
   if (customVersion && customVersion !== pkg.version) {
@@ -273,9 +275,10 @@ async function buildWindows() {
         execSync(`npx electron-builder --win nsis ${versionFlag}`, { stdio: 'inherit' })
       }
     } else {
-      execSync(`npx electron-builder --win ${builderTarget} ${versionFlag}`, { stdio: 'inherit' })
+      const ebTarget = builderTarget === 'msix' ? 'appx' : builderTarget
+      execSync(`npx electron-builder --win ${ebTarget} ${versionFlag}`, { stdio: 'inherit' })
     }
-    if (builderTarget === 'appx') {
+    if (builderTarget === 'appx' || builderTarget === 'msix') {
       try {
         log('Signing AppX / MSIX package with Windows SDK SignTool and developer certificate...')
         execSync(`powershell -NoProfile -ExecutionPolicy Bypass -File "${path.join(__dirname, 'sign_appx.ps1')}"`, { stdio: 'inherit' })
@@ -356,7 +359,7 @@ async function buildWindows() {
   }
 
   // Fallback to portable executable if makensis is not available
-  const target = builderTarget === 'setup' ? 'portable' : builderTarget
+  const target = builderTarget === 'setup' ? 'portable' : (builderTarget === 'msix' ? 'appx' : builderTarget)
   log(`Building fallback Windows package (target: ${target}) for v${version}...`)
   const signFlag = !hasWine ? '-c.win.signAndEditExecutable=false' : ''
   execSync(`npx electron-builder --win ${target} ${signFlag} ${versionFlag}`, { stdio: 'inherit' })

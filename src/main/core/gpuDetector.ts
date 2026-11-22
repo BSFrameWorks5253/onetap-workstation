@@ -73,6 +73,30 @@ export function findAndEnsureFfmpegPath(): string | null {
     path.join(cwd, 'ffmpeg')
   ]
 
+  // Add packaged Electron resource paths
+  try {
+    if (process.resourcesPath) {
+      candidates.push(
+        process.resourcesPath,
+        path.join(process.resourcesPath, 'bin'),
+        path.join(process.resourcesPath, 'ffmpeg'),
+        path.join(process.resourcesPath, 'ffmpeg', 'bin')
+      )
+    }
+    if (process.execPath) {
+      const execDir = path.dirname(process.execPath)
+      candidates.push(
+        execDir,
+        path.join(execDir, 'bin'),
+        path.join(execDir, 'ffmpeg'),
+        path.join(execDir, 'ffmpeg', 'bin'),
+        path.join(execDir, 'resources'),
+        path.join(execDir, 'resources', 'bin'),
+        path.join(execDir, 'resources', 'ffmpeg', 'bin')
+      )
+    }
+  } catch {}
+
   if (isWin) {
     candidates.push(
       'C:\\ffmpeg\\bin',

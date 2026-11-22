@@ -35,11 +35,18 @@ export function isGroupPhotoVideoFile(fileNameOrPath: string): boolean {
   const base = path.basename(fileNameOrPath)
   const stem = base.replace(/\.(tmp|temp)$/i, '').replace(/\.[^/.]+$/, '').trim()
   if (/group[_\s-]?photo/i.test(stem)) return true
-  // Matches "GP", "GP1", "GP 1", "GP_1", "GP-1", "GP01", "GP1_Final", "GP_Outro", "1448_GP1", etc.
-  if (/(?:^|[\s_.-])gp(?:\d+|[_\s-]+\d+)?(?:[\s_.-]|$|[a-z])/i.test(stem)) {
+  // Matches "GP", "GP1", "GP 1", "GP_1", "GP-1", "GP01", "GP1_Final", "GP_Outro", "1448_GP1", "43-16N-GP1", etc.
+  if (/(?:^|[\s_.-])gp(?:\d+|[_\s-]+\d+)?(?:[\s_.-]|$|_?outro|_?final|[a-z])/i.test(stem)) {
     if (/^gp[a-z]{2,}/i.test(stem)) return false
     return true
   }
+  // Also check if containing folder name is GP / Group Photo
+  try {
+    const dirName = path.basename(path.dirname(fileNameOrPath)).toLowerCase()
+    if (dirName === 'gp' || dirName === 'group photo' || dirName === 'group photos' || dirName === 'group_photo' || dirName === 'outro') {
+      return true
+    }
+  } catch {}
   return false
 }
 
@@ -140,36 +147,61 @@ export async function scanGroupPhotosInFolder(folderPath: string): Promise<Group
   const results: GroupPhotoItem[] = []
   if (!folderPath || !fs.existsSync(folderPath)) return results
 
+  const targetDir = fs.statSync(folderPath).isDirectory() ? folderPath : path.dirname(folderPath)
   const dirsToScan = new Set<string>()
-  dirsToScan.add(folderPath)
+  dirsToScan.add(targetDir)
 
-  // 1. Direct DVD subfolders
-  const dvdSub = path.join(folderPath, 'DVD')
+  // 1. Direct and parent DVD subfolders
+  const dvdSub = path.join(targetDir, 'DVD')
   if (fs.existsSync(dvdSub)) dirsToScan.add(dvdSub)
-  const dvdSubLower = path.join(folderPath, 'dvd')
+  const dvdSubLower = path.join(targetDir, 'dvd')
   if (fs.existsSync(dvdSubLower)) dirsToScan.add(dvdSubLower)
 
-  // 2. Sibling DVD folder (e.g. if folderPath is .../Raw or .../Footage or .../Videos or .../Final)
-  const parent = path.dirname(folderPath)
-  if (parent && parent !== folderPath && fs.existsSync(parent)) {
+  const parent = path.dirname(targetDir)
+  if (parent && parent !== targetDir && fs.existsSync(parent)) {
+    dirsToScan.add(parent)
     const sibDvd = path.join(parent, 'DVD')
     if (fs.existsSync(sibDvd)) dirsToScan.add(sibDvd)
     const sibDvdLower = path.join(parent, 'dvd')
     if (fs.existsSync(sibDvdLower)) dirsToScan.add(sibDvdLower)
   }
 
-  // 3. Any immediate subdirectories containing 'dvd', 'gp', 'group', 'final', or 'output'
-  try {
-    const subEntries = fs.readdirSync(folderPath, { withFileTypes: true })
-    for (const sub of subEntries) {
-      if (sub.isDirectory() && !sub.name.startsWith('.')) {
-        const lower = sub.name.toLowerCase()
-        if (lower === 'dvd' || lower.includes('gp') || lower.includes('group') || lower === 'final' || lower === 'output') {
-          dirsToScan.add(path.join(folderPath, sub.name))
+  // 2. Recursive subdirectory walker up to depth 3
+  const queue: Array<{ dir: string; depth: number }> = [{ dir: targetDir, depth: 0 }]
+  if (fs.existsSync(dvdSub)) queue.push({ dir: dvdSub, depth: 0 })
+  if (parent && parent !== targetDir && fs.existsSync(parent)) queue.push({ dir: parent, depth: 1 })
+
+  const visitedWalk = new Set<string>()
+  while (queue.length > 0) {
+    const { dir: curDir, depth } = queue.shift()!
+    const norm = path.resolve(curDir).toLowerCase()
+    if (visitedWalk.has(norm) || depth > 3) continue
+    visitedWalk.add(norm)
+    dirsToScan.add(curDir)
+
+    try {
+      const subEntries = fs.readdirSync(curDir, { withFileTypes: true })
+      for (const sub of subEntries) {
+        if (sub.isDirectory() && !sub.name.startsWith('.') && !sub.name.startsWith('$')) {
+          const subFullPath = path.join(curDir, sub.name)
+          const lower = sub.name.toLowerCase()
+          if (
+            lower === 'dvd' ||
+            lower.includes('gp') ||
+            lower.includes('group') ||
+            lower.includes('photo') ||
+            lower.includes('outro') ||
+            lower === 'final' ||
+            lower === 'output' ||
+            depth < 2
+          ) {
+            dirsToScan.add(subFullPath)
+            queue.push({ dir: subFullPath, depth: depth + 1 })
+          }
         }
       }
-    }
-  } catch {}
+    } catch {}
+  }
 
   const seenPaths = new Set<string>()
 
@@ -177,13 +209,18 @@ export async function scanGroupPhotosInFolder(folderPath: string): Promise<Group
     try {
       if (!fs.existsSync(dir)) continue
       const entries = fs.readdirSync(dir, { withFileTypes: true })
+      const dirLower = path.basename(dir).toLowerCase()
+      const isParentGpFolder = dirLower === 'gp' || dirLower === 'group photo' || dirLower === 'group photos' || dirLower === 'group_photo' || dirLower === 'outro'
+
       for (const entry of entries) {
         if (!entry.isFile()) continue
         const ext = path.extname(entry.name).toLowerCase()
         if (!VIDEO_EXTS.includes(ext)) continue
-        if (!isGroupPhotoVideoFile(entry.name)) continue
 
         const fullPath = path.join(dir, entry.name)
+        const isGp = isGroupPhotoVideoFile(entry.name) || isGroupPhotoVideoFile(fullPath) || isParentGpFolder
+        if (!isGp) continue
+
         const normKey = path.resolve(fullPath).toLowerCase()
         if (seenPaths.has(normKey)) continue
         seenPaths.add(normKey)
