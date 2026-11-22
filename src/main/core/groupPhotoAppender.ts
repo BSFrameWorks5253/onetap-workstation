@@ -6,7 +6,7 @@ import { getFfprobeExePath } from './gpuDetector'
 
 const execFileAsync = promisify(execFile)
 
-const VIDEO_EXTS = ['.mp4', '.mov', '.avi', '.mkv', '.mts', '.m2ts', '.mxf', '.wmv']
+const VIDEO_EXTS = ['.mp4', '.mov', '.avi', '.mkv', '.mts', '.m2ts', '.mxf', '.wmv', '.m4v', '.webm', '.ts', '.mpg', '.mpeg']
 
 export interface GroupPhotoItem {
   gpNum: number
@@ -34,9 +34,13 @@ export function isGroupPhotoVideoFile(fileNameOrPath: string): boolean {
   if (!fileNameOrPath) return false
   const base = path.basename(fileNameOrPath)
   const stem = base.replace(/\.(tmp|temp)$/i, '').replace(/\.[^/.]+$/, '').trim()
-  const isGroupPhoto = /(?:^|[\s_.-])group[_\s-]?photo(?:[_\s-]*\d+)?(?:[\s_.-]|$)/i.test(stem)
-  const isGPn = /(?:^|[\s_.-])gp(?:[_\s-]*\d+)?(?:[\s_.-]|$)/i.test(stem)
-  return isGroupPhoto || isGPn
+  if (/group[_\s-]?photo/i.test(stem)) return true
+  // Matches "GP", "GP1", "GP 1", "GP_1", "GP-1", "GP01", "GP1_Final", "GP_Outro", "1448_GP1", etc.
+  if (/(?:^|[\s_.-])gp(?:\d+|[_\s-]+\d+)?(?:[\s_.-]|$|[a-z])/i.test(stem)) {
+    if (/^gp[a-z]{2,}/i.test(stem)) return false
+    return true
+  }
+  return false
 }
 
 /**
@@ -51,10 +55,10 @@ export function extractGpNumber(fileNameOrPath: string): number {
     const num = parseInt(m[1], 10)
     if (!isNaN(num) && num > 0) return num
   }
-  const mAny = stem.match(/\d+/)
-  if (mAny) {
-    const num2 = parseInt(mAny[0], 10)
-    if (!isNaN(num2) && num2 > 0) return num2
+  const mPre = stem.match(/(\d+)[_\s-]*(?:gp|group[_\s-]?photo)/i)
+  if (mPre && mPre[1]) {
+    const num = parseInt(mPre[1], 10)
+    if (!isNaN(num) && num > 0) return num
   }
   return 1
 }
@@ -94,7 +98,7 @@ export function extractNikaahNumberFromFileName(fileNameOrPath: string): number 
 /**
  * Probes video duration using ffprobe
  */
-async function probeVideoDuration(filePath: string): Promise<number> {
+export async function probeVideoDuration(filePath: string): Promise<number> {
   try {
     const ffprobeExe = getFfprobeExePath()
     const { stdout } = await execFileAsync(ffprobeExe, [
@@ -130,22 +134,48 @@ async function probeVideoDuration(filePath: string): Promise<number> {
 }
 
 /**
- * Scans a folder (e.g. DVD folder or parent folder containing DVD) for rendered Group Photo videos
+ * Scans a folder (e.g. DVD folder, parent folder, sibling DVD folder, etc.) for rendered Group Photo videos
  */
 export async function scanGroupPhotosInFolder(folderPath: string): Promise<GroupPhotoItem[]> {
   const results: GroupPhotoItem[] = []
   if (!folderPath || !fs.existsSync(folderPath)) return results
 
-  const dirsToScan = [folderPath]
+  const dirsToScan = new Set<string>()
+  dirsToScan.add(folderPath)
+
+  // 1. Direct DVD subfolders
   const dvdSub = path.join(folderPath, 'DVD')
-  if (fs.existsSync(dvdSub)) dirsToScan.push(dvdSub)
+  if (fs.existsSync(dvdSub)) dirsToScan.add(dvdSub)
   const dvdSubLower = path.join(folderPath, 'dvd')
-  if (fs.existsSync(dvdSubLower) && dvdSubLower !== dvdSub) dirsToScan.push(dvdSubLower)
+  if (fs.existsSync(dvdSubLower)) dirsToScan.add(dvdSubLower)
+
+  // 2. Sibling DVD folder (e.g. if folderPath is .../Raw or .../Footage or .../Videos or .../Final)
+  const parent = path.dirname(folderPath)
+  if (parent && parent !== folderPath && fs.existsSync(parent)) {
+    const sibDvd = path.join(parent, 'DVD')
+    if (fs.existsSync(sibDvd)) dirsToScan.add(sibDvd)
+    const sibDvdLower = path.join(parent, 'dvd')
+    if (fs.existsSync(sibDvdLower)) dirsToScan.add(sibDvdLower)
+  }
+
+  // 3. Any immediate subdirectories containing 'dvd', 'gp', 'group', 'final', or 'output'
+  try {
+    const subEntries = fs.readdirSync(folderPath, { withFileTypes: true })
+    for (const sub of subEntries) {
+      if (sub.isDirectory() && !sub.name.startsWith('.')) {
+        const lower = sub.name.toLowerCase()
+        if (lower === 'dvd' || lower.includes('gp') || lower.includes('group') || lower === 'final' || lower === 'output') {
+          dirsToScan.add(path.join(folderPath, sub.name))
+        }
+      }
+    }
+  } catch {}
 
   const seenPaths = new Set<string>()
 
   for (const dir of dirsToScan) {
     try {
+      if (!fs.existsSync(dir)) continue
       const entries = fs.readdirSync(dir, { withFileTypes: true })
       for (const entry of entries) {
         if (!entry.isFile()) continue
@@ -154,11 +184,17 @@ export async function scanGroupPhotosInFolder(folderPath: string): Promise<Group
         if (!isGroupPhotoVideoFile(entry.name)) continue
 
         const fullPath = path.join(dir, entry.name)
-        if (seenPaths.has(fullPath)) continue
-        seenPaths.add(fullPath)
+        const normKey = path.resolve(fullPath).toLowerCase()
+        if (seenPaths.has(normKey)) continue
+        seenPaths.add(normKey)
 
         const gpNum = extractGpNumber(entry.name)
-        const dur = await probeVideoDuration(fullPath)
+        let dur = 15.0
+        try {
+          dur = await probeVideoDuration(fullPath)
+        } catch {
+          dur = 15.0
+        }
 
         results.push({
           gpNum,

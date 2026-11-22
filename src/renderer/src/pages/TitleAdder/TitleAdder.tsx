@@ -3106,11 +3106,25 @@ export default function TitleAdder(): JSX.Element {
     api.settings.setAndSave('last_output_adder', baseOutputToSave)
     api.settings.setAndSave('title_duration', dur)
 
+    const resolvedVideoFiles: string[] = []
+    if (audioPreviewAssignments.length > 0) {
+      for (const a of audioPreviewAssignments) {
+        if (a.videoPath) resolvedVideoFiles.push(a.videoPath)
+      }
+    }
+    if (resolvedVideoFiles.length === 0) {
+      if (vids && vids.length > 0) {
+        for (const v of vids) resolvedVideoFiles.push(v)
+      } else if (videoFiles && videoFiles.length > 0) {
+        for (const vf of videoFiles) resolvedVideoFiles.push(vf)
+      }
+    }
+
     await api.titleAdder.start({
       mode,
       batchSource: effectiveSource,
       batchSources: effectiveSources,
-      videoFiles,
+      videoFiles: resolvedVideoFiles,
       fileOutputFolders,
       outputFolder,
       duration: dur,
@@ -6281,6 +6295,7 @@ export default function TitleAdder(): JSX.Element {
                       mutedVideos: mutedVideos,
                       availableVideos: audioPreviewAssignments.map(a => a.videoName),
                       batchSource: batchSource,
+                      batchSources: batchSources,
                       thumbnailMode: thumbnailMode,
                       thumbnailModeSelections: userThumbnailModeSelections
                     })
@@ -6721,6 +6736,7 @@ export default function TitleAdder(): JSX.Element {
                       mutedVideos: mutedVideos,
                       availableVideos: audioPreviewAssignments.map(a => a.videoName),
                       batchSource: batchSource,
+                      batchSources: batchSources,
                       thumbnailMode: thumbnailMode,
                       thumbnailModeSelections: userThumbnailModeSelections
                     })

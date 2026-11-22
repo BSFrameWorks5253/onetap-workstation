@@ -29,7 +29,7 @@ import { getFfmpegExePath, getFfprobeExePath } from '../core/gpuDetector'
 import { parseSafarFromPath, extractEventCodeFromPath, SafarParsedInfo, getEventSharafContent, getEventGenre } from '../core/safarHierarchy'
 import { recordRenderFinished } from './taskTracker.ipc'
 import { updateIslandState, onTitleAdderProgressBridge } from '../core/dynamicIsland'
-import { scanGroupPhotosInFolder, buildDefaultGroupPhotoAssignments, GroupPhotoItem } from '../core/groupPhotoAppender'
+import { scanGroupPhotosInFolder, buildDefaultGroupPhotoAssignments, GroupPhotoItem, probeVideoDuration, extractGpNumber } from '../core/groupPhotoAppender'
 
 type WinGetter = () => BrowserWindow | null
 
@@ -71,11 +71,13 @@ export function isGroupPhotoVideo(filenameOrPath: string): boolean {
     .replace(/\.(tmp|temp)$/i, '')
     .replace(/\.[^/.]+$/, '')
     .trim()
-  // Matches "Group_Photo_1", "Group_Photo_2", "Group Photo 1", "Group-Photo-1", "GroupPhoto1", "Group_Photo", etc.
-  // OR "GPn" where n can be any number: e.g. "GP1", "GP2", "GP01", "GP-1", "GP_1", "GP 1", etc.
-  const isGroupPhoto = /(?:^|[\s_.-])group[_\s-]?photo(?:[_\s-]*\d+)?(?:[\s_.-]|$)/i.test(stem)
-  const isGPn = /(?:^|[\s_.-])gp(?:[_\s-]*\d+)?(?:[\s_.-]|$)/i.test(stem)
-  return isGroupPhoto || isGPn
+  if (/group[_\s-]?photo/i.test(stem)) return true
+  // Matches "GP", "GP1", "GP 1", "GP_1", "GP-1", "GP01", "GP1_Final", "GP_Outro", "1448_GP1", etc.
+  if (/(?:^|[\s_.-])gp(?:\d+|[_\s-]+\d+)?(?:[\s_.-]|$|[a-z])/i.test(stem)) {
+    if (/^gp[a-z]{2,}/i.test(stem)) return false
+    return true
+  }
+  return false
 }
 
 export function findTransitionFile(titlesFolder: string): string | null {
@@ -1305,19 +1307,74 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
 
     const availableGroupPhotos: GroupPhotoItem[] = []
     const seenGpPaths = new Set<string>()
-    for (const srcDir of batchSources) {
-      if (srcDir && fs.existsSync(srcDir)) {
-        try {
-          const gps = await scanGroupPhotosInFolder(srcDir)
-          for (const gp of gps) {
-            if (!seenGpPaths.has(gp.fullPath.toLowerCase())) {
-              seenGpPaths.add(gp.fullPath.toLowerCase())
-              availableGroupPhotos.push(gp)
-            }
-          }
-        } catch {}
+
+    // Collect all candidate directories where GP files could reside
+    const candidateDirs = new Set<string>()
+
+    // 1. From batchSources
+    for (const src of batchSources) {
+      if (src && fs.existsSync(src)) candidateDirs.add(src)
+    }
+
+    // 2. From params.videoFiles
+    if (params.videoFiles && Array.isArray(params.videoFiles)) {
+      for (const vf of params.videoFiles) {
+        if (vf && typeof vf === 'string') {
+          const vDir = path.dirname(vf)
+          if (vDir && fs.existsSync(vDir)) candidateDirs.add(vDir)
+        }
       }
     }
+
+    // 3. From resolved assignments (every ceremony video's actual directory on disk!)
+    for (const a of assignments) {
+      if (a.videoPath) {
+        const vDir = path.dirname(a.videoPath)
+        if (vDir && fs.existsSync(vDir)) candidateDirs.add(vDir)
+      }
+    }
+
+    // 4. From params.outputFolder
+    if (params.outputFolder && fs.existsSync(params.outputFolder)) {
+      candidateDirs.add(params.outputFolder)
+    }
+
+    // Scan every candidate directory
+    for (const dir of candidateDirs) {
+      try {
+        const gps = await scanGroupPhotosInFolder(dir)
+        for (const gp of gps) {
+          const norm = path.resolve(gp.fullPath).toLowerCase()
+          if (!seenGpPaths.has(norm)) {
+            seenGpPaths.add(norm)
+            availableGroupPhotos.push(gp)
+          }
+        }
+      } catch {}
+    }
+
+    // 5. Also check if any file in params.videoFiles itself was a GP video
+    if (params.videoFiles && Array.isArray(params.videoFiles)) {
+      for (const vf of params.videoFiles) {
+        if (vf && typeof vf === 'string' && fs.existsSync(vf) && isGroupPhotoVideo(vf)) {
+          const norm = path.resolve(vf).toLowerCase()
+          if (!seenGpPaths.has(norm)) {
+            seenGpPaths.add(norm)
+            const gpNum = extractGpNumber(vf)
+            let dur = 15.0
+            try { dur = await probeVideoDuration(vf) } catch { dur = 15.0 }
+            availableGroupPhotos.push({
+              gpNum,
+              fileName: path.basename(vf),
+              fullPath: vf,
+              duration: dur
+            })
+          }
+        }
+      }
+    }
+
+    availableGroupPhotos.sort((a, b) => a.gpNum - b.gpNum)
 
     const suggestedGroupPhotoAssignments = buildDefaultGroupPhotoAssignments(
       assignments.map(a => a.videoPath),
@@ -1351,12 +1408,23 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
         const stat = fs.statSync(norm)
         return { valid: true, exists: true, isDirectory: stat.isDirectory() }
       }
-      // Check if parent folder exists so subfolder can be created
-      const parent = path.dirname(norm)
-      if (fs.existsSync(parent)) {
+      // Check if any ancestor folder exists so subfolders can be created recursively
+      let curr = path.dirname(norm)
+      let canCreate = false
+      while (curr && curr !== path.dirname(curr)) {
+        if (fs.existsSync(curr)) {
+          canCreate = true
+          break
+        }
+        curr = path.dirname(curr)
+      }
+      if (!canCreate && parsed.root && fs.existsSync(parsed.root)) {
+        canCreate = true
+      }
+      if (canCreate) {
         return { valid: true, exists: false, canCreate: true }
       }
-      return { valid: false, exists: false, reason: `Folder does not exist and parent path is unreachable` }
+      return { valid: false, exists: false, reason: `Destination path is unreachable` }
     } catch (err: any) {
       return { valid: false, exists: false, reason: err?.message || 'Invalid path format' }
     }
@@ -1466,6 +1534,9 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
           videos = filtered
         }
       }
+      if (videos.length === 0 && params.videoFiles && params.videoFiles.length > 0) {
+        videos = params.videoFiles.filter(f => fs.existsSync(f))
+      }
       if (videos.length === 0) {
         send('titleAdder:log', { jobId: params.jobId, message: "✖ No video files found in selected source folder(s).", level: 'error' })
         send('titleAdder:done', { jobId: params.jobId, success: false })
@@ -1473,6 +1544,16 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
       }
     } else {
       videos = params.videoFiles ?? []
+      if (videos.length === 0 && batchSources.length > 0) {
+        for (const src of batchSources) {
+          const bVids = getBatchVideos(src)
+          for (const bv of bVids) {
+            if (!videos.includes(bv)) {
+              videos.push(bv)
+            }
+          }
+        }
+      }
     }
     videos = videos.filter(v => !isGroupPhotoVideo(v))
 
