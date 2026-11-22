@@ -111,7 +111,12 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
   const transLen = (!skipFront && startImg && hasCustomTrans) ? (params.transitionDuration ?? 1.0) : 0
   const leadDuration = introLen + transLen
   const fadeStart = Math.max(totalLength - 2.0, 0)
+
+  // Detect encoder — _cache should already be warmed at app startup via warmEncoderCache()
+  // so this returns instantly. If not yet cached, it probes GPU here (up to ~4.8s max).
+  onEvent({ type: 'log', jobId, message: '🔍 Checking encoder capability...', level: 'info' })
   const enc = getVideoEncoder()
+  onEvent({ type: 'log', jobId, message: `✅ Encoder: ${enc.label}`, level: 'info' })
 
   // Dynamic input stream setup
   const dynamicInputs: string[] = []

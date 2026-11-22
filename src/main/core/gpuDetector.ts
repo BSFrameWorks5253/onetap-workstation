@@ -144,30 +144,8 @@ export function findAndEnsureFfmpegPath(): string | null {
       path.join(localAppData, 'Programs', 'ffmpeg')
     )
 
-    // Check WinGet packages directories dynamically
-    const wingetPkgDir = path.join(localAppData, 'Microsoft', 'WinGet', 'Packages')
-    try {
-      if (fs.existsSync(wingetPkgDir)) {
-        const pkgs = fs.readdirSync(wingetPkgDir, { withFileTypes: true })
-        for (const pkg of pkgs) {
-          if (pkg.isDirectory() && (pkg.name.toLowerCase().includes('ffmpeg') || pkg.name.toLowerCase().includes('gyan'))) {
-            const pkgPath = path.join(wingetPkgDir, pkg.name)
-            candidates.push(pkgPath)
-            candidates.push(path.join(pkgPath, 'bin'))
-            // Subdirectories like ffmpeg-7.1-full_build
-            try {
-              const subs = fs.readdirSync(pkgPath, { withFileTypes: true })
-              for (const sub of subs) {
-                if (sub.isDirectory()) {
-                  candidates.push(path.join(pkgPath, sub.name, 'bin'))
-                  candidates.push(path.join(pkgPath, sub.name))
-                }
-              }
-            } catch {}
-          }
-        }
-      }
-    } catch {}
+    // Note: WinGet Packages dynamic scan removed — it blocks on OneDrive/network drives.
+    // The static WinGet Links path (already in candidates above) covers standard installs.
 
     // Check standard root folder candidates
     const rootCandidates = [
@@ -308,6 +286,21 @@ export function forceCpuEncoder(): EncoderResult {
     flags: ['-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-pix_fmt', 'yuv420p']
   }
   return _cache
+}
+
+/**
+ * Eagerly warms the GPU encoder cache at app startup so the first call to
+ * getVideoEncoder() inside runFFmpegJob() returns instantly from cache.
+ * Call this once from app.whenReady() — it runs asynchronously (setTimeout)
+ * so it never blocks the main thread or the app ready sequence.
+ */
+export function warmEncoderCache(): void {
+  if (_cache) return // Already warmed
+  setTimeout(() => {
+    try {
+      getVideoEncoder()
+    } catch {}
+  }, 2000) // 2s delay — let the app window fully open first
 }
 
 export function checkFfmpeg(): { ok: boolean; message: string } {

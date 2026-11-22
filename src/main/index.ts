@@ -4,7 +4,7 @@ import path, { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import { pathToFileURL } from 'url'
 import { loadEnv } from './core/envLoader'
-import { findAndEnsureFfmpegPath } from './core/gpuDetector'
+import { findAndEnsureFfmpegPath, warmEncoderCache } from './core/gpuDetector'
 
 // Suppress default Electron error dialogs for transient Windows file locks (EBUSY / EPERM / OneDrive locks)
 try {
@@ -871,6 +871,9 @@ app.whenReady().then(() => {
   // Set app id for windows taskbar grouping
   app.setAppUserModelId('com.bsframework.onetap')
   ensureWindowsAppUserModelId()
+
+  // Eagerly warm the GPU encoder cache so it never blocks on first render job
+  warmEncoderCache()
 
   // Register protocol to serve local files (Electron 31 compatible, direct fs read)
   protocol.handle('local-resource', async (request) => {
