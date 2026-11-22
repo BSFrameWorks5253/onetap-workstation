@@ -71,8 +71,9 @@ export function findAndEnsureFfmpegPath(): string | null {
 
   // 3. Check standard PATH lookup fallback
   try {
-    const res = spawnSync(ffmpegBinary, ['-version'], { timeout: 3000, windowsHide: true, env: process.env })
+    const res = spawnSync(ffmpegBinary, ['-version'], { timeout: 1500, windowsHide: true, env: process.env })
     if (res.status === 0) {
+      _discoveredFfmpegDir = 'PATH'
       return 'PATH'
     }
   } catch {}
@@ -168,28 +169,17 @@ export function findAndEnsureFfmpegPath(): string | null {
       }
     } catch {}
 
-    // Check standard root folder candidates and dynamic ffmpeg-* build directories
+    // Check standard root folder candidates
     const rootCandidates = [
       'C:\\ffmpeg', 'C:\\ffmpeg\\bin',
       'D:\\ffmpeg', 'D:\\ffmpeg\\bin',
       'E:\\ffmpeg', 'E:\\ffmpeg\\bin'
     ]
     for (const rc of rootCandidates) {
-      if (fs.existsSync(rc)) candidates.push(rc)
+      try {
+        if (fs.existsSync(rc)) candidates.push(rc)
+      } catch {}
     }
-    try {
-      for (const drive of ['C:\\', 'D:\\', 'E:\\']) {
-        if (fs.existsSync(drive)) {
-          const entries = fs.readdirSync(drive, { withFileTypes: true })
-          for (const ent of entries) {
-            if (ent.isDirectory() && ent.name.toLowerCase().startsWith('ffmpeg')) {
-              candidates.push(path.join(drive, ent.name, 'bin'))
-              candidates.push(path.join(drive, ent.name))
-            }
-          }
-        }
-      }
-    } catch {}
   } else {
     // Unix / Linux candidates
     candidates.push(
@@ -245,7 +235,7 @@ export function getFfprobeExePath(): string {
   // 2. Query where.exe / which for ffprobe
   try {
     const locator = isWin ? 'where.exe' : 'which'
-    const res = spawnSync(locator, ['ffprobe'], { timeout: 3000, windowsHide: true, env: process.env })
+    const res = spawnSync(locator, ['ffprobe'], { timeout: 1500, windowsHide: true, env: process.env })
     if (res.status === 0 && res.stdout) {
       const lines = res.stdout.toString().split(/\r?\n/).map(l => l.trim()).filter(Boolean)
       for (const line of lines) {
@@ -258,6 +248,7 @@ export function getFfprobeExePath(): string {
   } catch {}
 
   // 3. Fallback to binary name on PATH
+  _discoveredFfprobePath = ffprobeBinary
   return ffprobeBinary
 }
 
@@ -267,7 +258,7 @@ function runProbe(flags: string[]): boolean {
     const result = spawnSync(
       ffmpegExe,
       ['-f', 'lavfi', '-i', 'color=black:s=128x128:d=0.5', ...flags, '-f', 'null', '-'],
-      { timeout: 8000, windowsHide: true, env: process.env }
+      { timeout: 1200, windowsHide: true, env: process.env }
     )
     return result.status === 0
   } catch {

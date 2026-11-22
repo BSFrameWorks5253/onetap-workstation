@@ -530,15 +530,15 @@ function resolveVideoThumbnail(
 
 async function getVideoInfo(filePath: string): Promise<{
   width: number; height: number; duration: number; fps: string
-} | null> {
-  // Method 1: ffprobe JSON probe
+}> {
+  // Method 1: ffprobe JSON probe (fast 2500ms timeout)
   try {
     const ffprobeExe = getFfprobeExePath()
     const { stdout } = await execFileAsync(ffprobeExe, [
       '-v', 'error', '-select_streams', 'v:0',
       '-show_entries', 'stream=width,height,duration,r_frame_rate:format=duration',
       '-of', 'json', filePath
-    ], { windowsHide: true, env: process.env, timeout: 10000 })
+    ], { windowsHide: true, env: process.env, timeout: 2500 })
     const parsed = JSON.parse(stdout.toString())
     const streams = parsed.streams || []
     const s = streams.find((st: any) => st.width && st.height) || streams[0]
@@ -556,11 +556,11 @@ async function getVideoInfo(filePath: string): Promise<{
     }
   } catch {}
 
-  // Method 2: ffmpeg -i banner fallback (works even if ffprobe is missing or fails on container)
+  // Method 2: ffmpeg -i banner fallback (fast 2000ms timeout)
   try {
     const ffmpegExe = getFfmpegExePath()
     const res = spawnSync(ffmpegExe, ['-hide_banner', '-i', filePath], {
-      timeout: 10000,
+      timeout: 2000,
       windowsHide: true,
       env: process.env
     })
@@ -593,7 +593,17 @@ async function getVideoInfo(filePath: string): Promise<{
     }
   } catch {}
 
-  return null
+  // Method 3: Safe default fallback so rendering never aborts or stalls
+  let fallbackDur = 60
+  try {
+    if (fs.existsSync(filePath)) {
+      const bytes = fs.statSync(filePath).size
+      // Assume ~15 Mbps for standard 1080p MP4 to estimate duration if probing failed
+      if (bytes > 0) fallbackDur = Math.max(5, Math.round(bytes / (15 * 1024 * 1024 / 8)))
+    }
+  } catch {}
+
+  return { width: 1920, height: 1080, duration: fallbackDur, fps: '30/1' }
 }
 
 async function hasAudioStream(filePath: string): Promise<boolean> {
@@ -603,23 +613,23 @@ async function hasAudioStream(filePath: string): Promise<boolean> {
       '-v', 'error', '-select_streams', 'a:0',
       '-show_entries', 'stream=index',
       '-of', 'json', filePath
-    ], { windowsHide: true, env: process.env, timeout: 10000 })
+    ], { windowsHide: true, env: process.env, timeout: 2000 })
     const parsed = JSON.parse(stdout.toString())
     if (parsed.streams && parsed.streams.length > 0) return true
   } catch {}
 
-  // Fallback: check with ffmpeg -i
+  // Fallback: check with ffmpeg -i (2000ms timeout)
   try {
     const ffmpegExe = getFfmpegExePath()
     const res = spawnSync(ffmpegExe, ['-hide_banner', '-i', filePath], {
-      timeout: 10000,
+      timeout: 2000,
       windowsHide: true,
       env: process.env
     })
     const out = (res.stderr || '').toString() + (res.stdout || '').toString()
     return /Stream #\d+:\d+.*Audio:/i.test(out)
   } catch {
-    return false
+    return true // Assume audio present rather than muting by mistake
   }
 }
 
@@ -1316,6 +1326,23 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
     } else {
       videos = params.videoFiles ?? []
     }
+
+    // Capture all Group Photo videos directly detected in source/batch/DVD folders
+    const rawGpCandidates: string[] = []
+    for (const v of videos) {
+      if (isGroupPhotoVideo(v) && !rawGpCandidates.includes(v)) {
+        rawGpCandidates.push(v)
+      }
+    }
+    if (params.videoFiles && Array.isArray(params.videoFiles)) {
+      for (const vf of params.videoFiles) {
+        if (vf && isGroupPhotoVideo(vf) && !rawGpCandidates.includes(vf)) {
+          rawGpCandidates.push(vf)
+        }
+      }
+    }
+
+    // Filter ceremony videos (GP videos are attached as outros, not rendered as standalone ceremonies)
     videos = videos.filter(v => !isGroupPhotoVideo(v))
 
     const special1Path = getSpecial1AudioPath(titlesFolder)
@@ -1368,6 +1395,22 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
 
     const availableGroupPhotos: GroupPhotoItem[] = []
     const seenGpPaths = new Set<string>()
+
+    // Ingest directly detected GP files from batch/DVD immediately
+    for (const gpPath of rawGpCandidates) {
+      if (fs.existsSync(gpPath)) {
+        const norm = path.resolve(gpPath).toLowerCase()
+        if (!seenGpPaths.has(norm)) {
+          seenGpPaths.add(norm)
+          availableGroupPhotos.push({
+            gpNum: extractGpNumber(gpPath),
+            fileName: path.basename(gpPath),
+            fullPath: gpPath,
+            duration: 15.0
+          })
+        }
+      }
+    }
 
     // Collect all candidate directories where GP files could reside
     const candidateDirs = new Set<string>()
@@ -1754,6 +1797,11 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
       // ── Per-video header ──────────────────────────────────────
       send('titleAdder:log', { jobId: params.jobId, message: `\n━━━ [${done + 1}/${videos.length}] ${path.basename(videoPath)} ━━━`, level: 'info' })
       send('titleAdder:log', { jobId: params.jobId, message: `  Prefix detected: "${prefix}"`, level: 'info' })
+      send('titleAdder:progress', {
+        jobId: params.jobId,
+        percent: 0,
+        status: `${path.basename(videoPath)}: Preparing...`
+      })
 
       // Per-video thumbnail placement mode override (computed upfront so Pure Video mode can skip title image requirement)
       const perVideoThumbMode =

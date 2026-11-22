@@ -1,5 +1,13 @@
 [
   {
+    "version": "26.11.32",
+    "date": "2026-11-22",
+    "whats_new": "* Group Photo Outro Auto-Detection: Directly ingests and pairs detected Group Photo (GP) videos located in the batch source or DVD folder, opening the dedicated GP setup modal.\n* Rapid Non-Blocking Metadata Probing: Throttled, fast timeouts for FFmpeg/FFprobe operations with safe automatic duration and format fallbacks.\n* Instant UI Encode Telemetry: Immediately exits 'Initializing...' status upon job start to display the active video filename, progress percentage, and speed metrics.",
+    "release_notes": "UniDesk Studio v26.11.32 delivers vital stability fixes for client workstations, eliminating main-thread freezes from synchronous drive scanning, removing conflicting multi-stream cover art muxing, and resolving Group Photo outro detection in batch folders.",
+    "bugs_fixed": "* Resolved Client Render Not Starting: Eliminated aggressive drive root scanning across empty optical/removable drives (D:\\ and E:\\) and removed conflicting second video stream cover art muxing.\n* Fixed Group Photo Modal Not Appearing: Ensured GP videos in DVD are preserved during preflight and automatically advance to the Group Photo assignment window.\n* Fixed Regex Progress Parsing: Updated FFmpeg time parser to handle decimal and integer time values with arbitrary whitespace.",
+    "improvements": "* Direct DVD GP Ingestion: Instantly recognizes GP1, GP2, Group Photo files without slow filesystem tree traversals.\n* Synchronized Extension Builds: Maintained 100% parity across one-tap-extension and one-tap-parent-extension."
+  },
+  {
     "version": "26.11.31",
     "date": "2026-11-22",
     "whats_new": "* Resilient Title Adder Video Rendering Pipeline: Bulletproof multi-stage rendering with automatic GPU-to-CPU failover, ensuring client computers without dedicated GPUs or with conflicting drivers render seamlessly.\n* Automatic FFmpeg Binary Discovery: Dynamic environment path resolver for FFmpeg and FFprobe binaries across WinGet, Scoop, Chocolatey, and standard installation roots.\n* Stream-Specific Cover Art Synthesis: Explicitly scoped stream mapping and pixel format conversions for thumbnail cover art embedding without stalling the main video stream.",

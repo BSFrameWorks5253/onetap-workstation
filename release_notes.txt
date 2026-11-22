@@ -1,18 +1,19 @@
 [VERSION]
-26.11.31
+26.11.32
 
 [WHATS_NEW]
-* Resilient Title Adder Video Rendering Pipeline: Bulletproof multi-stage rendering with automatic GPU-to-CPU failover, ensuring client computers without dedicated GPUs or with conflicting drivers render seamlessly.
-* Automatic FFmpeg Binary Discovery: Dynamic environment path resolver for FFmpeg and FFprobe binaries across WinGet, Scoop, Chocolatey, and standard installation roots.
-* Stream-Specific Cover Art Synthesis: Explicitly scoped stream mapping and pixel format conversions for thumbnail cover art embedding without stalling the main video stream.
+* Group Photo Outro Auto-Detection & Instant Assignment: Group Photo (GP) videos located in the batch source or DVD folder are directly ingested and surfaced immediately in the dedicated Group Photo window.
+* Ultra-Fast Non-Blocking Metadata Probing: Rapid timeouts with robust fallbacks in FFmpeg/FFprobe resolvers, eliminating main-thread freezes.
+* Instant Video Progress Feedback: Immediate UI state transition from 'Initializing...' displaying the active video file, percentage, and real-time encode telemetry.
 
 [BUGS_FIXED]
-* Resolved Title Adder Render Not Starting: Eliminated global frame limit (-vframes:v:1 1) on attached picture streams that prematurely terminated full-length video encoding.
-* Fixed Filtergraph Incompatibility: Removed -hwaccel auto from video input streams, preventing dxva2/cuda hardware surface conflicts with CPU software scale/pad filters.
-* Fixed FFprobe Metadata Skip: Added dual format/stream duration parsing and seamless fallback to ffmpeg -i when ffprobe is missing or returns N/A for stream duration.
-* Fixed GPU Encode Abort: Automatically catches GPU encoder crashes (NVENC, QSV, AMF) and executes immediate in-flight retry using libx264 (CPU).
+* Resolved Client Rendering Initialization Freeze: Eliminated aggressive drive root scanning across empty optical/removable drives (D:\ and E:\) and removed conflicting multi-stream cover art muxing.
+* Fixed Group Photo Modal Not Appearing: Ensured GP videos in DVD are preserved during preflight and automatically trigger the Group Photo setup modal.
+* Fixed Regex Progress Parsing: Updated FFmpeg time parser to handle decimal and integer time values with arbitrary whitespace.
 
 [IMPROVEMENTS]
+* Direct DVD GP Ingestion: Instantly recognizes GP1, GP2, Group Photo files without slow filesystem tree traversals.
+* Synchronized Extension Builds: Maintained 100% parity across one-tap-extension and one-tap-parent-extension.
 * Comprehensive Stderr Error Logging: Captured and surfaced granular FFmpeg stderr diagnostics directly to the UI activity log and dynamic status displays.
 * Clean Retry Engine: Automatically removes incomplete or corrupted partial outputs before launching fallback retries.
 * Multi-Target Setup Installer: NSIS and Inno Setup integration for single-click installation and portable distribution.

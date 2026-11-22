@@ -103,7 +103,7 @@ export function extractNikaahNumberFromFileName(fileNameOrPath: string): number 
 }
 
 /**
- * Probes video duration using ffprobe
+ * Probes video duration using ffprobe with rapid non-blocking timeout
  */
 export async function probeVideoDuration(filePath: string): Promise<number> {
   try {
@@ -111,50 +111,15 @@ export async function probeVideoDuration(filePath: string): Promise<number> {
     const { stdout } = await execFileAsync(ffprobeExe, [
       '-v', 'error',
       '-select_streams', 'v:0',
-      '-show_entries', 'stream=duration',
+      '-show_entries', 'stream=duration:format=duration',
       '-of', 'json',
       filePath
-    ], { windowsHide: true, env: process.env, timeout: 8000 })
+    ], { windowsHide: true, env: process.env, timeout: 2000 })
     const parsed = JSON.parse(stdout.toString())
-    const durStr = parsed.streams?.[0]?.duration
+    const durStr = parsed.streams?.[0]?.duration || parsed.format?.duration
     if (durStr && !isNaN(parseFloat(durStr))) {
-      return Math.round(parseFloat(durStr) * 100) / 100
-    }
-  } catch {}
-
-  try {
-    const ffprobeExe = getFfprobeExePath()
-    const { stdout } = await execFileAsync(ffprobeExe, [
-      '-v', 'error',
-      '-show_entries', 'format=duration',
-      '-of', 'json',
-      filePath
-    ], { windowsHide: true, env: process.env, timeout: 8000 })
-    const parsed = JSON.parse(stdout.toString())
-    const durStr = parsed.format?.duration
-    if (durStr && !isNaN(parseFloat(durStr))) {
-      return Math.round(parseFloat(durStr) * 100) / 100
-    }
-  } catch {}
-
-  // Fallback: probe via ffmpeg -i
-  try {
-    const ffmpegExe = getFfmpegExePath()
-    const res = spawnSync(ffmpegExe, ['-hide_banner', '-i', filePath], {
-      timeout: 8000,
-      windowsHide: true,
-      env: process.env
-    })
-    const out = (res.stderr || '').toString() + (res.stdout || '').toString()
-    const durMatch = out.match(/Duration:\s*(\d+):(\d+):([\d.]+)/)
-    if (durMatch) {
-      const hours = parseFloat(durMatch[1])
-      const mins = parseFloat(durMatch[2])
-      const secs = parseFloat(durMatch[3])
-      const dur = hours * 3600 + mins * 60 + secs
-      if (!isNaN(dur) && dur > 0) {
-        return Math.round(dur * 100) / 100
-      }
+      const dur = parseFloat(durStr)
+      if (dur > 0) return Math.round(dur * 100) / 100
     }
   } catch {}
 
@@ -172,57 +137,33 @@ export async function scanGroupPhotosInFolder(folderPath: string): Promise<Group
   const dirsToScan = new Set<string>()
   dirsToScan.add(targetDir)
 
-  // 1. Direct and parent DVD subfolders
+  // 1. Direct DVD subfolders
   const dvdSub = path.join(targetDir, 'DVD')
   if (fs.existsSync(dvdSub)) dirsToScan.add(dvdSub)
   const dvdSubLower = path.join(targetDir, 'dvd')
   if (fs.existsSync(dvdSubLower)) dirsToScan.add(dvdSubLower)
 
-  const parent = path.dirname(targetDir)
-  if (parent && parent !== targetDir && fs.existsSync(parent)) {
-    dirsToScan.add(parent)
-    const sibDvd = path.join(parent, 'DVD')
-    if (fs.existsSync(sibDvd)) dirsToScan.add(sibDvd)
-    const sibDvdLower = path.join(parent, 'dvd')
-    if (fs.existsSync(sibDvdLower)) dirsToScan.add(sibDvdLower)
+  // 2. If targetDir itself is a DVD folder, check its parent date folder
+  const isTargetDvd = path.basename(targetDir).toLowerCase() === 'dvd'
+  if (isTargetDvd) {
+    const parent = path.dirname(targetDir)
+    if (parent && parent !== targetDir && fs.existsSync(parent)) {
+      dirsToScan.add(parent)
+    }
   }
 
-  // 2. Recursive subdirectory walker up to depth 3
-  const queue: Array<{ dir: string; depth: number }> = [{ dir: targetDir, depth: 0 }]
-  if (fs.existsSync(dvdSub)) queue.push({ dir: dvdSub, depth: 0 })
-  if (parent && parent !== targetDir && fs.existsSync(parent)) queue.push({ dir: parent, depth: 1 })
-
-  const visitedWalk = new Set<string>()
-  while (queue.length > 0) {
-    const { dir: curDir, depth } = queue.shift()!
-    const norm = path.resolve(curDir).toLowerCase()
-    if (visitedWalk.has(norm) || depth > 3) continue
-    visitedWalk.add(norm)
-    dirsToScan.add(curDir)
-
-    try {
-      const subEntries = fs.readdirSync(curDir, { withFileTypes: true })
-      for (const sub of subEntries) {
-        if (sub.isDirectory() && !sub.name.startsWith('.') && !sub.name.startsWith('$')) {
-          const subFullPath = path.join(curDir, sub.name)
-          const lower = sub.name.toLowerCase()
-          if (
-            lower === 'dvd' ||
-            lower.includes('gp') ||
-            lower.includes('group') ||
-            lower.includes('photo') ||
-            lower.includes('outro') ||
-            lower === 'final' ||
-            lower === 'output' ||
-            depth < 2
-          ) {
-            dirsToScan.add(subFullPath)
-            queue.push({ dir: subFullPath, depth: depth + 1 })
-          }
+  // 3. Check specific relevant subfolders inside targetDir (GP, Group Photo, Outro)
+  try {
+    const subs = fs.readdirSync(targetDir, { withFileTypes: true })
+    for (const sub of subs) {
+      if (sub.isDirectory() && !sub.name.startsWith('.') && !sub.name.startsWith('$')) {
+        const lower = sub.name.toLowerCase()
+        if (lower === 'dvd' || lower.includes('gp') || lower.includes('group') || lower.includes('photo') || lower.includes('outro')) {
+          dirsToScan.add(path.join(targetDir, sub.name))
         }
       }
-    } catch {}
-  }
+    }
+  } catch {}
 
   const seenPaths = new Set<string>()
 

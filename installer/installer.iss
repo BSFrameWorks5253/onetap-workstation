@@ -11,7 +11,7 @@
 [Setup]
 AppId={{com.bsframework.onetap}}
 AppName=One Tap
-AppVersion=26.11.31
+AppVersion=26.11.32
 AppPublisher=BS Framework
 AppPublisherURL=https://bsframework.com/
 DefaultDirName={autopf}\One Tap

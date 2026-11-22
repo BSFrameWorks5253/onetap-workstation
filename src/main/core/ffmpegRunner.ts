@@ -432,27 +432,16 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
     metadataArgs.push('-metadata', `date=${detectedYear}`, '-metadata', `year=${detectedYear}`)
   }
 
-  // Cover art & thumbnail embedding:
-  // Windows File Explorer, macOS Finder, iOS Photos, and Android MediaStore inspect attached_pic cover art.
-  // When an intro title image is present, we map it directly as an attached_pic MJPEG stream and enable
-  // +faststart so the moov atom is placed at the start of the MP4 file for instant, crystal-clear thumbnail generation.
-  const hasCoverArt = !skipFront && startImgIdx >= 0 && !!startImg && fs.existsSync(startImg)
-
-  const executeAttempt = (activeEnc: ReturnType<typeof getVideoEncoder>, tryCoverArt: boolean, isRetry: boolean): void => {
+  // Title card is the first frame of the output video with -movflags +faststart,
+  // ensuring instant, crystal-clear thumbnail generation in Windows File Explorer and mobile devices.
+  const executeAttempt = (activeEnc: ReturnType<typeof getVideoEncoder>, isRetry: boolean): void => {
     if (_cancelledJobs.has(jobId)) {
       _cancelledJobs.delete(jobId)
       onEvent({ type: 'done', jobId, success: false, message: '⛔ Job was cancelled by user.' })
       return
     }
 
-    const attachCoverArt = tryCoverArt && hasCoverArt
     const ffmpegExe = getFfmpegExePath()
-
-    // When cover art is attached, encoder flags must NOT use a global -pix_fmt that would
-    // bleed onto the MJPEG cover art stream (v:1). Convert -pix_fmt to stream-specific -pix_fmt:v:0.
-    const encFlags = attachCoverArt
-      ? activeEnc.flags.map(f => f === '-pix_fmt' ? '-pix_fmt:v:0' : f)
-      : activeEnc.flags
 
     const cmd = [
       ffmpegExe, '-y',
@@ -461,9 +450,7 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
       ...audioInputs,
       '-filter_complex', audioFilter + videoFilter,
       '-map', '[final_video]', '-map', '[final_audio]',
-      ...(attachCoverArt ? ['-map', `${startImgIdx}:v`] : []),
-      ...encFlags,
-      ...(attachCoverArt ? ['-c:v:1', 'mjpeg', '-pix_fmt:v:1', 'yuvj420p', '-disposition:v:1', 'attached_pic'] : []),
+      ...activeEnc.flags,
       '-c:a', 'aac', '-b:a', '192k', '-threads', '0',
       '-movflags', '+faststart',
       ...metadataArgs,
@@ -473,7 +460,17 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
     onEvent({
       type: 'log',
       jobId,
-      message: `⚙ ${isRetry ? '[Auto-Fallback] ' : ''}Encoding → ${path.basename(outputPath)} [${activeEnc.label}${attachCoverArt ? ' + CoverArt' : ''}]`
+      message: `⚙ ${isRetry ? '[Auto-Fallback] ' : ''}Encoding → ${path.basename(outputPath)} [${activeEnc.label}]`
+    })
+
+    // Emit initial progress immediately so UI updates from 'Initializing...' to current video
+    onEvent({
+      type: 'progress',
+      jobId,
+      percent: 0,
+      status: `${path.basename(videoPath)}: 0%`,
+      speed: '',
+      fps: ''
     })
 
     const proc = spawn(cmd[0], cmd.slice(1), {
@@ -497,7 +494,7 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
         }
       }
 
-      const matchTime  = text.match(/time=(\d+:\d+:\d+\.\d+)/)
+      const matchTime  = text.match(/time=\s*(\d+:\d+:\d+(?:\.\d+)?)/)
       const matchFps   = text.match(/fps=\s*([\d.]+)/)
       const matchSpeed = text.match(/speed=\s*([\d.x]+)/)
 
@@ -548,7 +545,7 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
           level: 'warn'
         })
         const cpuEnc = forceCpuEncoder()
-        executeAttempt(cpuEnc, attachCoverArt, true)
+        executeAttempt(cpuEnc, true)
         return
       }
 
@@ -590,7 +587,7 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
       const reversed = [...stderrLines].reverse()
       const matchedErr = reversed.find(l => errKeywords.test(l)) || reversed[0] || `exit code ${code}`
 
-      // Retry 1: Fallback from GPU to CPU if GPU encoder failed
+      // Fallback from GPU to CPU if GPU encoder failed
       if (!isRetry && activeEnc.label.includes('(GPU)')) {
         onEvent({
           type: 'log',
@@ -602,37 +599,7 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
           if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath)
         } catch {}
         const cpuEnc = forceCpuEncoder()
-        executeAttempt(cpuEnc, attachCoverArt, true)
-        return
-      }
-
-      // Retry 2: If cover art caused failure, retry without cover art
-      if (attachCoverArt && !isRetry) {
-        onEvent({
-          type: 'log',
-          jobId,
-          message: `⚠ Encoding with cover art failed (${matchedErr}). Retrying without embedded cover art...`,
-          level: 'warn'
-        })
-        try {
-          if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath)
-        } catch {}
-        executeAttempt(activeEnc, false, true)
-        return
-      }
-
-      // Retry 3: If CPU retry with cover art failed, retry CPU clean without cover art
-      if (attachCoverArt && isRetry) {
-        onEvent({
-          type: 'log',
-          jobId,
-          message: `⚠ CPU encoding with cover art failed (${matchedErr}). Retrying clean render without cover art...`,
-          level: 'warn'
-        })
-        try {
-          if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath)
-        } catch {}
-        executeAttempt(activeEnc, false, true)
+        executeAttempt(cpuEnc, true)
         return
       }
 
@@ -645,7 +612,7 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
     })
   }
 
-  executeAttempt(enc, true, false)
+  executeAttempt(enc, false)
 }
 
 export function cancelJob(jobId: string): void {
