@@ -447,6 +447,13 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
 
     const attachCoverArt = tryCoverArt && hasCoverArt
     const ffmpegExe = getFfmpegExePath()
+
+    // When cover art is attached, encoder flags must NOT use a global -pix_fmt that would
+    // bleed onto the MJPEG cover art stream (v:1). Convert -pix_fmt to stream-specific -pix_fmt:v:0.
+    const encFlags = attachCoverArt
+      ? activeEnc.flags.map(f => f === '-pix_fmt' ? '-pix_fmt:v:0' : f)
+      : activeEnc.flags
+
     const cmd = [
       ffmpegExe, '-y',
       '-threads', '0',
@@ -455,8 +462,8 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
       '-filter_complex', audioFilter + videoFilter,
       '-map', '[final_video]', '-map', '[final_audio]',
       ...(attachCoverArt ? ['-map', `${startImgIdx}:v`] : []),
-      ...activeEnc.flags,
-      ...(attachCoverArt ? ['-c:v:1', 'mjpeg', '-pix_fmt:v:1', 'yuvj420p', '-disposition:v:1', 'attached_pic', '-vframes:v:1', '1'] : []),
+      ...encFlags,
+      ...(attachCoverArt ? ['-c:v:1', 'mjpeg', '-pix_fmt:v:1', 'yuvj420p', '-disposition:v:1', 'attached_pic'] : []),
       '-c:a', 'aac', '-b:a', '192k', '-threads', '0',
       '-movflags', '+faststart',
       ...metadataArgs,

@@ -281,19 +281,19 @@ export function getVideoEncoder(): EncoderResult {
   const candidates: EncoderResult[] = [
     {
       label: 'NVENC (GPU)',
-      flags: ['-c:v:0', 'h264_nvenc', '-preset', 'p4', '-tune', 'hq', '-cq', '18', '-pix_fmt:v:0', 'yuv420p']
+      flags: ['-c:v', 'h264_nvenc', '-preset', 'p4', '-tune', 'hq', '-cq', '18', '-pix_fmt', 'yuv420p']
     },
     {
       label: 'NVENC Legacy (GPU)',
-      flags: ['-c:v:0', 'h264_nvenc', '-preset', 'fast', '-cq', '18', '-pix_fmt:v:0', 'yuv420p']
+      flags: ['-c:v', 'h264_nvenc', '-preset', 'fast', '-cq', '18', '-pix_fmt', 'yuv420p']
     },
     {
       label: 'QSV (GPU)',
-      flags: ['-c:v:0', 'h264_qsv', '-preset', 'faster', '-global_quality', '18', '-pix_fmt:v:0', 'yuv420p']
+      flags: ['-c:v', 'h264_qsv', '-preset', 'faster', '-global_quality', '18', '-pix_fmt', 'yuv420p']
     },
     {
       label: 'AMD AMF (GPU)',
-      flags: ['-c:v:0', 'h264_amf', '-rc', 'cqp', '-qp_i', '18', '-qp_p', '18', '-pix_fmt:v:0', 'yuv420p']
+      flags: ['-c:v', 'h264_amf', '-rc', 'cqp', '-qp_i', '18', '-qp_p', '18', '-pix_fmt', 'yuv420p']
     }
   ]
 
@@ -306,7 +306,7 @@ export function getVideoEncoder(): EncoderResult {
 
   _cache = {
     label: 'libx264 (CPU)',
-    flags: ['-c:v:0', 'libx264', '-preset', 'veryfast', '-crf', '18', '-pix_fmt:v:0', 'yuv420p']
+    flags: ['-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-pix_fmt', 'yuv420p']
   }
   return _cache
 }
@@ -314,7 +314,7 @@ export function getVideoEncoder(): EncoderResult {
 export function forceCpuEncoder(): EncoderResult {
   _cache = {
     label: 'libx264 (CPU)',
-    flags: ['-c:v:0', 'libx264', '-preset', 'veryfast', '-crf', '18', '-pix_fmt:v:0', 'yuv420p']
+    flags: ['-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-pix_fmt', 'yuv420p']
   }
   return _cache
 }
