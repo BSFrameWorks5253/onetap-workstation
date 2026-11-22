@@ -449,17 +449,21 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
     const ffmpegExe = getFfmpegExePath()
 
     const cmd = [
-      ffmpegExe, '-y',
+      ffmpegExe,
+      '-y',
+      '-nostdin',
+      '-hide_banner',
+      '-stats',
       '-threads', '0',
       ...dynamicInputs,
       ...audioInputs,
       '-filter_complex', audioFilter + videoFilter,
       '-map', '[final_video]', '-map', '[final_audio]',
       ...activeEnc.flags,
-      '-c:a', 'aac', '-b:a', '192k', '-threads', '0',
+      '-c:a', 'aac', '-b:a', '192k',
       '-movflags', '+faststart',
       ...metadataArgs,
-      outputPath, '-hide_banner', '-stats'
+      outputPath
     ]
 
     onEvent({
@@ -473,7 +477,7 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
       type: 'progress',
       jobId,
       percent: 0,
-      status: `${path.basename(videoPath)}: 0%`,
+      status: `Encoding ${path.basename(videoPath)} (0%)`,
       speed: '',
       fps: ''
     })
@@ -607,6 +611,13 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
         executeAttempt(cpuEnc, true)
         return
       }
+
+      onEvent({
+        type: 'progress',
+        jobId,
+        percent: 0,
+        status: `⚠️ Error on ${path.basename(videoPath)}: ${matchedErr}`
+      })
 
       onEvent({
         type: 'done',

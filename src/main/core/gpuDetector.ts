@@ -235,8 +235,8 @@ function runProbe(flags: string[]): boolean {
     const ffmpegExe = getFfmpegExePath()
     const result = spawnSync(
       ffmpegExe,
-      ['-f', 'lavfi', '-i', 'color=black:s=128x128:d=0.5', ...flags, '-f', 'null', '-'],
-      { timeout: 1200, windowsHide: true, env: process.env }
+      ['-y', '-nostdin', '-f', 'lavfi', '-i', 'color=black:s=128x128:d=0.5', ...flags, '-f', 'null', '-'],
+      { timeout: 1500, windowsHide: true, env: process.env }
     )
     return result.status === 0
   } catch {

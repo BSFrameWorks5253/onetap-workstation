@@ -1669,6 +1669,11 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
 
     send('titleAdder:log', { jobId: params.jobId, message: `📋 Processing ${videos.length} video(s)`, level: 'info' })
     send('titleAdder:found', { jobId: params.jobId, total: videos.length })
+    send('titleAdder:progress', {
+      jobId: params.jobId,
+      percent: 0,
+      status: `Starting render queue (${videos.length} videos)...`
+    })
 
     // Extract date folder name dynamically
     let actualOutputDir = params.outputFolder || ''
@@ -1800,7 +1805,7 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
       send('titleAdder:progress', {
         jobId: params.jobId,
         percent: 0,
-        status: `${path.basename(videoPath)}: Preparing...`
+        status: `[${done + 1}/${videos.length}] Preparing ${path.basename(videoPath)}...`
       })
 
       // Per-video thumbnail placement mode override (computed upfront so Pure Video mode can skip title image requirement)
