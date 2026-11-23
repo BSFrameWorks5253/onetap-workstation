@@ -5,9 +5,9 @@
 
 (function () {
     var AutoUpdater = {
-        currentVersion: "1.0.0",
+        currentVersion: "26.11.1",
         repoOwner: "BSFrameWorks5253",
-        repoName: "onetap-adobe-extenstion",
+        repoName: "onetap-workstation",
         isUpdating: false,
 
         // Initialize AutoUpdater engine
@@ -81,7 +81,8 @@
 
             try {
                 var https = require('https');
-                var rawUrl = "https://raw.githubusercontent.com/" + this.repoOwner + "/" + this.repoName + "/main/version.json";
+                var manifestPath = "extensions/one-tap-extension/version.json";
+                var rawUrl = "https://raw.githubusercontent.com/" + this.repoOwner + "/" + this.repoName + "/main/" + manifestPath;
 
                 https.get(rawUrl, { headers: { 'User-Agent': 'OneTap-CEP-Updater' } }, function (res) {
                     if (res.statusCode !== 200) {
@@ -177,8 +178,8 @@
                     return;
                 }
 
-                var zipUrl = remote.downloadUrl || ("https://github.com/" + this.repoOwner + "/" + this.repoName + "/releases/download/v" + remote.version + "/one-tap-parent-extension.zip");
-                var tempZipPath = path.join(os.tmpdir(), "one-tap-parent-update-v" + remote.version + ".zip");
+                var zipUrl = remote.downloadUrl || ("https://github.com/" + this.repoOwner + "/" + this.repoName + "/releases/download/v" + remote.version + "/one-tap-extension.zip");
+                var tempZipPath = path.join(os.tmpdir(), "one-tap-update-v" + remote.version + ".zip");
 
                 // Download zip file with redirect handling
                 this.downloadFile(zipUrl, tempZipPath, function (err) {

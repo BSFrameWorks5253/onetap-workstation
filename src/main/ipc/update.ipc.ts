@@ -54,13 +54,45 @@ export function getWorkstationVersion(): string {
     }
   } catch {}
   try {
-    return (app.getVersion() || (appPackageJson?.version as string) || '26.11.37').trim()
+    return (app.getVersion() || (appPackageJson?.version as string) || '26.11.42').trim()
   } catch {
     return (appPackageJson?.version as string) || '26.11.04'
   }
 }
 
 const CURRENT_VERSION = getWorkstationVersion()
+
+/**
+ * Resolve GitHub token from environment variables, settings store, or .env files
+ */
+export function resolveGithubToken(): string {
+  if (process.env.GH_TOKEN) return process.env.GH_TOKEN.trim()
+  if (process.env.GITHUB_TOKEN) return process.env.GITHUB_TOKEN.trim()
+  const savedToken = (get('github_token') as string)
+  if (savedToken && savedToken.trim()) return savedToken.trim()
+
+  try {
+    const candidates = [
+      path.join(app.getAppPath(), '.env'),
+      path.join(app.getAppPath(), '.env.local'),
+      path.join(process.cwd(), '.env'),
+      path.join(process.cwd(), '.env.local')
+    ]
+    for (const p of candidates) {
+      if (fs.existsSync(p)) {
+        const lines = fs.readFileSync(p, 'utf8').split('\n')
+        for (const line of lines) {
+          const trimmed = line.trim()
+          if (trimmed.startsWith('GH_TOKEN=') || trimmed.startsWith('GITHUB_TOKEN=')) {
+            const tok = trimmed.split('=')[1]?.replace(/^["']|["']$/g, '').trim()
+            if (tok) return tok
+          }
+        }
+      }
+    }
+  } catch {}
+  return ''
+}
 
 /**
  * Native utility to follow HTTPS redirects recursively and establish GET stream
@@ -449,74 +481,145 @@ export async function checkAnythingUpdate(customPath?: string): Promise<UpdateMa
 }
 
 /**
- * Query GitHub Releases API for the latest release manifest
+ * Query GitHub for the latest release manifest using a resilient dual-strategy:
+ * 1. Primary: Fast raw git manifest (version/update.json) on raw.githubusercontent.com
+ *    - Never rate-limited (bypasses GitHub REST API's 60 req/hr IP limit via CDN)
+ *    - Always synchronized with git main branch commits
+ * 2. Secondary: GitHub Releases REST API (api.github.com/repos/.../releases)
+ *    - Attaches GITHUB_TOKEN / GH_TOKEN if configured
+ *    - Enriches manifest with actual binary asset URLs, exact file sizes, and release assets
+ *    - If API rate-limited (403) or offline, seamlessly falls back to raw manifest without throwing
  */
 export async function checkGitHubUpdate(): Promise<UpdateManifest> {
   const repoName = GITHUB_REPO.trim().replace(/^https:\/\/github\.com\//i, '')
-  const fetchUrl = `https://api.github.com/repos/${repoName}/releases/latest`
-  console.log(`[Updater] Querying GitHub Releases API: ${fetchUrl}`)
+  const currentVer = getWorkstationVersion().trim()
 
-  const responseStream = await getUrlStream(fetchUrl, {
-    headers: { 'Accept': 'application/vnd.github.v3+json' }
-  })
-
-  const responseBody = await new Promise<string>((resolve, reject) => {
-    let body = ''
-    responseStream.on('data', chunk => body += chunk)
-    responseStream.on('end', () => resolve(body))
-    responseStream.on('error', reject)
-  })
-
-  const release = JSON.parse(responseBody)
-  if (!release || (!release.tag_name && !release.name)) {
-    throw new Error(release?.message || 'No valid release tag found on GitHub.')
+  // 1. Try fetching Raw Git Manifest from main branch (Zero API Rate Limit)
+  let rawManifestData: any = null
+  try {
+    const rawUrl = `https://raw.githubusercontent.com/${repoName}/main/version/update.json`
+    console.log(`[Updater] Querying Raw Git Manifest: ${rawUrl}`)
+    const rawStream = await getUrlStream(rawUrl, {
+      headers: { 'Cache-Control': 'no-cache' }
+    })
+    const rawBody = await new Promise<string>((resolve, reject) => {
+      let b = ''
+      rawStream.on('data', chunk => b += chunk)
+      rawStream.on('end', () => resolve(b))
+      rawStream.on('error', reject)
+    })
+    const parsed = JSON.parse(rawBody)
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      const sorted = [...parsed].sort((a, b) => compareVersions(b.version, a.version))
+      rawManifestData = sorted[0]
+    } else if (parsed && parsed.version) {
+      rawManifestData = parsed
+    }
+  } catch (rawErr) {
+    console.warn('[Updater] Raw git manifest check notice:', rawErr)
   }
 
-  // Trim carefully — GitHub tags can have trailing whitespace/newlines
-  const currentVer = getWorkstationVersion().trim()
-  const latestVersion = (release.tag_name || release.name || '').replace(/^v/i, '').trim()
+  // 2. Query GitHub Releases API with optional Auth Token
+  const token = resolveGithubToken()
+  const apiHeaders: Record<string, string> = {
+    'Accept': 'application/vnd.github.v3+json'
+  }
+  if (token && token.length > 8 && !token.includes('your_github_token')) {
+    apiHeaders['Authorization'] = `Bearer ${token}`
+  }
+
+  let releaseApiData: any = null
+  try {
+    const fetchUrl = `https://api.github.com/repos/${repoName}/releases/latest`
+    console.log(`[Updater] Querying GitHub Releases API: ${fetchUrl}`)
+    const responseStream = await getUrlStream(fetchUrl, { headers: apiHeaders })
+    const responseBody = await new Promise<string>((resolve, reject) => {
+      let body = ''
+      responseStream.on('data', chunk => body += chunk)
+      responseStream.on('end', () => resolve(body))
+      responseStream.on('error', reject)
+    })
+    const rel = JSON.parse(responseBody)
+    if (rel && (rel.tag_name || rel.name)) {
+      releaseApiData = rel
+    } else if (rel?.message) {
+      console.warn(`[Updater] GitHub API note: ${rel.message}`)
+    }
+  } catch (apiErr) {
+    console.warn('[Updater] GitHub Releases API query note:', apiErr)
+  }
+
+  // Determine latest version from available sources
+  const rawVer = (rawManifestData?.version || '').replace(/^v/i, '').trim()
+  const apiVer = (releaseApiData?.tag_name || releaseApiData?.name || '').replace(/^v/i, '').trim()
+
+  let latestVersion = ''
+  if (rawVer && apiVer) {
+    latestVersion = compareVersions(rawVer, apiVer) >= 0 ? rawVer : apiVer
+  } else {
+    latestVersion = rawVer || apiVer
+  }
+
+  if (!latestVersion) {
+    throw new Error('Unable to retrieve version manifest from GitHub (Raw Git and API uncontactable).')
+  }
+
   const isNew = compareVersions(latestVersion, currentVer) > 0
-  console.log(`[Updater] Version check — GitHub tag: "${release.tag_name}" → latest: "${latestVersion}" | current: "${currentVer}" | updateAvailable: ${isNew}`)
+  console.log(`[Updater] Version check — GitHub tag/manifest: "v${latestVersion}" (raw: ${rawVer || 'n/a'}, api: ${apiVer || 'n/a'}) → current: "${currentVer}" | updateAvailable: ${isNew}`)
 
   // Select setup installer asset based on platform and target version
   let targetAsset: any = null
-  if (process.platform === 'linux') {
-    const linuxAssets = release.assets?.filter((a: any) => a.name.endsWith('.AppImage') || a.name.endsWith('.deb')) || []
-    targetAsset = linuxAssets.find((a: any) => a.name.includes(latestVersion)) || linuxAssets[0]
-  } else {
-    const exeAssets = release.assets?.filter((a: any) => a.name.endsWith('.exe')) || []
-    // Prioritize installer matching the latest version tag (e.g. Uni.Desk_Setup_V26.10.5.exe)
-    targetAsset =
-      exeAssets.find((a: any) => a.name.includes(latestVersion) && a.name.toLowerCase().includes('setup')) ||
-      exeAssets.find((a: any) => a.name.includes(latestVersion)) ||
-      exeAssets.find((a: any) => a.name.toLowerCase().includes('setup')) ||
-      exeAssets[0]
+  if (releaseApiData && releaseApiData.assets) {
+    if (process.platform === 'linux') {
+      const linuxAssets = releaseApiData.assets.filter((a: any) => a.name.endsWith('.AppImage') || a.name.endsWith('.deb'))
+      targetAsset = linuxAssets.find((a: any) => a.name.includes(latestVersion)) || linuxAssets[0]
+    } else {
+      const exeAssets = releaseApiData.assets.filter((a: any) => a.name.endsWith('.exe'))
+      targetAsset =
+        exeAssets.find((a: any) => a.name.includes(latestVersion) && a.name.toLowerCase().includes('setup')) ||
+        exeAssets.find((a: any) => a.name.includes(latestVersion)) ||
+        exeAssets.find((a: any) => a.name.toLowerCase().includes('setup')) ||
+        exeAssets[0]
+    }
   }
-
-  if (!targetAsset && release.assets?.length > 0) {
-    targetAsset = release.assets[0]
-  }
-
-  console.log(`[Updater] Selected release asset: ${targetAsset?.name} (${targetAsset?.browser_download_url})`)
 
   const sizeInBytes = targetAsset?.size || 0
   const sizeStr = sizeInBytes > 0
     ? (sizeInBytes > 1024 * 1024 * 1024
       ? (sizeInBytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB'
       : (sizeInBytes / (1024 * 1024)).toFixed(1) + ' MB')
-    : '1.5 GB'
+    : (rawManifestData ? '78.5 MB' : '1.5 GB')
+
+  // Build release notes
+  let notes = ''
+  if (rawManifestData) {
+    const parts: string[] = []
+    if (rawManifestData.whats_new) parts.push(rawManifestData.whats_new)
+    if (rawManifestData.release_notes) parts.push(rawManifestData.release_notes)
+    if (rawManifestData.bugs_fixed) parts.push(`\nBugs Fixed:\n${rawManifestData.bugs_fixed}`)
+    if (rawManifestData.improvements) parts.push(`\nImprovements:\n${rawManifestData.improvements}`)
+    notes = parts.join('\n\n').trim()
+  } else if (releaseApiData?.body) {
+    notes = releaseApiData.body
+  }
+  if (!notes) {
+    notes = `One Tap v${latestVersion} update from GitHub with performance enhancements and fixes.`
+  }
+
+  const defaultDownloadUrl = targetAsset?.browser_download_url
+    || `https://github.com/${repoName}/releases/download/v${latestVersion}/OneTap-Setup-V-${latestVersion}.exe`
 
   const manifest: UpdateManifest = {
     updateAvailable: isNew,
     currentVersion: currentVer,
     latestVersion: latestVersion,
-    releaseName: release.name || `Release v${latestVersion}`,
-    releaseDate: release.published_at ? release.published_at.split('T')[0] : new Date().toISOString().split('T')[0],
-    downloadUrl: targetAsset?.browser_download_url || `https://github.com/${repoName}/releases/latest`,
+    releaseName: releaseApiData?.name || `One Tap v${latestVersion}`,
+    releaseDate: (rawManifestData?.date || releaseApiData?.published_at || new Date().toISOString()).split('T')[0],
+    downloadUrl: defaultDownloadUrl,
     size: sizeStr,
-    releaseNotes: release.body || 'Performance enhancements and bug fixes included in this release.',
+    releaseNotes: notes,
     checksum: '',
-    htmlUrl: release.html_url || `https://github.com/${repoName}/releases/latest`,
+    htmlUrl: releaseApiData?.html_url || `https://github.com/${repoName}/releases/tag/v${latestVersion}`,
     source: 'github',
     isLocalFile: false
   }
@@ -751,17 +854,44 @@ export function registerUpdateIPC(mainWindowGetter: () => BrowserWindow | null):
     // CASE B: Remote stream download from GitHub
     console.log(`[Updater] Initiating stream download from GitHub: ${targetUrl} -> ${finalInstallerPath}`)
 
-    let response: http.IncomingMessage
-    try {
-      response = await getUrlStream(targetUrl)
-    } catch (e) {
-      console.error('[Updater] Downloader connection failure:', e)
-      throw new Error(`GitHub download connection failure: ${String(e)}`)
+    const repoName = GITHUB_REPO.trim().replace(/^https:\/\/github\.com\//i, '')
+    const candidateUrls = [targetUrl]
+    if (manifest?.latestVersion) {
+      const v = manifest.latestVersion
+      const alts = [
+        `https://github.com/${repoName}/releases/download/v${v}/OneTap-Setup-V-${v}.exe`,
+        `https://github.com/${repoName}/releases/download/v${v}/OneTap-Setup-v${v}.exe`,
+        `https://github.com/${repoName}/releases/download/v${v}/OneTap-V-${v}.exe`,
+        `https://github.com/${repoName}/releases/download/v${v}/OneTap_Setup_${v}.exe`,
+        `https://github.com/${repoName}/releases/download/v${v}/Uni.Desk.Setup.v${v}.exe`,
+        `https://github.com/${repoName}/releases/download/v${v}/Uni.Desk_Setup_V${v}.exe`
+      ]
+      for (const a of alts) {
+        if (!candidateUrls.includes(a)) candidateUrls.push(a)
+      }
     }
 
-    if (response.statusCode && response.statusCode >= 400) {
-      throw new Error(`GitHub server returned HTTP status ${response.statusCode}`)
+    let response: http.IncomingMessage | null = null
+    let workingUrl = targetUrl
+
+    for (const candUrl of candidateUrls) {
+      try {
+        console.log(`[Updater] Probing installer target: ${candUrl}`)
+        const resp = await getUrlStream(candUrl)
+        if (resp.statusCode && resp.statusCode < 400) {
+          response = resp
+          workingUrl = candUrl
+          break
+        }
+      } catch (probeErr) {
+        console.warn(`[Updater] Probe note on ${candUrl}:`, probeErr)
+      }
     }
+
+    if (!response || (response.statusCode && response.statusCode >= 400)) {
+      throw new Error(`The update installer binary for v${manifest?.latestVersion || ''} has not been published or attached to GitHub Releases yet. Please visit ${manifest?.htmlUrl || `https://github.com/${repoName}/releases`} to view release status.`)
+    }
+    console.log(`[Updater] Established download stream via: ${workingUrl}`)
 
     const totalBytes = parseInt(response.headers['content-length'] || '0', 10)
     let transferredBytes = 0
@@ -1018,5 +1148,24 @@ if exist "%TARGET_EXE%" (
     }
 
     return { success: true }
+  })
+
+  // 5. Git Repository Sync (for source-code checkouts)
+  ipcMain.handle('update:gitPull', async () => {
+    try {
+      const gitDir = path.resolve(app.getAppPath(), '.git')
+      const targetCwd = fs.existsSync(gitDir) ? app.getAppPath() : process.cwd()
+      return new Promise((resolve) => {
+        exec('git pull origin main', { cwd: targetCwd }, (err, stdout, stderr) => {
+          if (err) {
+            resolve({ success: false, output: stderr || err.message })
+          } else {
+            resolve({ success: true, output: stdout || 'Already up to date.' })
+          }
+        })
+      })
+    } catch (e: any) {
+      return { success: false, output: e.message }
+    }
   })
 }

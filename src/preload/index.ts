@@ -253,6 +253,7 @@ contextBridge.exposeInMainWorld('api', {
     install:            (options?: { silent?: boolean }) => ipcRenderer.invoke('update:install', options),
     getCurrentVersion:  () => ipcRenderer.invoke('update:getCurrentVersion'),
     getUpdateConfig:    () => ipcRenderer.invoke('update:getUpdateConfig'),
+    gitPull:            () => ipcRenderer.invoke('update:gitPull'),
     onProgress:         (cb: (d: any) => void) => {
       const sub = (_e: any, d: any): void => cb(d)
       ipcRenderer.on('update:progress', sub)
