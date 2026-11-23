@@ -1,5 +1,13 @@
 [
   {
+    "version": "26.11.39",
+    "date": "2026-11-23",
+    "whats_new": "* Critical findFile Performance Fix: Restored findFile to non-recursive O(1) direct existence checks, eliminating synchronous readdirSync recursive tree crawls on external USB drives.\n* Direct WebContents IPC Bridge: Bound render progress and logs directly to the caller WebContents and active window handle, preventing lost log messages on window re-render.\n* Instant Render Queue Execution: Immediate transition from Pre-Render setup to active video encoding.",
+    "release_notes": "One Tap v26.11.39 resolves critical startup hangs in findFile, restores non-recursive file resolution, and connects IPC progress streaming directly to the calling window.",
+    "bugs_fixed": "* Fixed recursive readdirSync tree crawling in findFile that stalled queue initialization on external USB drives.\n* Fixed webContents IPC delivery by binding directly to the invoke event sender.",
+    "improvements": "* Instantaneous queue startup for all batch operations."
+  },
+  {
     "version": "26.11.38",
     "date": "2026-11-23",
     "whats_new": "* Title Adder External Drive Fix: Eliminated blocking recursive synchronous directory crawling on USB drives; instant queue startup without freezing on Initializing.\n* Fast-Path Pre-Resolved Video Queue: Passes verified videoFiles directly to render engine, eliminating redundant disk re-scanning of external drive.\n* Non-Blocking Flat Directory Scans: Scans only immediate image directories, preventing Node.js event loop starvation on large external hard drives.\n* Immediate UI Responsiveness: Displays queue status and video 1 encoding within milliseconds of clicking Confirm & Render.",

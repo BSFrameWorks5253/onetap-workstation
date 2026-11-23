@@ -250,38 +250,56 @@ function resolveVideoFolderAndFiles(rootPath: string): { dir: string; files: Arr
  * @param name File basename (without extension)
  * @returns Full file path if found, or null
  */
-function findFile(folder: string, name: string, maxDepth = 3): string | null {
-  if (!folder || !name) return null
-  const targetLower = name.toLowerCase()
+function findFile(folder: string, name: string): string | null {
+  if (!folder || !name || !fs.existsSync(folder)) return null
+  const targetLower = name.toLowerCase().trim()
 
-  const searchRecursive = (dir: string, depth = 0): string | null => {
-    if (depth > maxDepth || !fs.existsSync(dir)) return null
+  // 1. Direct O(1) existence checks with exact candidates
+  for (const ext of [...AUDIO_EXTS, ...IMG_EXTS]) {
+    const direct1 = path.join(folder, name + ext)
+    if (fs.existsSync(direct1)) return direct1
+    const direct2 = path.join(folder, name.toLowerCase() + ext)
+    if (fs.existsSync(direct2)) return direct2
+    const direct3 = path.join(folder, name.toUpperCase() + ext)
+    if (fs.existsSync(direct3)) return direct3
+  }
+
+  // 2. Flat, non-recursive directory scan of immediate folder entries
+  try {
+    const entries = fs.readdirSync(folder, { withFileTypes: true })
+    for (const entry of entries) {
+      if (entry.isFile()) {
+        const ext = path.extname(entry.name).toLowerCase()
+        if ([...AUDIO_EXTS, ...IMG_EXTS].includes(ext)) {
+          const stem = path.basename(entry.name, ext).toLowerCase().trim()
+          if (stem === targetLower) {
+            return path.join(folder, entry.name)
+          }
+        }
+      }
+    }
+  } catch {}
+
+  // 3. Flat check in direct 'Special' subfolder only (shallow, no recursion)
+  const specialSub = path.join(folder, 'Special')
+  if (fs.existsSync(specialSub)) {
     try {
-      const entries = fs.readdirSync(dir, { withFileTypes: true })
-      // Pass 1: Direct match in current folder
+      const entries = fs.readdirSync(specialSub, { withFileTypes: true })
       for (const entry of entries) {
         if (entry.isFile()) {
           const ext = path.extname(entry.name).toLowerCase()
           if ([...AUDIO_EXTS, ...IMG_EXTS].includes(ext)) {
-            const stem = path.basename(entry.name, ext).toLowerCase()
+            const stem = path.basename(entry.name, ext).toLowerCase().trim()
             if (stem === targetLower) {
-              return path.join(dir, entry.name)
+              return path.join(specialSub, entry.name)
             }
           }
         }
       }
-      // Pass 2: Recurse into subdirectories
-      for (const entry of entries) {
-        if (entry.isDirectory() && !isIgnoredDir(entry.name)) {
-          const res = searchRecursive(path.join(dir, entry.name), depth + 1)
-          if (res) return res
-        }
-      }
     } catch {}
-    return null
   }
 
-  return searchRecursive(folder, 0)
+  return null
 }
 
 /**
@@ -1562,11 +1580,17 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
     skipFront?: boolean
     skipBack?: boolean
   }) => {
-    const win = getWin()
-    if (!win) return
+    const callerWin = (_e?.sender ? BrowserWindow.fromWebContents(_e.sender) : null) || getWin() || BrowserWindow.getAllWindows().find(w => !w.isDestroyed()) || null
+    const targetWebContents = _e?.sender || callerWin?.webContents || null
 
     const send = (channel: string, data: unknown): void => {
-      try { win.webContents.send(channel, data) } catch { /* win closed */ }
+      try {
+        if (targetWebContents && !targetWebContents.isDestroyed()) {
+          targetWebContents.send(channel, data)
+        } else if (callerWin && !callerWin.isDestroyed()) {
+          callerWin.webContents.send(channel, data)
+        }
+      } catch { /* win closed */ }
     }
 
     let done = 0
@@ -1749,7 +1773,7 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
       cancelJob(params.jobId)
       updateIslandState({ active: false, done: true, success: false, task: 'Rendering Cancelled' })
       send('titleAdder:log', { jobId: params.jobId, message: '⛔ Job was cancelled immediately by user.', level: 'warn' })
-      getWin()?.setProgressBar(-1)
+      (callerWin || getWin())?.setProgressBar(-1)
       send('titleAdder:done', { jobId: params.jobId, success: false, cancelled: true, done, total: videos.length })
     })
 
@@ -2253,7 +2277,7 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
           if (evt.type === 'progress') {
             send('titleAdder:progress', evt)
             const p = evt.percent ?? 0
-            getWin()?.setProgressBar(Math.max(0, Math.min(1, p / 100)))
+            ;(callerWin || getWin())?.setProgressBar(Math.max(0, Math.min(1, p / 100)))
 
             onTitleAdderProgressBridge(evt, {
               jobId: params.jobId,
@@ -2396,7 +2420,7 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
       setAndSave('converter_video_target', finalOutputDir)
     }
 
-    getWin()?.setProgressBar(-1)
+    ;(callerWin || getWin())?.setProgressBar(-1)
     updateIslandState({
       active: false,
       done: true,
