@@ -1,5 +1,13 @@
 [
   {
+    "version": "26.11.38",
+    "date": "2026-11-23",
+    "whats_new": "* Title Adder External Drive Fix: Eliminated blocking recursive synchronous directory crawling on USB drives; instant queue startup without freezing on Initializing.\n* Fast-Path Pre-Resolved Video Queue: Passes verified videoFiles directly to render engine, eliminating redundant disk re-scanning of external drive.\n* Non-Blocking Flat Directory Scans: Scans only immediate image directories, preventing Node.js event loop starvation on large external hard drives.\n* Immediate UI Responsiveness: Displays queue status and video 1 encoding within milliseconds of clicking Confirm & Render.",
+    "release_notes": "One Tap v26.11.38 completely eliminates rendering startup freezes on external USB drives, replaces recursive synchronous directory crawling with fast flat scans, and provides instant render queue execution.",
+    "bugs_fixed": "* Resolved render queue freeze on Initializing when running off external USB hard drives.\n* Eliminated recursive synchronous fs.readdirSync scans in scanStartDir and scanDirForImages.\n* Skipped redundant getBatchVideos re-scanning when videoFiles are pre-resolved.",
+    "improvements": "* Instant queue initialization and video 1 encoding.\n* Real-time progress updates delivered directly to UI without delay."
+  },
+  {
     "version": "26.11.37",
     "date": "2026-11-23",
     "whats_new": "* Title Adder Render Pipeline Fix: Eliminated startup hang on Initializing, added instant progress updates.\n* FFmpeg Audio/Video Synchronization: Resolved MP4 muxer stall by perfectly matching audio and video streams when Group Photo outro is attached.\n* Root Drive Non-Blocking Discovery: Removed synchronous fs.readdirSync root drive scans that hung external/network drives on client PCs.\n* Strict Group Photo Assignment: Only assigns GP outro to Nikaah ceremonies, excluding GP files from being rendered as standalone ceremonies.",

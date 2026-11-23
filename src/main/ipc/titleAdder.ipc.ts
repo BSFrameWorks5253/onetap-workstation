@@ -1296,20 +1296,17 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
     const availableTitleImages: Array<{ name: string; path: string }> = []
     const seenImagePaths = new Set<string>()
 
-    const scanDirForImages = (dir: string, depth = 0) => {
-      if (!dir || !fs.existsSync(dir) || depth > 4) return
+    // Flat, non-recursive directory scan of image files only — prevents blocking event loop on USB external drives
+    const scanDirForImages = (dir: string) => {
+      if (!dir || !fs.existsSync(dir)) return
       try {
         const entries = fs.readdirSync(dir, { withFileTypes: true })
         for (const entry of entries) {
           if (entry.name.startsWith('.') || entry.name.startsWith('$') || entry.name.toLowerCase() === 'thumbs.db') continue
-          const p = path.join(dir, entry.name)
-          if (entry.isDirectory()) {
-            if (!isIgnoredDir(entry.name)) {
-              scanDirForImages(p, depth + 1)
-            }
-          } else if (entry.isFile()) {
+          if (entry.isFile()) {
             const ext = path.extname(entry.name).toLowerCase()
             if (IMG_EXTS.includes(ext)) {
+              const p = path.join(dir, entry.name)
               if (!seenImagePaths.has(p.toLowerCase())) {
                 seenImagePaths.add(p.toLowerCase())
                 availableTitleImages.push({
@@ -1323,9 +1320,13 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
       } catch {}
     }
 
-    if (titlesFolder) scanDirForImages(titlesFolder)
+    if (titlesFolder) {
+      scanDirForImages(titlesFolder)
+      const specDir = path.join(titlesFolder, 'Special')
+      if (fs.existsSync(specDir)) scanDirForImages(specDir)
+    }
 
-    // Scan all batchSources subdirectories if available
+    // Scan all batchSources subdirectories if available (flat immediate directory only)
     for (const src of batchSources) {
       if (fs.existsSync(src)) {
         scanDirForImages(path.join(src, 'Final Titles'))
@@ -1343,21 +1344,15 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
     }
 
     let videos: string[] = []
-    if (params.mode === 'batch' && batchSources.length > 0) {
+    if (params.videoFiles && params.videoFiles.length > 0) {
+      videos = params.videoFiles.filter(f => fs.existsSync(f))
+    } else if (params.mode === 'batch' && batchSources.length > 0) {
       for (const src of batchSources) {
         const bVids = getBatchVideos(src)
         for (const bv of bVids) {
           if (!videos.includes(bv)) {
             videos.push(bv)
           }
-        }
-      }
-
-      if (params.videoFiles && params.videoFiles.length > 0) {
-        const expSet = new Set(params.videoFiles.map(e => getCanonicalStem(e)))
-        const filtered = videos.filter(v => expSet.has(getCanonicalStem(v)))
-        if (filtered.length > 0) {
-          videos = filtered
         }
       }
     } else {
@@ -1596,29 +1591,30 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
 
       const availableTitleImages: Array<{ name: string; path: string }> = []
       const seenStartImg = new Set<string>()
-      const scanStartDir = (dir: string, depth = 0) => {
-        if (!dir || !fs.existsSync(dir) || depth > 4) return
+
+      // Flat, non-recursive directory scan of image files only — prevents blocking event loop on USB external drives
+      const scanStartDir = (dir: string) => {
+        if (!dir || !fs.existsSync(dir)) return
         try {
           const entries = fs.readdirSync(dir, { withFileTypes: true })
           for (const entry of entries) {
             if (entry.name.startsWith('.') || entry.name.startsWith('$') || entry.name.toLowerCase() === 'thumbs.db') continue
-            const p = path.join(dir, entry.name)
-            if (entry.isDirectory()) {
-              if (!isIgnoredDir(entry.name)) {
-                scanStartDir(p, depth + 1)
-              }
-            } else if (entry.isFile()) {
-              if (IMG_EXTS.includes(path.extname(entry.name).toLowerCase())) {
-                if (!seenStartImg.has(p.toLowerCase())) {
-                  seenStartImg.add(p.toLowerCase())
-                  availableTitleImages.push({ name: entry.name, path: p })
-                }
+            if (entry.isFile() && IMG_EXTS.includes(path.extname(entry.name).toLowerCase())) {
+              const p = path.join(dir, entry.name)
+              if (!seenStartImg.has(p.toLowerCase())) {
+                seenStartImg.add(p.toLowerCase())
+                availableTitleImages.push({ name: entry.name, path: p })
               }
             }
           }
         } catch {}
       }
-      if (titlesFolder) scanStartDir(titlesFolder)
+
+      if (titlesFolder) {
+        scanStartDir(titlesFolder)
+        const specDir = path.join(titlesFolder, 'Special')
+        if (fs.existsSync(specDir)) scanStartDir(specDir)
+      }
       for (const src of batchSources) {
         if (fs.existsSync(src)) {
           scanStartDir(path.join(src, 'Final Titles'))
@@ -1633,7 +1629,10 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
         }
       }
 
-      if (params.mode === 'batch' && batchSources.length > 0) {
+      // Fast-path: Prioritize pre-resolved videoFiles from client modal without redundant USB disk re-scanning
+      if (params.videoFiles && params.videoFiles.length > 0) {
+        videos = params.videoFiles.filter(f => fs.existsSync(f))
+      } else if (params.mode === 'batch' && batchSources.length > 0) {
         for (const src of batchSources) {
           const bVids = getBatchVideos(src)
           for (const bv of bVids) {
@@ -1642,34 +1641,10 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
             }
           }
         }
-        if (params.videoFiles && params.videoFiles.length > 0) {
-          const expSet = new Set(params.videoFiles.map(e => getCanonicalStem(e)))
-          const filtered = videos.filter(v => expSet.has(getCanonicalStem(v)))
-          if (filtered.length > 0) {
-            videos = filtered
-          }
-        }
-        if (videos.length === 0 && params.videoFiles && params.videoFiles.length > 0) {
-          videos = params.videoFiles.filter(f => fs.existsSync(f))
-        }
-        if (videos.length === 0) {
-          send('titleAdder:log', { jobId: params.jobId, message: "✖ No video files found in selected source folder(s).", level: 'error' })
-          send('titleAdder:done', { jobId: params.jobId, success: false, done: 0, total: 0, error: 'No video files found' })
-          return
-        }
-      } else {
-        videos = params.videoFiles ? [...params.videoFiles] : []
-        if (videos.length === 0 && batchSources.length > 0) {
-          for (const src of batchSources) {
-            const bVids = getBatchVideos(src)
-            for (const bv of bVids) {
-              if (!videos.includes(bv)) {
-                videos.push(bv)
-              }
-            }
-          }
-        }
+      } else if (params.videoFiles) {
+        videos = params.videoFiles.filter(f => fs.existsSync(f))
       }
+
       const nonGps = videos.filter(v => !isGroupPhotoVideo(v))
       if (nonGps.length > 0) {
         videos = nonGps
@@ -1681,6 +1656,7 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
         return
       }
 
+      send('titleAdder:progress', { jobId: params.jobId, percent: 0, status: `Queue ready: ${videos.length} video(s) found. Starting video 1...` })
       send('titleAdder:log', { jobId: params.jobId, message: `📋 Processing ${videos.length} video(s)`, level: 'info' })
       send('titleAdder:found', { jobId: params.jobId, total: videos.length })
 
