@@ -1,5 +1,13 @@
 [
   {
+    "version": "26.11.41",
+    "date": "2026-11-23",
+    "whats_new": "* TrayDock Contrast & Theme Token Polish: Fixed washed-out text on the active rendering floating dock card by integrating design system tokens.\n* High-Contrast Light Theme: Replaced hardcoded white text and glass background with theme-reactive variables (var(--surface), var(--text-primary), var(--text-secondary), var(--border)).\n* Crisp Progress & Meta Visibility: Progress percentages, job labels, and ETA/speed statistics now render with crisp contrast across both light and dark workstation themes.",
+    "release_notes": "One Tap v26.11.41 fixes the contrast and visibility of the floating TrayDock card during rendering in light mode, ensuring text and progress indicators are crisp and legible.",
+    "bugs_fixed": "* Fixed white-on-light washed out text in TrayDock.\n* Integrated design system tokens across TrayDock titles, percentage counters, and status badges.",
+    "improvements": "* Clean contrast across all workstation themes."
+  },
+  {
     "version": "26.11.40",
     "date": "2026-11-23",
     "whats_new": "* Critical Renderer ReferenceError Fix: Fixed undefined variable 'dur' in TitleAdder startJob, allowing the render pipeline to launch immediately.\n* Robust Start Exception Handling: Wrapped start sequence in comprehensive try/catch with user-facing alerts.\n* Instant Queue Execution: Videos start rendering immediately upon confirmation.",

@@ -59,15 +59,15 @@ export default function TrayDock({ adderJob, syncJob, prprojJob, onNavigate }: T
 
       {/* Premiere Project Generator Active Job */}
       {showPrproj && (
-        <div className="tray-card tray-card--adder" onClick={() => onNavigate('prproj')} style={{ borderLeftColor: '#9999FF' }}>
+        <div className="tray-card tray-card--prproj" onClick={() => onNavigate('prproj')}>
           <div className="tray-header">
-            <span className="tray-icon"><PageIcon pageKey="prproj" size={18} /></span>
+            <span className="tray-icon"><PageIcon pageKey="prproj" size={18} color="var(--accent-adder, #6366f1)" /></span>
             <span className="tray-title">Sequence Generator Active</span>
             <span className="tray-pulse" />
           </div>
           <div className="tray-progress-wrap">
             <div className="tray-progress-bar">
-              <div className="tray-progress-fill" style={{ width: `${prprojJob.progress}%`, background: 'linear-gradient(90deg, #9999FF, #6366F1)' }} />
+              <div className="tray-progress-fill" style={{ width: `${prprojJob.progress}%` }} />
             </div>
             <span className="tray-percent">{Math.round(prprojJob.progress)}%</span>
           </div>
@@ -81,7 +81,7 @@ export default function TrayDock({ adderJob, syncJob, prprojJob, onNavigate }: T
       {showSync && (
         <div className="tray-card tray-card--sync" onClick={() => onNavigate('drivesync')}>
           <div className="tray-header">
-            <span className="tray-icon"><PageIcon pageKey="drivesync" size={18} color="#34D399" /></span>
+            <span className="tray-icon"><PageIcon pageKey="drivesync" size={18} color="var(--accent-drivesync, #10b981)" /></span>
             <span className="tray-title">Drive Sync Active</span>
             <span className="tray-pulse" />
           </div>
