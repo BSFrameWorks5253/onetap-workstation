@@ -86,11 +86,12 @@ export function isGroupPhotoVideo(filenameOrPath: any): boolean {
     .replace(/\.(tmp|temp)$/i, '')
     .replace(/\.[^/.]+$/, '')
     .trim()
-  // Matches "Group_Photo_1", "Group_Photo_2", "Group Photo 1", "Group-Photo-1", "GroupPhoto1", "Group_Photo", etc.
-  // OR "GPn" where n can be any number: e.g. "GP1", "GP2", "GP01", "GP-1", "GP_1", "GP 1", etc.
-  const isGroupPhoto = /(?:^|[\s_.-])group[_\s-]?photo(?:[_\s-]*\d+)?(?:[\s_.-]|$)/i.test(stem)
-  const isGPn = /(?:^|[\s_.-])gp(?:[_\s-]*\d+)?(?:[\s_.-]|$)/i.test(stem)
-  return isGroupPhoto || isGPn
+  if (/(?:^|[\s_.-])group[_\s-]?photo(?:[_\s-]*\d+)?(?:[\s_.-]|$)/i.test(stem)) return true
+  if (/(?:^|[\s_.-])gp(?:[_\s-]*\d+)?(?:[\s_.-]|$)/i.test(stem)) {
+    if (/(?:^|[\s_.-])gp[a-z]{1,}/i.test(stem)) return false
+    return true
+  }
+  return false
 }
 
 function CustomAudioSelect({ value, options, defaultPath, defaultName, onChange }: CustomAudioSelectProps) {

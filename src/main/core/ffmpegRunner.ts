@@ -132,17 +132,17 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
     if (isTransImg) {
       dynamicInputs.push('-loop', '1', '-framerate', fps, '-t', String(transLen), '-i', params.transitionFile)
     } else {
-      dynamicInputs.push('-hwaccel', 'auto', '-t', String(transLen), '-i', params.transitionFile)
+      dynamicInputs.push('-t', String(transLen), '-i', params.transitionFile)
     }
   }
 
   const vidIdx = nextInputIdx++
-  dynamicInputs.push('-hwaccel', 'auto', '-i', videoPath)
+  dynamicInputs.push('-i', videoPath)
 
   let gpVidIdx = -1
   if (params.groupPhotoVideo && fs.existsSync(params.groupPhotoVideo)) {
     gpVidIdx = nextInputIdx++
-    dynamicInputs.push('-hwaccel', 'auto', '-i', params.groupPhotoVideo)
+    dynamicInputs.push('-i', params.groupPhotoVideo)
   }
 
   let endImgIdx = -1
@@ -297,6 +297,7 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
       audioFilter =
         `${videoAudioSrc},atrim=0:${vidDuration.toFixed(3)},` +
         `asetpts=PTS-STARTPTS${delayPart},` +
+        `apad,atrim=0:${totalLength.toFixed(3)},` +
         `afade=t=out:st=${fadeStart}:d=2[final_audio];`
     }
 
@@ -306,8 +307,8 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
   } else if (useNikahLogic) {
     audioInputs = ['-stream_loop', '-1', '-i', audioPrimary!]
     audioFilter =
-      `[${audioIdx}:a]aresample=48000,atrim=0:${totalLength},asetpts=PTS-STARTPTS,` +
-      `afade=t=in:st=0:d=2,afade=t=out:st=${fadeStart}:d=2[final_audio];`
+      `[${audioIdx}:a]aresample=48000,atrim=0:${totalLength.toFixed(3)},asetpts=PTS-STARTPTS,` +
+      `afade=t=in:st=0:d=2,afade=t=out:st=${fadeStart.toFixed(3)}:d=2[final_audio];`
 
   // ────────────────────────────────────────────────────────────
   // BRANCH 3 — NORMAL (all other prefixes)
@@ -319,25 +320,26 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
       if (!muteOriginal) {
         const delayPart = leadMs > 0 ? `adelay=${leadMs}|${leadMs}[vid_delayed];` : `anull[vid_delayed];`
         audioFilter =
-          `[${audioIdx}:a]aresample=48000,atrim=0:${totalLength},asetpts=PTS-STARTPTS,` +
-          `afade=t=in:st=0:d=2,afade=t=out:st=${fadeStart}:d=2[bg_full];` +
+          `[${audioIdx}:a]aresample=48000,atrim=0:${totalLength.toFixed(3)},asetpts=PTS-STARTPTS,` +
+          `afade=t=in:st=0:d=2,afade=t=out:st=${fadeStart.toFixed(3)}:d=2[bg_full];` +
           `[bg_full]volume=0.12[bg_quiet];` +
-          `${videoAudioSrc},atrim=0:${vidDuration},asetpts=PTS-STARTPTS,` +
+          `${videoAudioSrc},atrim=0:${vidDuration.toFixed(3)},asetpts=PTS-STARTPTS,` +
           delayPart +
-          `[bg_quiet][vid_delayed]amix=inputs=2:normalize=0:duration=longest[final_audio];`
+          `[bg_quiet][vid_delayed]amix=inputs=2:normalize=0:duration=longest,apad,atrim=0:${totalLength.toFixed(3)},afade=t=out:st=${fadeStart.toFixed(3)}:d=2[final_audio];`
       } else {
         audioFilter =
-          `[${audioIdx}:a]aresample=48000,atrim=0:${totalLength},asetpts=PTS-STARTPTS,` +
-          `afade=t=in:st=0:d=2,afade=t=out:st=${fadeStart}:d=2[final_audio];`
+          `[${audioIdx}:a]aresample=48000,atrim=0:${totalLength.toFixed(3)},asetpts=PTS-STARTPTS,` +
+          `afade=t=in:st=0:d=2,afade=t=out:st=${fadeStart.toFixed(3)}:d=2[final_audio];`
       }
     } else {
       audioInputs = []
       if (!muteOriginal) {
         const delayPart = leadMs > 0 ? `,adelay=${leadMs}|${leadMs}` : ''
         audioFilter =
-          `${videoAudioSrc},atrim=0:${vidDuration},asetpts=PTS-STARTPTS` +
+          `${videoAudioSrc},atrim=0:${vidDuration.toFixed(3)},asetpts=PTS-STARTPTS` +
           delayPart +
-          `,afade=t=out:st=${fadeStart}:d=2[final_audio];`
+          `,apad,atrim=0:${totalLength.toFixed(3)}` +
+          `,afade=t=out:st=${fadeStart.toFixed(3)}:d=2[final_audio];`
       } else {
         audioFilter = `anullsrc=channel_layout=stereo:sample_rate=48000:d=${totalLength.toFixed(3)}[final_audio];`
       }
@@ -374,7 +376,8 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
 
   // Direct clean cut to Group Photo video (ZERO transition, ZERO fade, ZERO black frames)
   if (gpVidIdx >= 0) {
-    videoFilter += `[${gpVidIdx}:v]scale=${width}:${height}:force_original_aspect_ratio=decrease:flags=fast_bilinear,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=${fps},format=yuv420p,settb=AVTB,setpts=PTS-STARTPTS[gp_vid];`
+    const gpDur = params.groupPhotoDuration && params.groupPhotoDuration > 0 ? params.groupPhotoDuration : 15.0
+    videoFilter += `[${gpVidIdx}:v]scale=${width}:${height}:force_original_aspect_ratio=decrease:flags=fast_bilinear,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=${fps},format=yuv420p,trim=0:${gpDur.toFixed(3)},settb=AVTB,setpts=PTS-STARTPTS[gp_vid];`
     concatSegments.push('[gp_vid]')
   }
 
@@ -561,7 +564,7 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
       })
     })
 
-    proc.on('close', (code) => {
+    const handleFinished = (code: number | null): void => {
       if (doneEmitted) return
       doneEmitted = true
       _activeJobs.delete(jobId)
@@ -574,7 +577,7 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
 
       const exists = fs.existsSync(outputPath)
       const size = exists ? fs.statSync(outputPath).size : 0
-      const success = code === 0 && exists && size > 1024
+      const success = (code === 0 || code === null) && exists && size > 1024
 
       if (success) {
         onEvent({
@@ -620,6 +623,14 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
         success: false,
         message: `✖ FAILED (exit ${code}): ${path.basename(outputPath)} — ${matchedErr}`
       })
+    }
+
+    proc.on('close', (code) => handleFinished(code))
+    proc.on('exit', (code) => {
+      // Small 100ms grace period for stderr to flush, then finalize if close didn't fire
+      setTimeout(() => {
+        if (!doneEmitted) handleFinished(code)
+      }, 100)
     })
   }
 

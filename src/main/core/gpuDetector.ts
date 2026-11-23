@@ -49,8 +49,25 @@ export function findAndEnsureFfmpegPath(): string | null {
     }
   } catch {}
 
-  // 2. Check standard PATH lookup first
+  // 2. Check standard PATH lookup and resolve exact directory on Windows
   try {
+    if (isWin) {
+      let whereRes = spawnSync('where.exe', [ffmpegBinary], { timeout: 2000, windowsHide: true, env: process.env })
+      if (whereRes.status !== 0) {
+        whereRes = spawnSync('where', [ffmpegBinary], { timeout: 2000, windowsHide: true, env: process.env })
+      }
+      if (whereRes.status === 0) {
+        const firstLine = whereRes.stdout?.toString().split(/\r?\n/)[0]?.trim()
+        if (firstLine && fs.existsSync(firstLine)) {
+          const dir = path.dirname(firstLine)
+          if (!process.env.PATH?.toLowerCase().includes(dir.toLowerCase())) {
+            process.env.PATH = `${dir}${path.delimiter}${process.env.PATH || ''}`
+          }
+          _discoveredFfmpegDir = dir
+          return dir
+        }
+      }
+    }
     const res = spawnSync(ffmpegBinary, ['-version'], { timeout: 3000, windowsHide: true, env: process.env })
     if (res.status === 0) {
       return 'PATH'
@@ -63,6 +80,7 @@ export function findAndEnsureFfmpegPath(): string | null {
   const programData = process.env.PROGRAMDATA || ''
   const homeDir = os.homedir()
   const cwd = process.cwd()
+  const resPath = (process as any).resourcesPath
 
   const candidates: string[] = [
     path.join(cwd, 'tools', 'ffmpeg', 'bin'),
@@ -72,6 +90,17 @@ export function findAndEnsureFfmpegPath(): string | null {
     path.join(cwd, 'ffmpeg', 'bin'),
     path.join(cwd, 'ffmpeg')
   ]
+
+  if (resPath) {
+    candidates.push(
+      path.join(resPath, 'ffmpeg', 'bin'),
+      path.join(resPath, 'ffmpeg'),
+      path.join(resPath, 'tools', 'ffmpeg', 'bin'),
+      path.join(resPath, 'tools', 'ffmpeg'),
+      path.join(resPath, 'bin'),
+      resPath
+    )
+  }
 
   if (isWin) {
     candidates.push(
@@ -89,7 +118,7 @@ export function findAndEnsureFfmpegPath(): string | null {
       path.join(localAppData, 'Programs', 'ffmpeg', 'bin')
     )
 
-    // Check standard root folder candidates and dynamic ffmpeg-* build directories
+    // Check standard root folder candidates
     const rootCandidates = [
       'C:\\ffmpeg', 'C:\\ffmpeg\\bin',
       'D:\\ffmpeg', 'D:\\ffmpeg\\bin'
@@ -97,15 +126,27 @@ export function findAndEnsureFfmpegPath(): string | null {
     for (const rc of rootCandidates) {
       if (fs.existsSync(rc)) candidates.push(rc)
     }
+
+    // Check WinGet Packages directory safely (scoped directory, never whole root drive)
     try {
-      for (const drive of ['C:\\', 'D:\\']) {
-        if (fs.existsSync(drive)) {
-          const entries = fs.readdirSync(drive, { withFileTypes: true })
-          for (const ent of entries) {
-            if (ent.isDirectory() && ent.name.toLowerCase().startsWith('ffmpeg')) {
-              candidates.push(path.join(drive, ent.name, 'bin'))
-              candidates.push(path.join(drive, ent.name))
-            }
+      const wingetDir = path.join(localAppData, 'Microsoft', 'WinGet', 'Packages')
+      if (fs.existsSync(wingetDir)) {
+        const entries = fs.readdirSync(wingetDir, { withFileTypes: true })
+        for (const ent of entries) {
+          if (ent.isDirectory() && ent.name.toLowerCase().includes('ffmpeg')) {
+            const pkgBase = path.join(wingetDir, ent.name)
+            candidates.push(pkgBase)
+            candidates.push(path.join(pkgBase, 'bin'))
+            // Check one subfolder level (e.g. ffmpeg-7.1-full_build/bin)
+            try {
+              const subEnts = fs.readdirSync(pkgBase, { withFileTypes: true })
+              for (const sub of subEnts) {
+                if (sub.isDirectory() && sub.name.toLowerCase().startsWith('ffmpeg')) {
+                  candidates.push(path.join(pkgBase, sub.name, 'bin'))
+                  candidates.push(path.join(pkgBase, sub.name))
+                }
+              }
+            } catch {}
           }
         }
       }

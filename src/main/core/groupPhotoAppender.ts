@@ -1,12 +1,24 @@
 import fs from 'fs'
 import path from 'path'
-import { execFile } from 'child_process'
+import { execFile, spawnSync } from 'child_process'
 import { promisify } from 'util'
-import { getFfprobeExePath } from './gpuDetector'
+import { getFfprobeExePath, getFfmpegExePath } from './gpuDetector'
 
 const execFileAsync = promisify(execFile)
 
 const VIDEO_EXTS = ['.mp4', '.mov', '.avi', '.mkv', '.mts', '.m2ts', '.mxf', '.wmv', '.m4v', '.webm', '.ts', '.mpg', '.mpeg']
+
+const IGNORED_SCAN_NAMES = new Set([
+  'node_modules', '.git', '.github', '.vscode', 'dist', 'out', 'build',
+  'final', 'output', 'converted', '$recycle.bin', '.agent', '.gemini'
+])
+
+function isIgnoredFolder(name: string): boolean {
+  if (!name) return true
+  const lower = name.toLowerCase().trim()
+  if (lower.startsWith('.') || lower.startsWith('$')) return true
+  return IGNORED_SCAN_NAMES.has(lower)
+}
 
 export interface GroupPhotoItem {
   gpNum: number
@@ -34,10 +46,10 @@ export function isGroupPhotoVideoFile(fileNameOrPath: string): boolean {
   if (!fileNameOrPath) return false
   const base = path.basename(fileNameOrPath)
   const stem = base.replace(/\.(tmp|temp)$/i, '').replace(/\.[^/.]+$/, '').trim()
-  if (/group[_\s-]?photo/i.test(stem)) return true
-  // Matches "GP", "GP1", "GP 1", "GP_1", "GP-1", "GP01", "GP1_Final", "GP_Outro", "1448_GP1", etc.
-  if (/(?:^|[\s_.-])gp(?:\d+|[_\s-]+\d+)?(?:[\s_.-]|$|[a-z])/i.test(stem)) {
-    if (/^gp[a-z]{2,}/i.test(stem)) return false
+  if (/(?:^|[\s_.-])group[_\s-]?photo(?:[_\s-]*\d+)?(?:[\s_.-]|$)/i.test(stem)) return true
+  if (/(?:^|[\s_.-])gp(?:[_\s-]*\d+)?(?:[\s_.-]|$)/i.test(stem)) {
+    // Avoid false positives on words like 'gpa', 'gps', 'gphoto'
+    if (/(?:^|[\s_.-])gp[a-z]{1,}/i.test(stem)) return false
     return true
   }
   return false
@@ -96,7 +108,7 @@ export function extractNikaahNumberFromFileName(fileNameOrPath: string): number 
 }
 
 /**
- * Probes video duration using ffprobe
+ * Probes video duration using ffprobe with ffmpeg banner fallback
  */
 export async function probeVideoDuration(filePath: string): Promise<number> {
   try {
@@ -107,12 +119,33 @@ export async function probeVideoDuration(filePath: string): Promise<number> {
       '-show_entries', 'stream=duration:format=duration',
       '-of', 'json',
       filePath
-    ], { windowsHide: true, env: process.env, timeout: 2000 })
+    ], { windowsHide: true, env: process.env, timeout: 1500 })
     const parsed = JSON.parse(stdout.toString())
     const durStr = parsed.streams?.[0]?.duration || parsed.format?.duration
     if (durStr && !isNaN(parseFloat(durStr))) {
       const dur = parseFloat(durStr)
       if (dur > 0) return Math.round(dur * 100) / 100
+    }
+  } catch {}
+
+  // Fallback: fast banner probe with ffmpeg -i
+  try {
+    const ffmpegExe = getFfmpegExePath()
+    const res = spawnSync(ffmpegExe, ['-hide_banner', '-i', filePath], {
+      timeout: 1500,
+      windowsHide: true,
+      env: process.env
+    })
+    const out = (res.stderr || '').toString()
+    const durMatch = out.match(/Duration:\s*(\d+):(\d+):([\d.]+)/)
+    if (durMatch) {
+      const hours = parseFloat(durMatch[1])
+      const mins = parseFloat(durMatch[2])
+      const secs = parseFloat(durMatch[3])
+      const duration = hours * 3600 + mins * 60 + secs
+      if (!isNaN(duration) && duration > 0) {
+        return Math.round(duration * 100) / 100
+      }
     }
   } catch {}
 
@@ -144,13 +177,13 @@ export async function scanGroupPhotosInFolder(folderPath: string): Promise<Group
     if (fs.existsSync(sibDvdLower)) dirsToScan.add(sibDvdLower)
   }
 
-  // 3. Any immediate subdirectories containing 'dvd', 'gp', 'group', 'final', or 'output'
+  // 3. Any immediate subdirectories containing 'dvd' or 'gp'
   try {
     const subEntries = fs.readdirSync(folderPath, { withFileTypes: true })
     for (const sub of subEntries) {
-      if (sub.isDirectory() && !sub.name.startsWith('.') && sub.name.toLowerCase() !== 'node_modules' && sub.name.toLowerCase() !== '.git') {
+      if (sub.isDirectory() && !isIgnoredFolder(sub.name)) {
         const lower = sub.name.toLowerCase()
-        if (lower === 'dvd' || lower.includes('gp') || lower.includes('group') || lower === 'final' || lower === 'output') {
+        if (lower === 'dvd' || lower.includes('gp') || lower.includes('group_photo')) {
           dirsToScan.add(path.join(folderPath, sub.name))
         }
       }
@@ -213,18 +246,24 @@ export function buildDefaultGroupPhotoAssignments(
   const ceremonyVideos = videoList.filter(v => !isGroupPhotoVideoFile(v))
   if (ceremonyVideos.length === 0) return assignments
 
-  // Determine Nikaah ceremony numbers or sequential indices
-  const items: Array<{ videoPath: string; cerNum: number }> = ceremonyVideos.map((vp, idx) => {
+  // Identify videos that are specifically Nikaah ceremonies
+  const nikaahItems: Array<{ videoPath: string; cerNum: number }> = []
+  for (const vp of ceremonyVideos) {
     const cer = extractNikaahNumberFromFileName(vp)
-    return {
-      videoPath: vp,
-      cerNum: cer !== null ? cer : (idx + 1)
+    if (cer !== null) {
+      nikaahItems.push({ videoPath: vp, cerNum: cer })
     }
-  })
+  }
 
-  items.sort((a, b) => a.cerNum - b.cerNum)
+  // If there are no Nikaah ceremonies detected in the folder, do NOT force-assign GP outro
+  // to unrelated ceremonies (Waaz, Majlis, Ziyafat, etc.) by default.
+  if (nikaahItems.length === 0) {
+    return assignments
+  }
 
-  const total = items.length
+  nikaahItems.sort((a, b) => a.cerNum - b.cerNum)
+
+  const total = nikaahItems.length
   const gpCount = availableGps.length
   const step = Math.ceil(total / gpCount)
 
@@ -233,7 +272,7 @@ export function buildDefaultGroupPhotoAssignments(
     const startIndex = gi * step
     const endIndex = Math.min((gi + 1) * step, total)
     for (let j = startIndex; j < endIndex; j++) {
-      const item = items[j]
+      const item = nikaahItems[j]
       assignments[item.videoPath] = gpItem.fullPath
       const base = path.basename(item.videoPath)
       assignments[base] = gpItem.fullPath

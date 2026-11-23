@@ -61,9 +61,12 @@ function isGroupPhotoVideo(filenameOrPath: any): boolean {
   if (!filenameOrPath || typeof filenameOrPath !== 'string') return false
   const base = filenameOrPath.split(/[\\/]/).pop() || ''
   const stem = base.replace(/\.(tmp|temp)$/i, '').replace(/\.[^/.]+$/, '').trim()
-  const isGroupPhoto = /(?:^|[\s_.-])group[_\s-]?photo(?:[_\s-]*\d+)?(?:[\s_.-]|$)/i.test(stem)
-  const isGPn = /(?:^|[\s_.-])gp(?:[_\s-]*\d+)?(?:[\s_.-]|$)/i.test(stem)
-  return isGroupPhoto || isGPn
+  if (/(?:^|[\s_.-])group[_\s-]?photo(?:[_\s-]*\d+)?(?:[\s_.-]|$)/i.test(stem)) return true
+  if (/(?:^|[\s_.-])gp(?:[_\s-]*\d+)?(?:[\s_.-]|$)/i.test(stem)) {
+    if (/(?:^|[\s_.-])gp[a-z]{1,}/i.test(stem)) return false
+    return true
+  }
+  return false
 }
 
 function safeGet(key: string, defaultVal = ''): string {

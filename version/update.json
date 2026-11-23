@@ -1,5 +1,13 @@
 [
   {
+    "version": "26.11.37",
+    "date": "2026-11-23",
+    "whats_new": "* Title Adder Render Pipeline Fix: Eliminated startup hang on Initializing, added instant progress updates.\n* FFmpeg Audio/Video Synchronization: Resolved MP4 muxer stall by perfectly matching audio and video streams when Group Photo outro is attached.\n* Root Drive Non-Blocking Discovery: Removed synchronous fs.readdirSync root drive scans that hung external/network drives on client PCs.\n* Strict Group Photo Assignment: Only assigns GP outro to Nikaah ceremonies, excluding GP files from being rendered as standalone ceremonies.",
+    "release_notes": "One Tap v26.11.37 resolves video rendering startup stalls on client PCs, fixes FFmpeg audio/video duration alignment for Group Photo outros, and removes main-thread drive scans.",
+    "bugs_fixed": "* Resolved render pipeline freeze on Initializing.\n* Fixed FFmpeg MP4 muxer stall at frame 0.\n* Fixed synchronous D: drive scan in gpuDetector.\n* Filtered out GP files from ceremony render queue.",
+    "improvements": "* Real-time render queue progress updates from queue inception.\n* Graceful exit handling on close and exit signals."
+  },
+  {
     "version": "26.11.36",
     "date": "2026-11-23",
     "whats_new": "* Hierarchical Codebase Analysis Engine: Automatically mirrors folder structure in .code-analysis/ with minute details (exports, types, hooks, IPC channels) saving ~888,000+ AI context tokens.\n* Windows Taskbar Live Previews: Hovering over sidebar navigation items renders real-time thumbnail previews simulating native Windows taskbar popovers.\n* Islamic Welcome Screen & Arabic Typography: Centered Arabic calligraphy (أَهْلًا وَسَهْلًا) with kinetic typography wave animations and docked preloader without redundant branding.\n* Animated Arabic Greeting in Email Studio: Embedded ONTO wave calligraphy greeting banner for luxury client announcements.\n* Multi-Folder Batch Queue & Reordering: Support for rendering N batches with dynamic priority reordering and automated photo transfer.",

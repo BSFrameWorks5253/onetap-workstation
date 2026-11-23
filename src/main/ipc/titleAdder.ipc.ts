@@ -71,10 +71,10 @@ export function isGroupPhotoVideo(filenameOrPath: string): boolean {
     .replace(/\.(tmp|temp)$/i, '')
     .replace(/\.[^/.]+$/, '')
     .trim()
-  if (/group[_\s-]?photo/i.test(stem)) return true
-  // Matches "GP", "GP1", "GP 1", "GP_1", "GP-1", "GP01", "GP1_Final", "GP_Outro", "1448_GP1", etc.
-  if (/(?:^|[\s_.-])gp(?:\d+|[_\s-]+\d+)?(?:[\s_.-]|$|[a-z])/i.test(stem)) {
-    if (/^gp[a-z]{2,}/i.test(stem)) return false
+  if (/(?:^|[\s_.-])group[_\s-]?photo(?:[_\s-]*\d+)?(?:[\s_.-]|$)/i.test(stem)) return true
+  if (/(?:^|[\s_.-])gp(?:[_\s-]*\d+)?(?:[\s_.-]|$)/i.test(stem)) {
+    // Avoid false positives on words like 'gpa', 'gps', 'gphoto'
+    if (/(?:^|[\s_.-])gp[a-z]{1,}/i.test(stem)) return false
     return true
   }
   return false
@@ -1577,6 +1577,9 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
     let done = 0
     let videos: string[] = []
 
+    send('titleAdder:log', { jobId: params.jobId, message: '🚀 Starting video title render pipeline...', level: 'info' })
+    send('titleAdder:progress', { jobId: params.jobId, percent: 0, status: 'Initializing video render queue...' })
+
     try {
       const batchSources = (params.batchSources && params.batchSources.length > 0)
         ? params.batchSources.filter(Boolean)
@@ -1667,7 +1670,10 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
           }
         }
       }
-      videos = videos.filter(v => !isGroupPhotoVideo(v))
+      const nonGps = videos.filter(v => !isGroupPhotoVideo(v))
+      if (nonGps.length > 0) {
+        videos = nonGps
+      }
 
       if (videos.length === 0) {
         send('titleAdder:log', { jobId: params.jobId, message: "✖ No playable video files found to process (all videos were filtered or none found).", level: 'error' })
@@ -1729,7 +1735,6 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
 
     let normalIdx = 0
     let specialIdx = 0
-    let done = 0
     let cancelled = false
     const batchOutputs: Record<string, string> = {}
 
@@ -1803,6 +1808,13 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
       }
 
       // ── Per-video header ──────────────────────────────────────
+      send('titleAdder:progress', {
+        jobId: params.jobId,
+        percent: Math.round((done / Math.max(videos.length, 1)) * 100),
+        status: `Preparing ${path.basename(videoPath)} [${done + 1}/${videos.length}]...`,
+        speed: '',
+        fps: ''
+      })
       send('titleAdder:log', { jobId: params.jobId, message: `\n━━━ [${done + 1}/${videos.length}] ${path.basename(videoPath)} ━━━`, level: 'info' })
       send('titleAdder:log', { jobId: params.jobId, message: `  Prefix detected: "${prefix}"`, level: 'info' })
 
