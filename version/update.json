@@ -1,35 +1,11 @@
 [
   {
-    "version": "26.11.32",
-    "date": "2026-11-22",
-    "whats_new": "* Group Photo Outro Auto-Detection: Directly ingests and pairs detected Group Photo (GP) videos located in the batch source or DVD folder, opening the dedicated GP setup modal.\n* Rapid Non-Blocking Metadata Probing: Throttled, fast timeouts for FFmpeg/FFprobe operations with safe automatic duration and format fallbacks.\n* Instant UI Encode Telemetry: Immediately exits 'Initializing...' status upon job start to display the active video filename, progress percentage, and speed metrics.",
-    "release_notes": "UniDesk Studio v26.11.32 delivers vital stability fixes for client workstations, eliminating main-thread freezes from synchronous drive scanning, removing conflicting multi-stream cover art muxing, and resolving Group Photo outro detection in batch folders.",
-    "bugs_fixed": "* Resolved Client Render Not Starting: Eliminated aggressive drive root scanning across empty optical/removable drives (D:\\ and E:\\) and removed conflicting second video stream cover art muxing.\n* Fixed Group Photo Modal Not Appearing: Ensured GP videos in DVD are preserved during preflight and automatically advance to the Group Photo assignment window.\n* Fixed Regex Progress Parsing: Updated FFmpeg time parser to handle decimal and integer time values with arbitrary whitespace.",
-    "improvements": "* Direct DVD GP Ingestion: Instantly recognizes GP1, GP2, Group Photo files without slow filesystem tree traversals.\n* Synchronized Extension Builds: Maintained 100% parity across one-tap-extension and one-tap-parent-extension."
-  },
-  {
-    "version": "26.11.31",
-    "date": "2026-11-22",
-    "whats_new": "* Resilient Title Adder Video Rendering Pipeline: Bulletproof multi-stage rendering with automatic GPU-to-CPU failover, ensuring client computers without dedicated GPUs or with conflicting drivers render seamlessly.\n* Automatic FFmpeg Binary Discovery: Dynamic environment path resolver for FFmpeg and FFprobe binaries across WinGet, Scoop, Chocolatey, and standard installation roots.\n* Stream-Specific Cover Art Synthesis: Explicitly scoped stream mapping and pixel format conversions for thumbnail cover art embedding without stalling the main video stream.",
-    "release_notes": "UniDesk Studio v26.11.31 delivers critical stability and reliability enhancements to the Title Adder video processing engine, eliminating video encoding initialization stalls, optimizing hardware/software encoder fallback, and broadening cross-platform FFmpeg discovery.",
-    "bugs_fixed": "* Resolved Title Adder Render Not Starting: Eliminated global frame limit (-vframes:v:1 1) on attached picture streams that prematurely terminated full-length video encoding.\n* Fixed Filtergraph Incompatibility: Removed -hwaccel auto from video input streams, preventing dxva2/cuda hardware surface conflicts with CPU software scale/pad filters.\n* Fixed FFprobe Metadata Skip: Added dual format/stream duration parsing and seamless fallback to ffmpeg -i when ffprobe is missing or returns N/A for stream duration.\n* Fixed GPU Encode Abort: Automatically catches GPU encoder crashes (NVENC, QSV, AMF) and executes immediate in-flight retry using libx264 (CPU).",
-    "improvements": "* Comprehensive Stderr Error Logging: Captured and surfaced granular FFmpeg stderr diagnostics directly to the UI activity log and dynamic status displays.\n* Clean Retry Engine: Automatically removes incomplete or corrupted partial outputs before launching fallback retries.\n* Multi-Target Setup Installer: NSIS and Inno Setup integration for single-click installation and portable distribution."
-  },
-  {
-    "version": "26.11.30",
-    "date": "2026-11-22",
+    "version": "26.11.36",
+    "date": "2026-11-23",
     "whats_new": "* Hierarchical Codebase Analysis Engine: Automatically mirrors folder structure in .code-analysis/ with minute details (exports, types, hooks, IPC channels) saving ~888,000+ AI context tokens.\n* Windows Taskbar Live Previews: Hovering over sidebar navigation items renders real-time thumbnail previews simulating native Windows taskbar popovers.\n* Islamic Welcome Screen & Arabic Typography: Centered Arabic calligraphy (أَهْلًا وَسَهْلًا) with kinetic typography wave animations and docked preloader without redundant branding.\n* Animated Arabic Greeting in Email Studio: Embedded ONTO wave calligraphy greeting banner for luxury client announcements.\n* Multi-Folder Batch Queue & Reordering: Support for rendering N batches with dynamic priority reordering and automated photo transfer.",
     "release_notes": "UniDesk Studio v26.11.0 is a major milestone release introducing an enterprise-grade hierarchical codebase token caching engine, native Windows taskbar-style live page previews, an authentic Islamic welcome screen with kinetic Arabic typography, multi-folder batch rendering reordering, and critical stability fixes preventing Task Tracker background freezes.",
     "bugs_fixed": "* Resolved Task Tracker Freeze: Eliminated aggressive synchronous drive root scanning across floppy/card-reader drives (A: and B:), implemented throttled background sentinel and 8-second cached scan result.\n* Fixed Settings Software Updates: Removed deprecated \"Preview Welcome Screen\" button, added real-time feedback and toast notifications for updates and email subscriptions.\n* Fixed GitHub README Animated Banner: Re-engineered resources/banner.svg using 100% native SVG elements and keyframes, bypassing GitHub Camo's foreignObject sanitization filter.\n* Audio Assignment Pool Persistence: Prevented audio settings from resetting back to defaults across render cycles.",
     "improvements": "* Title Adder UI Polish: Cleaned batch cards, balanced spacing, refined toggle switches, and elevated action buttons.\n* Token Cache Integration: Instantaneous SHA-256 incremental checks preventing redundant re-analysis across sessions.\n* Light & Dark Mode Contrast Tuning: Warm architectural linen light mode and high-contrast obsidian dark mode for zero eye strain."
-  },
-  {
-    "version": "26.11.29",
-    "date": "2026-11-22",
-    "whats_new": "* Title Adder Rendering & Group Photo Outro Pipeline v26.11.29: Bulletproof ceremony video rendering with automatic title image fallbacks, dedicated Group Photo modal routing, and non-blocking background audio handling.\n* Automatic Pure Video Mode: If intro title cards are unavailable, ceremony rendering proceeds smoothly without stalling or skipping.\n* Recursive Group Photo Outro Scanning: Automatically discovers Group Photos in DVD subfolders, sibling directories, or user-selected file paths.",
-    "release_notes": "UniDesk Studio v26.11.29 delivers critical fixes for Title Adder rendering execution, automated Group Photo outro discovery and assignment, and robust FFmpeg stream synthesis.",
-    "bugs_fixed": "* Fixed Title Adder Rendering Not Starting: Eliminated strict continue skips when title images or background audio tracks were absent.\n* Fixed Group Photo Modal Not Showing: Rewrote group photo scanner to recursively explore DVD and subdirectories up to 3 levels deep.\n* Fixed VideoFiles Drop Filter: Ensured Group Photo video files are preserved in state when dropped or loaded.",
-    "improvements": "* UI Controls: Added direct '+ Add GP Video' and 'Group Photos ➜' shortcut buttons in Preflight Check and Outro Assignment windows.\n* Theme & Design Consistency: Preserved surface and border tokens across both extensions."
   },
   {
     "version": "26.11.28",

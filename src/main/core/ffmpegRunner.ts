@@ -22,8 +22,8 @@ export interface FFmpegJobParams {
   jobId: string
   videoPath: string
   outputPath: string
-  startImg?: string      // intro image
-  endImg?: string        // outro image
+  startImg?: string       // intro image
+  endImg?: string         // outro image
   watermark: string
   audioPrimary?: string  // single audio track (used for bg music or fill for WAAZ/ID)
   useNikahLogic: boolean
@@ -111,12 +111,7 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
   const transLen = (!skipFront && startImg && hasCustomTrans) ? (params.transitionDuration ?? 1.0) : 0
   const leadDuration = introLen + transLen
   const fadeStart = Math.max(totalLength - 2.0, 0)
-
-  // Detect encoder — _cache should already be warmed at app startup via warmEncoderCache()
-  // so this returns instantly. If not yet cached, it probes GPU here (up to ~4.8s max).
-  onEvent({ type: 'log', jobId, message: '🔍 Checking encoder capability...', level: 'info' })
   const enc = getVideoEncoder()
-  onEvent({ type: 'log', jobId, message: `✅ Encoder: ${enc.label}`, level: 'info' })
 
   // Dynamic input stream setup
   const dynamicInputs: string[] = []
@@ -355,9 +350,12 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
 
   if (!skipFront && startImgIdx >= 0) {
     // High-precision bicubic scaling ensures crisp title text, sharp calligraphy, and border details
+    // Transition dissolve at the tail of title thumbnail into video
+    const fadeOutStart = Math.max(introLen - 0.5, 0).toFixed(3)
     videoFilter +=
       `[${startImgIdx}:v]fps=${fps},scale=${width}:${height}:force_original_aspect_ratio=decrease:flags=bicubic+accurate_rnd,` +
-      `pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1,format=yuv420p,trim=0:${introLen.toFixed(3)},settb=AVTB,setpts=PTS-STARTPTS[img_start];`
+      `pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1,format=yuv420p,trim=0:${introLen.toFixed(3)},settb=AVTB,setpts=PTS-STARTPTS,` +
+      `fade=t=out:st=${fadeOutStart}:d=0.5[img_start];`
     concatSegments.push('[img_start]')
 
     // Custom transition clip (rendered if explicit transition input was registered)
@@ -381,9 +379,11 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
   }
 
   if (!skipBack && endImgIdx >= 0) {
+    const fadeOutEndStart = Math.max(outroLen - 0.5, 0).toFixed(3)
     videoFilter +=
       `[${endImgIdx}:v]fps=${fps},scale=${width}:${height}:force_original_aspect_ratio=decrease:flags=bicubic+accurate_rnd,` +
-      `pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1,format=yuv420p,trim=0:${outroLen.toFixed(3)},settb=AVTB,setpts=PTS-STARTPTS[img_end];`
+      `pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1,format=yuv420p,trim=0:${outroLen.toFixed(3)},settb=AVTB,setpts=PTS-STARTPTS,` +
+      `fade=t=in:st=0:d=0.5,fade=t=out:st=${fadeOutEndStart}:d=0.5[img_end];`
     concatSegments.push('[img_end]')
   }
 

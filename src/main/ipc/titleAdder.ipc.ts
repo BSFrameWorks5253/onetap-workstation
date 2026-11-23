@@ -72,17 +72,11 @@ export function isGroupPhotoVideo(filenameOrPath: string): boolean {
     .replace(/\.[^/.]+$/, '')
     .trim()
   if (/group[_\s-]?photo/i.test(stem)) return true
-  // Matches "GP", "GP1", "GP 1", "GP_1", "GP-1", "GP01", "GP1_Final", "GP_Outro", "1448_GP1", "43-16N-GP1", etc.
-  if (/(?:^|[\s_.-])gp(?:\d+|[_\s-]+\d+)?(?:[\s_.-]|$|_?outro|_?final|[a-z])/i.test(stem)) {
+  // Matches "GP", "GP1", "GP 1", "GP_1", "GP-1", "GP01", "GP1_Final", "GP_Outro", "1448_GP1", etc.
+  if (/(?:^|[\s_.-])gp(?:\d+|[_\s-]+\d+)?(?:[\s_.-]|$|[a-z])/i.test(stem)) {
     if (/^gp[a-z]{2,}/i.test(stem)) return false
     return true
   }
-  try {
-    const dirName = path.basename(path.dirname(filenameOrPath)).toLowerCase()
-    if (dirName === 'gp' || dirName === 'group photo' || dirName === 'group photos' || dirName === 'group_photo' || dirName === 'outro') {
-      return true
-    }
-  } catch {}
   return false
 }
 
@@ -105,11 +99,45 @@ export function findTransitionFile(titlesFolder: string): string | null {
   return null
 }
 
+const IGNORED_SCAN_DIRS = new Set([
+  'node_modules',
+  '.git',
+  '.github',
+  '.vscode',
+  '.idea',
+  'dist',
+  'out',
+  'build',
+  'release',
+  'bin',
+  'obj',
+  '$recycle.bin',
+  'system volume information',
+  '.code-analysis',
+  '.agent',
+  '.gemini',
+  'tools',
+  'scripts',
+  'public',
+  'installer',
+  'packages',
+  'coverage',
+  '.cache'
+])
+
+export function isIgnoredDir(name: string): boolean {
+  if (!name) return true
+  const lower = name.toLowerCase()
+  if (lower.startsWith('.') || lower.startsWith('$')) return true
+  return IGNORED_SCAN_DIRS.has(lower)
+}
+
 function findVideoFiles(dirPath: string): Array<{ fullPath: string; fileName: string; relPath: string }> {
   if (!dirPath || !fs.existsSync(dirPath)) return []
   const results: Array<{ fullPath: string; fileName: string; relPath: string }> = []
 
-  const scan = (currentDir: string, relPrefix: string = '') => {
+  const scan = (currentDir: string, relPrefix: string = '', depth = 0) => {
+    if (depth > 4) return
     try {
       const entries = fs.readdirSync(currentDir, { withFileTypes: true })
 
@@ -128,8 +156,8 @@ function findVideoFiles(dirPath: string): Array<{ fullPath: string; fileName: st
       for (const entry of entries) {
         const fullPath = path.join(currentDir, entry.name)
         if (entry.isDirectory()) {
-          if (!entry.name.startsWith('.')) {
-            scan(fullPath, relPrefix ? path.join(relPrefix, entry.name) : entry.name)
+          if (!isIgnoredDir(entry.name)) {
+            scan(fullPath, relPrefix ? path.join(relPrefix, entry.name) : entry.name, depth + 1)
           }
         } else if (entry.isFile()) {
           if (isGroupPhotoVideo(entry.name)) continue
@@ -244,7 +272,7 @@ function findFile(folder: string, name: string, maxDepth = 3): string | null {
       }
       // Pass 2: Recurse into subdirectories
       for (const entry of entries) {
-        if (entry.isDirectory() && !entry.name.startsWith('.') && !entry.name.startsWith('$')) {
+        if (entry.isDirectory() && !isIgnoredDir(entry.name)) {
           const res = searchRecursive(path.join(dir, entry.name), depth + 1)
           if (res) return res
         }
@@ -627,10 +655,10 @@ async function hasAudioStream(filePath: string): Promise<boolean> {
       env: process.env
     })
     const out = (res.stderr || '').toString() + (res.stdout || '').toString()
-    return /Stream #\d+:\d+.*Audio:/i.test(out)
-  } catch {
-    return true // Assume audio present rather than muting by mistake
-  }
+    return /Stream.*Audio:/.test(out)
+  } catch {}
+
+  return false
 }
 
 function getAudioSamples(filePath: string): number {
@@ -638,19 +666,26 @@ function getAudioSamples(filePath: string): number {
   try {
     const out = execFileSync(ffprobeExe, [
       '-v', 'error', '-select_streams', 'a:0',
-      '-show_entries', 'stream=duration,sample_rate:format=duration',
+      '-show_entries', 'stream=duration,sample_rate',
       '-of', 'json', filePath
     ], { windowsHide: true, env: process.env, timeout: 10000 }).toString()
     const parsed = JSON.parse(out)
     const stream = parsed.streams?.[0]
-    let duration = parseFloat(stream?.duration ?? '0')
-    if (isNaN(duration) || duration <= 0) {
-      duration = parseFloat(parsed.format?.duration ?? '0')
-    }
-    const sampleRate = parseInt(stream?.sample_rate ?? '48000') || 48000
-    if (!isNaN(duration) && duration > 0) {
+    if (stream) {
+      const duration = parseFloat(stream.duration ?? '0')
+      const sampleRate = parseInt(stream.sample_rate ?? '48000')
       return Math.round(duration * sampleRate)
     }
+  } catch {}
+  try {
+    const out = execFileSync(ffprobeExe, [
+      '-v', 'error',
+      '-show_entries', 'format=duration',
+      '-of', 'json', filePath
+    ], { windowsHide: true, env: process.env, timeout: 10000 }).toString()
+    const parsed = JSON.parse(out)
+    const duration = parseFloat(parsed.format?.duration ?? '0')
+    return Math.round(duration * 48000)
   } catch {}
   return 0
 }
@@ -666,13 +701,12 @@ async function detectSilence(filePath: string, vidDuration: number): Promise<{
     try {
       const ffmpegExe = getFfmpegExePath()
       const proc = spawn(ffmpegExe, [
-        '-nostdin',
         '-vn', '-sn', '-dn',
         '-i', filePath,
         '-map', '0:a:0?',
         '-af', 'silencedetect=n=-45dB:d=1.5',
         '-f', 'null', '-'
-      ], { windowsHide: true, env: process.env, stdio: ['ignore', 'pipe', 'pipe'] })
+      ], { windowsHide: true, env: process.env })
 
       let out = ''
       proc.stderr?.on('data', chunk => { out += chunk.toString() })
@@ -1270,7 +1304,9 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
           if (entry.name.startsWith('.') || entry.name.startsWith('$') || entry.name.toLowerCase() === 'thumbs.db') continue
           const p = path.join(dir, entry.name)
           if (entry.isDirectory()) {
-            scanDirForImages(p, depth + 1)
+            if (!isIgnoredDir(entry.name)) {
+              scanDirForImages(p, depth + 1)
+            }
           } else if (entry.isFile()) {
             const ext = path.extname(entry.name).toLowerCase()
             if (IMG_EXTS.includes(ext)) {
@@ -1327,23 +1363,6 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
     } else {
       videos = params.videoFiles ?? []
     }
-
-    // Capture all Group Photo videos directly detected in source/batch/DVD folders
-    const rawGpCandidates: string[] = []
-    for (const v of videos) {
-      if (isGroupPhotoVideo(v) && !rawGpCandidates.includes(v)) {
-        rawGpCandidates.push(v)
-      }
-    }
-    if (params.videoFiles && Array.isArray(params.videoFiles)) {
-      for (const vf of params.videoFiles) {
-        if (vf && isGroupPhotoVideo(vf) && !rawGpCandidates.includes(vf)) {
-          rawGpCandidates.push(vf)
-        }
-      }
-    }
-
-    // Filter ceremony videos (GP videos are attached as outros, not rendered as standalone ceremonies)
     videos = videos.filter(v => !isGroupPhotoVideo(v))
 
     const special1Path = getSpecial1AudioPath(titlesFolder)
@@ -1396,22 +1415,6 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
 
     const availableGroupPhotos: GroupPhotoItem[] = []
     const seenGpPaths = new Set<string>()
-
-    // Ingest directly detected GP files from batch/DVD immediately
-    for (const gpPath of rawGpCandidates) {
-      if (fs.existsSync(gpPath)) {
-        const norm = path.resolve(gpPath).toLowerCase()
-        if (!seenGpPaths.has(norm)) {
-          seenGpPaths.add(norm)
-          availableGroupPhotos.push({
-            gpNum: extractGpNumber(gpPath),
-            fileName: path.basename(gpPath),
-            fullPath: gpPath,
-            duration: 15.0
-          })
-        }
-      }
-    }
 
     // Collect all candidate directories where GP files could reside
     const candidateDirs = new Set<string>()
@@ -1571,85 +1574,63 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
       try { win.webContents.send(channel, data) } catch { /* win closed */ }
     }
 
-    const batchSources = (params.batchSources && params.batchSources.length > 0)
-      ? params.batchSources.filter(Boolean)
-      : [params.batchSource, params.batchSource2].filter(Boolean) as string[]
+    let done = 0
+    let videos: string[] = []
 
-    const primarySource = batchSources[0]
-    const titlesFolder = resolveTitlesFolder(get('titles_folder') as string, primarySource)
-    const pool = buildAudioPool(titlesFolder)
-    const nikahAudio = getNikahAudio(titlesFolder)
-    const end = findFile(titlesFolder, 'End')
-    const wm  = findFile(titlesFolder, 'Watermark')
-    const mode = get('audio_assignment_mode', 'single') as string
-    const special1AudioPath = getSpecial1AudioPath(titlesFolder)
+    try {
+      const batchSources = (params.batchSources && params.batchSources.length > 0)
+        ? params.batchSources.filter(Boolean)
+        : [params.batchSource, params.batchSource2].filter(Boolean) as string[]
 
-    const availableTitleImages: Array<{ name: string; path: string }> = []
-    const seenStartImg = new Set<string>()
-    const scanStartDir = (dir: string, depth = 0) => {
-      if (!dir || !fs.existsSync(dir) || depth > 4) return
-      try {
-        const entries = fs.readdirSync(dir, { withFileTypes: true })
-        for (const entry of entries) {
-          if (entry.name.startsWith('.') || entry.name.startsWith('$') || entry.name.toLowerCase() === 'thumbs.db') continue
-          const p = path.join(dir, entry.name)
-          if (entry.isDirectory()) {
-            scanStartDir(p, depth + 1)
-          } else if (entry.isFile()) {
-            if (IMG_EXTS.includes(path.extname(entry.name).toLowerCase())) {
-              if (!seenStartImg.has(p.toLowerCase())) {
-                seenStartImg.add(p.toLowerCase())
-                availableTitleImages.push({ name: entry.name, path: p })
+      const primarySource = batchSources[0]
+      const titlesFolder = resolveTitlesFolder(get('titles_folder') as string, primarySource)
+      const pool = buildAudioPool(titlesFolder)
+      const nikahAudio = getNikahAudio(titlesFolder)
+      const end = findFile(titlesFolder, 'End')
+      const wm  = findFile(titlesFolder, 'Watermark')
+      const mode = get('audio_assignment_mode', 'single') as string
+      const special1AudioPath = getSpecial1AudioPath(titlesFolder)
+
+      const availableTitleImages: Array<{ name: string; path: string }> = []
+      const seenStartImg = new Set<string>()
+      const scanStartDir = (dir: string, depth = 0) => {
+        if (!dir || !fs.existsSync(dir) || depth > 4) return
+        try {
+          const entries = fs.readdirSync(dir, { withFileTypes: true })
+          for (const entry of entries) {
+            if (entry.name.startsWith('.') || entry.name.startsWith('$') || entry.name.toLowerCase() === 'thumbs.db') continue
+            const p = path.join(dir, entry.name)
+            if (entry.isDirectory()) {
+              if (!isIgnoredDir(entry.name)) {
+                scanStartDir(p, depth + 1)
+              }
+            } else if (entry.isFile()) {
+              if (IMG_EXTS.includes(path.extname(entry.name).toLowerCase())) {
+                if (!seenStartImg.has(p.toLowerCase())) {
+                  seenStartImg.add(p.toLowerCase())
+                  availableTitleImages.push({ name: entry.name, path: p })
+                }
               }
             }
           }
-        }
-      } catch {}
-    }
-    if (titlesFolder) scanStartDir(titlesFolder)
-    for (const src of batchSources) {
-      if (fs.existsSync(src)) {
-        scanStartDir(path.join(src, 'Final Titles'))
-        scanStartDir(path.join(src, 'Titles'))
-        scanStartDir(path.join(src, 'Title'))
-        scanStartDir(path.join(src, 'Thumbnails'))
+        } catch {}
       }
-    }
-    if (availableTitleImages.length === 0) {
+      if (titlesFolder) scanStartDir(titlesFolder)
       for (const src of batchSources) {
-        if (fs.existsSync(src)) scanStartDir(src)
-      }
-    }
-
-    let videos: string[] = []
-
-    if (params.mode === 'batch' && batchSources.length > 0) {
-      for (const src of batchSources) {
-        const bVids = getBatchVideos(src)
-        for (const bv of bVids) {
-          if (!videos.includes(bv)) {
-            videos.push(bv)
-          }
+        if (fs.existsSync(src)) {
+          scanStartDir(path.join(src, 'Final Titles'))
+          scanStartDir(path.join(src, 'Titles'))
+          scanStartDir(path.join(src, 'Title'))
+          scanStartDir(path.join(src, 'Thumbnails'))
         }
       }
-      if (params.videoFiles && params.videoFiles.length > 0) {
-        const expSet = new Set(params.videoFiles.map(e => getCanonicalStem(e)))
-        const filtered = videos.filter(v => expSet.has(getCanonicalStem(v)))
-        if (filtered.length > 0) {
-          videos = filtered
+      if (availableTitleImages.length === 0) {
+        for (const src of batchSources) {
+          if (fs.existsSync(src)) scanStartDir(src)
         }
       }
-      if (videos.length === 0 && params.videoFiles && params.videoFiles.length > 0) {
-        videos = params.videoFiles.filter(f => fs.existsSync(f))
-      }
-      if (videos.length === 0) {
-        send('titleAdder:log', { jobId: params.jobId, message: "✖ No video files found in selected source folder(s).", level: 'error' })
-        send('titleAdder:done', { jobId: params.jobId, success: false })
-        return
-      }
-    } else {
-      videos = params.videoFiles ?? []
-      if (videos.length === 0 && batchSources.length > 0) {
+
+      if (params.mode === 'batch' && batchSources.length > 0) {
         for (const src of batchSources) {
           const bVids = getBatchVideos(src)
           for (const bv of bVids) {
@@ -1658,23 +1639,44 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
             }
           }
         }
+        if (params.videoFiles && params.videoFiles.length > 0) {
+          const expSet = new Set(params.videoFiles.map(e => getCanonicalStem(e)))
+          const filtered = videos.filter(v => expSet.has(getCanonicalStem(v)))
+          if (filtered.length > 0) {
+            videos = filtered
+          }
+        }
+        if (videos.length === 0 && params.videoFiles && params.videoFiles.length > 0) {
+          videos = params.videoFiles.filter(f => fs.existsSync(f))
+        }
+        if (videos.length === 0) {
+          send('titleAdder:log', { jobId: params.jobId, message: "✖ No video files found in selected source folder(s).", level: 'error' })
+          send('titleAdder:done', { jobId: params.jobId, success: false, done: 0, total: 0, error: 'No video files found' })
+          return
+        }
+      } else {
+        videos = params.videoFiles ? [...params.videoFiles] : []
+        if (videos.length === 0 && batchSources.length > 0) {
+          for (const src of batchSources) {
+            const bVids = getBatchVideos(src)
+            for (const bv of bVids) {
+              if (!videos.includes(bv)) {
+                videos.push(bv)
+              }
+            }
+          }
+        }
       }
-    }
-    videos = videos.filter(v => !isGroupPhotoVideo(v))
+      videos = videos.filter(v => !isGroupPhotoVideo(v))
 
-    if (videos.length === 0) {
-      send('titleAdder:log', { jobId: params.jobId, message: "✖ No ceremony video files found to render in selected folder(s).", level: 'error' })
-      send('titleAdder:done', { jobId: params.jobId, success: false, error: 'No ceremony video files found to render' })
-      return
-    }
+      if (videos.length === 0) {
+        send('titleAdder:log', { jobId: params.jobId, message: "✖ No playable video files found to process (all videos were filtered or none found).", level: 'error' })
+        send('titleAdder:done', { jobId: params.jobId, success: false, done: 0, total: 0, error: 'No playable video files found' })
+        return
+      }
 
-    send('titleAdder:log', { jobId: params.jobId, message: `📋 Processing ${videos.length} video(s)`, level: 'info' })
-    send('titleAdder:found', { jobId: params.jobId, total: videos.length })
-    send('titleAdder:progress', {
-      jobId: params.jobId,
-      percent: 0,
-      status: `Starting render queue (${videos.length} videos)...`
-    })
+      send('titleAdder:log', { jobId: params.jobId, message: `📋 Processing ${videos.length} video(s)`, level: 'info' })
+      send('titleAdder:found', { jobId: params.jobId, total: videos.length })
 
     // Extract date folder name dynamically
     let actualOutputDir = params.outputFolder || ''
@@ -1803,11 +1805,6 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
       // ── Per-video header ──────────────────────────────────────
       send('titleAdder:log', { jobId: params.jobId, message: `\n━━━ [${done + 1}/${videos.length}] ${path.basename(videoPath)} ━━━`, level: 'info' })
       send('titleAdder:log', { jobId: params.jobId, message: `  Prefix detected: "${prefix}"`, level: 'info' })
-      send('titleAdder:progress', {
-        jobId: params.jobId,
-        percent: 0,
-        status: `[${done + 1}/${videos.length}] Preparing ${path.basename(videoPath)}...`
-      })
 
       // Per-video thumbnail placement mode override (computed upfront so Pure Video mode can skip title image requirement)
       const perVideoThumbMode =
@@ -1858,21 +1855,12 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
         send('titleAdder:log', { jobId: params.jobId, message: `  🖼 [User Selected] Title image: ${path.basename(titleImg)}`, level: 'info' })
       } else {
         titleImg = findTitleImageForVideo(titlesFolder, prefix, videoPath, availableTitleImages)
-        if (!titleImg && availableTitleImages.length > 0) {
-          titleImg = availableTitleImages[0].path
-          send('titleAdder:log', { jobId: params.jobId, message: `  🖼 [Fallback] No exact title image for "${prefix}" — using available project title: ${path.basename(titleImg)}`, level: 'info' })
-        }
-        if (titleImg) {
-          send('titleAdder:log', { jobId: params.jobId, message: `  🖼 Title image: ${path.basename(titleImg)}`, level: 'info' })
-        } else if (skipFront) {
-          send('titleAdder:log', { jobId: params.jobId, message: `  ℹ [Pure Video] No title image found for "${prefix}", but front thumbnail is skipped — proceeding without front title image.`, level: 'info' })
+        if (!titleImg) {
+          send('titleAdder:log', { jobId: params.jobId, message: `  ℹ No title image found for prefix "${prefix}" in ${titlesFolder} — rendering video without front title card.`, level: 'info' })
         } else {
-          send('titleAdder:log', { jobId: params.jobId, message: `  ℹ No title image found on disk for "${prefix}" — proceeding with video render (front intro thumbnail excluded).`, level: 'info' })
+          send('titleAdder:log', { jobId: params.jobId, message: `  🖼 Title image: ${path.basename(titleImg)}`, level: 'info' })
         }
       }
-
-      const finalSkipFront = skipFront || !titleImg
-      const finalSkipBack = skipBack || (!end && !titleImg)
 
       // Find next video in queue
       let currentNextVideoName = ''
@@ -2240,6 +2228,8 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
         })
       }
 
+      const finalSkipFront = skipFront || !titleImg
+      const finalSkipBack = skipBack || (!end && !titleImg)
       const totalLength = (finalSkipFront ? 0 : introDuration) + (transDuration > 0 ? transDuration : 0) + info.duration + groupPhotoDuration + (finalSkipBack ? 0 : outroDuration)
       send('titleAdder:log', { jobId: params.jobId, message: `  ⏱ Total output length: ${totalLength.toFixed(2)}s (${finalSkipFront ? 'no front thumbnail' : introDuration + 's intro'} + ${transDuration > 0 ? transDuration.toFixed(1) + 's buffer + ' : ''}${info.duration.toFixed(2)}s video + ${groupPhotoDuration > 0 ? groupPhotoDuration.toFixed(2) + 's GP + ' : ''}${finalSkipBack ? 'no back thumbnail' : outroDuration + 's outro'})`, level: 'info' })
 
@@ -2429,6 +2419,23 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
       task: cancelled ? 'Cancelled' : 'All videos rendered successfully!'
     })
     send('titleAdder:done', { jobId: params.jobId, success: !cancelled, done, total: videos.length, outputFolder: finalOutputDir, batchOutputs })
+    } catch (err: any) {
+      console.error('[titleAdder:start] Fatal unhandled error:', err)
+      send('titleAdder:log', {
+        jobId: params.jobId,
+        message: `✖ FATAL ERROR in render engine: ${err?.message || err}`,
+        level: 'error'
+      })
+      updateIslandState({ active: false, done: true, success: false, task: 'Render error' })
+      send('titleAdder:done', {
+        jobId: params.jobId,
+        success: false,
+        done,
+        total: videos.length,
+        error: err?.message || String(err)
+      })
+      return { success: false, error: err?.message || String(err) }
+    }
   })
 
   ipcMain.handle('titleAdder:scanStats', async (_e, rootPath: string) => {
@@ -2786,7 +2793,9 @@ export function getFinalTitlesInfo(customFolder?: string): FinalTitlesPayload {
           const fullPath = path.join(dir, entry.name)
 
           if (entry.isDirectory()) {
-            scanDirectory(fullPath, depth + 1)
+            if (!isIgnoredDir(entry.name)) {
+              scanDirectory(fullPath, depth + 1)
+            }
           } else if (entry.isFile()) {
             try {
               const stat = fs.statSync(fullPath)

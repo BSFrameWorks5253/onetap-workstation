@@ -28,7 +28,6 @@ const ffprobeBinary = isWin ? 'ffprobe.exe' : 'ffprobe'
 
 let _cache: EncoderResult | null = null
 let _discoveredFfmpegDir: string | null = null
-let _discoveredFfprobePath: string | null = null
 
 export function findAndEnsureFfmpegPath(): string | null {
   if (_discoveredFfmpegDir && fs.existsSync(path.join(_discoveredFfmpegDir, ffmpegBinary))) {
@@ -50,35 +49,15 @@ export function findAndEnsureFfmpegPath(): string | null {
     }
   } catch {}
 
-  // 2. Query where.exe / which to find the exact binary location
+  // 2. Check standard PATH lookup first
   try {
-    const locator = isWin ? 'where.exe' : 'which'
-    const res = spawnSync(locator, ['ffmpeg'], { timeout: 3000, windowsHide: true, env: process.env })
-    if (res.status === 0 && res.stdout) {
-      const lines = res.stdout.toString().split(/\r?\n/).map(l => l.trim()).filter(Boolean)
-      for (const line of lines) {
-        if (fs.existsSync(line)) {
-          const dir = path.dirname(line)
-          if (!process.env.PATH?.toLowerCase().includes(dir.toLowerCase())) {
-            process.env.PATH = `${dir}${path.delimiter}${process.env.PATH || ''}`
-          }
-          _discoveredFfmpegDir = dir
-          return dir
-        }
-      }
-    }
-  } catch {}
-
-  // 3. Check standard PATH lookup fallback
-  try {
-    const res = spawnSync(ffmpegBinary, ['-version'], { timeout: 1500, windowsHide: true, env: process.env })
+    const res = spawnSync(ffmpegBinary, ['-version'], { timeout: 3000, windowsHide: true, env: process.env })
     if (res.status === 0) {
-      _discoveredFfmpegDir = 'PATH'
       return 'PATH'
     }
   } catch {}
 
-  // 4. Standard candidates to search
+  // 3. Standard candidates to search
   const userProfile = process.env.USERPROFILE || ''
   const localAppData = process.env.LOCALAPPDATA || ''
   const programData = process.env.PROGRAMDATA || ''
@@ -94,70 +73,43 @@ export function findAndEnsureFfmpegPath(): string | null {
     path.join(cwd, 'ffmpeg')
   ]
 
-  // Add packaged Electron resource paths
-  try {
-    if (process.resourcesPath) {
-      candidates.push(
-        process.resourcesPath,
-        path.join(process.resourcesPath, 'bin'),
-        path.join(process.resourcesPath, 'ffmpeg'),
-        path.join(process.resourcesPath, 'ffmpeg', 'bin')
-      )
-    }
-    if (process.execPath) {
-      const execDir = path.dirname(process.execPath)
-      candidates.push(
-        execDir,
-        path.join(execDir, 'bin'),
-        path.join(execDir, 'ffmpeg'),
-        path.join(execDir, 'ffmpeg', 'bin'),
-        path.join(execDir, 'resources'),
-        path.join(execDir, 'resources', 'bin'),
-        path.join(execDir, 'resources', 'ffmpeg', 'bin')
-      )
-    }
-  } catch {}
-
   if (isWin) {
     candidates.push(
       'C:\\ffmpeg\\bin',
       'C:\\ffmpeg',
       'D:\\ffmpeg\\bin',
       'D:\\ffmpeg',
-      'E:\\ffmpeg\\bin',
-      'E:\\ffmpeg',
       'C:\\Program Files\\ffmpeg\\bin',
-      'C:\\Program Files\\ffmpeg',
       'C:\\Program Files (x86)\\ffmpeg\\bin',
-      'C:\\Program Files (x86)\\ffmpeg',
       'C:\\tools\\ffmpeg\\bin',
       path.join(programData, 'chocolatey', 'bin'),
-      path.join(programData, 'chocolatey', 'lib', 'ffmpeg', 'tools', 'ffmpeg', 'bin'),
-      path.join(localAppData, 'Microsoft', 'WinGet', 'Links'),
-      path.join(userProfile, 'scoop', 'shims'),
-      path.join(userProfile, 'scoop', 'apps', 'ffmpeg', 'current', 'bin'),
       path.join(localAppData, 'bin'),
       path.join(localAppData, 'ffmpeg', 'bin'),
       path.join(userProfile, 'ffmpeg', 'bin'),
-      path.join(userProfile, 'ffmpeg'),
-      path.join(localAppData, 'Programs', 'ffmpeg', 'bin'),
-      path.join(localAppData, 'Programs', 'ffmpeg')
+      path.join(localAppData, 'Programs', 'ffmpeg', 'bin')
     )
 
-    // Note: WinGet Packages dynamic scan removed — it blocks on OneDrive/network drives.
-    // The static WinGet Links path (already in candidates above) covers standard installs.
-
-    // Check standard root folder candidates
+    // Check standard root folder candidates and dynamic ffmpeg-* build directories
     const rootCandidates = [
       'C:\\ffmpeg', 'C:\\ffmpeg\\bin',
-      'D:\\ffmpeg', 'D:\\ffmpeg\\bin',
-      'E:\\ffmpeg', 'E:\\ffmpeg\\bin'
+      'D:\\ffmpeg', 'D:\\ffmpeg\\bin'
     ]
     for (const rc of rootCandidates) {
-      try {
-        if (fs.existsSync(rc)) candidates.push(rc)
-      } catch {}
+      if (fs.existsSync(rc)) candidates.push(rc)
     }
+    try {
+      for (const drive of ['C:\\', 'D:\\']) {
+        if (fs.existsSync(drive)) {
+          const entries = fs.readdirSync(drive, { withFileTypes: true })
+          for (const ent of entries) {
+            if (ent.isDirectory() && ent.name.toLowerCase().startsWith('ffmpeg')) {
+              candidates.push(path.join(drive, ent.name, 'bin'))
+              candidates.push(path.join(drive, ent.name))
+            }
+          }
+        }
+      }
+    } catch {}
   } else {
     // Unix / Linux candidates
     candidates.push(
@@ -196,37 +148,11 @@ export function getFfmpegExePath(): string {
 }
 
 export function getFfprobeExePath(): string {
-  if (_discoveredFfprobePath && fs.existsSync(_discoveredFfprobePath)) {
-    return _discoveredFfprobePath
+  const dir = findAndEnsureFfmpegPath()
+  if (dir && dir !== 'PATH') {
+    const p = path.join(dir, ffprobeBinary)
+    if (fs.existsSync(p)) return p
   }
-
-  // 1. Check if ffprobe lives alongside ffmpeg
-  const ffmpegDir = findAndEnsureFfmpegPath()
-  if (ffmpegDir && ffmpegDir !== 'PATH') {
-    const p = path.join(ffmpegDir, ffprobeBinary)
-    if (fs.existsSync(p)) {
-      _discoveredFfprobePath = p
-      return p
-    }
-  }
-
-  // 2. Query where.exe / which for ffprobe
-  try {
-    const locator = isWin ? 'where.exe' : 'which'
-    const res = spawnSync(locator, ['ffprobe'], { timeout: 1500, windowsHide: true, env: process.env })
-    if (res.status === 0 && res.stdout) {
-      const lines = res.stdout.toString().split(/\r?\n/).map(l => l.trim()).filter(Boolean)
-      for (const line of lines) {
-        if (fs.existsSync(line)) {
-          _discoveredFfprobePath = line
-          return line
-        }
-      }
-    }
-  } catch {}
-
-  // 3. Fallback to binary name on PATH
-  _discoveredFfprobePath = ffprobeBinary
   return ffprobeBinary
 }
 
@@ -236,7 +162,7 @@ function runProbe(flags: string[]): boolean {
     const result = spawnSync(
       ffmpegExe,
       ['-y', '-nostdin', '-f', 'lavfi', '-i', 'color=black:s=128x128:d=0.5', ...flags, '-f', 'null', '-'],
-      { timeout: 1500, windowsHide: true, env: process.env }
+      { timeout: 2500, windowsHide: true, env: process.env }
     )
     return result.status === 0
   } catch {
@@ -290,9 +216,7 @@ export function forceCpuEncoder(): EncoderResult {
 
 /**
  * Eagerly warms the GPU encoder cache at app startup so the first call to
- * getVideoEncoder() inside runFFmpegJob() returns instantly from cache.
- * Call this once from app.whenReady() — it runs asynchronously (setTimeout)
- * so it never blocks the main thread or the app ready sequence.
+ * getVideoEncoder() inside runFFmpegJob() returns instantly from memory cache.
  */
 export function warmEncoderCache(): void {
   if (_cache) return // Already warmed
@@ -300,7 +224,7 @@ export function warmEncoderCache(): void {
     try {
       getVideoEncoder()
     } catch {}
-  }, 2000) // 2s delay — let the app window fully open first
+  }, 1500)
 }
 
 export function checkFfmpeg(): { ok: boolean; message: string } {

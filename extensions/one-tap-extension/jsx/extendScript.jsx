@@ -19,7 +19,6 @@ var EVENT_DEFS = {
     BQ:     { code: "BQ",     name: "Bethak Qadam",         colorIndex: 1, colorName: "Coral" },
     BZ:     { code: "BZ",     name: "Bethak Ziyafat",       colorIndex: 2, colorName: "Lavender" },
     FMB:    { code: "FMB",    name: "FMB",                  colorIndex: 0, colorName: "Green" },
-    GP:     { code: "GP",     name: "Group Photo",          colorIndex: 7, colorName: "Cyan" },
     H:      { code: "H",      name: "Haddiyat",             colorIndex: 4, colorName: "Amber" },
     ID:     { code: "ID",     name: "Idaraat",              colorIndex: 6, colorName: "Royal Blue" },
     IF:     { code: "IF",     name: "Iftettah",             colorIndex: 0, colorName: "Lime" },
@@ -79,54 +78,13 @@ $.runScript.getMarkerNames = function() {
         while (mScan) {
             var mNm = mScan.name || '';
             var mCmt = mScan.comments || '';
-            // Only skip internal overwrite sub-markers; always include ceremony and Group Photo markers (GP1, GP2, etc.)
-            var isInternalSubMarker = (mCmt.indexOf("OT_GP_INSERTED") !== -1) && !isGroupPhotoName(mNm);
-            if (!isInternalSubMarker) {
+            var isGp = isGroupPhotoName(mNm) || (mCmt.indexOf("OT_GP_INSERTED") !== -1) || (/ - (?:GP\s*\d+|Group\s*Photo)/i.test(mNm));
+            if (!isGp) {
                 var mStart = (mScan.start && !isNaN(Number(mScan.start.seconds))) ? Number(mScan.start.seconds) : 0;
                 markerItems.push({ obj: mScan, name: mNm, startSec: mStart });
             }
             mScan = markers.getNextMarker(mScan);
         }
-
-        // Auto-detect any GP clips on timeline tracks that may not yet have markers
-        var hasGpMarker = false;
-        for (var miCheck = 0; miCheck < markerItems.length; miCheck++) {
-            if (isGroupPhotoName(markerItems[miCheck].name)) {
-                hasGpMarker = true;
-                break;
-            }
-        }
-        if (!hasGpMarker && seq.videoTracks) {
-            try {
-                for (var vti2 = 0; vti2 < seq.videoTracks.numTracks; vti2++) {
-                    var vtk2 = seq.videoTracks[vti2];
-                    if (!vtk2 || !vtk2.clips) continue;
-                    for (var vci2 = 0; vci2 < vtk2.clips.numItems; vci2++) {
-                        var vcp2 = vtk2.clips[vci2];
-                        if (!vcp2) continue;
-                        var vcp2Cmt = "";
-                        try { vcp2Cmt = vcp2.comment || ""; } catch(e) {}
-                        if (vcp2Cmt.indexOf("OT_GP_INSERTED") !== -1) continue;
-                        var vcp2Name = vcp2.name || (vcp2.projectItem && vcp2.projectItem.name) || "";
-                        if (isGroupPhotoName(vcp2Name)) {
-                            var cp2Start = (vcp2.start && !isNaN(Number(vcp2.start.seconds))) ? Number(vcp2.start.seconds) : 0;
-                            var cp2End = (vcp2.end && !isNaN(Number(vcp2.end.seconds))) ? Number(vcp2.end.seconds) : 0;
-                            var gpNum2 = extractGpNumber(vcp2Name);
-                            var tDur = new Time();
-                            tDur.seconds = Math.max(1.0, cp2End - cp2Start);
-                            var tEnd2 = new Time();
-                            tEnd2.seconds = cp2End;
-                            markerItems.push({
-                                obj: { end: tEnd2, duration: tDur },
-                                name: "GP" + gpNum2,
-                                startSec: cp2Start
-                            });
-                        }
-                    }
-                }
-            } catch(eAutoGpClips) {}
-        }
-
         markerItems.sort(function (a, b) { return a.startSec - b.startSec; });
         var count = 0;
         for (var mi = 0; mi < markerItems.length; mi++) {
@@ -427,75 +385,29 @@ $.runScript.autoInOutMarkers = function (userChoice, addSeqPrefix) {
                     try { cIdx = m.getColorByIndex(0); } catch (eColor) { cIdx = 5; }
                 }
 
-                var mCmt = (m.comments !== undefined ? m.comments : "");
-                var isInternalSubMarker = (mCmt.indexOf("OT_GP_INSERTED") !== -1) && !isGroupPhotoName(mName);
-
-                if (isInternalSubMarker) {
-                    // Only preserve internal overwrite helper annotations
+                if (isGroupPhotoName(mName)) {
+                    // Group Photo markers (GP1, GROUP_PHOTO_1, etc.) must NEVER be treated as video separation markers!
                     gpMarkersToPreserve.push({
                         name: mName,
                         startSec: mStart,
                         endSec: mEnd,
-                        comment: mCmt,
+                        comment: (m.comments !== undefined ? m.comments : ""),
                         colorIndex: cIdx
                     });
                 } else {
-                    // All ceremonies and Group Photos (GP1, GP2, etc.) get separate in/out duration segments!
                     list.push({
                         obj: m,
                         name: mName,
                         startSec: mStart,
-                        endSec: mEnd,
-                        comment: mCmt,
-                        colorIndex: isGroupPhotoName(mName) ? 7 : cIdx
+                        comment: (m.comments !== undefined ? m.comments : ""),
+                        colorIndex: cIdx
                     });
                 }
             } catch (e) {
-                list.push({ obj: m, name: "", startSec: 0, endSec: 0, comment: "", colorIndex: 5 });
+                list.push({ obj: m, name: "", startSec: 0, comment: "", colorIndex: 5 });
             }
             m = markers.getNextMarker(m);
         }
-
-        // Auto-detect any GP clips on timeline tracks that may not yet have markers
-        try {
-            var vtClips = seq.videoTracks;
-            if (vtClips) {
-                for (var vti = 0; vti < vtClips.numTracks; vti++) {
-                    var vtk = vtClips[vti];
-                    if (!vtk || !vtk.clips) continue;
-                    for (var vci = 0; vci < vtk.clips.numItems; vci++) {
-                        var vcp = vtk.clips[vci];
-                        if (!vcp) continue;
-                        var vcpCmt = "";
-                        try { vcpCmt = vcp.comment || ""; } catch(eCmt) {}
-                        if (vcpCmt.indexOf("OT_GP_INSERTED") !== -1) continue;
-                        var vcpName = vcp.name || (vcp.projectItem && vcp.projectItem.name) || "";
-                        if (isGroupPhotoName(vcpName)) {
-                            var cpStart = (vcp.start && !isNaN(Number(vcp.start.seconds))) ? Number(vcp.start.seconds) : 0;
-                            var cpEnd = (vcp.end && !isNaN(Number(vcp.end.seconds))) ? Number(vcp.end.seconds) : 0;
-                            var alreadyMarked = false;
-                            for (var lk = 0; lk < list.length; lk++) {
-                                if (Math.abs((list[lk].startSec || 0) - cpStart) < 0.5) {
-                                    alreadyMarked = true;
-                                    break;
-                                }
-                            }
-                            if (!alreadyMarked) {
-                                var gpNumFound = extractGpNumber(vcpName);
-                                list.push({
-                                    obj: null,
-                                    name: "GP" + gpNumFound,
-                                    startSec: cpStart,
-                                    endSec: cpEnd,
-                                    comment: "Group Photo " + gpNumFound + " (" + vcpName + ")",
-                                    colorIndex: 7
-                                });
-                            }
-                        }
-                    }
-                }
-            }
-        } catch(eClipScan) {}
         if (list.length < 1) return "No sequence markers found.";
 
         // sort by start time
@@ -678,19 +590,19 @@ $.runScript.autoInOutMarkers = function (userChoice, addSeqPrefix) {
 
             if (needsCorrection) {
                 var pfxCasing = itemsInGroup[0].prefix.toUpperCase();
-                var maxDigits = (pKey === "GP") ? 1 : 2;
+                var maxDigits = 2;
                 for (var md = 0; md < itemsInGroup.length; md++) {
                     if (itemsInGroup[md].numDigits > maxDigits) {
                         maxDigits = itemsInGroup[md].numDigits;
                     }
                 }
 
-                sequenceWarnings.push("⚠ PREFIX SEQUENCE CORRECTION (" + pKey + "): Automatically renumbered " + itemsInGroup.length + " marker(s) sequentially (" + pfxCasing + (maxDigits === 1 ? "1" : "01") + ", " + pfxCasing + (maxDigits === 1 ? "2" : "02") + "...).");
+                sequenceWarnings.push("⚠ PREFIX SEQUENCE CORRECTION (" + pKey + "): Automatically renumbered " + itemsInGroup.length + " marker(s) sequentially (" + pfxCasing + "01, " + pfxCasing + "02...).");
 
                 for (var r = 0; r < itemsInGroup.length; r++) {
                     var newSeqNum = r + 1;
                     var pad = "0000" + newSeqNum;
-                    var newNumStr = (maxDigits === 1) ? String(newSeqNum) : pad.substr(pad.length - maxDigits);
+                    var newNumStr = pad.substr(pad.length - maxDigits);
                     var newCleanName = pfxCasing + newNumStr;
 
                     var idx = itemsInGroup[r].itemIndex;
@@ -705,21 +617,14 @@ $.runScript.autoInOutMarkers = function (userChoice, addSeqPrefix) {
             var sFrame = Math.round(Number(list[i].startSec || 0) * fps);
             var s = sFrame / fps;
             var e;
-            var itemExplicitEnd = (list[i].endSec && Number(list[i].endSec) > s + (0.5 / fps)) ? Number(list[i].endSec) : null;
             if (i < list.length - 1) {
                 var nsFrame = Math.round(Number(list[i + 1].startSec || s) * fps);
                 var eFrame = Math.max(sFrame, nsFrame);
                 e = eFrame / fps;
-                if (itemExplicitEnd !== null && itemExplicitEnd < e && isGroupPhotoName(list[i].cleanName || list[i].name)) {
-                    e = itemExplicitEnd;
-                }
             } else {
                 var seqEndFrame = Math.round(Number(seqEndSec) * fps);
                 var eFrameLast = Math.max(sFrame, seqEndFrame);
                 e = eFrameLast / fps;
-                if (itemExplicitEnd !== null && itemExplicitEnd < e && isGroupPhotoName(list[i].cleanName || list[i].name)) {
-                    e = itemExplicitEnd;
-                }
             }
             if (!isFinite(e) || e < s) e = s;
 
@@ -971,54 +876,13 @@ $.runScript.autoMEIO = function (selectedMarkersStr, explicitExtOrPresetPath) {
         while (mScan) {
             var mNm = mScan.name || '';
             var mCmt = mScan.comments || '';
-            // Only skip internal overwrite sub-markers; always include ceremony and Group Photo markers (GP1, GP2, etc.)
-            var isInternalSubMarker = (mCmt.indexOf("OT_GP_INSERTED") !== -1) && !isGroupPhotoName(mNm);
-            if (!isInternalSubMarker) {
+            var isGp = isGroupPhotoName(mNm) || (mCmt.indexOf("OT_GP_INSERTED") !== -1) || (/ - (?:GP\s*\d+|Group\s*Photo)/i.test(mNm));
+            if (!isGp) {
                 var mStart = (mScan.start && !isNaN(Number(mScan.start.seconds))) ? Number(mScan.start.seconds) : 0;
                 markerItems.push({ obj: mScan, name: mNm, startSec: mStart });
             }
             mScan = markers.getNextMarker(mScan);
         }
-
-        // Auto-detect any GP clips on timeline tracks that may not yet have markers
-        var hasGpMarker = false;
-        for (var miCheck = 0; miCheck < markerItems.length; miCheck++) {
-            if (isGroupPhotoName(markerItems[miCheck].name)) {
-                hasGpMarker = true;
-                break;
-            }
-        }
-        if (!hasGpMarker && seq.videoTracks) {
-            try {
-                for (var vti2 = 0; vti2 < seq.videoTracks.numTracks; vti2++) {
-                    var vtk2 = seq.videoTracks[vti2];
-                    if (!vtk2 || !vtk2.clips) continue;
-                    for (var vci2 = 0; vci2 < vtk2.clips.numItems; vci2++) {
-                        var vcp2 = vtk2.clips[vci2];
-                        if (!vcp2) continue;
-                        var vcp2Cmt = "";
-                        try { vcp2Cmt = vcp2.comment || ""; } catch(e) {}
-                        if (vcp2Cmt.indexOf("OT_GP_INSERTED") !== -1) continue;
-                        var vcp2Name = vcp2.name || (vcp2.projectItem && vcp2.projectItem.name) || "";
-                        if (isGroupPhotoName(vcp2Name)) {
-                            var cp2Start = (vcp2.start && !isNaN(Number(vcp2.start.seconds))) ? Number(vcp2.start.seconds) : 0;
-                            var cp2End = (vcp2.end && !isNaN(Number(vcp2.end.seconds))) ? Number(vcp2.end.seconds) : 0;
-                            var gpNum2 = extractGpNumber(vcp2Name);
-                            var tDur = new Time();
-                            tDur.seconds = Math.max(1.0, cp2End - cp2Start);
-                            var tEnd2 = new Time();
-                            tEnd2.seconds = cp2End;
-                            markerItems.push({
-                                obj: { end: tEnd2, duration: tDur },
-                                name: "GP" + gpNum2,
-                                startSec: cp2Start
-                            });
-                        }
-                    }
-                }
-            } catch(eAutoGpClips) {}
-        }
-
         markerItems.sort(function (a, b) { return a.startSec - b.startSec; });
         var count = 0;
         var queuedFiles = [];
@@ -1476,7 +1340,6 @@ $.runScript.getTimelineStats = function () {
                         breakdownOrder.push("GP");
                     }
                     breakdownMap["GP"].count++;
-                    totalMarkers++;
                 } else {
                     totalMarkers++;
                     var pfxInfo = getPrefixFromMarkerName(mName);
@@ -1590,54 +1453,13 @@ $.runScript.legacy_autoMEIO = function (selectedMarkersStr, explicitExtOrPresetP
         while (mScan) {
             var mNm = mScan.name || '';
             var mCmt = mScan.comments || '';
-            // Only skip internal overwrite sub-markers; always include ceremony and Group Photo markers (GP1, GP2, etc.)
-            var isInternalSubMarker = (mCmt.indexOf("OT_GP_INSERTED") !== -1) && !isGroupPhotoName(mNm);
-            if (!isInternalSubMarker) {
+            var isGp = isGroupPhotoName(mNm) || (mCmt.indexOf("OT_GP_INSERTED") !== -1) || (/ - (?:GP\s*\d+|Group\s*Photo)/i.test(mNm));
+            if (!isGp) {
                 var mStart = (mScan.start && !isNaN(Number(mScan.start.seconds))) ? Number(mScan.start.seconds) : 0;
                 markerItems.push({ obj: mScan, name: mNm, startSec: mStart });
             }
             mScan = markers.getNextMarker(mScan);
         }
-
-        // Auto-detect any GP clips on timeline tracks that may not yet have markers
-        var hasGpMarker = false;
-        for (var miCheck = 0; miCheck < markerItems.length; miCheck++) {
-            if (isGroupPhotoName(markerItems[miCheck].name)) {
-                hasGpMarker = true;
-                break;
-            }
-        }
-        if (!hasGpMarker && seq.videoTracks) {
-            try {
-                for (var vti2 = 0; vti2 < seq.videoTracks.numTracks; vti2++) {
-                    var vtk2 = seq.videoTracks[vti2];
-                    if (!vtk2 || !vtk2.clips) continue;
-                    for (var vci2 = 0; vci2 < vtk2.clips.numItems; vci2++) {
-                        var vcp2 = vtk2.clips[vci2];
-                        if (!vcp2) continue;
-                        var vcp2Cmt = "";
-                        try { vcp2Cmt = vcp2.comment || ""; } catch(e) {}
-                        if (vcp2Cmt.indexOf("OT_GP_INSERTED") !== -1) continue;
-                        var vcp2Name = vcp2.name || (vcp2.projectItem && vcp2.projectItem.name) || "";
-                        if (isGroupPhotoName(vcp2Name)) {
-                            var cp2Start = (vcp2.start && !isNaN(Number(vcp2.start.seconds))) ? Number(vcp2.start.seconds) : 0;
-                            var cp2End = (vcp2.end && !isNaN(Number(vcp2.end.seconds))) ? Number(vcp2.end.seconds) : 0;
-                            var gpNum2 = extractGpNumber(vcp2Name);
-                            var tDur = new Time();
-                            tDur.seconds = Math.max(1.0, cp2End - cp2Start);
-                            var tEnd2 = new Time();
-                            tEnd2.seconds = cp2End;
-                            markerItems.push({
-                                obj: { end: tEnd2, duration: tDur },
-                                name: "GP" + gpNum2,
-                                startSec: cp2Start
-                            });
-                        }
-                    }
-                }
-            } catch(eAutoGpClips) {}
-        }
-
         markerItems.sort(function (a, b) { return a.startSec - b.startSec; });
         var count = 0;
         var queuedFiles = [];
@@ -1873,7 +1695,6 @@ function getPrefixFromMarkerName(name) {
         var u = String(codeStr).toUpperCase().replace(/^[^A-Z]+|[^A-Z]+$/g, "");
         if (u === "NAMAZ") return "NAMAZ";
         if (u === "NIKAH" || u === "NIKAAH") return "N";
-        if (u === "GP" || u === "GROUPPHOTO" || u === "GROUP_PHOTO") return "GP";
         if (u === "BETHAK") return "AQ";
         if (u === "ZIYARAT" || u === "ZIARAT" || u === "ZIYAFAT") return "Z";
         if (u === "MAJLIS") return "M";
@@ -1954,10 +1775,10 @@ function getPrefixFromMarkerName(name) {
 
     // 4. Match against known official codes sorted by length descending (longest codes match first!)
     var officialCodes = [
-        "GROUP_PHOTO", "GROUPPHOTO", "MISBAH", "ONLINE", "IFTETTAH", "ISTEQBAL", "BETHAK", "MAJLIS", "ZIYARAT", "ZIARAT", "NAMAZ",
+        "MISBAH", "ONLINE", "IFTETTAH", "ISTEQBAL", "BETHAK", "MAJLIS", "ZIYARAT", "ZIARAT", "NAMAZ",
         "NIKAAH", "NIKAH", "WAAZ", "QMZ", "TQN", "TNQ", "TJR", "IFS", "KGS", "MKB", "MUL", "MYN",
         "FMB", "AQ", "BM", "BQ", "BZ", "ID", "IF", "MF", "MO", "MQ", "MZ", "SH", "SQ", "TQ", "WD", "ZO",
-        "GP", "M", "N", "Q", "Z", "H"
+        "M", "N", "Q", "Z", "H"
     ];
 
     for (var i = 0; i < officialCodes.length; i++) {
@@ -2624,10 +2445,10 @@ $.runScript.importMediaXml = function(explicitXmlPath) {
 function isGroupPhotoName(name) {
     if (!name) return false;
     var s = String(name).replace(/\.[a-z0-9]{2,5}$/i, "").replace(/^\s+|\s+$/g, "");
-    if (/group[_\s-]*(?:photo|video|pic)|nikah[_\s-]*group|nikaah[_\s-]*group|nikah[_\s-]*(?:photo|video)|nikaah[_\s-]*(?:photo|video)/i.test(s)) return true;
+    if (/group\s*photo|group\s*video|group\s*pic|nikah\s*group|nikaah\s*group|nikah\s*photo|nikaah\s*photo|nikah\s*video|nikaah\s*video/i.test(s)) return true;
     if (/(?:^|[\s_.-])gp(?:[_\s-]*\d+)?(?:[\s_.-]|$)/i.test(s)) return true;
     if (/^gp\s*\d*$/i.test(s)) return true;
-    if (/\s*-\s*(?:group[_\s-]*photo|gp\b)/i.test(s)) return true;
+    if (/\s*-\s*(?:group\s*photo|gp\b)/i.test(s)) return true;
     return false;
 }
 
@@ -5462,7 +5283,7 @@ $.runScript.addGpMarkerAtClip = function(clipIdentifier, gpNumber) {
         var cleanId = String(clipIdentifier).replace(/^\s+|\s+$/g, "");
         var num = parseInt(gpNumber, 10);
         if (isNaN(num) || num < 1) num = 1;
-        var markerName = "GP" + num;
+        var markerName = "GROUP_PHOTO_" + num;
 
         var foundClip = null;
 
@@ -6356,7 +6177,7 @@ $.runScript.groupPhotoInserterExecute = function(assignmentsStr, userTargetTrack
                 while (curMk) {
                     var mName = (curMk.name || "").replace(/^\s+|\s+$/g, "");
                     var mCmt = curMk.comments || "";
-                    var isGpRec = (mCmt.indexOf("Group Photo Source") !== -1 || mCmt.indexOf("OT_GP_INSERTED") !== -1 || /^GROUP_PHOTO_\d+$/i.test(mName));
+                    var isGpRec = isGroupPhotoName(mName) || /^GROUP_PHOTO_\d+$/i.test(mName) || /^GP\s*\d+$/i.test(mName) || mCmt.indexOf("Group Photo Source") !== -1 || mCmt.indexOf("OT_GP_INSERTED") !== -1;
                     if (isGpRec) {
                         backupRecord.deletedGpMarkers.push({
                             name: mName,

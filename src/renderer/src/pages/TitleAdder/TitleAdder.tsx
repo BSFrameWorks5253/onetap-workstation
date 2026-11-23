@@ -1064,27 +1064,7 @@ export default function TitleAdder(): JSX.Element {
   const videoFiles = storeState.videoFiles
   const setVideoFiles = (filesOrUpdater: string[] | ((prev: string[]) => string[])) => {
     const next = typeof filesOrUpdater === 'function' ? filesOrUpdater(storeState.videoFiles) : filesOrUpdater
-    const rawList = next || []
-    const filtered = rawList.filter(f => !isGroupPhotoVideo(f))
-    const gpOnly = rawList.filter(f => isGroupPhotoVideo(f))
-    if (gpOnly.length > 0) {
-      setAvailableGroupPhotos(prev => {
-        const existingPaths = new Set(prev.map(p => p.fullPath.toLowerCase()))
-        const additions: typeof prev = []
-        gpOnly.forEach((gpPath, gIdx) => {
-          if (!existingPaths.has(gpPath.toLowerCase())) {
-            existingPaths.add(gpPath.toLowerCase())
-            additions.push({
-              gpNum: prev.length + gIdx + 1,
-              fileName: gpPath.split(/[\\/]/).pop() || gpPath,
-              fullPath: gpPath,
-              duration: 15.0
-            })
-          }
-        })
-        return additions.length > 0 ? [...prev, ...additions] : prev
-      })
-    }
+    const filtered = (next || []).filter(f => !isGroupPhotoVideo(f))
     setStoreState({ videoFiles: filtered })
   }
 
@@ -2873,8 +2853,7 @@ export default function TitleAdder(): JSX.Element {
         mode,
         batchSource: batchSources[0] || '',
         batchSources,
-        videoFiles,
-        outputFolder
+        videoFiles
       })
 
       if (!res || !res.assignments || res.assignments.length === 0) {
@@ -3032,7 +3011,7 @@ export default function TitleAdder(): JSX.Element {
       return
     }
 
-    const vids = opts.availableVideos || currentStore.availableVideos || availableVideos
+    const vids = (opts.availableVideos || currentStore.availableVideos || availableVideos || []) as string[]
     const effectiveMuted = opts.mutedVideos || new Set(currentStore.mutedVideos || mutedVideos)
     const effectiveWatermarked = opts.watermarkedVideos || new Set(currentStore.watermarkedVideos || watermarkedVideos)
     const effectiveAudio = opts.customAssignments || opts.audioAssignments || currentStore.userAudioSelections || userAudioSelections
@@ -3109,6 +3088,27 @@ export default function TitleAdder(): JSX.Element {
         resolvedWatermarkSelections[v] = finalWm
       }
     }
+
+    const resolvedVideoFiles: string[] = []
+    if (audioPreviewAssignments.length > 0) {
+      for (const a of audioPreviewAssignments) {
+        if (a.videoPath) resolvedVideoFiles.push(a.videoPath)
+      }
+    }
+    if (resolvedVideoFiles.length === 0) {
+      if (vids && vids.length > 0) {
+        for (const v of vids) resolvedVideoFiles.push(v)
+      } else if (videoFiles && videoFiles.length > 0) {
+        for (const vf of videoFiles) resolvedVideoFiles.push(vf)
+      }
+    }
+
+    if (resolvedVideoFiles.length === 0 && (!effectiveSources || effectiveSources.length === 0) && !effectiveSource) {
+      showToast({ title: 'No Videos Selected', message: 'Please select video files or a source folder to render.', type: 'error' })
+      setRunning(false)
+      return
+    }
+
     setRunning(true)
     setCancelled(false)
     setProgress(0)
@@ -3127,55 +3127,45 @@ export default function TitleAdder(): JSX.Element {
     api.settings.setAndSave('last_output_adder', baseOutputToSave)
     api.settings.setAndSave('title_duration', dur)
 
-    const resolvedVideoFiles: string[] = []
-    if (audioPreviewAssignments.length > 0) {
-      for (const a of audioPreviewAssignments) {
-        if (a.videoPath) resolvedVideoFiles.push(a.videoPath)
-      }
-    }
-    if (resolvedVideoFiles.length === 0) {
-      if (vids && vids.length > 0) {
-        for (const v of vids) resolvedVideoFiles.push(v)
-      } else if (videoFiles && videoFiles.length > 0) {
-        for (const vf of videoFiles) resolvedVideoFiles.push(vf)
-      }
-    }
-
-    console.log('[TitleAdder] Starting job for', resolvedVideoFiles.length, 'video(s). Target output:', targetOut)
-    if (resolvedVideoFiles.length === 0 && (!effectiveSources || effectiveSources.length === 0) && (!effectiveSource)) {
-      showToast({ title: 'No Videos Selected', message: 'Please select video files or a source folder to render.', type: 'error' })
+    try {
+      await api.titleAdder.start({
+        mode,
+        batchSource: effectiveSource,
+        batchSources: effectiveSources,
+        videoFiles: resolvedVideoFiles,
+        fileOutputFolders,
+        outputFolder,
+        duration: dur,
+        jobId: jobIdRef.current, 
+        addToStats: addToStats,
+        muteOriginal: muteOriginal,
+        addWatermark: addWatermarkGlobal,
+        muteExceptions: (vids || []).filter(f => {
+          const isMuted = resolvedMuteSelections[f] ?? Array.from(effectiveMuted).some(m => (m as string).toLowerCase() === f.toLowerCase())
+          return !isMuted
+        }),
+        watermarkExceptions: (vids || []).filter(f => {
+          const isWm = resolvedWatermarkSelections[f] ?? Array.from(effectiveWatermarked).some(w => (w as string).toLowerCase() === f.toLowerCase())
+          return !isWm
+        }),
+        audioAssignments: resolvedAudioSelections,
+        titleImageAssignments: resolvedImageSelections,
+        videoMuteSelections: resolvedMuteSelections,
+        videoWatermarkSelections: resolvedWatermarkSelections,
+        groupPhotoAssignments: resolvedGpSelections,
+        thumbnailMode: effectiveThumbMode,
+        thumbnailModeSelections: effectiveThumbSelections
+      })
+    } catch (err: any) {
+      console.error('[TitleAdder] Error starting render job:', err)
       setRunning(false)
-      return
+      setStatus('Failed')
+      showToast({
+        title: 'Rendering Failed to Start',
+        message: err?.message || 'An error occurred while launching the render job.',
+        type: 'error'
+      })
     }
-
-    await api.titleAdder.start({
-      mode,
-      batchSource: effectiveSource,
-      batchSources: effectiveSources,
-      videoFiles: resolvedVideoFiles,
-      fileOutputFolders,
-      outputFolder,
-      duration: dur,
-      jobId: jobIdRef.current, 
-      addToStats: addToStats,
-      muteOriginal: muteOriginal,
-      addWatermark: addWatermarkGlobal,
-      muteExceptions: vids.filter(f => {
-        const isMuted = resolvedMuteSelections[f] ?? Array.from(effectiveMuted).some(m => (m as string).toLowerCase() === f.toLowerCase())
-        return !isMuted
-      }),
-      watermarkExceptions: vids.filter(f => {
-        const isWm = resolvedWatermarkSelections[f] ?? Array.from(effectiveWatermarked).some(w => (w as string).toLowerCase() === f.toLowerCase())
-        return !isWm
-      }),
-      audioAssignments: resolvedAudioSelections,
-      titleImageAssignments: resolvedImageSelections,
-      videoMuteSelections: resolvedMuteSelections,
-      videoWatermarkSelections: resolvedWatermarkSelections,
-      groupPhotoAssignments: resolvedGpSelections,
-      thumbnailMode: effectiveThumbMode,
-      thumbnailModeSelections: effectiveThumbSelections
-    })
   }
 
   startJobRef.current = startJob
@@ -6277,33 +6267,10 @@ export default function TitleAdder(): JSX.Element {
                   </>
                 )}
               </div>
-              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: '10px' }}>
                 <GhostButton onClick={() => setIsAudioModalOpen(false)}>
                   Cancel
                 </GhostButton>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsAudioModalOpen(false)
-                    setIsGpModalOpen(true)
-                  }}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '8px 14px',
-                    borderRadius: '8px',
-                    border: '1px solid color-mix(in srgb, var(--accent) 40%, var(--border))',
-                    background: 'color-mix(in srgb, var(--accent) 12%, var(--surface))',
-                    color: 'var(--text-primary)',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    cursor: 'pointer'
-                  }}
-                  title="Open dedicated Group Photo Outro Assignment Window"
-                >
-                  📸 {availableGroupPhotos.length > 0 ? `Group Photos (${availableGroupPhotos.length}) ➜` : 'Group Photo Setup ➜'}
-                </button>
                 <Button
                   accent={meta.accent}
                   accentHv={meta.accentHv}
@@ -6765,46 +6732,10 @@ export default function TitleAdder(): JSX.Element {
                   Group Photos will be appended to ceremony videos with <strong>Direct Hard Cut</strong> (zero transition, zero fade). Audio remains seamless.
                 </span>
               </div>
-              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: '10px' }}>
                 <GhostButton onClick={() => { setIsGpModalOpen(false); setIsAudioModalOpen(true); }}>
                   ← Back to Preflight Check
                 </GhostButton>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    const api = (window as any).api
-                    if (!api?.dialog?.openFile) return
-                    const picked = await api.dialog.openFile({
-                      title: 'Select Group Photo Video',
-                      filters: [{ name: 'Videos', extensions: ['mp4', 'mov', 'avi', 'mkv', 'm4v'] }]
-                    })
-                    if (picked) {
-                      const fname = picked.split(/[\\/]/).pop() || picked
-                      setAvailableGroupPhotos(prev => {
-                        const exists = prev.some(p => p.fullPath.toLowerCase() === picked.toLowerCase())
-                        if (exists) return prev
-                        return [...prev, { gpNum: prev.length + 1, fileName: fname, fullPath: picked, duration: 15.0 }]
-                      })
-                      showToast({ title: 'Group Photo Added', message: `Added ${fname}`, type: 'success' })
-                    }
-                  }}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '8px 12px',
-                    borderRadius: '8px',
-                    border: '1px solid var(--border)',
-                    background: 'var(--surface)',
-                    color: 'var(--text-secondary)',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    cursor: 'pointer'
-                  }}
-                  title="Select an additional Group Photo video from disk"
-                >
-                  + Add GP Video
-                </button>
                 <GhostButton onClick={() => setIsGpModalOpen(false)}>
                   Cancel
                 </GhostButton>
