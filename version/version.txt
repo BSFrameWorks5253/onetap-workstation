@@ -1,13 +1,14 @@
-Version:    26.11.32
-Build Date: 2026-11-22 22:50:00
+Version:    26.11.35
+Build Date: 2026-11-23 01:30:00
 
 === What's New ===
-* Group Photo Outro Auto-Detection & Instant Assignment: Group Photo (GP) videos located in the batch source or DVD folder are directly ingested and surfaced immediately in the dedicated Group Photo window.
-* Ultra-Fast Non-Blocking Metadata Probing: Rapid timeouts with robust fallbacks in FFmpeg/FFprobe resolvers, eliminating main-thread freezes.
-* Instant Video Progress Feedback: Immediate UI state transition from 'Initializing...' displaying the active video file, percentage, and real-time encode telemetry.
+* Restored Pre-v26.11.26 Proven Rendering Pipeline: Hardware-accelerated decoding (-hwaccel auto) reinstated for ceremony and transition inputs.
+* Clean Concat Filtergraph: Eliminates dissolve/fade artifacts on thumbnails and cleanly sequences ceremony video and Group Photo outros.
+* Non-Blocking Silence Analysis: Safe child process isolation with stdin redirected and 15s bounded safety watchdog.
+* Robust Process Overwrite Installer: NSIS installer automatically terminates running instances on launch, ensuring clean, flawless binary updates on client workstations.
 
 === Bugs Fixed ===
-* Resolved Client Rendering Initialization Freeze: Eliminated aggressive drive root scanning across empty optical/removable drives (D:\ and E:\) and removed conflicting multi-stream cover art muxing.
+* Resolved Client Rendering Initialization Freeze: Restored proven v26.11.24/26 core execution flow, eliminating queue initialization stalls.
 * Fixed Group Photo Modal Not Appearing: Ensured GP videos in DVD are preserved during preflight and automatically trigger the Group Photo setup modal.
 * Fixed Filtergraph Incompatibility: Removed -hwaccel auto from video input streams, preventing dxva2/cuda hardware surface conflicts with CPU software scale/pad filters.
 * Fixed FFprobe Metadata Skip: Added dual format/stream duration parsing and seamless fallback to ffmpeg -i when ffprobe is missing or returns N/A for stream duration.

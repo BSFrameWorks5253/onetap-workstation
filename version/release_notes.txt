@@ -1,15 +1,16 @@
 [VERSION]
-26.11.32
+26.11.35
 
 [WHATS_NEW]
-* Group Photo Outro Auto-Detection & Instant Assignment: Group Photo (GP) videos located in the batch source or DVD folder are directly ingested and surfaced immediately in the dedicated Group Photo window.
-* Ultra-Fast Non-Blocking Metadata Probing: Rapid timeouts with robust fallbacks in FFmpeg/FFprobe resolvers, eliminating main-thread freezes.
-* Instant Video Progress Feedback: Immediate UI state transition from 'Initializing...' displaying the active video file, percentage, and real-time encode telemetry.
+* Restored Pre-v26.11.26 Proven Rendering Pipeline: Hardware-accelerated decoding (-hwaccel auto) reinstated for ceremony and transition inputs.
+* Clean Concat Filtergraph: Eliminates dissolve/fade artifacts on thumbnails and cleanly sequences ceremony video and Group Photo outros.
+* Non-Blocking Silence Analysis: Safe child process isolation with stdin redirected and 15s bounded safety watchdog.
+* Robust Process Overwrite Installer: NSIS installer automatically terminates running instances on launch, ensuring clean, flawless binary updates on client workstations.
 
 [BUGS_FIXED]
-* Resolved Client Rendering Initialization Freeze: Eliminated aggressive drive root scanning across empty optical/removable drives (D:\ and E:\) and removed conflicting multi-stream cover art muxing.
-* Fixed Group Photo Modal Not Appearing: Ensured GP videos in DVD are preserved during preflight and automatically trigger the Group Photo setup modal.
-* Fixed Regex Progress Parsing: Updated FFmpeg time parser to handle decimal and integer time values with arbitrary whitespace.
+* Resolved Client Rendering Initialization Freeze: Restored proven v26.11.24/26 core execution flow, eliminating queue initialization stalls.
+* Fixed Group Photo Modal & Stream Integration: Ensured GP videos in DVD are preserved and correctly appended.
+* Fixed Trailing CLI Arguments: Guaranteed output path is strictly terminal in FFmpeg argument array.
 
 [IMPROVEMENTS]
 * Direct DVD GP Ingestion: Instantly recognizes GP1, GP2, Group Photo files without slow filesystem tree traversals.

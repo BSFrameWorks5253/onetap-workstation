@@ -8,7 +8,7 @@
 Unicode true
 
 !ifndef VERSION
-  !define VERSION "26.11.32"
+  !define VERSION "26.11.35"
 !endif
 
 !ifndef OUTDIR
@@ -65,6 +65,12 @@ InstallDir "$LOCALAPPDATA\Programs\One Tap"
 InstallDirRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_DIR_REGKEY}" ""
 ShowInstDetails show
 ShowUnInstDetails show
+
+Function .onInit
+  ; Ensure any currently running One Tap or ffmpeg instance is closed before extracting files
+  nsExec::Exec 'taskkill /F /IM "One Tap.exe"'
+  nsExec::Exec 'taskkill /F /IM "ffmpeg.exe"'
+FunctionEnd
 
 ; ── INSTALLATION SECTION ──────────────────────────────────────────────
 Section "MainSection" SEC01

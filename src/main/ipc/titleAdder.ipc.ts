@@ -666,12 +666,13 @@ async function detectSilence(filePath: string, vidDuration: number): Promise<{
     try {
       const ffmpegExe = getFfmpegExePath()
       const proc = spawn(ffmpegExe, [
+        '-nostdin',
         '-vn', '-sn', '-dn',
         '-i', filePath,
         '-map', '0:a:0?',
         '-af', 'silencedetect=n=-45dB:d=1.5',
         '-f', 'null', '-'
-      ], { windowsHide: true, env: process.env })
+      ], { windowsHide: true, env: process.env, stdio: ['ignore', 'pipe', 'pipe'] })
 
       let out = ''
       proc.stderr?.on('data', chunk => { out += chunk.toString() })

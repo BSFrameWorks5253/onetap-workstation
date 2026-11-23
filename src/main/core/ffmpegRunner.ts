@@ -137,17 +137,17 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
     if (isTransImg) {
       dynamicInputs.push('-loop', '1', '-framerate', fps, '-t', String(transLen), '-i', params.transitionFile)
     } else {
-      dynamicInputs.push('-t', String(transLen), '-i', params.transitionFile)
+      dynamicInputs.push('-hwaccel', 'auto', '-t', String(transLen), '-i', params.transitionFile)
     }
   }
 
   const vidIdx = nextInputIdx++
-  dynamicInputs.push('-i', videoPath)
+  dynamicInputs.push('-hwaccel', 'auto', '-i', videoPath)
 
   let gpVidIdx = -1
   if (params.groupPhotoVideo && fs.existsSync(params.groupPhotoVideo)) {
     gpVidIdx = nextInputIdx++
-    dynamicInputs.push('-i', params.groupPhotoVideo)
+    dynamicInputs.push('-hwaccel', 'auto', '-i', params.groupPhotoVideo)
   }
 
   let endImgIdx = -1
@@ -355,12 +355,9 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
 
   if (!skipFront && startImgIdx >= 0) {
     // High-precision bicubic scaling ensures crisp title text, sharp calligraphy, and border details
-    // Transition dissolve at the tail of title thumbnail into video
-    const fadeOutStart = Math.max(introLen - 0.5, 0).toFixed(3)
     videoFilter +=
       `[${startImgIdx}:v]fps=${fps},scale=${width}:${height}:force_original_aspect_ratio=decrease:flags=bicubic+accurate_rnd,` +
-      `pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1,format=yuv420p,trim=0:${introLen.toFixed(3)},settb=AVTB,setpts=PTS-STARTPTS,` +
-      `fade=t=out:st=${fadeOutStart}:d=0.5[img_start];`
+      `pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1,format=yuv420p,trim=0:${introLen.toFixed(3)},settb=AVTB,setpts=PTS-STARTPTS[img_start];`
     concatSegments.push('[img_start]')
 
     // Custom transition clip (rendered if explicit transition input was registered)
@@ -384,11 +381,9 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
   }
 
   if (!skipBack && endImgIdx >= 0) {
-    const fadeOutEndStart = Math.max(outroLen - 0.5, 0).toFixed(3)
     videoFilter +=
       `[${endImgIdx}:v]fps=${fps},scale=${width}:${height}:force_original_aspect_ratio=decrease:flags=bicubic+accurate_rnd,` +
-      `pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1,format=yuv420p,trim=0:${outroLen.toFixed(3)},settb=AVTB,setpts=PTS-STARTPTS,` +
-      `fade=t=in:st=0:d=0.5,fade=t=out:st=${fadeOutEndStart}:d=0.5[img_end];`
+      `pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1,format=yuv420p,trim=0:${outroLen.toFixed(3)},settb=AVTB,setpts=PTS-STARTPTS[img_end];`
     concatSegments.push('[img_end]')
   }
 
@@ -460,7 +455,7 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
       '-filter_complex', audioFilter + videoFilter,
       '-map', '[final_video]', '-map', '[final_audio]',
       ...activeEnc.flags,
-      '-c:a', 'aac', '-b:a', '192k',
+      '-c:a', 'aac', '-b:a', '192k', '-threads', '0',
       '-movflags', '+faststart',
       ...metadataArgs,
       outputPath
