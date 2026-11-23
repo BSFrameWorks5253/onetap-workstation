@@ -3122,13 +3122,15 @@ export default function TitleAdder(): JSX.Element {
     clear()
     jobIdRef.current = `job_${Date.now()}`
 
-    // Save paths and duration
-    if (mode === 'batch' && effectiveSource) api.settings.setAndSave('last_source_adder', effectiveSource)
-    const baseOutputToSave = safarFinalInfo?.finalFolder || (outputFolder.match(/(.*?[\/\\]final(?:[\/\\]|$))/i)?.[1]?.replace(/[\/\\]$/, '')) || outputFolder
-    api.settings.setAndSave('last_output_adder', baseOutputToSave)
-    api.settings.setAndSave('title_duration', dur)
-
     try {
+      const dur = parseFloat(String(duration)) || 3
+
+      // Save paths and duration
+      if (mode === 'batch' && effectiveSource) api.settings.setAndSave('last_source_adder', effectiveSource)
+      const baseOutputToSave = safarFinalInfo?.finalFolder || (outputFolder.match(/(.*?[\/\\]final(?:[\/\\]|$))/i)?.[1]?.replace(/[\/\\]$/, '')) || outputFolder
+      api.settings.setAndSave('last_output_adder', baseOutputToSave)
+      api.settings.setAndSave('title_duration', dur)
+
       await api.titleAdder.start({
         mode,
         batchSource: effectiveSource,

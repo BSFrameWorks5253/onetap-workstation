@@ -1,5 +1,13 @@
 [
   {
+    "version": "26.11.40",
+    "date": "2026-11-23",
+    "whats_new": "* Critical Renderer ReferenceError Fix: Fixed undefined variable 'dur' in TitleAdder startJob, allowing the render pipeline to launch immediately.\n* Robust Start Exception Handling: Wrapped start sequence in comprehensive try/catch with user-facing alerts.\n* Instant Queue Execution: Videos start rendering immediately upon confirmation.",
+    "release_notes": "One Tap v26.11.40 fixes the critical ReferenceError: dur is not defined exception in TitleAdder that prevented the video render pipeline from starting.",
+    "bugs_fixed": "* Fixed Uncaught (in promise) ReferenceError: dur is not defined in TitleAdder.tsx.\n* Prevented unhandled promise rejections during render startup.",
+    "improvements": "* Streamlined render initiation and instant queue progression."
+  },
+  {
     "version": "26.11.39",
     "date": "2026-11-23",
     "whats_new": "* Critical findFile Performance Fix: Restored findFile to non-recursive O(1) direct existence checks, eliminating synchronous readdirSync recursive tree crawls on external USB drives.\n* Direct WebContents IPC Bridge: Bound render progress and logs directly to the caller WebContents and active window handle, preventing lost log messages on window re-render.\n* Instant Render Queue Execution: Immediate transition from Pre-Render setup to active video encoding.",
