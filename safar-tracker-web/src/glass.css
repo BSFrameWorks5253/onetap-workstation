@@ -532,6 +532,21 @@ body::before {
   50% { opacity: 0.4; transform: scale(0.85); }
 }
 
+.modal-mobile-drag-handle {
+  display: none;
+}
+
+@keyframes slide-up-sheet {
+  from {
+    transform: translateY(100%);
+    opacity: 0.5;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
 .hero-meta-chip {
   display: inline-flex !important;
   align-items: center !important;
@@ -6683,6 +6698,200 @@ input[type="text"]:focus, input[type="search"]:focus, select:focus {
     gap: 4px !important;
   }
 
+  /* ── 2b. Executive Hero Command Center Mobile Ergonomics ── */
+  .dashboard-hero-card.executive-hero-command,
+  .executive-hero-command {
+    padding: 16px 14px !important;
+    border-radius: 18px !important;
+    margin-bottom: 16px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .hero-command-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+    margin-bottom: 12px !important;
+  }
+
+  .hero-status-pill-row {
+    gap: 6px !important;
+    margin-bottom: 6px !important;
+  }
+
+  .hero-status-pill {
+    font-size: 10px !important;
+    padding: 3px 8px !important;
+  }
+
+  .hero-meta-chip {
+    font-size: 11px !important;
+    padding: 2px 7px !important;
+  }
+
+  .hero-campaign-title {
+    font-size: 20px !important;
+    line-height: 1.25 !important;
+    word-break: break-word !important;
+  }
+
+  .hero-campaign-subtitle {
+    font-size: 12px !important;
+    line-height: 1.35 !important;
+  }
+
+  .hero-executive-badge {
+    width: 100% !important;
+    flex-direction: row !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 10px 16px !important;
+    border-radius: 12px !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .hero-badge-val-row {
+    gap: 2px !important;
+  }
+
+  .hero-badge-number {
+    font-size: 28px !important;
+  }
+
+  .hero-badge-symbol {
+    font-size: 16px !important;
+  }
+
+  .hero-badge-caption {
+    font-size: 11px !important;
+    margin-top: 0 !important;
+  }
+
+  .hero-progress-section {
+    margin: 14px 0 10px 0 !important;
+  }
+
+  .hero-progress-header {
+    font-size: 11.5px !important;
+    margin-bottom: 6px !important;
+  }
+
+  .hero-progress-label {
+    font-size: 10.5px !important;
+  }
+
+  .hero-metric-spotlight-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+    margin: 14px 0 16px 0 !important;
+  }
+
+  .hero-spotlight-card {
+    padding: 10px 12px !important;
+    border-radius: 12px !important;
+    box-sizing: border-box !important;
+  }
+
+  .hero-spotlight-card:nth-child(3) {
+    grid-column: span 2 !important;
+  }
+
+  .hero-spotlight-num {
+    font-size: 18px !important;
+  }
+
+  .hero-spotlight-pct {
+    font-size: 11px !important;
+    padding: 1px 5px !important;
+  }
+
+  .hero-command-actions {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    margin-top: 14px !important;
+    padding-top: 12px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .hero-action-btn {
+    width: 100% !important;
+    min-height: 48px !important;
+    justify-content: center !important;
+    padding: 10px 16px !important;
+    box-sizing: border-box !important;
+    border-radius: 12px !important;
+  }
+
+  .hero-utility-btn {
+    flex: 1 1 calc(50% - 4px) !important;
+    min-height: 44px !important;
+    font-size: 12.5px !important;
+    padding: 8px 12px !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+    border-radius: 12px !important;
+  }
+
+  /* ── 2c. WhatsApp Briefing Modal iOS Bottom Sheet on Mobile ── */
+  .whatsapp-briefing-modal-overlay {
+    align-items: flex-end !important;
+    padding: 0 !important;
+  }
+
+  .whatsapp-briefing-modal-container {
+    max-width: 100vw !important;
+    width: 100% !important;
+    max-height: 92vh !important;
+    border-radius: 20px 20px 0 0 !important;
+    border-bottom: none !important;
+    animation: slide-up-sheet 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  }
+
+  .modal-mobile-drag-handle {
+    display: block !important;
+    width: 38px !important;
+    height: 4px !important;
+    background: #cbd5e1 !important;
+    border-radius: 999px !important;
+    margin: 8px auto 0 !important;
+  }
+
+  .whatsapp-briefing-modal-header {
+    padding: 12px 18px !important;
+  }
+
+  .whatsapp-briefing-tab-selector {
+    padding: 10px 14px !important;
+    gap: 8px !important;
+  }
+
+  .whatsapp-briefing-modal-body {
+    padding: 14px 16px !important;
+  }
+
+  .whatsapp-briefing-modal-footer {
+    padding: 12px 16px calc(14px + env(safe-area-inset-bottom, 8px)) !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+
+  .whatsapp-briefing-modal-footer button {
+    width: 100% !important;
+    min-height: 46px !important;
+    justify-content: center !important;
+  }
+
+  .whatsapp-briefing-modal-footer > div {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+  }
+
   /* ── 3. Page Headings ── */
   .page-heading {
     padding-bottom: 8px !important;
@@ -7057,13 +7266,39 @@ input[type="text"]:focus, input[type="search"]:focus, select:focus {
   }
 
   .mobile-nav-item.active {
-    color: var(--apple-blue, #007aff) !important;
+    color: #4f46e5 !important;
     font-weight: 700 !important;
   }
 
   .mobile-nav-item.active svg {
-    color: var(--apple-blue, #007aff) !important;
+    color: #4f46e5 !important;
     stroke-width: 2.3 !important;
+  }
+
+  .mobile-nav-item:active {
+    transform: scale(0.92) !important;
+  }
+
+  .mobile-nav-icon-wrap {
+    position: relative !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .mobile-nav-badge {
+    position: absolute !important;
+    top: -4px !important;
+    right: -8px !important;
+    background: #ef4444 !important;
+    color: #ffffff !important;
+    font-size: 9px !important;
+    font-weight: 800 !important;
+    padding: 1px 5px !important;
+    border-radius: 999px !important;
+    line-height: 1.1 !important;
+    border: 1.5px solid #ffffff !important;
+    box-shadow: 0 1px 4px rgba(239, 68, 68, 0.4) !important;
   }
 
   /* ── 10. Sidebar Mobile Drawer ── */
@@ -7294,20 +7529,74 @@ input[type="text"]:focus, input[type="search"]:focus, select:focus {
   }
 
   .safar-preview-row {
-    flex-direction: column !important;
-    align-items: stretch !important;
-    gap: 6px !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
     padding: 8px 10px !important;
     border-radius: 10px !important;
+  }
+
+  .safar-preview-date {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+    overflow: hidden !important;
+  }
+
+  .safar-preview-date strong {
+    font-size: 13px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
   }
 
   .safar-preview-status {
     display: flex !important;
     align-items: center !important;
-    justify-content: space-between !important;
     gap: 6px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .dashboard-safar-card-footer {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+    width: 100% !important;
+    padding-top: 12px !important;
+    border-top: 1px solid #f1f5f9 !important;
+  }
+
+  .dashboard-safar-card-footer .footer-left {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
     width: 100% !important;
     flex-wrap: wrap !important;
+    gap: 6px !important;
+  }
+
+  .dashboard-safar-card-footer .footer-right {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr auto !important;
+    gap: 6px !important;
+    width: 100% !important;
+  }
+
+  .dashboard-safar-card-footer .btn-card-whatsapp {
+    min-height: 40px !important;
+    justify-content: center !important;
+    font-size: 12px !important;
+    border-radius: 10px !important;
+  }
+
+  .dashboard-safar-card-footer .button-safar-remove {
+    min-height: 40px !important;
+    padding: 0 10px !important;
+    border-radius: 10px !important;
   }
 
   /* ── 15. Toolbar & Filter Form Controls ── */

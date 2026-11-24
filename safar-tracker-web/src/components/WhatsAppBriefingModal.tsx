@@ -629,6 +629,7 @@ export default function WhatsAppBriefingModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="briefing-modal-title"
+      className="whatsapp-briefing-modal-overlay"
       style={{
         position: 'fixed',
         inset: 0,
@@ -646,6 +647,7 @@ export default function WhatsAppBriefingModal({
       }}
     >
       <div
+        className="whatsapp-briefing-modal-container"
         style={{
           width: '100%',
           maxWidth: '680px',
@@ -660,8 +662,12 @@ export default function WhatsAppBriefingModal({
           animation: 'fade-scale 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
         }}
       >
+        {/* Mobile Drag Indicator Pill */}
+        <div className="modal-mobile-drag-handle" aria-hidden="true" />
+
         {/* Modal Header */}
         <div
+          className="whatsapp-briefing-modal-header"
           style={{
             padding: '18px 24px',
             borderBottom: '1px solid #e2e8f0',
@@ -744,6 +750,7 @@ export default function WhatsAppBriefingModal({
 
         {/* Choose Format: Message vs Image */}
         <div
+          className="whatsapp-briefing-tab-selector"
           style={{
             padding: '14px 24px',
             backgroundColor: '#f8fafc',
@@ -864,7 +871,7 @@ export default function WhatsAppBriefingModal({
         </div>
 
         {/* Modal Body */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
+        <div className="whatsapp-briefing-modal-body" style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
           {activeTab === 'msg' ? (
             <div>
               {/* 100% Done Alert if all dates uploaded */}
@@ -1066,6 +1073,7 @@ export default function WhatsAppBriefingModal({
 
         {/* Modal Footer with Actions */}
         <div
+          className="whatsapp-briefing-modal-footer"
           style={{
             padding: '16px 24px',
             backgroundColor: '#f8fafc',
