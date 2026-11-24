@@ -1,8 +1,9 @@
 Version:    26.11.42
-Build Date: 2026-11-23 22:53:33
+Build Date: 2026-11-24 09:53:00
 
 === What's New ===
-* Hierarchical Codebase Analysis Engine: Automatically mirrors folder structure in .code-analysis/ with minute details (exports, types, hooks, IPC channels) saving ~888,000+ AI context tokens.
+* Permanent Title Card Thumbnail for Windows Explorer: Embedded title cards as container attached_pic stream into MP4 outputs, guaranteeing Windows File Explorer and mobile devices always display the added 1-3s title card as the video's thumbnail icon.
+* Interactive 1-3s Video Opening Frame Preview: Real-time video thumbnail previews directly inside the Title Adder table showing the exact 1-3s opening frame captured by Windows Explorer with lightbox inspection.
 * Windows Taskbar Live Previews: Hovering over sidebar navigation items renders real-time thumbnail previews simulating native Windows taskbar popovers.
 * Islamic Welcome Screen & Arabic Typography: Centered Arabic calligraphy (أَهْلًا وَسَهْلًا) with kinetic typography wave animations and docked preloader without redundant branding.
 * Animated Arabic Greeting in Email Studio: Embedded ONTO wave calligraphy greeting banner for luxury client announcements.

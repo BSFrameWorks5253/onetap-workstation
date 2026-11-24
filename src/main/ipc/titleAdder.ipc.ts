@@ -22,6 +22,7 @@ const execFileAsync = promisify(execFile)
 import fs from 'fs'
 import path from 'path'
 import os from 'os'
+import crypto from 'crypto'
 import { get, setAndSave } from '../core/settingsManager'
 import { buildAudioPool, getNikahAudio, getAudioForVideo, getSpecialAudioPath, buildInstrumentalAudioPool, getInstrumentalAudioPath, getAllAvailableAudioFiles } from '../core/audioEngine'
 import { runFFmpegJob, cancelJob, extractYearFromFileName } from '../core/ffmpegRunner'
@@ -1291,6 +1292,97 @@ export function resolveSafarFinalPathForVideo(videoPath: string): {
     dateFolderExistsInFinal: false,
     reason: 'Could not resolve Final directory for Safar'
   }
+}
+
+// ── In-Memory & Disk Cached Video Opening Frame (1-3s) Thumbnail Extractor ──
+const _videoThumbCache = new Map<string, string>()
+
+export async function extractVideoThumbnail(videoPath: string, timestampSec: number = 1.5): Promise<string | null> {
+  if (!videoPath || typeof videoPath !== 'string') return null
+  if (!fs.existsSync(videoPath)) return null
+
+  // Fast in-memory check
+  if (_videoThumbCache.has(videoPath)) {
+    const cached = _videoThumbCache.get(videoPath)!
+    if (fs.existsSync(cached)) return cached
+    _videoThumbCache.delete(videoPath)
+  }
+
+  try {
+    const thumbDir = path.join(os.tmpdir(), 'onetap_video_thumbs')
+    if (!fs.existsSync(thumbDir)) {
+      fs.mkdirSync(thumbDir, { recursive: true })
+    }
+
+    const stat = fs.statSync(videoPath)
+    const hash = crypto
+      .createHash('md5')
+      .update(`${videoPath}_${stat.mtimeMs}_${stat.size}_${timestampSec}`)
+      .digest('hex')
+      .slice(0, 16)
+    const outThumbPath = path.join(thumbDir, `thumb_${hash}.jpg`)
+
+    if (fs.existsSync(outThumbPath) && fs.statSync(outThumbPath).size > 100) {
+      _videoThumbCache.set(videoPath, outThumbPath)
+      return outThumbPath
+    }
+
+    const ffmpegExe = getFfmpegExePath()
+    // Seek to 1.5s (matching the 1-3s opening window used by Windows File Explorer), scale to 240px wide preview
+    await execFileAsync(
+      ffmpegExe,
+      [
+        '-y',
+        '-nostdin',
+        '-hide_banner',
+        '-ss', String(timestampSec),
+        '-i', videoPath,
+        '-vframes', '1',
+        '-vf', 'scale=240:-1:flags=fast_bilinear',
+        '-q:v', '3',
+        outThumbPath
+      ],
+      { timeout: 8000, windowsHide: true }
+    )
+
+    if (fs.existsSync(outThumbPath) && fs.statSync(outThumbPath).size > 100) {
+      _videoThumbCache.set(videoPath, outThumbPath)
+      return outThumbPath
+    }
+  } catch {
+    // If seek at 1.5s fails (e.g. video is < 1.5s), fallback to frame 0.0s
+    try {
+      const thumbDir = path.join(os.tmpdir(), 'onetap_video_thumbs')
+      const stat = fs.statSync(videoPath)
+      const hash = crypto
+        .createHash('md5')
+        .update(`${videoPath}_${stat.mtimeMs}_${stat.size}_0`)
+        .digest('hex')
+        .slice(0, 16)
+      const fallbackPath = path.join(thumbDir, `thumb_${hash}.jpg`)
+      const ffmpegExe = getFfmpegExePath()
+      await execFileAsync(
+        ffmpegExe,
+        [
+          '-y',
+          '-nostdin',
+          '-hide_banner',
+          '-ss', '0',
+          '-i', videoPath,
+          '-vframes', '1',
+          '-vf', 'scale=240:-1:flags=fast_bilinear',
+          '-q:v', '3',
+          fallbackPath
+        ],
+        { timeout: 8000, windowsHide: true }
+      )
+      if (fs.existsSync(fallbackPath) && fs.statSync(fallbackPath).size > 100) {
+        _videoThumbCache.set(videoPath, fallbackPath)
+        return fallbackPath
+      }
+    } catch {}
+  }
+  return null
 }
 
 export function registerTitleAdderIPC(getWin: WinGetter): void {
@@ -2732,6 +2824,28 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
       return { success: true }
     }
     return { success: false, error: 'File does not exist' }
+  })
+
+  ipcMain.handle('titleAdder:getVideoThumbnail', async (_e, videoPath: string) => {
+    return await extractVideoThumbnail(videoPath)
+  })
+
+  ipcMain.handle('titleAdder:getVideoThumbnails', async (_e, videoPaths: string[]) => {
+    if (!Array.isArray(videoPaths)) return {}
+    const results: Record<string, string> = {}
+    const concurrency = 4
+    for (let i = 0; i < videoPaths.length; i += concurrency) {
+      const chunk = videoPaths.slice(i, i + concurrency)
+      await Promise.all(
+        chunk.map(async (vp) => {
+          try {
+            const thumb = await extractVideoThumbnail(vp)
+            if (thumb) results[vp] = thumb
+          } catch {}
+        })
+      )
+    }
+    return results
   })
 }
 

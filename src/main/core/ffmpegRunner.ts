@@ -118,9 +118,17 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
   let nextInputIdx = 0
 
   let startImgIdx = -1
-  if (!skipFront && startImg && introLen > 0) {
-    startImgIdx = nextInputIdx++
-    dynamicInputs.push('-loop', '1', '-framerate', fps, '-t', String(introLen), '-i', startImg)
+  let attachedPicInputIdx = -1
+  if (!skipFront && startImg && fs.existsSync(startImg)) {
+    if (introLen > 0) {
+      startImgIdx = nextInputIdx++
+      dynamicInputs.push('-loop', '1', '-framerate', fps, '-t', String(introLen), '-i', startImg)
+    }
+    // Embed the title card as a dedicated cover art / attached picture stream
+    // This forces Windows File Explorer, macOS, and mobile devices to permanently display
+    // the title card as the video file's thumbnail icon.
+    attachedPicInputIdx = nextInputIdx++
+    dynamicInputs.push('-i', startImg)
   }
 
   // Custom transition clip (only if an explicit transition file exists on disk and front intro is present)
@@ -446,6 +454,20 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
 
     const ffmpegExe = getFfmpegExePath()
 
+    const streamMaps: string[] = ['-map', '[final_video]', '-map', '[final_audio]']
+    const attachedPicArgs: string[] = []
+    let finalEncFlags = activeEnc.flags
+
+    if (attachedPicInputIdx >= 0) {
+      streamMaps.push('-map', `${attachedPicInputIdx}:v`)
+      finalEncFlags = activeEnc.flags.map(f => {
+        if (f === '-c:v') return '-c:v:0'
+        if (f === '-pix_fmt') return '-pix_fmt:v:0'
+        return f
+      })
+      attachedPicArgs.push('-c:v:1', 'mjpeg', '-disposition:v:1', 'attached_pic')
+    }
+
     const cmd = [
       ffmpegExe,
       '-y',
@@ -456,8 +478,9 @@ export function runFFmpegJob(params: FFmpegJobParams, onEvent: EventCallback): v
       ...dynamicInputs,
       ...audioInputs,
       '-filter_complex', audioFilter + videoFilter,
-      '-map', '[final_video]', '-map', '[final_audio]',
-      ...activeEnc.flags,
+      ...streamMaps,
+      ...finalEncFlags,
+      ...attachedPicArgs,
       '-c:a', 'aac', '-b:a', '192k', '-threads', '0',
       '-movflags', '+faststart',
       ...metadataArgs,

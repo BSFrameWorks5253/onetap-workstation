@@ -522,6 +522,10 @@ def compile_installer(version: str, log_fn):
         log_fn('\n' + '-'*56)
         log_fn('  COMPILING NSIS SETUP INSTALLER  (makensis)')
         log_fn('-'*56 + '\n')
+        unpacked_dir = os.path.join('release', 'win-unpacked')
+        if not os.path.exists(unpacked_dir) or not os.listdir(unpacked_dir):
+            log_fn('[Installer] Packaging unpacked binaries for NSIS installer...')
+            _stream_cmd('npx electron-builder --win dir -c.win.signAndEditExecutable=false', log_fn)
         ok = _stream_cmd(f'"{nsis}" -DVERSION="{version}" installer.nsi', log_fn, cwd='installer')
         if ok:
             for d in ['release', 'dist', 'out']:

@@ -1325,6 +1325,34 @@ export default function TitleAdder(): JSX.Element {
   const [availableAudioOptions, setAvailableAudioOptions] = useState<Array<{ name: string; path: string }>>([])
   const [availableTitleImageOptions, setAvailableTitleImageOptions] = useState<Array<{ name: string; path: string }>>([])
 
+  // Video 1-3s Opening Frame (Windows Explorer thumbnail) preview state
+  const [videoThumbnails, setVideoThumbnails] = useState<Record<string, string>>({})
+  const [previewVideoModal, setPreviewVideoModal] = useState<{ path: string; name: string; thumbUrl: string } | null>(null)
+
+  const fetchVideoThumbnails = useCallback(async (assignments: Array<{ videoPath: string }>) => {
+    const apiInst = (window as any).api
+    if (!apiInst?.titleAdder?.getVideoThumbnails || !assignments || assignments.length === 0) return
+    const paths = assignments.map(a => a.videoPath).filter(Boolean)
+    if (paths.length === 0) return
+    try {
+      const res = await apiInst.titleAdder.getVideoThumbnails(paths)
+      if (res && Object.keys(res).length > 0) {
+        setVideoThumbnails(prev => ({ ...prev, ...res }))
+      }
+    } catch (err) {
+      console.warn('Failed to fetch video thumbnails:', err)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (audioPreviewAssignments.length > 0) {
+      const missing = audioPreviewAssignments.filter(a => a.videoPath && !videoThumbnails[a.videoPath])
+      if (missing.length > 0) {
+        fetchVideoThumbnails(missing)
+      }
+    }
+  }, [audioPreviewAssignments, videoThumbnails, fetchVideoThumbnails])
+
   const userAudioSelections = storeState.userAudioSelections || {}
   const setUserAudioSelections = (selections: Record<string, string> | ((prev: Record<string, string>) => Record<string, string>)) => {
     const next = typeof selections === 'function' ? selections(storeState.userAudioSelections || {}) : selections
@@ -5937,95 +5965,125 @@ export default function TitleAdder(): JSX.Element {
                         >
                           <td style={{ opacity: 0.6, fontSize: '12px', fontWeight: 600 }}>{idx + 1}</td>
                           <td style={{ fontWeight: 600 }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                                <span>🎬</span>
-                                <span title={item.videoName}>{item.videoName}</span>
-                                {item.videoName.toLowerCase().includes('.tmp') && (
-                                  <span style={{ fontSize: '10px', padding: '1px 6px', borderRadius: '4px', background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', fontWeight: 700, border: '1px solid rgba(245, 158, 11, 0.3)' }}>
-                                    ⏳ Temp (Pending Render)
-                                  </span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              {/* Video 1-3s Opening Frame (Matches Windows Explorer Thumbnail) */}
+                              <div
+                                className="ta-video-thumb-preview"
+                                title="Video opening frame (1.5s timestamp captured by Windows Explorer) — Click to view"
+                                onClick={() => {
+                                  const thumb = videoThumbnails[item.videoPath]
+                                  if (thumb) {
+                                    setPreviewVideoModal({
+                                      path: item.videoPath,
+                                      name: item.videoName,
+                                      thumbUrl: toLocalResourceUrl(thumb)
+                                    })
+                                  }
+                                }}
+                              >
+                                {videoThumbnails[item.videoPath] ? (
+                                  <img
+                                    src={toLocalResourceUrl(videoThumbnails[item.videoPath])}
+                                    alt={item.videoName}
+                                    className="ta-video-thumb-img"
+                                  />
+                                ) : (
+                                  <div className="ta-video-thumb-placeholder">
+                                    <span>🎬</span>
+                                  </div>
                                 )}
-                                {item.isNikah && <span className="ta-nikah-tag">👰 Nikah Audio</span>}
-                                {isSpecial && !item.isNikah && <span className="ta-nikah-tag" style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', borderColor: 'rgba(245, 158, 11, 0.3)' }}>⭐ Special Audio</span>}
-                              </span>
+                                <span className="ta-video-thumb-badge">1.5s</span>
+                              </div>
 
-                              {/* Target Folder Path Display with Auto / User Set status */}
-                              {(() => {
-                                const targetPath = fileOutputFolders[item.videoPath] || fileOutputFolders[item.videoName] || outputFolder || ''
-                                const isUserSet = Boolean(fileOutputFolders[item.videoPath] || fileOutputFolders[item.videoName])
-                                return (
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', marginTop: '2px', flexWrap: 'wrap' }}>
-                                    <span
-                                      style={{
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        gap: '4px',
-                                        padding: '1px 7px',
-                                        borderRadius: '10px',
-                                        fontSize: '10px',
-                                        fontWeight: 700,
-                                        letterSpacing: '0.02em',
-                                        background: isUserSet ? 'rgba(59, 130, 246, 0.15)' : 'rgba(16, 185, 129, 0.15)',
-                                        color: isUserSet ? '#3b82f6' : '#10b981',
-                                        border: `1px solid ${isUserSet ? 'rgba(59, 130, 246, 0.3)' : 'rgba(16, 185, 129, 0.3)'}`
-                                      }}
-                                    >
-                                      {isUserSet ? '👤 Custom' : '🤖 Auto'}
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0, flex: 1 }}>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                  <span title={item.videoName}>{item.videoName}</span>
+                                  {item.videoName.toLowerCase().includes('.tmp') && (
+                                    <span style={{ fontSize: '10px', padding: '1px 6px', borderRadius: '4px', background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', fontWeight: 700, border: '1px solid rgba(245, 158, 11, 0.3)' }}>
+                                      ⏳ Temp (Pending Render)
                                     </span>
-                                    <span
-                                      title={targetPath || 'Will use main output destination'}
-                                      style={{
-                                        maxWidth: '220px',
-                                        overflow: 'hidden',
-                                        textOverflow: 'ellipsis',
-                                        whiteSpace: 'nowrap',
-                                        color: 'var(--text-secondary, #94a3b8)',
-                                        fontFamily: 'monospace',
-                                        fontSize: '10.5px'
-                                      }}
-                                    >
-                                      📁 {targetPath ? (targetPath.split(/[\\/]/).slice(-2).join('\\') || targetPath) : 'Main Output'}
-                                    </span>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleSelectCustomOutputForFile(item.videoPath || item.videoName)}
-                                      title={`Change destination folder for ${item.videoName}`}
-                                      style={{
-                                        background: 'none',
-                                        border: '1px solid rgba(255, 255, 255, 0.15)',
-                                        borderRadius: '4px',
-                                        color: 'var(--text-primary)',
-                                        cursor: 'pointer',
-                                        fontSize: '10px',
-                                        padding: '1px 5px',
-                                        lineHeight: 1.2
-                                      }}
-                                    >
-                                      Change ➜
-                                    </button>
-                                    {isUserSet && (
+                                  )}
+                                  {item.isNikah && <span className="ta-nikah-tag">👰 Nikah Audio</span>}
+                                  {isSpecial && !item.isNikah && <span className="ta-nikah-tag" style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', borderColor: 'rgba(245, 158, 11, 0.3)' }}>⭐ Special Audio</span>}
+                                </span>
+
+                                {/* Target Folder Path Display with Auto / User Set status */}
+                                {(() => {
+                                  const targetPath = fileOutputFolders[item.videoPath] || fileOutputFolders[item.videoName] || outputFolder || ''
+                                  const isUserSet = Boolean(fileOutputFolders[item.videoPath] || fileOutputFolders[item.videoName])
+                                  return (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', marginTop: '2px', flexWrap: 'wrap' }}>
+                                      <span
+                                        style={{
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '4px',
+                                          padding: '1px 7px',
+                                          borderRadius: '10px',
+                                          fontSize: '10px',
+                                          fontWeight: 700,
+                                          letterSpacing: '0.02em',
+                                          background: isUserSet ? 'rgba(59, 130, 246, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+                                          color: isUserSet ? '#3b82f6' : '#10b981',
+                                          border: `1px solid ${isUserSet ? 'rgba(59, 130, 246, 0.3)' : 'rgba(16, 185, 129, 0.3)'}`
+                                        }}
+                                      >
+                                        {isUserSet ? '👤 Custom' : '🤖 Auto'}
+                                      </span>
+                                      <span
+                                        title={targetPath || 'Will use main output destination'}
+                                        style={{
+                                          maxWidth: '220px',
+                                          overflow: 'hidden',
+                                          textOverflow: 'ellipsis',
+                                          whiteSpace: 'nowrap',
+                                          color: 'var(--text-secondary, #94a3b8)',
+                                          fontFamily: 'monospace',
+                                          fontSize: '10.5px'
+                                        }}
+                                      >
+                                        📁 {targetPath ? (targetPath.split(/[\\/]/).slice(-2).join('\\') || targetPath) : 'Main Output'}
+                                      </span>
                                       <button
                                         type="button"
-                                        onClick={() => handleResetCustomOutputForFile(item.videoPath || item.videoName)}
-                                        title="Reset destination folder to Auto-detected"
+                                        onClick={() => handleSelectCustomOutputForFile(item.videoPath || item.videoName)}
+                                        title={`Change destination folder for ${item.videoName}`}
                                         style={{
                                           background: 'none',
-                                          border: '1px solid rgba(245, 158, 11, 0.3)',
+                                          border: '1px solid var(--border)',
                                           borderRadius: '4px',
-                                          color: '#f59e0b',
+                                          color: 'var(--text-primary)',
                                           cursor: 'pointer',
                                           fontSize: '10px',
                                           padding: '1px 5px',
                                           lineHeight: 1.2
                                         }}
                                       >
-                                        ↺ Reset
+                                        Change ➜
                                       </button>
-                                    )}
-                                  </div>
-                                )
-                              })()}
+                                      {isUserSet && (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleResetCustomOutputForFile(item.videoPath || item.videoName)}
+                                          title="Reset destination folder to Auto-detected"
+                                          style={{
+                                            background: 'none',
+                                            border: '1px solid rgba(245, 158, 11, 0.3)',
+                                            borderRadius: '4px',
+                                            color: '#f59e0b',
+                                            cursor: 'pointer',
+                                            fontSize: '10px',
+                                            padding: '1px 5px',
+                                            lineHeight: 1.2
+                                          }}
+                                        >
+                                          ↺ Reset
+                                        </button>
+                                      )}
+                                    </div>
+                                  )
+                                })()}
+                              </div>
                             </div>
                           </td>
                           <td>
@@ -6773,6 +6831,57 @@ export default function TitleAdder(): JSX.Element {
 
 
 
+
+      {/* Video Opening Frame (1-3s) Lightbox Preview Modal */}
+      {previewVideoModal && (
+        <div className="ta-modal-overlay anim-fade-in no-drag" onClick={() => setPreviewVideoModal(null)}>
+          <div
+            className="ta-modal-content anim-scale-in no-drag"
+            style={{ maxWidth: '640px', padding: 0, overflow: 'hidden' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="ta-modal-header" style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', background: 'var(--surface-2)' }}>
+              <div className="ta-modal-header-title" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ fontSize: '18px' }}>🎬</span>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                    {previewVideoModal.name}
+                  </h3>
+                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                    Opening Frame (1.5s timestamp captured by Windows Explorer)
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="ta-modal-close"
+                onClick={() => setPreviewVideoModal(null)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: 'var(--text-secondary)' }}
+              >
+                ✕
+              </button>
+            </div>
+            <div style={{ padding: '16px', background: 'var(--surface)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+              <div style={{ width: '100%', borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--border)', boxShadow: 'var(--shadow-md)', background: '#000' }}>
+                <img
+                  src={previewVideoModal.thumbUrl}
+                  alt={previewVideoModal.name}
+                  style={{ width: '100%', maxHeight: '360px', objectFit: 'contain', display: 'block' }}
+                />
+              </div>
+              <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', color: 'var(--text-muted)' }}>
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '400px' }} title={previewVideoModal.path}>
+                  📁 {previewVideoModal.path}
+                </span>
+                <span style={{ fontWeight: 600, color: 'var(--text-secondary)', flexShrink: 0 }}>Timestamp: 00:00:01.500</span>
+              </div>
+            </div>
+            <div style={{ padding: '12px 20px', borderTop: '1px solid var(--border)', background: 'var(--surface-2)', display: 'flex', justifyContent: 'flex-end' }}>
+              <Button size="sm" onClick={() => setPreviewVideoModal(null)}>Close Preview</Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {isDragging && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 9999, cursor: 'col-resize', userSelect: 'none', background: 'transparent' }} />

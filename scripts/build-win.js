@@ -273,9 +273,10 @@ async function buildWindows() {
         execSync(`npx electron-builder --win nsis ${versionFlag}`, { stdio: 'inherit' })
       }
     } else {
-      execSync(`npx electron-builder --win ${builderTarget} ${versionFlag}`, { stdio: 'inherit' })
+      const actualTarget = builderTarget === 'msix' ? 'appx' : builderTarget
+      execSync(`npx electron-builder --win ${actualTarget} ${versionFlag}`, { stdio: 'inherit' })
     }
-    if (builderTarget === 'appx') {
+    if (builderTarget === 'appx' || builderTarget === 'msix') {
       try {
         log('Signing AppX / MSIX package with Windows SDK SignTool and developer certificate...')
         execSync(`powershell -NoProfile -ExecutionPolicy Bypass -File "${path.join(__dirname, 'sign_appx.ps1')}"`, { stdio: 'inherit' })

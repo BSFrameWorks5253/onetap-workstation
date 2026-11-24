@@ -119,6 +119,8 @@ contextBridge.exposeInMainWorld('api', {
     setFinalTitlesFolder: (folderPath: string) => ipcRenderer.invoke('titleAdder:setFinalTitlesFolder', folderPath),
     openFinalTitlesFolder: (customPath?: string) => ipcRenderer.invoke('titleAdder:openFinalTitlesFolder', customPath),
     showFileInFolder: (filePath: string) => ipcRenderer.invoke('titleAdder:showFileInFolder', filePath),
+    getVideoThumbnail: (videoPath: string) => ipcRenderer.invoke('titleAdder:getVideoThumbnail', videoPath),
+    getVideoThumbnails: (videoPaths: string[]) => ipcRenderer.invoke('titleAdder:getVideoThumbnails', videoPaths),
     onSetBatchSource: (cb: (d: string) => void) => {
       const sub = (_e: any, d: string): void => cb(d)
       ipcRenderer.on('titleAdder:setBatchSource', sub)
