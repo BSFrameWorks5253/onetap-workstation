@@ -3,5 +3,5 @@
   "versionCode": 26114602,
   "releaseDate": "2026-11-24",
   "downloadUrl": "https://github.com/BSFrameWorks5253/onetap-workstation/releases/download/v26.11.46.02/OneTapStudio-v26.11.46.02.apk",
-  "changelog": "Autonomous release build v26.11.46.02. Fix static initialization circular dependency in Screen.items."
+  "changelog": "Autonomous release build v26.11.46.02. Cloud Database Sync & Auto-Update Engine active."
 }
