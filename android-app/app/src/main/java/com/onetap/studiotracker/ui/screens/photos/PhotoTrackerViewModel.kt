@@ -11,9 +11,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
-class PhotoTrackerViewModel(
+class PhotoTrackerViewModel : ViewModel() {
+
     private val repository: SafarRepository = SafarRepository.getInstance()
-) : ViewModel() {
 
     val activeCampaign: StateFlow<SafarCampaign?> = repository.campaigns.map { list ->
         list.firstOrNull { it.isOngoing } ?: list.firstOrNull()

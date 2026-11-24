@@ -24,7 +24,7 @@ data class AppUpdateInfo(
 
 object UpdateManager {
 
-    const val CURRENT_APP_VERSION = "26.11.1"
+    const val CURRENT_APP_VERSION = "26.11.46.01"
 
     private const val GITHUB_REPO = "BSFrameWorks5253/onetap-workstation"
     private const val RAW_VERSION_URL =

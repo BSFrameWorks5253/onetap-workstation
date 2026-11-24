@@ -22,9 +22,9 @@ enum class BriefingMode {
     IMAGE
 }
 
-class DashboardViewModel(
+class DashboardViewModel : ViewModel() {
+
     private val repository: SafarRepository = SafarRepository.getInstance()
-) : ViewModel() {
 
     val campaigns: StateFlow<List<SafarCampaign>> = repository.campaigns
 

@@ -13,9 +13,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
-class KanbanViewModel(
+class KanbanViewModel : ViewModel() {
+
     private val repository: SafarRepository = SafarRepository.getInstance()
-) : ViewModel() {
 
     val campaigns: StateFlow<List<SafarCampaign>> = repository.campaigns
 

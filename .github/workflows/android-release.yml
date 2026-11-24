@@ -38,30 +38,30 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
-      - name: Determine Release Version (Starting from 26.11.1)
+      - name: Determine Release Version (Starting from 26.11.46.01)
         id: versioning
         run: |
           if [ -n "${{ github.event.inputs.manual_version }}" ]; then
             VERSION="${{ github.event.inputs.manual_version }}"
             echo "Using manual version: $VERSION"
           else
-            # Find existing tags starting with v26.11.
-            LATEST_TAG=$(git tag -l "v26.11.*" | sort -V | tail -n 1)
+            # Find existing tags starting with v26.11.46.
+            LATEST_TAG=$(git tag -l "v26.11.46.*" | sort -V | tail -n 1)
             if [ -z "$LATEST_TAG" ]; then
-              VERSION="26.11.1"
-              echo "No previous v26.11.* tags found. Starting at: $VERSION"
+              VERSION="26.11.46.01"
+              echo "No previous v26.11.46.* tags found. Starting at: $VERSION"
             else
-              # Extract patch number and increment
-              PATCH=$(echo "$LATEST_TAG" | sed 's/v26\.11\.//')
-              NEXT_PATCH=$((PATCH + 1))
-              VERSION="26.11.$NEXT_PATCH"
+              # Extract subpatch e.g. 01 and increment
+              SUBPATCH=$(echo "$LATEST_TAG" | sed 's/v26\.11\.46\.//')
+              NUM=$((10#$SUBPATCH + 1))
+              NEXT_SUBPATCH=$(printf "%02d" $NUM)
+              VERSION="26.11.46.$NEXT_SUBPATCH"
               echo "Previous tag: $LATEST_TAG -> Next version: $VERSION"
             fi
           fi
 
-          # Extract patch number to compute integer versionCode
-          PATCH_NUM=$(echo "$VERSION" | cut -d. -f3)
-          VERSION_CODE=$((261100 + PATCH_NUM))
+          # Compute integer versionCode e.g. 26.11.46.01 -> 26114601
+          VERSION_CODE=$(echo "$VERSION" | tr -d '.')
 
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "VERSION_CODE=$VERSION_CODE" >> $GITHUB_ENV
