@@ -3,5 +3,5 @@
   "versionCode": 26114601,
   "releaseDate": "2026-11-24",
   "downloadUrl": "https://github.com/BSFrameWorks5253/onetap-workstation/releases/download/v26.11.46.01/OneTapStudio-v26.11.46.01.apk",
-  "changelog": "Autonomous release build v26.11.46.01. Direct zero-arg ViewModel instantiation & resilient crash shield active."
+  "changelog": "Autonomous release build v26.11.46.01. Cloud Database Sync & Auto-Update Engine active."
 }
