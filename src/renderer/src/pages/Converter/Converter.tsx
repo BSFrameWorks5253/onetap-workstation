@@ -109,7 +109,7 @@ export default function Converter(): JSX.Element {
         const activePair = latestBatchPairs[targetIdx]
         if (activePair) {
           const jTarget = cleanPath(existingUserJpeg || activePair.jpegFolder || chainedJpeg)
-          const vTarget = cleanPath((targetIdx === 0 && chainedVideo) ? chainedVideo : (activePair.videoFolder || chainedVideo))
+          const vTarget = cleanPath(activePair.videoFolder || chainedVideo)
           if (jTarget && !jpegFolder) {
             setJpegFolder(jTarget)
             localStorage.setItem('ot_converter_source_jpeg', jTarget)
@@ -212,14 +212,20 @@ export default function Converter(): JSX.Element {
   // Auto-refresh file list whenever either folder path changes (incl. on mount after settings restore)
   useEffect(() => {
     if (!api?.converter?.listFiles) return
-    if (!jpegFolder && !videoFolder) { setFolderImages([]); setFolderVideos([]); return }
+    const jf = cleanPath(jpegFolder)
+    const vf = cleanPath(videoFolder)
+    if (!jf && !vf) { setFolderImages([]); setFolderVideos([]); return }
     let cancelled = false
     setFilesLoading(true)
-    api.converter.listFiles({ jpegFolder: jpegFolder || undefined, videoFolder: videoFolder || undefined })
+    api.converter.listFiles({ jpegFolder: jf || undefined, videoFolder: vf || undefined })
       .then((res: any) => {
         if (cancelled) return
         setFolderImages(res.images ?? [])
         setFolderVideos(res.videos ?? [])
+        if (res?.videoDir && (!vf || res.videoDir.toLowerCase() !== vf.toLowerCase()) && res.videos && res.videos.length > 0) {
+          setVideoFolder(res.videoDir)
+          localStorage.setItem('ot_converter_video_target', res.videoDir)
+        }
       })
       .catch(() => {})
       .finally(() => { if (!cancelled) setFilesLoading(false) })
@@ -227,14 +233,18 @@ export default function Converter(): JSX.Element {
   }, [jpegFolder, videoFolder])
 
   async function loadFiles(jpeg?: string, video?: string): Promise<void> {
-    const jf = jpeg  ?? jpegFolder
-    const vf = video ?? videoFolder
+    const jf = cleanPath(jpeg !== undefined ? jpeg : (jpegFolder || localStorage.getItem('ot_converter_source_jpeg') || ''))
+    const vf = cleanPath(video !== undefined ? video : (videoFolder || localStorage.getItem('ot_converter_video_target') || ''))
     if (!jf && !vf) { setFolderImages([]); setFolderVideos([]); return }
     setFilesLoading(true)
     try {
       const res = await api.converter.listFiles({ jpegFolder: jf || undefined, videoFolder: vf || undefined })
       setFolderImages(res.images ?? [])
       setFolderVideos(res.videos ?? [])
+      if (res?.videoDir && (!vf || res.videoDir.toLowerCase() !== vf.toLowerCase()) && res.videos && res.videos.length > 0) {
+        setVideoFolder(res.videoDir)
+        localStorage.setItem('ot_converter_video_target', res.videoDir)
+      }
     } catch { /* silent */ } finally {
       setFilesLoading(false)
     }
@@ -244,8 +254,10 @@ export default function Converter(): JSX.Element {
     if (!batchPairs[idx]) return
     setSelectedBatchIndex(idx)
     const pair = batchPairs[idx]
+    let jClean = ''
+    let vClean = ''
     if (pair.jpegFolder) {
-      const jClean = cleanPath(pair.jpegFolder)
+      jClean = cleanPath(pair.jpegFolder)
       setJpegFolder(jClean)
       localStorage.setItem('ot_converter_source_jpeg', jClean)
       if (api?.settings?.setAndSave) {
@@ -253,7 +265,7 @@ export default function Converter(): JSX.Element {
       }
     }
     if (pair.videoFolder) {
-      const vClean = cleanPath(pair.videoFolder)
+      vClean = cleanPath(pair.videoFolder)
       setVideoFolder(vClean)
       localStorage.setItem('ot_converter_video_target', vClean)
       if (api?.settings?.setAndSave) {
@@ -261,7 +273,7 @@ export default function Converter(): JSX.Element {
       }
     }
     setRenameCollapsed(false)
-    loadFiles(pair.jpegFolder, pair.videoFolder)
+    loadFiles(jClean || undefined, vClean || undefined)
     playTick()
   }
 
@@ -799,7 +811,11 @@ export default function Converter(): JSX.Element {
                   <button
                     type="button"
                     className="cv-files-refresh"
-                    onClick={() => loadFiles()}
+                    onClick={() => {
+                      const curV = cleanPath(videoFolder || batchPairs[selectedBatchIndex]?.videoFolder || '')
+                      const curJ = cleanPath(jpegFolder || batchPairs[selectedBatchIndex]?.jpegFolder || '')
+                      loadFiles(curJ || undefined, curV || undefined)
+                    }}
                     disabled={filesLoading}
                     title="Refresh file list"
                     style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}

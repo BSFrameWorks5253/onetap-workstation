@@ -847,6 +847,8 @@ export default function TitleAdder(): JSX.Element {
         } else {
           resolvedVideo = normOut
         }
+      } else {
+        resolvedVideo = src || cleanSrc
       }
 
       // Preserve existing user-defined JPEG folder
@@ -883,6 +885,7 @@ export default function TitleAdder(): JSX.Element {
       }
       window.dispatchEvent(new CustomEvent('refresh-converter-paths', { detail: { batchPairs, outputFolder: baseOut, batchOutputs: batchOutputsOverride } }))
     } catch {}
+    return batchPairs
   }
 
   // ── Final Titles Folder Link & Two-Way Sync ─────────────────────
@@ -1890,7 +1893,7 @@ export default function TitleAdder(): JSX.Element {
 
     let expVideos: string[] = []
     if (incomingExpected && incomingExpected.length > 0) {
-      expVideos = incomingExpected.filter(v => !isGroupPhotoVideo(v))
+      expVideos = incomingExpected
       titleAdderStore.setState({ expectedVideos: expVideos })
     } else if (!isDifferentBatch && initialStore.expectedVideos && initialStore.expectedVideos.length > 0) {
       expVideos = initialStore.expectedVideos
@@ -1969,7 +1972,7 @@ export default function TitleAdder(): JSX.Element {
       if (expSet) {
         try {
           const fallbackVideos = await api.titleAdder.listVideos(cleanPath)
-          const validFallbacks = (fallbackVideos || []).filter((v: string) => !v.toLowerCase().endsWith('.tmp') && !v.toLowerCase().endsWith('.temp') && !isGroupPhotoVideo(v))
+          const validFallbacks = (fallbackVideos || []).filter((v: string) => !v.toLowerCase().endsWith('.tmp') && !v.toLowerCase().endsWith('.temp'))
           if (validFallbacks.length > 0) {
             console.log('[TitleAdder] expSet filtered all videos to 0, falling back to all valid videos found in cleanPath:', validFallbacks)
             videos = validFallbacks
@@ -2146,6 +2149,7 @@ export default function TitleAdder(): JSX.Element {
       const res = await api.titleAdder.previewAudioAssignments({
         mode: 'batch',
         batchSource: cleanPath,
+        batchSources: [cleanPath],
         videoFiles: videos
       })
 
@@ -2202,12 +2206,56 @@ export default function TitleAdder(): JSX.Element {
           type: 'info'
         })
       } else {
-        setIsAudioModalOpen(true)
+        // Fallback: build preview assignments directly from resolved videos so popup is never blank
+        const fallbackAssignments = (videos || []).map(v => {
+          const cleanBase = v.split(/[\\/]/).pop() || v
+          const prefix = getPrefix(cleanBase) || 'OTHER'
+          const vPath = (v.includes('/') || v.includes('\\')) ? v : [cleanPath, v].join('/')
+          return {
+            videoPath: vPath,
+            videoName: cleanBase,
+            prefix,
+            defaultAudioPath: '',
+            defaultAudioName: 'None',
+            defaultTitleImagePath: '',
+            defaultTitleImageName: 'No title image',
+            isNikah: prefix.toUpperCase() === 'N',
+            isSpecialWaazId: false
+          }
+        })
+        if (fallbackAssignments.length > 0) {
+          setAudioPreviewAssignments(fallbackAssignments)
+          setIsAudioModalOpen(true)
+          showToast({
+            title: '🎬 Batch Ready for Review',
+            message: `Loaded ${fallbackAssignments.length} videos. Confirm settings and click Start.`,
+            type: 'info'
+          })
+        }
       }
     } catch (err: any) {
       console.warn('Error previewing audio assignments on AME signal:', err)
       if (await executeAutoRender(videos)) return
-      setIsAudioModalOpen(true)
+      const fallbackAssignments = (videos || []).map(v => {
+        const cleanBase = v.split(/[\\/]/).pop() || v
+        const prefix = getPrefix(cleanBase) || 'OTHER'
+        const vPath = (v.includes('/') || v.includes('\\')) ? v : [cleanPath, v].join('/')
+        return {
+          videoPath: vPath,
+          videoName: cleanBase,
+          prefix,
+          defaultAudioPath: '',
+          defaultAudioName: 'None',
+          defaultTitleImagePath: '',
+          defaultTitleImageName: 'No title image',
+          isNikah: prefix.toUpperCase() === 'N',
+          isSpecialWaazId: false
+        }
+      })
+      if (fallbackAssignments.length > 0) {
+        setAudioPreviewAssignments(fallbackAssignments)
+        setIsAudioModalOpen(true)
+      }
     } finally {
       autoRenderLockRef.current = false
     }
@@ -2735,8 +2783,8 @@ export default function TitleAdder(): JSX.Element {
             apiInst.settings.setAndSave('last_output_adder', outDir).catch(() => {})
           }
           const effectiveSources = (batchSources && batchSources.length > 0) ? batchSources : Object.keys(d.batchOutputs || {})
-          syncBatchesToConverter(effectiveSources, outDir, d.batchOutputs)
-          window.dispatchEvent(new CustomEvent('refresh-converter-paths', { detail: { outputFolder: outDir, batchOutputs: d.batchOutputs } }))
+          const syncedPairs = syncBatchesToConverter(effectiveSources, outDir, d.batchOutputs)
+          window.dispatchEvent(new CustomEvent('refresh-converter-paths', { detail: { batchPairs: syncedPairs, outputFolder: outDir, batchOutputs: d.batchOutputs } }))
         }
 
         // Desktop Notification

@@ -2,7 +2,6 @@ import { ipcMain, BrowserWindow } from 'electron'
 import fs from 'fs'
 import path from 'path'
 import { getFfmpegExePath } from '../core/gpuDetector'
-import { isGroupPhotoVideo } from './titleAdder.ipc'
 import { getSharp } from '../core/sharpHelper'
 
 type WinGetter = () => BrowserWindow | null
@@ -50,24 +49,27 @@ export function resolveVideoFiles(folder: string): { dir: string; videos: VideoF
   let clean = cleanPath(folder)
   if (!clean || !fs.existsSync(clean)) return { dir: clean, videos: [] }
 
-  // If clean is a directory, check if it contains a 'Final' or 'Final Titles' subfolder where rendered videos live
+  // If clean is a directory, check if it contains a 'DVD', 'Final', or 'Final Titles' subfolder where rendered videos live
   try {
     if (fs.statSync(clean).isDirectory()) {
-      const finalCandidates = ['Final', 'final', 'FINAL', 'Final Titles', 'final titles', 'FINAL TITLES']
-      for (const cand of finalCandidates) {
-        const subFinal = path.join(clean, cand)
-        if (fs.existsSync(subFinal)) {
+      const candidateSubfolders = [
+        'DVD', 'dvd', 'Dvd',
+        'Final', 'final', 'FINAL',
+        'Final Titles', 'final titles', 'FINAL TITLES'
+      ]
+      for (const cand of candidateSubfolders) {
+        const subCand = path.join(clean, cand)
+        if (fs.existsSync(subCand)) {
           try {
-            if (fs.statSync(subFinal).isDirectory()) {
-              const subEntries = fs.readdirSync(subFinal)
+            if (fs.statSync(subCand).isDirectory()) {
+              const subEntries = fs.readdirSync(subCand)
               const hasVideos = subEntries.some(f => 
                 !f.startsWith('.') && 
                 !f.toLowerCase().includes('_temp_') && 
-                !isGroupPhotoVideo(f) &&
                 VIDEO_EXTS.includes(path.extname(f).toLowerCase())
               )
               if (hasVideos) {
-                clean = subFinal
+                clean = subCand
                 break
               }
             }
@@ -86,7 +88,6 @@ export function resolveVideoFiles(folder: string): { dir: string; videos: VideoF
       if (ent.isFile() && 
           !ent.name.startsWith('.') && 
           !ent.name.toLowerCase().includes('_temp_') && 
-          !isGroupPhotoVideo(ent.name) &&
           VIDEO_EXTS.includes(path.extname(ent.name).toLowerCase())) {
         results.push({
           fileName: ent.name,
@@ -98,24 +99,29 @@ export function resolveVideoFiles(folder: string): { dir: string; videos: VideoF
 
     // 2. Only look in 1-level deep subdirectories if no direct video files were found
     if (results.length === 0) {
-      const IGNORE_SUBDIRS = new Set(['dvd', 'converted_jpegs', 'thumbnails', 'temp', 'tmp', '.git', '$recycle.bin'])
+      const IGNORE_SUBDIRS = new Set(['converted_jpegs', 'thumbnails', 'temp', 'tmp', '.git', '$recycle.bin'])
       for (const ent of entries) {
         if (ent.isDirectory() && !ent.name.startsWith('.') && !IGNORE_SUBDIRS.has(ent.name.toLowerCase())) {
           const subPath = path.join(clean, ent.name)
           try {
             const subEntries = fs.readdirSync(subPath, { withFileTypes: true })
+            const foundInSub: VideoFileInfo[] = []
             for (const subEnt of subEntries) {
               if (subEnt.isFile() && 
                   !subEnt.name.startsWith('.') && 
                   !subEnt.name.toLowerCase().includes('_temp_') && 
-                  !isGroupPhotoVideo(subEnt.name) &&
                   VIDEO_EXTS.includes(path.extname(subEnt.name).toLowerCase())) {
-                results.push({
+                foundInSub.push({
                   fileName: subEnt.name,
                   fullPath: path.join(subPath, subEnt.name),
                   dir: subPath
                 })
               }
+            }
+            if (foundInSub.length > 0) {
+              results.push(...foundInSub)
+              clean = subPath
+              break
             }
           } catch {}
         }

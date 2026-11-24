@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">One Tap Studio</string>
+    <string name="dashboard_title">Dashboard</string>
+    <string name="kanban_title">Pipeline</string>
+    <string name="photos_title">Photo Tracker</string>
+    <string name="campaign_title">Safar Mubaraka</string>
+</resources>

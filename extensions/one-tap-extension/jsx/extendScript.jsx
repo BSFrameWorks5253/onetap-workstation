@@ -77,12 +77,8 @@ $.runScript.getMarkerNames = function() {
         var mScan = markers.getFirstMarker();
         while (mScan) {
             var mNm = mScan.name || '';
-            var mCmt = mScan.comments || '';
-            var isGp = isGroupPhotoName(mNm) || (mCmt.indexOf("OT_GP_INSERTED") !== -1) || (/ - (?:GP\s*\d+|Group\s*Photo)/i.test(mNm));
-            if (!isGp) {
-                var mStart = (mScan.start && !isNaN(Number(mScan.start.seconds))) ? Number(mScan.start.seconds) : 0;
-                markerItems.push({ obj: mScan, name: mNm, startSec: mStart });
-            }
+            var mStart = (mScan.start && !isNaN(Number(mScan.start.seconds))) ? Number(mScan.start.seconds) : 0;
+            markerItems.push({ obj: mScan, name: mNm, startSec: mStart });
             mScan = markers.getNextMarker(mScan);
         }
         markerItems.sort(function (a, b) { return a.startSec - b.startSec; });
@@ -385,24 +381,13 @@ $.runScript.autoInOutMarkers = function (userChoice, addSeqPrefix) {
                     try { cIdx = m.getColorByIndex(0); } catch (eColor) { cIdx = 5; }
                 }
 
-                if (isGroupPhotoName(mName)) {
-                    // Group Photo markers (GP1, GROUP_PHOTO_1, etc.) must NEVER be treated as video separation markers!
-                    gpMarkersToPreserve.push({
-                        name: mName,
-                        startSec: mStart,
-                        endSec: mEnd,
-                        comment: (m.comments !== undefined ? m.comments : ""),
-                        colorIndex: cIdx
-                    });
-                } else {
-                    list.push({
-                        obj: m,
-                        name: mName,
-                        startSec: mStart,
-                        comment: (m.comments !== undefined ? m.comments : ""),
-                        colorIndex: cIdx
-                    });
-                }
+                list.push({
+                    obj: m,
+                    name: mName,
+                    startSec: mStart,
+                    comment: (m.comments !== undefined ? m.comments : ""),
+                    colorIndex: cIdx
+                });
             } catch (e) {
                 list.push({ obj: m, name: "", startSec: 0, comment: "", colorIndex: 5 });
             }
@@ -875,12 +860,8 @@ $.runScript.autoMEIO = function (selectedMarkersStr, explicitExtOrPresetPath) {
         var mScan = markers.getFirstMarker();
         while (mScan) {
             var mNm = mScan.name || '';
-            var mCmt = mScan.comments || '';
-            var isGp = isGroupPhotoName(mNm) || (mCmt.indexOf("OT_GP_INSERTED") !== -1) || (/ - (?:GP\s*\d+|Group\s*Photo)/i.test(mNm));
-            if (!isGp) {
-                var mStart = (mScan.start && !isNaN(Number(mScan.start.seconds))) ? Number(mScan.start.seconds) : 0;
-                markerItems.push({ obj: mScan, name: mNm, startSec: mStart });
-            }
+            var mStart = (mScan.start && !isNaN(Number(mScan.start.seconds))) ? Number(mScan.start.seconds) : 0;
+            markerItems.push({ obj: mScan, name: mNm, startSec: mStart });
             mScan = markers.getNextMarker(mScan);
         }
         markerItems.sort(function (a, b) { return a.startSec - b.startSec; });
@@ -1452,12 +1433,8 @@ $.runScript.legacy_autoMEIO = function (selectedMarkersStr, explicitExtOrPresetP
         var mScan = markers.getFirstMarker();
         while (mScan) {
             var mNm = mScan.name || '';
-            var mCmt = mScan.comments || '';
-            var isGp = isGroupPhotoName(mNm) || (mCmt.indexOf("OT_GP_INSERTED") !== -1) || (/ - (?:GP\s*\d+|Group\s*Photo)/i.test(mNm));
-            if (!isGp) {
-                var mStart = (mScan.start && !isNaN(Number(mScan.start.seconds))) ? Number(mScan.start.seconds) : 0;
-                markerItems.push({ obj: mScan, name: mNm, startSec: mStart });
-            }
+            var mStart = (mScan.start && !isNaN(Number(mScan.start.seconds))) ? Number(mScan.start.seconds) : 0;
+            markerItems.push({ obj: mScan, name: mNm, startSec: mStart });
             mScan = markers.getNextMarker(mScan);
         }
         markerItems.sort(function (a, b) { return a.startSec - b.startSec; });

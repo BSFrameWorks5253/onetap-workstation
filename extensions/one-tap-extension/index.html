@@ -1879,6 +1879,7 @@
         }
 
         function switchTab(tabId) {
+            if (tabId !== 'batch' && tabId !== 'custom') tabId = 'batch';
             var tabs = document.querySelectorAll('.tab-btn');
             var pages = document.querySelectorAll('.tab-page');
             for (var i = 0; i < tabs.length; i++) {
@@ -1892,9 +1893,6 @@
             if (activeTab) activeTab.classList.add('active');
             if (activePage) activePage.classList.add('active');
             fetchTimelineStats();
-            if (tabId === 'gp') {
-                if (typeof gpiState !== 'undefined' && gpiState.gpSources.length === 0) gpiScan();
-            }
         }
 
         // ── GROUP PHOTO INSERTER — JS Logic ──────────────────────────────────────
@@ -3373,7 +3371,6 @@
             <div class="tab-bar">
                 <button id="tab-batch" class="tab-btn active" onclick="switchTab('batch')">⚡ <span class="tab-label">Batch</span></button>
                 <button id="tab-custom" class="tab-btn" onclick="switchTab('custom')">🎯 <span class="tab-label">Custom</span></button>
-                <button id="tab-gp" class="tab-btn" onclick="switchTab('gp')">📸 <span class="tab-label">Group Photo</span></button>
             </div>
 
             <!-- Scrollable Middle Viewport (Zero-clip in any panel size) -->
@@ -3499,92 +3496,6 @@
                 </div>
             </div>
 
-            <!-- TAB 3: GROUP PHOTO INSERTER (DEDICATED TAB) -->
-            <div id="page-gp" class="tab-page">
-                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px; flex-shrink:0;">
-                    <div style="font-size:10px; font-weight:750; color:var(--text-secondary);">💍 Group Photo Inserter</div>
-                    <div style="display:flex; gap:4px; align-items:center;">
-                        <button class="locate-xml-btn" onclick="gpiClearGpMarkers()" title="Delete ONLY Group Photo recognition markers from active sequence (keeps all Nikaah markers intact)" style="border-color:rgba(239, 68, 68, 0.4); color:var(--danger); background:rgba(239, 68, 68, 0.08);">
-                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                            Delete GP Markers
-                        </button>
-                        <button class="locate-xml-btn" onclick="gpiScan()" title="Scan active sequence for Group Photo sources and Nikaah markers">
-                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                            Scan Sequence
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Scan Results -->
-                <div id="gpiScanResults" style="flex-shrink:0;">
-                    <div class="gpi-empty-box">Click "Scan Sequence" to detect Group Photo sources and Nikaah markers.<br><br><span style="font-size:9px;opacity:0.7;">Identifies markers like <b>01N</b>, <b>GROUP_PHOTO_1</b>, Mango/Lavender clips, or timeline selections.</span></div>
-                </div>
-
-                <!-- Quick Clip Marker Adder: Enter clip name/number to create GP marker without coloring clips -->
-                <div class="gpi-quick-mark-box" style="flex-shrink:0; margin-top:4px;">
-                    <div class="gpi-section-label" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3px;">
-                        <span>Mark Clip as GP (Skip manual coloring)</span>
-                    </div>
-                    <div style="display:flex; gap:3px; align-items:center;">
-                        <input id="gpiQuickClipInp" type="text" class="gpi-clip-input" placeholder="Clip Name/Number (e.g. 01W, 1448...)" list="gpiClipSuggestions" autocomplete="off" style="flex:1;">
-                        <select id="gpiQuickGpSelect" class="gpi-num-input" style="width:54px; font-weight:700; font-size:9px; height:24px; padding:1px 2px;">
-                            <option value="1">GP 1</option>
-                            <option value="2">GP 2</option>
-                            <option value="3">GP 3</option>
-                            <option value="4">GP 4</option>
-                            <option value="5">GP 5</option>
-                        </select>
-                        <button class="gpi-pick-btn" onclick="gpiPickQuickClip()" title="Pick currently selected timeline clip">
-                            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg> Pick
-                        </button>
-                        <button class="gpi-mark-btn" onclick="gpiAddGpMarkerFromQuick()" title="Create GROUP_PHOTO marker on timeline at this clip">
-                            📍 Mark GP
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Step 1: Assignment Builder -->
-                <div style="flex-shrink:0; margin-top:4px;">
-                    <div class="gpi-section-label">Step 1: Enter Clip Name &amp; Nikaah Range</div>
-                    <datalist id="gpiClipSuggestions"></datalist>
-                    <div id="gpiAssignmentList" class="gpi-assignment-list"></div>
-                    <button class="gpi-add-btn" onclick="gpiAddAssignment()">＋ Add Assignment</button>
-                </div>
-
-                <!-- Step 2 & 3: Action Buttons & Target Track -->
-                <div class="gpi-track-select-row" style="display:flex; align-items:center; justify-content:space-between; margin-top:6px; margin-bottom:2px; font-size:10px;">
-                    <span style="font-weight:700; color:var(--text-secondary);">Target Video Track:</span>
-                    <select id="gpiTargetTrack" class="gpi-num-input" style="width:160px; height:24px; font-size:10px; font-weight:600; padding:1px 4px;">
-                        <option value="auto">Auto (Safe Non-Destructive)</option>
-                        <option value="1">Track V2 (Overlay / Safe)</option>
-                        <option value="0">Track V1 (Direct Overwrite)</option>
-                        <option value="2">Track V3</option>
-                    </select>
-                </div>
-                <div class="gpi-track-select-row" style="display:flex; align-items:center; justify-content:space-between; margin-top:3px; margin-bottom:3px; font-size:10px;">
-                    <span style="font-weight:700; color:var(--text-secondary);">Audio Channels:</span>
-                    <select id="gpiAudioTrack" class="gpi-num-input" style="width:160px; height:24px; font-size:10px; font-weight:600; padding:1px 4px;">
-                        <option value="single">Single Audio Track (Safe / A2)</option>
-                        <option value="mute">Mute / No Audio</option>
-                        <option value="stereo">Track A1/A2 Only (Stereo)</option>
-                    </select>
-                </div>
-                <div class="gpi-action-row" style="flex-shrink:0; margin-top:4px;">
-                    <button class="gpi-action-btn preview" onclick="gpiPreview()" title="Preview planned group photo overwrite assignments">
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="vertical-align:middle;margin-right:3px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                        Preview
-                    </button>
-                    <button class="gpi-action-btn execute" onclick="gpiPreviewAndExecute()" title="Cleanly overwrite clips onto timeline without rippling">
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="vertical-align:middle;margin-right:3px;"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                        Execute
-                    </button>
-                    <button id="gpiUndoBtn" class="gpi-action-btn undo" onclick="gpiUndo()" title="One-step Undo: Restore timeline exactly to state before assignment" disabled>
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:3px;"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
-                        Undo
-                    </button>
-                </div>
-            </div>
-
             </div><!-- /panel-scroll-area -->
 
             <!-- Floating Status Toast Banner -->
@@ -3690,25 +3601,6 @@
     </div>
 
     
-    </div>
-
-    <!-- Group Photo Inserter Preview Modal -->
-    <div id="gpPreviewModal" class="modal-overlay">
-        <div class="modal-content" style="max-height:85vh; display:flex; flex-direction:column;">
-            <div class="modal-header-row">
-                <span class="modal-header-title">📸 Group Photo Insertion Plan</span>
-                <span class="modal-badge" style="background:var(--accent-soft); color:var(--accent);">Review Plan</span>
-            </div>
-
-            <div id="gpPreviewStats" class="gp-stats-row"></div>
-            <div id="gpPreviewWarnings" class="gpi-warn-box" style="display:none;"></div>
-            <div id="gpPreviewList" class="gp-preview-list"></div>
-
-            <div class="modal-footer" style="margin-top:8px;">
-                <button type="button" onclick="document.getElementById('gpPreviewModal').classList.remove('active')">Cancel</button>
-                <button type="button" class="primary" onclick="gpiExecuteFromModal()">Execute Overwrite</button>
-            </div>
-        </div>
     </div>
 
 </body>

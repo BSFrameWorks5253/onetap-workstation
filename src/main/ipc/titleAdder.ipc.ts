@@ -1455,8 +1455,23 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
 
     let videos: string[] = []
     if (params.videoFiles && params.videoFiles.length > 0) {
-      videos = params.videoFiles.filter(f => fs.existsSync(f))
-    } else if (params.mode === 'batch' && batchSources.length > 0) {
+      // Resolve any filenames / relative paths to their full absolute paths
+      const { dir: resolvedDir } = primarySource ? resolveVideoFolderAndFiles(primarySource) : { dir: '' }
+      videos = params.videoFiles.map(f => {
+        if (!f) return ''
+        if (fs.existsSync(f)) return f
+        if (resolvedDir && fs.existsSync(path.join(resolvedDir, f))) return path.join(resolvedDir, f)
+        if (primarySource && fs.existsSync(path.join(primarySource, f))) return path.join(primarySource, f)
+        for (const s of batchSources) {
+          if (fs.existsSync(path.join(s, f))) return path.join(s, f)
+          const { dir: sDir } = resolveVideoFolderAndFiles(s)
+          if (sDir && fs.existsSync(path.join(sDir, f))) return path.join(sDir, f)
+        }
+        return f
+      }).filter(f => f && fs.existsSync(f))
+    }
+
+    if (videos.length === 0 && (params.mode === 'batch' || batchSources.length > 0)) {
       for (const src of batchSources) {
         const bVids = getBatchVideos(src)
         for (const bv of bVids) {
@@ -1465,10 +1480,9 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
           }
         }
       }
-    } else {
-      videos = params.videoFiles ?? []
+    } else if (videos.length === 0 && params.videoFiles && params.videoFiles.length > 0) {
+      videos = params.videoFiles.filter(Boolean)
     }
-    videos = videos.filter(v => !isGroupPhotoVideo(v))
 
     const special1Path = getSpecial1AudioPath(titlesFolder)
     let normalIdx = 0
