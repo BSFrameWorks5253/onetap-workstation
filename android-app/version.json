@@ -1,7 +1,7 @@
 {
-  "version": "26.11.44",
-  "versionCode": 261144,
+  "version": "26.11.45",
+  "versionCode": 261145,
   "releaseDate": "2026-11-24",
-  "downloadUrl": "https://github.com/BSFrameWorks5253/onetap-workstation/releases/download/v26.11.44/OneTapStudio-v26.11.44.apk",
-  "changelog": "Autonomous release build v26.11.44. Cloud Database Sync & Auto-Update Engine active."
+  "downloadUrl": "https://github.com/BSFrameWorks5253/onetap-workstation/releases/download/v26.11.45/OneTapStudio-v26.11.45.apk",
+  "changelog": "Autonomous release build v26.11.45. Cloud Database Sync & Auto-Update Engine active."
 }
