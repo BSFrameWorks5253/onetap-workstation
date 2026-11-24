@@ -16,6 +16,7 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
     data object Analytics : Screen("analytics", "Analytics", Icons.Default.BarChart)
 
     companion object {
-        val items = listOf(Dashboard, Kanban, PhotoTracker, Radar, Analytics)
+        val items: List<Screen>
+            get() = listOf(Dashboard, Kanban, PhotoTracker, Radar, Analytics)
     }
 }
