@@ -1,5 +1,13 @@
 [
   {
+    "version": "26.11.43",
+    "date": "2026-11-24",
+    "whats_new": "* Refined TrayDock Visual Elevation: Modernized the background render dock card with accent-tinted icon containers, live status indicator pills (LIVE / SYNC), and high-contrast typography.\n* Structured Meta Chips: Converted inline video count, render speed, and ETA metrics into clear, individually styled chips with icons (📹, ⚡, ⏱️).\n* Flawless Theme & Watermark Contrast: Guaranteed pristine readability and zero washed-out text across all workstation color schemes and patterned backgrounds.",
+    "release_notes": "One Tap v26.11.43 redesigns the background TrayDock widget with theme-adaptive high-contrast typography, live status badge pills, icon pill styling, and structured metadata chips.",
+    "bugs_fixed": "* Fixed washed-out rendering status text in floating TrayDock.\n* Improved spacing, icon alignment, and click-to-navigate affordance.",
+    "improvements": "* High-contrast live rendering dock with theme-reactive tokens and crisp metadata chips."
+  },
+  {
     "version": "26.11.42",
     "date": "2026-11-24",
     "whats_new": "* Permanent Title Card Thumbnail for Windows Explorer: Embedded the title card graphic as an official container attached_pic stream into MP4 outputs, guaranteeing Windows File Explorer, macOS Finder, and mobile devices always display the added 1-3s title card as the file's thumbnail icon.\n* Interactive 1-3s Video Opening Frame Preview: Integrated real-time video thumbnail previews directly inside the Title Adder pre-flight table, showing the exact 1-3s frame captured by Windows Explorer with instant click-to-zoom lightbox inspection.\n* Non-blocking Async Thumbnail Cache: Employs persistent disk and in-memory thumbnail caching, preventing UI micro-stutters during 50+ video batch reviews.",

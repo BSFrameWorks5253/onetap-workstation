@@ -37,11 +37,19 @@ export default function TrayDock({ adderJob, syncJob, prprojJob, onNavigate }: T
     <div className="tray-dock anim-slide-in-up">
       {/* Video Render Active Job */}
       {showAdder && (
-        <div className="tray-card tray-card--adder" onClick={() => onNavigate('adder')}>
+        <div className="tray-card tray-card--adder" onClick={() => onNavigate('adder')} title="Click to view Title Adder workstation">
           <div className="tray-header">
-            <span className="tray-icon"><PageIcon pageKey="adder" size={18} color="var(--accent-adder)" /></span>
-            <span className="tray-title">Title Adder Active</span>
-            <span className="tray-pulse" />
+            <div className="tray-icon-box">
+              <PageIcon pageKey="adder" size={17} color="var(--accent-adder, #6366f1)" />
+            </div>
+            <div className="tray-header-info">
+              <span className="tray-title">Title Adder Active</span>
+              <span className="tray-subtitle">Rendering queue in background</span>
+            </div>
+            <div className="tray-status-badge">
+              <span className="tray-pulse" />
+              <span className="tray-status-text">LIVE</span>
+            </div>
           </div>
           <div className="tray-progress-wrap">
             <div className="tray-progress-bar">
@@ -50,20 +58,38 @@ export default function TrayDock({ adderJob, syncJob, prprojJob, onNavigate }: T
             <span className="tray-percent">{Math.round(adderJob.progress)}%</span>
           </div>
           <div className="tray-meta">
-            <span>{adderJob.done} / {adderJob.total || '?'} videos</span>
-            {adderJob.speed && <span>· Speed: {adderJob.speed}</span>}
-            {adderJob.eta && <span>· ETA: {adderJob.eta}</span>}
+            <span className="tray-meta-chip">
+              📹 {adderJob.done} / {adderJob.total || '?'} videos
+            </span>
+            {adderJob.speed && (
+              <span className="tray-meta-chip">
+                ⚡ {adderJob.speed}
+              </span>
+            )}
+            {adderJob.eta && (
+              <span className="tray-meta-chip">
+                ⏱️ {adderJob.eta}
+              </span>
+            )}
           </div>
         </div>
       )}
 
       {/* Premiere Project Generator Active Job */}
       {showPrproj && (
-        <div className="tray-card tray-card--prproj" onClick={() => onNavigate('prproj')}>
+        <div className="tray-card tray-card--prproj" onClick={() => onNavigate('prproj')} title="Click to view Premiere Generator">
           <div className="tray-header">
-            <span className="tray-icon"><PageIcon pageKey="prproj" size={18} color="var(--accent-adder, #6366f1)" /></span>
-            <span className="tray-title">Sequence Generator Active</span>
-            <span className="tray-pulse" />
+            <div className="tray-icon-box">
+              <PageIcon pageKey="prproj" size={17} color="var(--accent-adder, #6366f1)" />
+            </div>
+            <div className="tray-header-info">
+              <span className="tray-title">Sequence Generator Active</span>
+              <span className="tray-subtitle">Building Premiere project</span>
+            </div>
+            <div className="tray-status-badge">
+              <span className="tray-pulse" />
+              <span className="tray-status-text">LIVE</span>
+            </div>
           </div>
           <div className="tray-progress-wrap">
             <div className="tray-progress-bar">
@@ -72,18 +98,28 @@ export default function TrayDock({ adderJob, syncJob, prprojJob, onNavigate }: T
             <span className="tray-percent">{Math.round(prprojJob.progress)}%</span>
           </div>
           <div className="tray-meta">
-            <span>{prprojJob.status || 'Generating sequence timelines...'}</span>
+            <span className="tray-meta-chip">
+              📁 {prprojJob.status || 'Generating sequence timelines...'}
+            </span>
           </div>
         </div>
       )}
 
       {/* Drive Sync Active Job */}
       {showSync && (
-        <div className="tray-card tray-card--sync" onClick={() => onNavigate('drivesync')}>
+        <div className="tray-card tray-card--sync" onClick={() => onNavigate('drivesync')} title="Click to view Drive Sync">
           <div className="tray-header">
-            <span className="tray-icon"><PageIcon pageKey="drivesync" size={18} color="var(--accent-drivesync, #10b981)" /></span>
-            <span className="tray-title">Drive Sync Active</span>
-            <span className="tray-pulse" />
+            <div className="tray-icon-box">
+              <PageIcon pageKey="drivesync" size={17} color="var(--accent-drivesync, #10b981)" />
+            </div>
+            <div className="tray-header-info">
+              <span className="tray-title">Drive Sync Active</span>
+              <span className="tray-subtitle">Syncing files with cloud</span>
+            </div>
+            <div className="tray-status-badge">
+              <span className="tray-pulse" />
+              <span className="tray-status-text">SYNC</span>
+            </div>
           </div>
           <div className="tray-progress-wrap">
             <div className="tray-progress-bar">
@@ -92,8 +128,14 @@ export default function TrayDock({ adderJob, syncJob, prprojJob, onNavigate }: T
             <span className="tray-percent">{Math.round(syncJob.progress)}%</span>
           </div>
           <div className="tray-meta">
-            <span>{syncJob.done} / {syncJob.total || '?'} files</span>
-            {syncJob.speed && <span>· {syncJob.speed}</span>}
+            <span className="tray-meta-chip">
+              ☁️ {syncJob.done} / {syncJob.total || '?'} files
+            </span>
+            {syncJob.speed && (
+              <span className="tray-meta-chip">
+                ⚡ {syncJob.speed}
+              </span>
+            )}
           </div>
         </div>
       )}
