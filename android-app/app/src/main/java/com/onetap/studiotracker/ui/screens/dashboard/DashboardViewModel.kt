@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 enum class BriefingMode {
     TEXT,
@@ -34,6 +35,14 @@ class DashboardViewModel(
     val stats: StateFlow<StudioStats> = repository.campaigns.map {
         StudioStats.calculate(it)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), StudioStats())
+
+    val syncState = repository.syncState
+
+    fun triggerManualSync() {
+        viewModelScope.launch {
+            repository.triggerCloudSync()
+        }
+    }
 
     private val _isBriefingSheetOpen = MutableStateFlow(false)
     val isBriefingSheetOpen: StateFlow<Boolean> = _isBriefingSheetOpen.asStateFlow()

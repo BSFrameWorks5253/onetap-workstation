@@ -87,6 +87,7 @@ fun DashboardScreen(
     val isBriefingOpen by viewModel.isBriefingSheetOpen.collectAsState()
     val selectedCampaign by viewModel.selectedBriefingCampaign.collectAsState()
     val briefingMode by viewModel.briefingMode.collectAsState()
+    val syncState by viewModel.syncState.collectAsState()
 
     Box(
         modifier = modifier
@@ -153,12 +154,17 @@ fun DashboardScreen(
                         }
                     }
 
-                    // Live Sync Pill
+                    // Cloud DB Realtime Sync Pill
+                    val isSyncing = syncState.status == com.onetap.studiotracker.data.sync.SyncStatus.SYNCING
+                    val isConnected = syncState.status == com.onetap.studiotracker.data.sync.SyncStatus.CONNECTED
+                    val pillColor = if (isConnected) EmeraldSuccess else if (isSyncing) Color(0xFF38BDF8) else Color(0xFFF59E0B)
+
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(20.dp))
                             .background(DarkSurfaceElevated)
                             .border(1.dp, DarkBorder, RoundedCornerShape(20.dp))
+                            .clickable { viewModel.triggerManualSync() }
                             .padding(horizontal = 10.dp, vertical = 5.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -166,12 +172,12 @@ fun DashboardScreen(
                                 modifier = Modifier
                                     .size(7.dp)
                                     .clip(CircleShape)
-                                    .background(EmeraldSuccess)
+                                    .background(pillColor)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = "Live Sync",
-                                color = EmeraldSuccess,
+                                text = if (isSyncing) "Syncing..." else if (isConnected) "DB: ${syncState.latencyMs}ms" else "Offline Cache",
+                                color = pillColor,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.SemiBold
                             )

@@ -8,12 +8,15 @@ android {
     namespace = "com.onetap.studiotracker"
     compileSdk = 34
 
+    val appVersionName = project.findProperty("versionName") as? String ?: "26.11.1"
+    val appVersionCode = (project.findProperty("versionCode") as? String)?.toIntOrNull() ?: 261101
+
     defaultConfig {
         applicationId = "com.onetap.studiotracker"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = appVersionCode
+        versionName = appVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -67,6 +70,10 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.navigation:navigation-compose:2.7.7")
+
+    // Networking & OkHttp
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 
     // Image loading
     implementation("io.coil-kt:coil-compose:2.6.0")
