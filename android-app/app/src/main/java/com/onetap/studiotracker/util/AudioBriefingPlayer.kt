@@ -11,7 +11,11 @@ import java.util.Locale
 
 class AudioBriefingPlayer(context: Context) : TextToSpeech.OnInitListener {
 
-    private var tts: TextToSpeech? = TextToSpeech(context.applicationContext, this)
+    private var tts: TextToSpeech? = try {
+        TextToSpeech(context.applicationContext, this)
+    } catch (_: Throwable) {
+        null
+    }
     private var isInitialized = false
 
     private val _isPlaying = MutableStateFlow(false)

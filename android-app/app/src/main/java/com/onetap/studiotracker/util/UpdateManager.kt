@@ -37,10 +37,24 @@ object UpdateManager {
         .readTimeout(12, TimeUnit.SECONDS)
         .build()
 
-    suspend fun checkForUpdates(): Result<AppUpdateInfo> = withContext(Dispatchers.IO) {
+    fun getInstalledVersion(context: Context? = null): String {
+        return try {
+            if (context != null) {
+                val pInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+                pInfo.versionName ?: com.onetap.studiotracker.BuildConfig.VERSION_NAME
+            } else {
+                com.onetap.studiotracker.BuildConfig.VERSION_NAME
+            }
+        } catch (_: Throwable) {
+            com.onetap.studiotracker.BuildConfig.VERSION_NAME
+        }
+    }
+
+    suspend fun checkForUpdates(context: Context? = null): Result<AppUpdateInfo> = withContext(Dispatchers.IO) {
         try {
+            val installedVersion = getInstalledVersion(context)
             // First try raw version.json for instant updates
-            var version: String = CURRENT_APP_VERSION
+            var version: String = installedVersion
             var code = 261101
             var downloadUrl = ""
             var changelog = ""
@@ -51,7 +65,7 @@ object UpdateManager {
                 if (resp.isSuccessful) {
                     val body = resp.body?.string() ?: ""
                     val json = JSONObject(body)
-                    version = json.optString("version", CURRENT_APP_VERSION)
+                    version = json.optString("version", installedVersion)
                     code = json.optInt("versionCode", 261101)
                     downloadUrl = json.optString("downloadUrl", "")
                     changelog = json.optString("changelog", "Performance improvements & bug fixes.")
@@ -85,7 +99,7 @@ object UpdateManager {
                 }
             }
 
-            val isAvailable = isNewer(version, CURRENT_APP_VERSION)
+            val isAvailable = isNewer(version, installedVersion)
             Result.success(
                 AppUpdateInfo(
                     latestVersion = version,

@@ -1,7 +1,7 @@
 package com.onetap.studiotracker.data.sync
 
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonElement
 
 @Serializable
 data class RemoteSnapshotRow(
@@ -14,7 +14,7 @@ data class RemoteSnapshotRow(
 data class RemoteSnapshotPayload(
     val safars: List<RemoteSafarGroup> = emptyList(),
     val tasks: List<RemoteTaskItem> = emptyList(),
-    val stageOverrides: Map<String, String> = emptyMap(),
+    val stageOverrides: Map<String, JsonElement> = emptyMap(),
     val deletedSafars: List<String> = emptyList(),
     val deletedTasks: List<String> = emptyList(),
     val activeSafar: String? = null,
@@ -23,7 +23,7 @@ data class RemoteSnapshotPayload(
 
 @Serializable
 data class RemoteSafarGroup(
-    val safarName: String,
+    val safarName: String = "",
     val totalDays: Int = 0,
     val completedDays: Int = 0,
     val isSafarDone: Boolean = false,
@@ -33,17 +33,23 @@ data class RemoteSafarGroup(
 
 @Serializable
 data class RemoteTaskItem(
-    val id: Long? = null,
-    val safarName: String,
-    val dateFolder: String,
-    val status: String = "editing_pending",
+    val id: String? = null,
+    val safarName: String = "",
+    val dateFolder: String = "",
+    val stage: String? = null,
+    val status: String? = null,
+    val editorName: String? = null,
     val videoEditor: String? = null,
     val notes: String? = null,
     val driveFolderUrl: String? = null,
     val totalPhotos: Int = 0,
     val uploadedPhotos: Int = 0,
     val photoStage: String? = null,
-    val updatedAt: Long? = null
+    val photoUploaded: Boolean = false,
+    val photoEditorName: String? = null,
+    val hijriDate: String? = null,
+    val dueDate: String? = null,
+    val updatedAt: String? = null
 )
 
 enum class SyncStatus {

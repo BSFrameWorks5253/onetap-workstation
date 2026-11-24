@@ -47,15 +47,23 @@ fun OneTapApp() {
     var pendingUpdate by remember { mutableStateOf<AppUpdateInfo?>(null) }
 
     LaunchedEffect(Unit) {
-        // Initialize notification channel for lifetime-free render alerts
-        BatchNotificationManager.createNotificationChannel(context)
+        try {
+            // Initialize notification channel for lifetime-free render alerts
+            BatchNotificationManager.createNotificationChannel(context)
+        } catch (t: Throwable) {
+            android.util.Log.e("OneTapApp", "Notification channel initialization caught", t)
+        }
 
-        val result = UpdateManager.checkForUpdates()
-        if (result.isSuccess) {
-            val info = result.getOrNull()
-            if (info != null && info.isUpdateAvailable) {
-                pendingUpdate = info
+        try {
+            val result = UpdateManager.checkForUpdates(context)
+            if (result.isSuccess) {
+                val info = result.getOrNull()
+                if (info != null && info.isUpdateAvailable) {
+                    pendingUpdate = info
+                }
             }
+        } catch (t: Throwable) {
+            android.util.Log.e("OneTapApp", "Update check caught", t)
         }
     }
 

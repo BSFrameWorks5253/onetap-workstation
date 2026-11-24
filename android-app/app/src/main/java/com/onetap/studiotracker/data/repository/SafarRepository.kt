@@ -101,71 +101,91 @@ class SafarRepository private constructor() {
     }
 
     private fun applyCloudSnapshot(payload: RemoteSnapshotPayload) {
-        // Group remote tasks by safarName
-        val tasksBySafar = payload.tasks.groupBy { it.safarName }
-        val updatedCampaigns = mutableListOf<SafarCampaign>()
+        try {
+            // Group remote tasks by safarName
+            val tasksBySafar = payload.tasks.groupBy { it.safarName }
+            val updatedCampaigns = mutableListOf<SafarCampaign>()
 
-        tasksBySafar.forEach { (safarName, taskItems) ->
-            val safarGroup = payload.safars.firstOrNull { it.safarName == safarName }
-            val isArchived = safarGroup?.isArchived ?: false
+            tasksBySafar.forEach { (safarName, taskItems) ->
+                if (safarName.isBlank()) return@forEach
+                val safarGroup = payload.safars.firstOrNull { it.safarName == safarName }
+                val isArchived = safarGroup?.isArchived ?: false
 
-            val mappedTasks = taskItems.mapIndexed { index, item ->
-                // Check stage overrides
-                val overrideKey = "${safarName}::${item.dateFolder}"
-                val effectiveStatus = payload.stageOverrides[overrideKey] ?: item.status
+                val mappedTasks = taskItems.mapIndexed { index, item ->
+                    // Check stage overrides
+                    val overrideKey = "${safarName}::${item.dateFolder}"
+                    val overrideElem = payload.stageOverrides[overrideKey]
+                    val overrideStatus = when {
+                        overrideElem == null -> null
+                        overrideElem is kotlinx.serialization.json.JsonPrimitive -> overrideElem.content
+                        overrideElem is kotlinx.serialization.json.JsonObject -> {
+                            val stageObj = overrideElem["stage"]
+                            val statusObj = overrideElem["status"]
+                            if (stageObj is kotlinx.serialization.json.JsonPrimitive) stageObj.content
+                            else if (statusObj is kotlinx.serialization.json.JsonPrimitive) statusObj.content
+                            else null
+                        }
+                        else -> null
+                    }
+                    val effectiveStatus = overrideStatus ?: item.stage ?: item.status ?: "editing_pending"
 
-                val stage = when (effectiveStatus.lowercase()) {
-                    "aljamea_done", "jamea", "submitted" -> Stage.ALJAMEA_DONE
-                    "uploaded" -> Stage.UPLOADED
-                    "upload_pending", "review" -> Stage.UPLOAD_PENDING
-                    "in_progress", "editing" -> Stage.IN_PROGRESS
-                    else -> Stage.EDITING_PENDING
+                    val stage = when (effectiveStatus.lowercase()) {
+                        "aljamea_done", "jamea", "submitted" -> Stage.ALJAMEA_DONE
+                        "uploaded" -> Stage.UPLOADED
+                        "upload_pending", "review" -> Stage.UPLOAD_PENDING
+                        "in_progress", "editing" -> Stage.IN_PROGRESS
+                        else -> Stage.EDITING_PENDING
+                    }
+
+                    val photoStage = when (item.photoStage?.lowercase()) {
+                        "drive_uploaded", "uploaded" -> PhotoStage.DRIVE_UPLOADED
+                        "color_graded" -> PhotoStage.COLOR_GRADED
+                        "raw_sorted" -> PhotoStage.RAW_SORTED
+                        else -> if (item.uploadedPhotos >= item.totalPhotos && item.totalPhotos > 0) PhotoStage.DRIVE_UPLOADED else PhotoStage.PENDING
+                    }
+
+                    val editor = item.editorName ?: item.videoEditor ?: "One Tap Studio"
+
+                    SafarTask(
+                        id = item.id ?: "${safarName.hashCode()}-$index",
+                        campaignId = safarName,
+                        title = if (item.dateFolder.isNotBlank()) item.dateFolder else "Day ${index + 1}",
+                        hijriDate = item.hijriDate ?: "1447-06-${String.format(Locale.ROOT, "%02d", index + 1)}",
+                        gregorianDate = "2025-11-${String.format(Locale.ROOT, "%02d", index + 20)}",
+                        stage = stage,
+                        videoEditor = editor,
+                        durationMinutes = 60,
+                        driveFolderUrl = item.driveFolderUrl ?: "https://drive.google.com",
+                        totalPhotos = if (item.totalPhotos > 0) item.totalPhotos else 120,
+                        uploadedPhotos = item.uploadedPhotos,
+                        photoStage = photoStage,
+                        notes = item.notes
+                    )
                 }
 
-                val photoStage = when (item.photoStage?.lowercase()) {
-                    "drive_uploaded", "uploaded" -> PhotoStage.DRIVE_UPLOADED
-                    "color_graded" -> PhotoStage.COLOR_GRADED
-                    "raw_sorted" -> PhotoStage.RAW_SORTED
-                    else -> if (item.uploadedPhotos >= item.totalPhotos && item.totalPhotos > 0) PhotoStage.DRIVE_UPLOADED else PhotoStage.PENDING
-                }
+                val isOngoing = safarName == payload.activeSafar || (payload.activeSafar == null && updatedCampaigns.isEmpty())
 
-                SafarTask(
-                    id = item.id?.toString() ?: "${safarName.hashCode()}-$index",
-                    campaignId = safarName,
-                    title = item.dateFolder,
-                    hijriDate = "1447-06-${String.format(Locale.ROOT, "%02d", index + 1)}",
-                    gregorianDate = "2025-11-${String.format(Locale.ROOT, "%02d", index + 20)}",
-                    stage = stage,
-                    videoEditor = item.videoEditor ?: "One Tap Studio",
-                    durationMinutes = 60,
-                    driveFolderUrl = item.driveFolderUrl ?: "https://drive.google.com",
-                    totalPhotos = if (item.totalPhotos > 0) item.totalPhotos else 120,
-                    uploadedPhotos = item.uploadedPhotos,
-                    photoStage = photoStage,
-                    notes = item.notes
+                updatedCampaigns.add(
+                    SafarCampaign(
+                        id = safarName,
+                        name = safarName,
+                        location = safarGroup?.city ?: "Studio Location",
+                        isOngoing = isOngoing,
+                        isArchived = isArchived,
+                        startDate = "2025-11-20",
+                        endDate = "2025-11-27",
+                        tasks = mappedTasks
+                    )
                 )
             }
 
-            val isOngoing = safarName == payload.activeSafar || (payload.activeSafar == null && updatedCampaigns.isEmpty())
-
-            updatedCampaigns.add(
-                SafarCampaign(
-                    id = safarName,
-                    name = safarName,
-                    location = safarGroup?.city ?: "Studio Location",
-                    isOngoing = isOngoing,
-                    isArchived = isArchived,
-                    startDate = "2025-11-20",
-                    endDate = "2025-11-27",
-                    tasks = mappedTasks
-                )
-            )
-        }
-
-        if (updatedCampaigns.isNotEmpty()) {
-            _campaigns.value = updatedCampaigns
-            val currentActive = updatedCampaigns.firstOrNull { it.isOngoing } ?: updatedCampaigns.first()
-            _activeCampaignId.value = currentActive.id
+            if (updatedCampaigns.isNotEmpty()) {
+                _campaigns.value = updatedCampaigns
+                val currentActive = updatedCampaigns.firstOrNull { it.isOngoing } ?: updatedCampaigns.first()
+                _activeCampaignId.value = currentActive.id
+            }
+        } catch (t: Throwable) {
+            android.util.Log.e("SafarRepository", "Error applying cloud snapshot", t)
         }
     }
 
@@ -188,17 +208,19 @@ class SafarRepository private constructor() {
             val remoteTasks = currentCampaigns.flatMap { c ->
                 c.tasks.mapIndexed { idx, t ->
                     RemoteTaskItem(
-                        id = t.id.toLongOrNull() ?: (c.name.hashCode().toLong() + idx),
+                        id = t.id,
                         safarName = c.name,
                         dateFolder = t.title,
+                        stage = t.stage.id,
                         status = t.stage.id,
+                        editorName = t.videoEditor,
                         videoEditor = t.videoEditor,
                         notes = t.notes,
                         driveFolderUrl = t.driveFolderUrl,
                         totalPhotos = t.totalPhotos,
                         uploadedPhotos = t.uploadedPhotos,
                         photoStage = t.photoStage.id,
-                        updatedAt = t.updatedAt
+                        updatedAt = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.ROOT).format(Date(t.updatedAt))
                     )
                 }
             }
