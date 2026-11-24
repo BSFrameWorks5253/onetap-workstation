@@ -503,3 +503,11 @@ fun CampaignRowCard(
         }
     }
 }
+
+@androidx.compose.ui.tooling.preview.Preview(showBackground = true, backgroundColor = 0xFF0F172A)
+@Composable
+fun DashboardScreenPreview() {
+    com.onetap.studiotracker.ui.theme.OneTapStudioTheme {
+        DashboardScreen(onNavigateKanban = {})
+    }
+}

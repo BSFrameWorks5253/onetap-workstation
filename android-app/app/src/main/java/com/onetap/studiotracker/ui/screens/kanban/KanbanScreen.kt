@@ -409,3 +409,11 @@ fun KanbanTaskCard(
         }
     }
 }
+
+@androidx.compose.ui.tooling.preview.Preview(showBackground = true, backgroundColor = 0xFF0F172A)
+@Composable
+fun KanbanScreenPreview() {
+    com.onetap.studiotracker.ui.theme.OneTapStudioTheme {
+        KanbanScreen()
+    }
+}

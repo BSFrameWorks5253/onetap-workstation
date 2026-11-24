@@ -413,3 +413,11 @@ fun IngestRadarScreen(
         }
     }
 }
+
+@androidx.compose.ui.tooling.preview.Preview(showBackground = true, backgroundColor = 0xFF0F172A)
+@Composable
+fun IngestRadarScreenPreview() {
+    com.onetap.studiotracker.ui.theme.OneTapStudioTheme {
+        IngestRadarScreen()
+    }
+}
