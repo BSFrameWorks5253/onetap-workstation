@@ -47,7 +47,6 @@ import SafarBriefingView from './components/SafarBriefingView'
 import WorkstationStatsView from './components/WorkstationStatsView'
 import AppLoader from './components/AppLoader'
 import WhatsAppBriefingModal from './components/WhatsAppBriefingModal'
-import MobileSimulatorModal from './components/MobileSimulatorModal'
 import {
   sendWhatsAppAlert,
   getStoredAuthUser,
@@ -146,7 +145,7 @@ type SafarSummary = {
   archivePriorStages?: Record<string, Stage>
   updatedAt?: string
 }
-export type Snapshot = {
+type Snapshot = {
   tasks: SafarTask[]
   folders: string[]
   safars: SafarSummary[]
@@ -156,7 +155,7 @@ export type Snapshot = {
   updatedAt: string
   source?: string
 }
-export type SafarGroup = SafarSummary & {
+type SafarGroup = SafarSummary & {
   tasks: SafarTask[]
   total: number
   completed: number
@@ -1176,13 +1175,6 @@ export default function App(): JSX.Element {
 
   const [showScriptableGuide, setShowScriptableGuide] = useState(false)
   const [briefingModalState, setBriefingModalState] = useState<{ safarName: string; initialTab: 'msg' | 'image' } | null>(null)
-  const [mobileSimulatorOpen, setMobileSimulatorOpen] = useState<boolean>(() => {
-    try {
-      return window.location.search.includes('preview=mobile') || window.location.hash.includes('mobile-preview')
-    } catch {
-      return false
-    }
-  })
 
   // Clear legacy notification keys to avoid stale browser cache
   useEffect(() => {
@@ -2769,16 +2761,6 @@ export default function App(): JSX.Element {
         />
       )}
 
-      {/* Desktop Mobile App Simulator */}
-      <MobileSimulatorModal
-        isOpen={mobileSimulatorOpen}
-        onClose={() => setMobileSimulatorOpen(false)}
-        currentSafar={effectiveOngoingSafar}
-        safarGroups={activeSafarGroups}
-        snapshot={snapshot}
-        onShareWhatsApp={(safar, mode) => shareDailyBriefingWhatsApp(safar, mode)}
-      />
-
       <a className="skip-link" href="#main-content">Skip to main content</a>
       <button type="button" className={`sidebar-overlay ${menuOpen ? 'visible' : ''}`} aria-label="Close navigation menu" onClick={() => { setMenuOpen(false); menuToggleRef.current?.focus() }} tabIndex={menuOpen ? 0 : -1} aria-hidden={!menuOpen}/>
       
@@ -2922,18 +2904,6 @@ export default function App(): JSX.Element {
               <span className="status-dot-pulse" />
               <span className="status-label">{connected ? 'Live Sync' : 'Local Mode'}</span>
             </div>
-
-            {/* Desktop Mobile App Simulator Button */}
-            <button
-              type="button"
-              className="topbar-btn-secondary"
-              onClick={() => setMobileSimulatorOpen(true)}
-              title="Preview Mobile App & WhatsApp Layout on Desktop"
-              style={{ borderColor: 'rgba(129, 140, 248, 0.4)', color: '#818cf8' }}
-            >
-              <Smartphone size={13} />
-              <span className="topbar-btn-text">Mobile Preview</span>
-            </button>
 
             {/* Sync Now Button */}
             <button
