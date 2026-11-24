@@ -1,6 +1,7 @@
 package com.onetap.studiotracker.ui.navigation
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Radar
@@ -12,8 +13,9 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
     data object Kanban : Screen("kanban", "Pipeline", Icons.Default.ViewKanban)
     data object PhotoTracker : Screen("photos", "Photos", Icons.Default.PhotoLibrary)
     data object Radar : Screen("radar", "Radar", Icons.Default.Radar)
+    data object Analytics : Screen("analytics", "Analytics", Icons.Default.BarChart)
 
     companion object {
-        val items = listOf(Dashboard, Kanban, PhotoTracker, Radar)
+        val items = listOf(Dashboard, Kanban, PhotoTracker, Radar, Analytics)
     }
 }

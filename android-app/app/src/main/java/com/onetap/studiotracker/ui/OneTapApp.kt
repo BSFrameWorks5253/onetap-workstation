@@ -11,6 +11,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -20,16 +21,19 @@ import com.onetap.studiotracker.data.repository.SafarRepository
 import com.onetap.studiotracker.ui.components.AppUpdateDialog
 import com.onetap.studiotracker.ui.components.BottomNavBar
 import com.onetap.studiotracker.ui.navigation.Screen
+import com.onetap.studiotracker.ui.screens.analytics.StudioAnalyticsScreen
 import com.onetap.studiotracker.ui.screens.dashboard.DashboardScreen
 import com.onetap.studiotracker.ui.screens.kanban.KanbanScreen
 import com.onetap.studiotracker.ui.screens.photos.PhotoTrackerScreen
 import com.onetap.studiotracker.ui.screens.radar.IngestRadarScreen
 import com.onetap.studiotracker.ui.theme.DarkBackground
 import com.onetap.studiotracker.util.AppUpdateInfo
+import com.onetap.studiotracker.util.BatchNotificationManager
 import com.onetap.studiotracker.util.UpdateManager
 
 @Composable
 fun OneTapApp() {
+    val context = LocalContext.current
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route ?: Screen.Dashboard.route
@@ -43,6 +47,9 @@ fun OneTapApp() {
     var pendingUpdate by remember { mutableStateOf<AppUpdateInfo?>(null) }
 
     LaunchedEffect(Unit) {
+        // Initialize notification channel for lifetime-free render alerts
+        BatchNotificationManager.createNotificationChannel(context)
+
         val result = UpdateManager.checkForUpdates()
         if (result.isSuccess) {
             val info = result.getOrNull()
@@ -96,6 +103,9 @@ fun OneTapApp() {
             }
             composable(Screen.Radar.route) {
                 IngestRadarScreen()
+            }
+            composable(Screen.Analytics.route) {
+                StudioAnalyticsScreen()
             }
         }
     }

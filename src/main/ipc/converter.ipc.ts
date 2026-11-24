@@ -3,6 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import { getFfmpegExePath } from '../core/gpuDetector'
 import { getSharp } from '../core/sharpHelper'
+import { broadcastBatchRenderComplete, BatchRenderReport } from '../core/batchRenderNotifier'
 
 type WinGetter = () => BrowserWindow | null
 
@@ -538,5 +539,10 @@ export function registerConverterIPC(getWin: WinGetter): void {
     }
 
     return { images, videos, jpegDir: resolvedJpegDir, videoDir: resolvedVideoDir }
+  })
+
+  // Broadcast batch render summary to mobile and web (100% free realtime tier)
+  ipcMain.handle('converter:notifyBatchRender', async (_e, report: BatchRenderReport) => {
+    return broadcastBatchRenderComplete(report)
   })
 }
