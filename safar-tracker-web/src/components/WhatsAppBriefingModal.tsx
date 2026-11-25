@@ -130,20 +130,17 @@ export default function WhatsAppBriefingModal({
     if (photoEdited > 0) lines.push(`• 🎨 *In Photo Grading:* ${photoEdited} dates`);
     lines.push('');
 
-    lines.push('📦 *DELIVERABLE STATUS BREAKDOWN:*');
-    if (deliveredDates.length > 0) {
-      lines.push(`✅ *Delivered Dates (${deliveredDates.length}):*`);
-      deliveredDates.slice(0, 10).forEach(d => lines.push(`   • ${d}`));
-      if (deliveredDates.length > 10) lines.push(`   • ... +${deliveredDates.length - 10} more dates`);
-    }
-    if (pendingDates.length > 0) {
-      lines.push(`⏳ *Pending Dates (${pendingDates.length}):*`);
-      pendingDates.slice(0, 10).forEach(p => {
-        const stageLabel = p.stage === 'upload_pending' ? 'Upload Pending' : p.stage === 'editing' ? 'In Progress' : 'Editing Pending';
-        lines.push(`   • ${p.folder} [${stageLabel}]`);
-      });
-      if (pendingDates.length > 10) lines.push(`   • ... +${pendingDates.length - 10} more dates`);
-    }
+    lines.push('📦 *SYNCHRONIZED DELIVERABLE MATRIX (BY DATE FOLDER):*');
+    lines.push('_Photos are paired with video releases; each scheduled date folder holds both deliverables._');
+    safarTasks.forEach(t => {
+      const isVidDone = t.stage === 'uploaded' || t.stage === 'jameya' || (t.stage as any) === 'upload' || (t.stage as any) === 'completed';
+      const isPhotoDone = t.photoStage === 'uploaded' || t.photoUploaded;
+      const vidTag = isVidDone ? '🎬 Video: Uploaded' : t.stage === 'upload_pending' ? '🎬 Video: Upload Pending' : t.stage === 'editing' ? '🎬 Video: In Progress' : '🎬 Video: Editing Pending';
+      const photoTag = isPhotoDone ? '📷 Drive: Uploaded' : t.photoStage === 'given_to_murtaza' ? '📷 Drive: With Lead' : t.photoStage === 'edited' ? '📷 Drive: Grading' : '📷 Drive: Pending';
+      const icon = (isVidDone && isPhotoDone) ? '✅' : isVidDone ? '🎬' : '⏳';
+      lines.push(`${icon} *${t.dateFolder}*`);
+      lines.push(`   └ [${vidTag}] · [${photoTag}]`);
+    });
 
     lines.push('══════════════════════════════════');
     lines.push(`🌐 *Interactive Briefing:* ${publicOrigin}/briefing?safar=${encodeURIComponent(safarName)}`);
@@ -162,9 +159,9 @@ export default function WhatsAppBriefingModal({
     canvasRef.current = canvas;
 
     const width = 1200;
-    // Calculate dynamic height based on dates list length
+    // Calculate dynamic height based on dates list length (unified common column rows)
     const datesCount = safarTasks.length;
-    const height = Math.max(880, 720 + Math.ceil(datesCount / 2) * 36);
+    const height = Math.max(920, 520 + datesCount * 44 + 70);
 
     canvas.width = width * 2; // 2x Retina scale
     canvas.height = height * 2;
@@ -344,173 +341,255 @@ export default function WhatsAppBriefingModal({
     drawSegment(videoInProgress, '#3b82f6'); // In Progress
     drawSegment(videoEditingPending, '#f59e0b'); // Editing Pending
 
-    // 5. Two Parallel Workflow Stat Cards
-    const colW = (width - 100) / 2;
+    // 5. Unified Synchronized Deliverables Panel (Full width = width - 80 = 1120)
+    const cardX = 40;
     const cardY = 310;
-    const cardH = 140;
+    const cardW = width - 80;
+    const cardH = 130;
 
-    // Card A: Video Pipeline
     ctx.fillStyle = isLight ? '#ffffff' : 'rgba(255, 255, 255, 0.03)';
     ctx.beginPath();
-    drawRoundRect(ctx, 40, cardY, colW, cardH, 14);
+    drawRoundRect(ctx, cardX, cardY, cardW, cardH, 14);
     ctx.fill();
     ctx.strokeStyle = isLight ? '#e2e8f0' : 'rgba(255, 255, 255, 0.08)';
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    ctx.font = 'bold 14px system-ui, -apple-system, sans-serif';
-    ctx.fillStyle = isLight ? '#0f172a' : '#ffffff';
-    ctx.fillText('🎬 Video Production Pipeline', 60, cardY + 30);
-
-    ctx.font = '12px system-ui, -apple-system, sans-serif';
-    ctx.fillStyle = isLight ? '#64748b' : '#94a3b8';
-    ctx.fillText(`Delivered: ${delivered}/${total} dates (${is100Done ? '100% Complete' : `${pct}%`})`, 60, cardY + 52);
-
-    // Chips inside card A
-    const vChips = [
-      { label: `${videoJameya} AlJamea Done`, color: isLight ? '#047857' : '#10b981', bg: isLight ? '#ecfdf5' : 'rgba(255, 255, 255, 0.06)', border: isLight ? '#a7f3d0' : 'transparent' },
-      { label: `${videoUploaded} Uploaded`, color: isLight ? '#15803d' : '#059669', bg: isLight ? '#f0fdf4' : 'rgba(255, 255, 255, 0.06)', border: isLight ? '#bbf7d0' : 'transparent' },
-      { label: `${videoUploadPending} Upload Pending`, color: isLight ? '#0891b2' : '#06b6d4', bg: isLight ? '#ecfeff' : 'rgba(255, 255, 255, 0.06)', border: isLight ? '#a5f3fc' : 'transparent' },
-      { label: `${videoInProgress} In Progress`, color: isLight ? '#1d4ed8' : '#3b82f6', bg: isLight ? '#eff6ff' : 'rgba(255, 255, 255, 0.06)', border: isLight ? '#bfdbfe' : 'transparent' },
-      { label: `${videoEditingPending} Editing Pending`, color: isLight ? '#b45309' : '#f59e0b', bg: isLight ? '#fffbeb' : 'rgba(255, 255, 255, 0.06)', border: isLight ? '#fde68a' : 'transparent' }
-    ];
-
-    let chipX = 60;
-    let chipY = cardY + 76;
-    vChips.forEach(c => {
-      ctx.font = 'bold 11px system-ui, -apple-system, sans-serif';
-      const cWidth = ctx.measureText(c.label).width + 16;
-      if (chipX + cWidth > 40 + colW - 20) {
-        chipX = 60;
-        chipY += 28;
-      }
-      ctx.fillStyle = c.bg;
-      ctx.beginPath();
-      drawRoundRect(ctx, chipX, chipY, cWidth, 22, 6);
-      ctx.fill();
-      if (c.border !== 'transparent') {
-        ctx.strokeStyle = c.border;
-        ctx.lineWidth = 1;
-        ctx.stroke();
-      }
-      ctx.fillStyle = c.color;
-      ctx.fillText(c.label, chipX + 8, chipY + 15);
-      chipX += cWidth + 8;
-    });
-
-    // Card B: Google Drive Photos
-    ctx.fillStyle = isLight ? '#ffffff' : 'rgba(255, 255, 255, 0.03)';
-    ctx.beginPath();
-    drawRoundRect(ctx, 40 + colW + 20, cardY, colW, cardH, 14);
-    ctx.fill();
-    ctx.strokeStyle = isLight ? '#e2e8f0' : 'rgba(255, 255, 255, 0.08)';
-    ctx.stroke();
-
-    ctx.font = 'bold 14px system-ui, -apple-system, sans-serif';
-    ctx.fillStyle = isLight ? '#0f172a' : '#ffffff';
-    ctx.fillText('📷 Google Drive Photo Delivery', 40 + colW + 40, cardY + 30);
-
-    ctx.font = '12px system-ui, -apple-system, sans-serif';
-    ctx.fillStyle = isLight ? '#64748b' : '#94a3b8';
-    ctx.fillText(`Drive Sync: ${photoUploaded}/${total} Deliverables Uploaded (${total > 0 ? Math.round((photoUploaded / total) * 100) : 0}%)`, 40 + colW + 40, cardY + 52);
-
-    // Chips inside card B
-    const pChips = [
-      { label: `${photoUploaded} Uploaded to Drive`, color: isLight ? '#15803d' : '#10b981', bg: isLight ? '#f0fdf4' : 'rgba(255, 255, 255, 0.06)', border: isLight ? '#bbf7d0' : 'transparent' },
-      { label: `${photoGiven} With Murtaza (Lead)`, color: isLight ? '#1d4ed8' : '#60a5fa', bg: isLight ? '#eff6ff' : 'rgba(255, 255, 255, 0.06)', border: isLight ? '#bfdbfe' : 'transparent' },
-      { label: `${photoEdited} In Photo Grading`, color: isLight ? '#7e22ce' : '#a78bfa', bg: isLight ? '#faf5ff' : 'rgba(255, 255, 255, 0.06)', border: isLight ? '#e9d5ff' : 'transparent' }
-    ];
-
-    let pChipX = 40 + colW + 40;
-    let pChipY = cardY + 76;
-    pChips.forEach(c => {
-      ctx.font = 'bold 11px system-ui, -apple-system, sans-serif';
-      const cWidth = ctx.measureText(c.label).width + 16;
-      ctx.fillStyle = c.bg;
-      ctx.beginPath();
-      drawRoundRect(ctx, pChipX, pChipY, cWidth, 22, 6);
-      ctx.fill();
-      if (c.border !== 'transparent') {
-        ctx.strokeStyle = c.border;
-        ctx.lineWidth = 1;
-        ctx.stroke();
-      }
-      ctx.fillStyle = c.color;
-      ctx.fillText(c.label, pChipX + 8, pChipY + 15);
-      pChipX += cWidth + 8;
-    });
-
-    // 6. Date Folders Status Matrix
-    const listY = 475;
     ctx.font = 'bold 15px system-ui, -apple-system, sans-serif';
     ctx.fillStyle = isLight ? '#0f172a' : '#ffffff';
-    ctx.fillText(`Date Folders Status Matrix (${safarTasks.length} Scheduled Deliverables)`, 40, listY);
+    ctx.fillText('📦 Synchronized Media Pipeline (Video Deliverables & Google Drive Photos)', cardX + 24, cardY + 28);
+
+    ctx.font = '12px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = isLight ? '#64748b' : '#94a3b8';
+    ctx.fillText(`Photos are paired with video releases · ${total} Total Scheduled Deliverables (${total} Video Folders = ${total} Photo Folders)`, cardX + 24, cardY + 48);
+
+    // Summary Metric Badges inside Card 5
+    const metricW = 230;
+    const metricH = 46;
+    const mY = cardY + 64;
+
+    // Metric 1: Video Deliverables
+    const m1X = cardX + 24;
+    ctx.fillStyle = isLight ? '#f0fdf4' : 'rgba(16, 185, 129, 0.08)';
+    ctx.beginPath();
+    drawRoundRect(ctx, m1X, mY, metricW, metricH, 8);
+    ctx.fill();
+    ctx.strokeStyle = isLight ? '#bbf7d0' : 'rgba(16, 185, 129, 0.2)';
+    ctx.stroke();
+    ctx.font = 'bold 10px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = isLight ? '#15803d' : '#34d399';
+    ctx.fillText('🎬 VIDEO DELIVERABLES', m1X + 12, mY + 16);
+    ctx.font = 'bold 15px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = isLight ? '#0f172a' : '#ffffff';
+    ctx.fillText(`${videoUploaded + videoJameya} / ${total} Uploaded (${pct}%)`, m1X + 12, mY + 35);
+
+    // Metric 2: Drive Photos
+    const m2X = m1X + metricW + 16;
+    ctx.fillStyle = isLight ? '#eff6ff' : 'rgba(59, 130, 246, 0.08)';
+    ctx.beginPath();
+    drawRoundRect(ctx, m2X, mY, metricW, metricH, 8);
+    ctx.fill();
+    ctx.strokeStyle = isLight ? '#bfdbfe' : 'rgba(59, 130, 246, 0.2)';
+    ctx.stroke();
+    ctx.font = 'bold 10px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = isLight ? '#1d4ed8' : '#60a5fa';
+    ctx.fillText('📷 PHOTOS IN DRIVE', m2X + 12, mY + 16);
+    ctx.font = 'bold 15px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = isLight ? '#0f172a' : '#ffffff';
+    ctx.fillText(`${photoUploaded} / ${total} Synced (${total > 0 ? Math.round((photoUploaded / total) * 100) : 0}%)`, m2X + 12, mY + 35);
+
+    // Metric 3: Fully Synced
+    const bothUploadedCount = safarTasks.filter(t => (t.stage === 'uploaded' || t.stage === 'jameya' || (t.stage as any) === 'upload' || (t.stage as any) === 'completed') && (t.photoStage === 'uploaded' || t.photoUploaded)).length;
+    const m3X = m2X + metricW + 16;
+    ctx.fillStyle = isLight ? '#ecfdf5' : 'rgba(16, 185, 129, 0.12)';
+    ctx.beginPath();
+    drawRoundRect(ctx, m3X, mY, metricW, metricH, 8);
+    ctx.fill();
+    ctx.strokeStyle = isLight ? '#a7f3d0' : 'rgba(16, 185, 129, 0.3)';
+    ctx.stroke();
+    ctx.font = 'bold 10px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = isLight ? '#047857' : '#10b981';
+    ctx.fillText('🏆 FULLY SYNCED DATES', m3X + 12, mY + 16);
+    ctx.font = 'bold 15px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = isLight ? '#0f172a' : '#ffffff';
+    ctx.fillText(`${bothUploadedCount} of ${total} Complete`, m3X + 12, mY + 35);
+
+    // Metric 4: Stage Breakdown Pills on the right
+    const m4X = m3X + metricW + 20;
+    ctx.font = 'bold 10px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = isLight ? '#64748b' : '#94a3b8';
+    ctx.fillText('PIPELINE BREAKDOWN:', m4X, mY + 14);
+
+    const chips = [
+      `${videoUploaded + videoJameya} Uploaded`,
+      `${videoUploadPending} Render Pending`,
+      `${videoInProgress} In Grading`
+    ];
+    let chipX = m4X;
+    let chipY = mY + 22;
+    chips.forEach(c => {
+      ctx.font = 'bold 9.5px system-ui, -apple-system, sans-serif';
+      const cW = ctx.measureText(c).width + 12;
+      ctx.fillStyle = isLight ? '#f1f5f9' : 'rgba(255, 255, 255, 0.08)';
+      ctx.beginPath();
+      drawRoundRect(ctx, chipX, chipY, cW, 18, 4);
+      ctx.fill();
+      ctx.fillStyle = isLight ? '#475569' : '#cbd5e1';
+      ctx.fillText(c, chipX + 6, chipY + 13);
+      chipX += cW + 6;
+    });
+
+    // 6. Common Column Date Folders Status Matrix
+    const listY = 465;
+    ctx.font = 'bold 15px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = isLight ? '#0f172a' : '#ffffff';
+    ctx.fillText(`Scheduled Deliverable Folders (${safarTasks.length} Common Video & Photo Dates)`, 40, listY);
 
     ctx.font = '12px system-ui, -apple-system, sans-serif';
     ctx.fillStyle = '#64748b';
-    ctx.fillText(is100Done ? '✓ All date folders are delivered and synchronized' : 'Overview of uploaded vs pending dates', 40, listY + 20);
+    ctx.fillText('Each scheduled date folder contains paired Video Deliverable and Google Drive Photo Deliverable', 40, listY + 18);
 
-    const rowStartY = listY + 40;
-    const rowH = 34;
-    const colWidth = (width - 100) / 2;
+    // Table Header Row
+    const tableHeaderY = listY + 30;
+    const tableW = width - 80;
+    ctx.fillStyle = isLight ? '#f1f5f9' : 'rgba(255, 255, 255, 0.05)';
+    ctx.beginPath();
+    drawRoundRect(ctx, 40, tableHeaderY, tableW, 28, 6);
+    ctx.fill();
+    ctx.font = 'bold 10.5px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = isLight ? '#475569' : '#94a3b8';
+    ctx.fillText('DATE DELIVERABLE FOLDER', 56, tableHeaderY + 18);
+    ctx.fillText('🎬 VIDEO DELIVERABLE', 450, tableHeaderY + 18);
+    ctx.fillText('📷 GOOGLE DRIVE PHOTOS', 720, tableHeaderY + 18);
+    ctx.fillText('DELIVERY STATE', 960, tableHeaderY + 18);
+
+    const rowStartY = tableHeaderY + 34;
+    const rowH = 36;
+    const rowGap = 6;
 
     safarTasks.forEach((task, idx) => {
-      const isColRight = idx % 2 === 1;
-      const rowIndex = Math.floor(idx / 2);
-      const rX = isColRight ? 40 + colWidth + 20 : 40;
-      const rY = rowStartY + rowIndex * (rowH + 8);
+      const rX = 40;
+      const rY = rowStartY + idx * (rowH + rowGap);
 
-      const isDelivered =
-        task.stage === 'uploaded' || task.stage === 'jameya' || (task.stage as any) === 'upload' || (task.stage as any) === 'completed';
+      const isVideoDelivered = task.stage === 'uploaded' || task.stage === 'jameya' || (task.stage as any) === 'upload' || (task.stage as any) === 'completed';
+      const isPhotoDelivered = task.photoStage === 'uploaded' || task.photoUploaded;
+      const isDateAllDone = isVideoDelivered && isPhotoDelivered;
 
       // Item Box
-      ctx.fillStyle = isDelivered
-        ? (isLight ? '#f0fdf4' : 'rgba(16, 185, 129, 0.06)')
-        : (isLight ? '#ffffff' : 'rgba(255, 255, 255, 0.03)');
+      ctx.fillStyle = isDateAllDone
+        ? (isLight ? '#f0fdf4' : 'rgba(16, 185, 129, 0.08)')
+        : isVideoDelivered
+        ? (isLight ? '#f8fafc' : 'rgba(255, 255, 255, 0.03)')
+        : (isLight ? '#ffffff' : 'rgba(255, 255, 255, 0.02)');
       ctx.beginPath();
-      drawRoundRect(ctx, rX, rY, colWidth, rowH, 8);
+      drawRoundRect(ctx, rX, rY, tableW, rowH, 8);
       ctx.fill();
-      ctx.strokeStyle = isDelivered
-        ? (isLight ? '#bbf7d0' : 'rgba(16, 185, 129, 0.2)')
+      ctx.strokeStyle = isDateAllDone
+        ? (isLight ? '#bbf7d0' : 'rgba(16, 185, 129, 0.25)')
         : (isLight ? '#e2e8f0' : 'rgba(255, 255, 255, 0.06)');
       ctx.stroke();
 
       // Dot
-      ctx.fillStyle = isDelivered
+      ctx.fillStyle = isDateAllDone
         ? '#10b981'
+        : isVideoDelivered
+        ? '#3b82f6'
         : task.stage === 'upload_pending'
         ? '#06b6d4'
-        : task.stage === 'editing'
-        ? '#3b82f6'
         : '#f59e0b';
       ctx.beginPath();
       ctx.arc(rX + 16, rY + rowH / 2, 4.5, 0, Math.PI * 2);
       ctx.fill();
 
-      // Title
-      ctx.fillStyle = isDelivered ? (isLight ? '#0f172a' : '#ffffff') : (isLight ? '#334155' : '#ffffff');
-      ctx.font = isDelivered ? '600 12px system-ui, -apple-system, sans-serif' : '500 12px system-ui, -apple-system, sans-serif';
-      const folderText = task.dateFolder.length > 36 ? task.dateFolder.slice(0, 34) + '…' : task.dateFolder;
-      ctx.fillText(folderText, rX + 28, rY + rowH / 2 + 4);
+      // Folder Name
+      ctx.fillStyle = isDateAllDone ? (isLight ? '#065f46' : '#ffffff') : (isLight ? '#0f172a' : '#ffffff');
+      ctx.font = 'bold 12.5px system-ui, -apple-system, sans-serif';
+      const folderName = task.dateFolder.length > 44 ? task.dateFolder.slice(0, 42) + '…' : task.dateFolder;
+      ctx.fillText(folderName, rX + 28, rY + rowH / 2 + 4);
 
-      // Status Tag
-      const tagText = isDelivered ? '✓ UPLOADED' : task.stage === 'upload_pending' ? 'UPLOAD PEND' : task.stage === 'editing' ? 'IN PROGRESS' : '⏳ PENDING';
-      ctx.font = 'bold 9px system-ui, -apple-system, sans-serif';
-      const tagW = ctx.measureText(tagText).width + 12;
-      const tagX = rX + colWidth - tagW - 12;
-      const tagY = rY + 7;
-
-      ctx.fillStyle = isDelivered
+      // Col 2: Video Status Pill (x = 450)
+      const vText = task.stage === 'jameya'
+        ? '🏛️ AlJamea Done'
+        : isVideoDelivered
+        ? '✓ Video Uploaded'
+        : task.stage === 'upload_pending'
+        ? '📤 Upload Pending'
+        : task.stage === 'editing'
+        ? '🎞️ In Progress'
+        : '⏳ Editing Pending';
+      const vBg = isVideoDelivered
         ? (isLight ? '#dcfce7' : 'rgba(16, 185, 129, 0.15)')
+        : task.stage === 'upload_pending'
+        ? (isLight ? '#cffafe' : 'rgba(6, 182, 212, 0.15)')
+        : task.stage === 'editing'
+        ? (isLight ? '#dbeafe' : 'rgba(59, 130, 246, 0.15)')
         : (isLight ? '#fef3c7' : 'rgba(245, 158, 11, 0.15)');
-      ctx.beginPath();
-      drawRoundRect(ctx, tagX, tagY, tagW, 20, 4);
-      ctx.fill();
-
-      ctx.fillStyle = isDelivered
+      const vColor = isVideoDelivered
         ? (isLight ? '#15803d' : '#34d399')
+        : task.stage === 'upload_pending'
+        ? (isLight ? '#0891b2' : '#22d3ee')
+        : task.stage === 'editing'
+        ? (isLight ? '#1d4ed8' : '#60a5fa')
         : (isLight ? '#b45309' : '#fbbf24');
-      ctx.fillText(tagText, tagX + 6, tagY + 14);
+      ctx.font = 'bold 10px system-ui, -apple-system, sans-serif';
+      const vW = ctx.measureText(vText).width + 16;
+      ctx.fillStyle = vBg;
+      ctx.beginPath();
+      drawRoundRect(ctx, 450, rY + 8, vW, 20, 5);
+      ctx.fill();
+      ctx.fillStyle = vColor;
+      ctx.fillText(vText, 458, rY + 22);
+
+      // Col 3: Photo Status Pill (x = 720)
+      const pText = isPhotoDelivered
+        ? '☁️ In Drive (Uploaded)'
+        : task.photoStage === 'given_to_murtaza'
+        ? '👤 With Murtaza (Lead)'
+        : task.photoStage === 'edited'
+        ? '🎨 In Photo Grading'
+        : '⏳ Photo Sync Pending';
+      const pBg = isPhotoDelivered
+        ? (isLight ? '#dcfce7' : 'rgba(16, 185, 129, 0.15)')
+        : task.photoStage === 'given_to_murtaza'
+        ? (isLight ? '#dbeafe' : 'rgba(59, 130, 246, 0.15)')
+        : task.photoStage === 'edited'
+        ? (isLight ? '#f3e8ff' : 'rgba(168, 85, 247, 0.15)')
+        : (isLight ? '#f1f5f9' : 'rgba(255, 255, 255, 0.05)');
+      const pColor = isPhotoDelivered
+        ? (isLight ? '#15803d' : '#34d399')
+        : task.photoStage === 'given_to_murtaza'
+        ? (isLight ? '#1d4ed8' : '#60a5fa')
+        : task.photoStage === 'edited'
+        ? (isLight ? '#7e22ce' : '#c084fc')
+        : (isLight ? '#64748b' : '#94a3b8');
+      ctx.font = 'bold 10px system-ui, -apple-system, sans-serif';
+      const pW = ctx.measureText(pText).width + 16;
+      ctx.fillStyle = pBg;
+      ctx.beginPath();
+      drawRoundRect(ctx, 720, rY + 8, pW, 20, 5);
+      ctx.fill();
+      ctx.fillStyle = pColor;
+      ctx.fillText(pText, 728, rY + 22);
+
+      // Col 4: Overall Delivery State (x = 960)
+      const dText = isDateAllDone
+        ? '🏆 100% DONE'
+        : isVideoDelivered
+        ? '🎬 VIDEO READY'
+        : '⏳ IN PROGRESS';
+      const dBg = isDateAllDone
+        ? (isLight ? '#059669' : '#10b981')
+        : isVideoDelivered
+        ? (isLight ? '#3b82f6' : '#2563eb')
+        : (isLight ? '#f59e0b' : '#d97706');
+      ctx.font = 'bold 10px system-ui, -apple-system, sans-serif';
+      const dW = ctx.measureText(dText).width + 16;
+      ctx.fillStyle = dBg;
+      ctx.beginPath();
+      drawRoundRect(ctx, 960, rY + 8, dW, 20, 5);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(dText, 968, rY + 22);
     });
 
     // 7. Footer Watermark
