@@ -1646,12 +1646,28 @@ class UniDeskStudio(ctk.CTk):
         if not os.path.exists(apk_path):
             self._android_log(f'[Publish] APK not found: {apk_path}')
             return
-        cmd = f'gh release create "{tag}" "{apk_path}#{asset_name}" --title "One Tap Studio Mobile v{version}" --notes "Android Mobile APK v{version} (Tag: {tag})"'
+        gh_bin = shutil.which('gh')
+        if not gh_bin:
+            candidates = [
+                os.path.join(os.environ.get('LOCALAPPDATA', ''), 'Programs', 'GitHub CLI', 'gh.exe'),
+                r'C:\Program Files\GitHub CLI\gh.exe',
+            ]
+            for c in candidates:
+                if os.path.exists(c):
+                    gh_bin = c
+                    break
+        if not gh_bin:
+            self._android_log('[Publish] GitHub CLI ("gh") not found in PATH or standard location.')
+            self._android_log('[Publish] Install with "winget install GitHub.cli" and authenticate with "gh auth login".')
+            self._android_log('[Publish] Or push to GitHub to let GitHub Actions build and publish automatically.')
+            return
+        gh_cmd = f'"{gh_bin}"' if ' ' in str(gh_bin) else str(gh_bin)
+        cmd = f'{gh_cmd} release create "{tag}" "{apk_path}#{asset_name}" --title "One Tap Studio Mobile v{version}" --notes "Android Mobile APK v{version} (Tag: {tag})"'
         self._android_log(f'\n[Publish] Creating GitHub Release {tag}...')
         ok = _stream_cmd(cmd, self._android_log)
         if not ok:
             self._android_log(f'[Publish] Trying upload to existing release {tag}...')
-            _stream_cmd(f'gh release upload "{tag}" "{apk_path}#{asset_name}" --clobber', self._android_log)
+            _stream_cmd(f'{gh_cmd} release upload "{tag}" "{apk_path}#{asset_name}" --clobber', self._android_log)
 
     def _publish_android_apk(self):
         version = self.android_ver_entry.get().strip() or '26.11.01.3'

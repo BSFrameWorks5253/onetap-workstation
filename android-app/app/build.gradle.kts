@@ -8,8 +8,8 @@ android {
     namespace = "com.onetap.studiotracker"
     compileSdk = 34
 
-    val appVersionName = project.findProperty("versionName") as? String ?: "26.11.46.02"
-    val appVersionCode = (project.findProperty("versionCode") as? String)?.toIntOrNull() ?: 26114602
+    val appVersionName = project.findProperty("versionName") as? String ?: "26.11.46.03"
+    val appVersionCode = (project.findProperty("versionCode") as? String)?.toIntOrNull() ?: 26114603
 
     defaultConfig {
         applicationId = "com.onetap.studiotracker"
