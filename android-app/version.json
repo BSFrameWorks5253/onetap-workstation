@@ -1,7 +1,7 @@
 {
-  "version": "26.11.46.03",
-  "versionCode": 26114603,
+  "version": "26.11.46.04",
+  "versionCode": 26114604,
   "releaseDate": "2026-11-25",
-  "downloadUrl": "https://github.com/BSFrameWorks5253/onetap-workstation/releases/download/v26.11.46.03-Mobile/One.Tap_V-26.11.46.03.apk",
-  "changelog": "Autonomous release build v26.11.46.03. Cloud Database Sync & Auto-Update Engine active."
+  "downloadUrl": "https://github.com/BSFrameWorks5253/onetap-workstation/releases/download/v26.11.46.04-Mobile/One.Tap_V-26.11.46.04.apk",
+  "changelog": "Autonomous release build v26.11.46.04. Cloud Database Sync & Auto-Update Engine active."
 }
