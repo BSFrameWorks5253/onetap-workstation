@@ -5,40 +5,55 @@ import androidx.compose.ui.graphics.Color
 enum class PhotoStage(
     val id: String,
     val title: String,
+    val subtitle: String,
     val hexColor: String,
-    val composeColor: Color
+    val composeColor: Color,
+    val order: Int
 ) {
-    PENDING(
-        id = "pending",
-        title = "Pending",
-        hexColor = "#64748B",
-        composeColor = Color(0xFF64748B)
+    EDITED(
+        id = "edited",
+        title = "Edited",
+        subtitle = "Exported & Graded",
+        hexColor = "#8B5CF6",
+        composeColor = Color(0xFF8B5CF6),
+        order = 0
     ),
-    RAW_SORTED(
-        id = "raw_sorted",
-        title = "Raw Sorted",
-        hexColor = "#F59E0B",
-        composeColor = Color(0xFFF59E0B)
+    GIVEN_TO_MURTAZA(
+        id = "given_to_murtaza",
+        title = "With Murtaza",
+        subtitle = "Handed to Video Lead",
+        hexColor = "#2563EB",
+        composeColor = Color(0xFF2563EB),
+        order = 1
     ),
-    COLOR_GRADED(
-        id = "color_graded",
-        title = "Color Graded",
-        hexColor = "#3B82F6",
-        composeColor = Color(0xFF3B82F6)
-    ),
-    DRIVE_UPLOADED(
-        id = "drive_uploaded",
-        title = "Drive Uploaded",
-        hexColor = "#10B981",
-        composeColor = Color(0xFF10B981)
+    UPLOADED(
+        id = "uploaded",
+        title = "Uploaded",
+        subtitle = "Cloud Synced",
+        hexColor = "#059669",
+        composeColor = Color(0xFF059669),
+        order = 2
     );
 
     val isComplete: Boolean
-        get() = this == DRIVE_UPLOADED
+        get() = this == UPLOADED
+
+    val nextStage: PhotoStage?
+        get() = entries.getOrNull(order + 1)
+
+    val prevStage: PhotoStage?
+        get() = if (order > 0) entries.getOrNull(order - 1) else null
 
     companion object {
-        fun fromId(id: String?): PhotoStage {
-            return entries.firstOrNull { it.id.equals(id, ignoreCase = true) } ?: PENDING
+        fun fromId(raw: String?, photoUploaded: Boolean = false): PhotoStage {
+            if (photoUploaded) return UPLOADED
+            val s = raw?.lowercase()?.trim() ?: ""
+            return when (s) {
+                "uploaded", "drive_uploaded" -> UPLOADED
+                "given_to_murtaza", "color_graded" -> GIVEN_TO_MURTAZA
+                "edited", "raw_sorted", "pending", "" -> EDITED
+                else -> EDITED
+            }
         }
     }
 }

@@ -6,6 +6,7 @@ import com.onetap.studiotracker.data.models.PhotoStage
 import com.onetap.studiotracker.data.models.SafarCampaign
 import com.onetap.studiotracker.data.models.SafarTask
 import com.onetap.studiotracker.data.repository.SafarRepository
+import com.onetap.studiotracker.data.sync.DrivePhotoFolderInfo
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
@@ -15,32 +16,23 @@ class PhotoTrackerViewModel : ViewModel() {
 
     private val repository: SafarRepository = SafarRepository.getInstance()
 
+    val campaigns: StateFlow<List<SafarCampaign>> = repository.campaigns
+
     val activeCampaign: StateFlow<SafarCampaign?> = repository.campaigns.map { list ->
-        list.firstOrNull { it.isOngoing } ?: list.firstOrNull()
+        list.firstOrNull { it.isOngoing } ?: list.firstOrNull { !it.isArchived } ?: list.firstOrNull()
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
+    val drivePhotoInfo: StateFlow<Map<String, DrivePhotoFolderInfo>> = repository.drivePhotoInfo
+
     fun updatePhotoStage(task: SafarTask, newStage: PhotoStage) {
-        val newCount = if (newStage == PhotoStage.DRIVE_UPLOADED) {
-            task.totalPhotos
-        } else {
-            task.uploadedPhotos
-        }
-        repository.updateTaskPhotos(task.id, newCount, newStage)
+        repository.updateTaskPhotoStage(task.id, newStage)
     }
 
-    fun adjustPhotoCount(task: SafarTask, delta: Int) {
-        val updatedCount = (task.uploadedPhotos + delta).coerceIn(0, task.totalPhotos)
-        val newStage = if (updatedCount >= task.totalPhotos && task.totalPhotos > 0) {
-            PhotoStage.DRIVE_UPLOADED
-        } else if (updatedCount > 0) {
-            PhotoStage.COLOR_GRADED
-        } else {
-            task.photoStage
-        }
-        repository.updateTaskPhotos(task.id, updatedCount, newStage)
+    fun batchMarkUploaded(taskIds: Set<String>) {
+        repository.batchUpdatePhotoStage(taskIds, PhotoStage.UPLOADED)
     }
 
-    fun markAllPhotosUploaded(task: SafarTask) {
-        repository.updateTaskPhotos(task.id, task.totalPhotos, PhotoStage.DRIVE_UPLOADED)
+    fun syncDriveFolders(campaign: SafarCampaign) {
+        repository.syncDrivePhotoFolders(campaign.name, campaign.tasks.map { it.title })
     }
 }

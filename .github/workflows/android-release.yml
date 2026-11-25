@@ -37,6 +37,8 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.4'
 
       - name: Determine Release Version (Starting from 26.11.46.01)
         id: versioning
@@ -76,7 +78,7 @@ jobs:
             "version": "${{ env.VERSION }}",
             "versionCode": ${{ env.VERSION_CODE }},
             "releaseDate": "$DATE_NOW",
-            "downloadUrl": "https://github.com/${{ github.repository }}/releases/download/v${{ env.VERSION }}/OneTapStudio-v${{ env.VERSION }}.apk",
+            "downloadUrl": "https://github.com/${{ github.repository }}/releases/download/v${{ env.VERSION }}-Mobile/One.Tap_V-${{ env.VERSION }}.apk",
             "changelog": "Autonomous release build v${{ env.VERSION }}. Cloud Database Sync & Auto-Update Engine active."
           }
           EOF
@@ -90,15 +92,15 @@ jobs:
       - name: Prepare APK Artifact
         run: |
           mkdir -p release-artifacts
-          cp android-app/app/build/outputs/apk/debug/app-debug.apk release-artifacts/OneTapStudio-v${{ env.VERSION }}.apk
+          cp android-app/app/build/outputs/apk/debug/app-debug.apk "release-artifacts/One Tap_V-${{ env.VERSION }}.apk"
           ls -la release-artifacts
 
       - name: Create GitHub Release & Upload APK
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "v${{ env.VERSION }}" \
-            release-artifacts/OneTapStudio-v${{ env.VERSION }}.apk \
+          gh release create "v${{ env.VERSION }}-Mobile" \
+            "release-artifacts/One Tap_V-${{ env.VERSION }}.apk" \
             android-app/version.json \
             --title "One Tap Studio Mobile v${{ env.VERSION }}" \
             --notes "### 🚀 One Tap Studio Mobile v${{ env.VERSION }}

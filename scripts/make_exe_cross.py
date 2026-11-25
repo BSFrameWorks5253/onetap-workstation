@@ -1097,6 +1097,7 @@ class UniDeskStudio(ctk.CTk):
 
         self.tab_names = [
             '🚀  Pipeline & Console',
+            '📱  Android APK',
             '📝  Release Notes',
             '✉️  Email Broadcast',
             '⚙️  Settings & Diagnostics'
@@ -1187,12 +1188,14 @@ class UniDeskStudio(ctk.CTk):
             self.tab_names[1]: ctk.CTkFrame(self.tab_container, fg_color='transparent'),
             self.tab_names[2]: ctk.CTkFrame(self.tab_container, fg_color='transparent'),
             self.tab_names[3]: ctk.CTkFrame(self.tab_container, fg_color='transparent'),
+            self.tab_names[4]: ctk.CTkFrame(self.tab_container, fg_color='transparent'),
         }
 
         self._build_tab_pipeline(self.frames[self.tab_names[0]])
-        self._build_tab_notes(self.frames[self.tab_names[1]])
-        self._build_tab_email(self.frames[self.tab_names[2]])
-        self._build_tab_settings(self.frames[self.tab_names[3]])
+        self._build_tab_android(self.frames[self.tab_names[1]])
+        self._build_tab_notes(self.frames[self.tab_names[2]])
+        self._build_tab_email(self.frames[self.tab_names[3]])
+        self._build_tab_settings(self.frames[self.tab_names[4]])
 
         # Display first tab by default
         self.current_tab_name = self.tab_names[0]
@@ -1372,6 +1375,297 @@ class UniDeskStudio(ctk.CTk):
         self.ver_entry.delete(0, 'end')
         self.ver_entry.insert(0, new_v)
         self._on_version_typed()
+
+    # ── TAB 2: Android APK Builder ───────────────────────────────────────────
+    def _detect_android_toolchain(self) -> dict:
+        java_home = os.environ.get('JAVA_HOME', '')
+        if not java_home or not os.path.exists(os.path.join(java_home, 'bin', 'java.exe' if IS_WIN else 'java')):
+            local_java_root = os.path.expandvars(r'%LOCALAPPDATA%\Java') if IS_WIN else '/usr/lib/jvm'
+            if os.path.exists(local_java_root):
+                for entry in sorted(os.listdir(local_java_root), reverse=True):
+                    cand = os.path.join(local_java_root, entry)
+                    if os.path.exists(os.path.join(cand, 'bin', 'java.exe' if IS_WIN else 'java')):
+                        java_home = cand
+                        break
+
+        android_home = os.environ.get('ANDROID_HOME', '') or os.environ.get('ANDROID_SDK_ROOT', '')
+        if not android_home or not os.path.exists(android_home):
+            cand_sdk = os.path.expandvars(r'%LOCALAPPDATA%\Android\Sdk') if IS_WIN else os.path.expanduser('~/Android/Sdk')
+            if os.path.exists(cand_sdk):
+                android_home = cand_sdk
+
+        gradle_cmd = shutil.which('gradle') or ''
+        if not gradle_cmd and IS_WIN:
+            cand_gradle = os.path.expandvars(r'%LOCALAPPDATA%\Gradle\gradle-8.4\bin\gradle.bat')
+            if os.path.exists(cand_gradle):
+                gradle_cmd = cand_gradle
+
+        wrapper_jar = os.path.join('android-app', 'gradle', 'wrapper', 'gradle-wrapper.jar')
+        if os.path.exists(wrapper_jar):
+            gradle_cmd = os.path.abspath(os.path.join('android-app', 'gradlew.bat' if IS_WIN else 'gradlew'))
+
+        has_platform_34 = bool(android_home and os.path.exists(os.path.join(android_home, 'platforms', 'android-34')))
+        return {
+            'java_home': java_home,
+            'android_home': android_home,
+            'gradle_cmd': gradle_cmd,
+            'has_platform_34': has_platform_34,
+        }
+
+    def _compute_android_version_code(self, version_str: str) -> int:
+        digits = re.sub(r'[^0-9]', '', version_str.strip())
+        if not digits:
+            return 2611013
+        try:
+            return int(digits[:9])
+        except ValueError:
+            return 2611013
+
+    def _read_android_version(self) -> str:
+        vjson = os.path.join('android-app', 'version.json')
+        if os.path.exists(vjson):
+            try:
+                with open(vjson, 'r', encoding='utf-8') as f:
+                    v = json.load(f).get('version', '').strip()
+                    if v:
+                        return v
+            except Exception:
+                pass
+        return '26.11.01.3'
+
+    def _bump_android_version(self):
+        cur = self.android_ver_entry.get().strip() or '26.11.01.3'
+        parts = cur.lstrip('vV').split('.')
+        try:
+            parts[-1] = str(int(parts[-1]) + 1)
+            nxt = '.'.join(parts)
+        except Exception:
+            nxt = '26.11.01.4'
+        self.android_ver_entry.delete(0, 'end')
+        self.android_ver_entry.insert(0, nxt)
+        self._update_android_code_preview()
+
+    def _update_android_code_preview(self, *_args):
+        if hasattr(self, 'android_ver_entry') and hasattr(self, 'lbl_android_vcode'):
+            v = self.android_ver_entry.get().strip()
+            code = self._compute_android_version_code(v)
+            self.lbl_android_vcode.configure(text=f'versionCode: {code}')
+
+    def _android_log(self, msg: str):
+        if not hasattr(self, 'android_console'):
+            return
+        def _append():
+            self.android_console.configure(state='normal')
+            self.android_console.insert('end', msg + '\n')
+            self.android_console.see('end')
+            self.android_console.configure(state='disabled')
+        self.after(0, _append)
+
+    def _build_tab_android(self, parent):
+        parent.grid_columnconfigure(0, weight=5)
+        parent.grid_columnconfigure(1, weight=7)
+        parent.grid_rowconfigure(0, weight=1)
+
+        left_col = ctk.CTkFrame(parent, fg_color='transparent')
+        left_col.grid(row=0, column=0, sticky='nsew', padx=(0, 8))
+
+        tc_card = ctk.CTkFrame(left_col, corner_radius=12, fg_color=C_CARD, border_width=1, border_color=C_BORDER)
+        tc_card.pack(fill='x', pady=(0, 10))
+
+        ctk.CTkLabel(tc_card, text='📱  Android Build Toolchain', font=(FONT_NAME, 12, 'bold'),
+                     text_color=C_TEXT_MAIN).pack(anchor='w', padx=14, pady=(12, 6))
+
+        tc = self._detect_android_toolchain()
+        for lbl, ok, val in [
+            ('Java 17 JDK', bool(tc['java_home']), tc['java_home'] or 'Not found'),
+            ('Gradle 8.4', bool(tc['gradle_cmd']), tc['gradle_cmd'] or 'Not found'),
+            ('Android SDK 34', tc['has_platform_34'], tc['android_home'] or 'Not found'),
+        ]:
+            r = ctk.CTkFrame(tc_card, fg_color='transparent')
+            r.pack(fill='x', padx=14, pady=2)
+            ctk.CTkLabel(r, text=f"{'●' if ok else '▲'} {lbl}:", font=(FONT_NAME, 10, 'bold'),
+                         text_color=C_GREEN if ok else C_AMBER, width=120, anchor='w').pack(side='left')
+            ctk.CTkLabel(r, text=val, font=(FONT_MONO_NAME, 9), text_color=C_TEXT_MUTED, anchor='w').pack(side='left', fill='x', expand=True)
+
+        ctk.CTkLabel(tc_card, text='Supports 4-part versions like 26.11.01.3, 26.11.46.02, etc.',
+                     font=(FONT_NAME, 9), text_color=C_TEXT_MUTED).pack(anchor='w', padx=14, pady=(6, 12))
+
+        cfg_card = ctk.CTkFrame(left_col, corner_radius=12, fg_color=C_CARD, border_width=1, border_color=C_BORDER)
+        cfg_card.pack(fill='x', pady=(0, 10))
+
+        ctk.CTkLabel(cfg_card, text='🏷  APK Version & Variant', font=(FONT_NAME, 12, 'bold'),
+                     text_color=C_TEXT_MAIN).pack(anchor='w', padx=14, pady=(12, 6))
+
+        ver_row = ctk.CTkFrame(cfg_card, fg_color='transparent')
+        ver_row.pack(fill='x', padx=14, pady=(0, 6))
+
+        self.android_ver_entry = ctk.CTkEntry(ver_row, height=34, font=(FONT_MONO_NAME, 12, 'bold'),
+                                              fg_color=C_CARD_ALT, border_color=C_BORDER, text_color=C_TEXT_MAIN)
+        self.android_ver_entry.insert(0, self._read_android_version())
+        self.android_ver_entry.bind('<KeyRelease>', self._update_android_code_preview)
+        self.android_ver_entry.pack(side='left', fill='x', expand=True, padx=(0, 8))
+
+        ctk.CTkButton(ver_row, text='+1 Patch', width=82, height=34, corner_radius=8,
+                      fg_color=C_CARD_ALT, hover_color='#E2E8F0', text_color=C_TEXT_MAIN,
+                      border_width=1, border_color=C_BORDER, font=(FONT_NAME, 10, 'bold'),
+                      command=self._bump_android_version).pack(side='right')
+
+        self.lbl_android_vcode = ctk.CTkLabel(cfg_card, text='', font=(FONT_MONO_NAME, 10), text_color=C_PRIMARY)
+        self.lbl_android_vcode.pack(anchor='w', padx=14, pady=(0, 8))
+        self._update_android_code_preview()
+
+        self.android_variant_var = tk.StringVar(value='assembleDebug')
+        var_row = ctk.CTkFrame(cfg_card, fg_color='transparent')
+        var_row.pack(fill='x', padx=14, pady=(0, 6))
+        ctk.CTkRadioButton(var_row, text='Debug APK', variable=self.android_variant_var, value='assembleDebug',
+                           font=(FONT_NAME, 10, 'bold'), text_color=C_TEXT_MAIN).pack(side='left', padx=(0, 14))
+        ctk.CTkRadioButton(var_row, text='Release APK', variable=self.android_variant_var, value='assembleRelease',
+                           font=(FONT_NAME, 10, 'bold'), text_color=C_TEXT_MAIN).pack(side='left')
+
+        self.android_auto_publish = tk.BooleanVar(value=True)
+        ctk.CTkCheckBox(
+            cfg_card, text='Auto-create GitHub Release (v<ver>-Mobile) after build',
+            variable=self.android_auto_publish, font=(FONT_NAME, 10, 'bold'), text_color=C_TEXT_MAIN
+        ).pack(anchor='w', padx=14, pady=(0, 10))
+
+        self.btn_build_apk = ctk.CTkButton(
+            cfg_card, text='🔨  BUILD ANDROID APK', height=40, corner_radius=9,
+            fg_color=C_PRIMARY, hover_color=C_PRIMARY_HOV, text_color='#FFFFFF',
+            font=(FONT_NAME, 11, 'bold'), command=self._start_android_build
+        )
+        self.btn_build_apk.pack(fill='x', padx=14, pady=(0, 8))
+
+        btn_row2 = ctk.CTkFrame(cfg_card, fg_color='transparent')
+        btn_row2.pack(fill='x', padx=14, pady=(0, 14))
+        ctk.CTkButton(
+            btn_row2, text='📂 Open APK Folder', height=34, corner_radius=8,
+            fg_color=C_CARD_ALT, hover_color='#E2E8F0', text_color=C_TEXT_MAIN,
+            border_width=1, border_color=C_BORDER, font=(FONT_NAME, 10, 'bold'),
+            command=self._open_android_apk_folder
+        ).pack(side='left', fill='x', expand=True, padx=(0, 6))
+
+        ctk.CTkButton(
+            btn_row2, text='☁️ Publish APK Release', height=34, corner_radius=8,
+            fg_color=C_GREEN, hover_color='#059669', text_color='#FFFFFF',
+            font=(FONT_NAME, 10, 'bold'), command=self._publish_android_apk
+        ).pack(side='right', fill='x', expand=True, padx=(6, 0))
+
+        right_col = ctk.CTkFrame(parent, corner_radius=12, fg_color=C_CARD, border_width=1, border_color=C_BORDER)
+        right_col.grid(row=0, column=1, sticky='nsew')
+
+        ctk.CTkLabel(right_col, text='📟  Android Gradle Build Console', font=(FONT_NAME, 12, 'bold'),
+                     text_color=C_TEXT_MAIN).pack(anchor='w', padx=14, pady=(12, 6))
+
+        self.android_console = ctk.CTkTextbox(right_col, fg_color='#0F172A', text_color='#E2E8F0',
+                                              font=(FONT_MONO_NAME, 10), corner_radius=8, state='disabled')
+        self.android_console.pack(fill='both', expand=True, padx=14, pady=(0, 14))
+        self._android_log('Ready to build One Tap Studio Android APK (supports 26.11.01.3+ versioning).')
+
+    def _start_android_build(self):
+        tc = self._detect_android_toolchain()
+        if not tc['gradle_cmd'] or not tc['java_home'] or not tc['android_home']:
+            messagebox.showerror('Android Toolchain Missing', 'Ensure JDK 17, Gradle 8.4, and Android SDK 34 are installed.')
+            return
+
+        version = self.android_ver_entry.get().strip() or '26.11.01.3'
+        vcode = self._compute_android_version_code(version)
+        task = self.android_variant_var.get()
+
+        vjson = os.path.join('android-app', 'version.json')
+        try:
+            with open(vjson, 'w', encoding='utf-8') as f:
+                json.dump({
+                    'version': version,
+                    'versionCode': vcode,
+                    'releaseDate': datetime.now().strftime('%Y-%m-%d'),
+                    'downloadUrl': f'https://github.com/BSFrameWorks5253/onetap-workstation/releases/download/v{version}-Mobile/One.Tap_V-{version}.apk',
+                    'changelog': f'One Tap Studio Mobile v{version} (real-time sync + light mode + desktop telemetry).'
+                }, f, indent=2)
+        except Exception as e:
+            self._android_log(f'[Warn] Could not update version.json: {e}')
+
+        self.btn_build_apk.configure(state='disabled', text='⏳  BUILDING APK…')
+        self._android_log(f'\n=== Building {task} | v{version}-Mobile (code {vcode}) ===')
+
+        def _worker():
+            env = os.environ.copy()
+            env['JAVA_HOME'] = tc['java_home']
+            env['ANDROID_HOME'] = tc['android_home']
+            env['ANDROID_SDK_ROOT'] = tc['android_home']
+            env['PATH'] = os.path.join(tc['java_home'], 'bin') + os.pathsep + env.get('PATH', '')
+
+            cmd = f'"{tc["gradle_cmd"]}" {task} -PversionName="{version}" -PversionCode="{vcode}" --no-daemon'
+            try:
+                proc = subprocess.Popen(
+                    cmd, shell=True, cwd=os.path.abspath('android-app'), env=env,
+                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding='utf-8', errors='replace'
+                )
+                for line in iter(proc.stdout.readline, ''):
+                    if line:
+                        self._android_log(line.rstrip())
+                proc.stdout.close()
+                proc.wait()
+                if proc.returncode == 0:
+                    sub = 'release' if task == 'assembleRelease' else 'debug'
+                    raw_apk = os.path.abspath(os.path.join('android-app', 'app', 'build', 'outputs', 'apk', sub, 'app-release-unsigned.apk' if sub == 'release' else 'app-debug.apk'))
+                    out_dir = os.path.abspath(os.path.join('android-app', 'release'))
+                    os.makedirs(out_dir, exist_ok=True)
+                    named_apk = os.path.join(out_dir, f'One Tap_V-{version}.apk')
+                    if os.path.exists(raw_apk):
+                        shutil.copyfile(raw_apk, named_apk)
+                        self._android_log(f'📦 Wrote APK: {named_apk}')
+                    self._android_log(f'\n✅ APK BUILD SUCCEEDED for v{version}-Mobile!')
+                    if self.android_auto_publish.get():
+                        self._publish_android_apk_sync(version, named_apk)
+                else:
+                    self._android_log(f'\n❌ APK BUILD FAILED (exit {proc.returncode})')
+            except Exception as exc:
+                self._android_log(f'[Error] {exc}')
+            finally:
+                self.after(0, lambda: self.btn_build_apk.configure(state='normal', text='🔨  BUILD ANDROID APK'))
+
+        threading.Thread(target=_worker, daemon=True).start()
+
+    def _open_android_apk_folder(self):
+        folder = os.path.abspath(os.path.join('android-app', 'release'))
+        if not os.path.exists(folder):
+            sub = 'release' if self.android_variant_var.get() == 'assembleRelease' else 'debug'
+            folder = os.path.abspath(os.path.join('android-app', 'app', 'build', 'outputs', 'apk', sub))
+        os.makedirs(folder, exist_ok=True)
+        try:
+            if IS_WIN:
+                os.startfile(folder)
+            elif IS_LINUX:
+                subprocess.Popen(['xdg-open', folder])
+        except Exception:
+            messagebox.showinfo('APK Folder', folder)
+
+    def _publish_android_apk_sync(self, version: str, apk_path: str):
+        tag = f'v{version}-Mobile'
+        asset_name = f'One Tap_V-{version}.apk'
+        if not os.path.exists(apk_path):
+            self._android_log(f'[Publish] APK not found: {apk_path}')
+            return
+        cmd = f'gh release create "{tag}" "{apk_path}#{asset_name}" --title "One Tap Studio Mobile v{version}" --notes "Android Mobile APK v{version} (Tag: {tag})"'
+        self._android_log(f'\n[Publish] Creating GitHub Release {tag}...')
+        ok = _stream_cmd(cmd, self._android_log)
+        if not ok:
+            self._android_log(f'[Publish] Trying upload to existing release {tag}...')
+            _stream_cmd(f'gh release upload "{tag}" "{apk_path}#{asset_name}" --clobber', self._android_log)
+
+    def _publish_android_apk(self):
+        version = self.android_ver_entry.get().strip() or '26.11.01.3'
+        named_apk = os.path.abspath(os.path.join('android-app', 'release', f'One Tap_V-{version}.apk'))
+        if not os.path.exists(named_apk):
+            sub = 'release' if self.android_variant_var.get() == 'assembleRelease' else 'debug'
+            apk_name = 'app-release-unsigned.apk' if sub == 'release' else 'app-debug.apk'
+            raw_apk = os.path.abspath(os.path.join('android-app', 'app', 'build', 'outputs', 'apk', sub, apk_name))
+            if not os.path.exists(raw_apk):
+                messagebox.showwarning('APK Not Found', f'Build the APK first:\n{raw_apk}')
+                return
+            os.makedirs(os.path.dirname(named_apk), exist_ok=True)
+            shutil.copyfile(raw_apk, named_apk)
+        threading.Thread(target=lambda: self._publish_android_apk_sync(version, named_apk), daemon=True).start()
 
     # ── TAB 2: Release Notes & Changelog ──────────────────────────────────────
     def _build_tab_notes(self, parent):

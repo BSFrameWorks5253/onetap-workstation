@@ -233,6 +233,11 @@ class AnyShareRealtimeService {
         photoStage: override?.photoStage || (previous as any)?.photoStage || (resolvedStage === 'uploaded' || resolvedStage === 'upload' || resolvedStage === 'jameya' || resolvedStage === 'completed' ? 'uploaded' : 'edited'),
         photoEditorName: override?.photoEditorName || (previous as any)?.photoEditorName || 'Muffadal Peti',
         photoUploaded: override?.photoUploaded !== undefined ? override.photoUploaded : ((previous as any)?.photoUploaded !== undefined ? (previous as any).photoUploaded : (resolvedStage === 'uploaded' || resolvedStage === 'upload' || resolvedStage === 'jameya' || resolvedStage === 'completed')),
+        renderDuration: typeof task.renderDuration === 'number' ? task.renderDuration : (previous as any)?.renderDuration,
+        renderVideoCount: typeof task.renderVideoCount === 'number' ? task.renderVideoCount : (previous as any)?.renderVideoCount,
+        renderSizeBytes: typeof task.renderSizeBytes === 'number' ? task.renderSizeBytes : (previous as any)?.renderSizeBytes,
+        prprojModifiedAt: typeof task.prprojModifiedAt === 'number' ? task.prprojModifiedAt : (previous as any)?.prprojModifiedAt,
+        renderedAt: typeof task.renderedAt === 'number' ? task.renderedAt : (previous as any)?.renderedAt,
         updatedAt: now,
         order: index
       };

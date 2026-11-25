@@ -59,7 +59,7 @@ fun MultiStageProgressBar(
             .fillMaxWidth()
             .height(height)
             .clip(RoundedCornerShape(height / 2))
-            .background(Color(0xFF1E293B))
+            .background(Color(0xFFF1F5F9))
     ) {
         if (animatedEditing > 0f) {
             Box(

@@ -8,11 +8,13 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONArray
+import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
 class SupabaseSyncClient(
-    private val baseUrl: String = "https://dubscvthmkgkeiqdladp.supabase.co",
-    private val apiKey: String = "sb_publishable_kYApNvq2_6HAfNwJb8hW1g_7iLMSVyk"
+    private val baseUrl: String = DEFAULT_URL,
+    private val apiKey: String = DEFAULT_KEY
 ) {
 
     private val json = Json {
@@ -22,13 +24,12 @@ class SupabaseSyncClient(
     }
 
     private val httpClient = OkHttpClient.Builder()
-        .connectTimeout(10, TimeUnit.SECONDS)
-        .readTimeout(10, TimeUnit.SECONDS)
-        .writeTimeout(10, TimeUnit.SECONDS)
+        .connectTimeout(12, TimeUnit.SECONDS)
+        .readTimeout(12, TimeUnit.SECONDS)
+        .writeTimeout(12, TimeUnit.SECONDS)
         .build()
 
     suspend fun fetchLatestSnapshot(): Result<RemoteSnapshotPayload?> = withContext(Dispatchers.IO) {
-        val startTime = System.currentTimeMillis()
         try {
             val url = "$baseUrl/rest/v1/safar_tracker_snapshots?id=eq.primary&select=id,snapshot,updated_at"
             val request = Request.Builder()
@@ -47,7 +48,6 @@ class SupabaseSyncClient(
             val body = response.body?.string() ?: return@withContext Result.success(null)
             val rows = json.decodeFromString<List<RemoteSnapshotRow>>(body)
             val snapshot = rows.firstOrNull()?.snapshot
-
             Result.success(snapshot)
         } catch (e: Exception) {
             Result.failure(e)
@@ -84,32 +84,25 @@ class SupabaseSyncClient(
         }
     }
 
-    suspend fun broadcastNotification(title: String, message: String, type: String = "mobile_status_update"): Result<Boolean> = withContext(Dispatchers.IO) {
+    suspend fun broadcastEvent(topic: String, event: String, payload: JSONObject): Result<Boolean> = withContext(Dispatchers.IO) {
         try {
             val url = "$baseUrl/realtime/v1/api/broadcast"
-            val broadcastPayload = """
-                {
-                    "messages": [
-                        {
-                            "topic": "realtime:anyshare_realtime_nexus",
-                            "event": "website_user_notification",
-                            "payload": {
-                                "title": "$title",
-                                "message": "$message",
-                                "type": "$type",
-                                "timestamp": "${System.currentTimeMillis()}"
-                            }
-                        }
-                    ]
-                }
-            """.trimIndent()
+            val envelope = JSONObject().apply {
+                put("messages", JSONArray().apply {
+                    put(JSONObject().apply {
+                        put("topic", topic)
+                        put("event", event)
+                        put("payload", payload)
+                    })
+                })
+            }
 
             val request = Request.Builder()
                 .url(url)
                 .header("apikey", apiKey)
                 .header("Authorization", "Bearer $apiKey")
                 .header("Content-Type", "application/json")
-                .post(broadcastPayload.toRequestBody("application/json".toMediaType()))
+                .post(envelope.toString().toRequestBody("application/json".toMediaType()))
                 .build()
 
             val response = httpClient.newCall(request).execute()
@@ -117,5 +110,24 @@ class SupabaseSyncClient(
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    suspend fun broadcastNotification(
+        title: String,
+        message: String,
+        type: String = "mobile_status_update"
+    ): Result<Boolean> {
+        val payload = JSONObject().apply {
+            put("title", title)
+            put("message", message)
+            put("type", type)
+            put("timestamp", System.currentTimeMillis().toString())
+        }
+        return broadcastEvent("realtime:anyshare_realtime_nexus", "website_user_notification", payload)
+    }
+
+    companion object {
+        const val DEFAULT_URL = "https://dubscvthmkgkeiqdladp.supabase.co"
+        const val DEFAULT_KEY = "sb_publishable_kYApNvq2_6HAfNwJb8hW1g_7iLMSVyk"
     }
 }

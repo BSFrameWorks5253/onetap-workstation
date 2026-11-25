@@ -94,4 +94,32 @@ object BatchNotificationManager {
             android.util.Log.e("BatchNotificationManager", "Failed to show notification safely", t)
         }
     }
+
+    fun showSimpleNotification(context: Context, title: String, message: String) {
+        try {
+            createNotificationChannel(context)
+            val intent = Intent(context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            }
+            val pendingIntent = PendingIntent.getActivity(
+                context,
+                title.hashCode(),
+                intent,
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            )
+            val appIcon = if (context.applicationInfo.icon != 0) context.applicationInfo.icon else android.R.drawable.ic_dialog_info
+            val builder = NotificationCompat.Builder(context, CHANNEL_ID)
+                .setSmallIcon(appIcon)
+                .setContentTitle(title)
+                .setContentText(message)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(message))
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .setContentIntent(pendingIntent)
+                .setAutoCancel(true)
+            val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+            manager?.notify((System.currentTimeMillis() % 100000).toInt(), builder.build())
+        } catch (t: Throwable) {
+            android.util.Log.e("BatchNotificationManager", "Failed to show simple notification", t)
+        }
+    }
 }

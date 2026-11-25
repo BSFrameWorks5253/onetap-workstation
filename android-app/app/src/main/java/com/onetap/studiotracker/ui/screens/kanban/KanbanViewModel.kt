@@ -20,7 +20,7 @@ class KanbanViewModel : ViewModel() {
     val campaigns: StateFlow<List<SafarCampaign>> = repository.campaigns
 
     val activeCampaign: StateFlow<SafarCampaign?> = repository.campaigns.map { list ->
-        list.firstOrNull { it.isOngoing } ?: list.firstOrNull()
+        list.firstOrNull { it.isOngoing } ?: list.firstOrNull { !it.isArchived } ?: list.firstOrNull()
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     private val _selectedStage = MutableStateFlow(Stage.EDITING_PENDING)
@@ -31,28 +31,26 @@ class KanbanViewModel : ViewModel() {
     }
 
     fun advanceTaskStage(task: SafarTask) {
-        val nextStage = when (task.stage) {
-            Stage.EDITING_PENDING -> Stage.IN_PROGRESS
-            Stage.IN_PROGRESS -> Stage.UPLOAD_PENDING
-            Stage.UPLOAD_PENDING -> Stage.UPLOADED
-            Stage.UPLOADED -> Stage.ALJAMEA_DONE
-            Stage.ALJAMEA_DONE -> Stage.ALJAMEA_DONE
-        }
-        repository.updateTaskStage(task.id, nextStage)
+        task.stage.nextStage?.let { repository.updateTaskStage(task.id, it) }
     }
 
     fun regressTaskStage(task: SafarTask) {
-        val prevStage = when (task.stage) {
-            Stage.ALJAMEA_DONE -> Stage.UPLOADED
-            Stage.UPLOADED -> Stage.UPLOAD_PENDING
-            Stage.UPLOAD_PENDING -> Stage.IN_PROGRESS
-            Stage.IN_PROGRESS -> Stage.EDITING_PENDING
-            Stage.EDITING_PENDING -> Stage.EDITING_PENDING
-        }
-        repository.updateTaskStage(task.id, prevStage)
+        task.stage.prevStage?.let { repository.updateTaskStage(task.id, it) }
     }
 
     fun setTaskStage(taskId: String, stage: Stage) {
         repository.updateTaskStage(taskId, stage)
+    }
+
+    fun bulkSetStage(taskIds: Set<String>, stage: Stage) {
+        repository.bulkUpdateTaskStage(taskIds, stage)
+    }
+
+    fun addManualTask(safarName: String, dateFolder: String, notes: String?) {
+        repository.addManualTask(safarName, dateFolder, notes)
+    }
+
+    fun excludeTask(task: SafarTask) {
+        repository.excludeTask(task.campaignId, task.id, task.title)
     }
 }

@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.HourglassTop
 import androidx.compose.material.icons.filled.PendingActions
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material3.Button
@@ -77,6 +78,7 @@ import com.onetap.studiotracker.ui.theme.TextSecondary
 @Composable
 fun DashboardScreen(
     onNavigateKanban: () -> Unit,
+    onNavigateSettings: () -> Unit = {},
     viewModel: DashboardViewModel = viewModel(),
     modifier: Modifier = Modifier
 ) {
@@ -140,7 +142,7 @@ fun DashboardScreen(
                                 ) {
                                     Text(
                                         text = "PRO",
-                                        color = Color(0xFF818CF8),
+                                        color = IndigoPrimary,
                                         fontSize = 9.sp,
                                         fontWeight = FontWeight.Bold
                                     )
@@ -154,32 +156,54 @@ fun DashboardScreen(
                         }
                     }
 
-                    // Cloud DB Realtime Sync Pill
-                    val isSyncing = syncState.status == com.onetap.studiotracker.data.sync.SyncStatus.SYNCING
-                    val isConnected = syncState.status == com.onetap.studiotracker.data.sync.SyncStatus.CONNECTED
-                    val pillColor = if (isConnected) EmeraldSuccess else if (isSyncing) Color(0xFF38BDF8) else Color(0xFFF59E0B)
-
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(DarkSurfaceElevated)
-                            .border(1.dp, DarkBorder, RoundedCornerShape(20.dp))
-                            .clickable { viewModel.triggerManualSync() }
-                            .padding(horizontal = 10.dp, vertical = 5.dp)
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(7.dp)
-                                    .clip(CircleShape)
-                                    .background(pillColor)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = if (isSyncing) "Syncing..." else if (isConnected) "DB: ${syncState.latencyMs}ms" else "Offline Cache",
-                                color = pillColor,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold
+                        val isSyncing = syncState.status == com.onetap.studiotracker.data.sync.SyncStatus.SYNCING
+                        val isRealtime = syncState.isRealtimeConnected || syncState.status == com.onetap.studiotracker.data.sync.SyncStatus.REALTIME_LIVE
+                        val isConnected = isRealtime || syncState.status == com.onetap.studiotracker.data.sync.SyncStatus.CONNECTED
+                        val pillColor = if (isConnected) EmeraldSuccess else if (isSyncing) Color(0xFF0284C7) else Color(0xFFD97706)
+
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(DarkSurface)
+                                .border(1.dp, DarkBorder, RoundedCornerShape(20.dp))
+                                .clickable { viewModel.triggerManualSync() }
+                                .padding(horizontal = 10.dp, vertical = 5.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(7.dp)
+                                        .clip(CircleShape)
+                                        .background(pillColor)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = if (isSyncing) "Syncing..." else if (isRealtime) "Live" else if (isConnected) "${syncState.latencyMs}ms" else "Offline",
+                                    color = pillColor,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .size(34.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(DarkSurface)
+                                .border(1.dp, DarkBorder, RoundedCornerShape(10.dp))
+                                .clickable { onNavigateSettings() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = "Settings",
+                                tint = TextSecondary,
+                                modifier = Modifier.size(18.dp)
                             )
                         }
                     }
@@ -490,7 +514,11 @@ fun CampaignRowCard(
                                     fontWeight = FontWeight.SemiBold
                                 )
                                 Text(
-                                    text = "${task.hijriDate} • ${task.gregorianDate}",
+                                    text = listOfNotNull(
+                                        task.hijriDate.takeIf { it.isNotBlank() },
+                                        task.dueDate.takeIf { it.isNotBlank() }?.let { "Due $it" },
+                                        task.effectiveVideoEditor
+                                    ).joinToString(" • "),
                                     color = TextMuted,
                                     fontSize = 10.sp
                                 )

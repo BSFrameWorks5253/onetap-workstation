@@ -54,7 +54,7 @@ export function getWorkstationVersion(): string {
     }
   } catch {}
   try {
-    return (app.getVersion() || (appPackageJson?.version as string) || '26.11.43').trim()
+    return (app.getVersion() || (appPackageJson?.version as string) || '26.11.44').trim()
   } catch {
     return (appPackageJson?.version as string) || '26.11.04'
   }
@@ -530,7 +530,7 @@ export async function checkGitHubUpdate(): Promise<UpdateManifest> {
 
   let releaseApiData: any = null
   try {
-    const fetchUrl = `https://api.github.com/repos/${repoName}/releases/latest`
+    const fetchUrl = `https://api.github.com/repos/${repoName}/releases?per_page=15`
     console.log(`[Updater] Querying GitHub Releases API: ${fetchUrl}`)
     const responseStream = await getUrlStream(fetchUrl, { headers: apiHeaders })
     const responseBody = await new Promise<string>((resolve, reject) => {
@@ -539,11 +539,22 @@ export async function checkGitHubUpdate(): Promise<UpdateManifest> {
       responseStream.on('end', () => resolve(body))
       responseStream.on('error', reject)
     })
-    const rel = JSON.parse(responseBody)
-    if (rel && (rel.tag_name || rel.name)) {
-      releaseApiData = rel
-    } else if (rel?.message) {
-      console.warn(`[Updater] GitHub API note: ${rel.message}`)
+    const parsed = JSON.parse(responseBody)
+    const releases = Array.isArray(parsed) ? parsed : (parsed?.tag_name ? [parsed] : [])
+    const desktopRel = releases.find((r: any) => {
+      if (!r || r.draft || r.prerelease) return false
+      const tag = String(r.tag_name || r.name || '').toLowerCase()
+      if (tag.includes('-mobile') || tag.endsWith('mobile')) return false
+      const assets = Array.isArray(r.assets) ? r.assets : []
+      if (assets.length > 0 && assets.every((a: any) => String(a?.name || '').toLowerCase().endsWith('.apk'))) {
+        return false
+      }
+      return Boolean(r.tag_name || r.name)
+    })
+    if (desktopRel) {
+      releaseApiData = desktopRel
+    } else if (parsed?.message) {
+      console.warn(`[Updater] GitHub API note: ${parsed.message}`)
     }
   } catch (apiErr) {
     console.warn('[Updater] GitHub Releases API query note:', apiErr)

@@ -94,7 +94,7 @@ fun IngestRadarScreen(
     val isAudioPlaying by audioPlayer.isPlaying.collectAsState()
 
     // Missing media detection
-    val uningestedTasks = campaign?.tasks?.filter { it.stage == Stage.EDITING_PENDING && it.uploadedPhotos == 0 } ?: emptyList()
+    val uningestedTasks = campaign?.tasks?.filter { it.stage == Stage.EDITING_PENDING && !it.isPhotosDelivered } ?: emptyList()
     val inProgressTasks = campaign?.tasks?.filter { it.stage == Stage.IN_PROGRESS || it.stage == Stage.UPLOAD_PENDING } ?: emptyList()
 
     // Production Stopwatch State

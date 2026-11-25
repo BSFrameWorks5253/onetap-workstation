@@ -92,7 +92,7 @@ fun ExecutiveHeroCard(
                         text = if (is100Done) "CAMPAIGN COMPLETED" else "ACTIVE ONGOING CAMPAIGN",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (is100Done) EmeraldGlow else Color(0xFF818CF8),
+                        color = if (is100Done) EmeraldSuccess else IndigoPrimary,
                         letterSpacing = 0.5.sp
                     )
                 }
@@ -265,7 +265,7 @@ fun ExecutiveHeroCard(
                             imageVector = Icons.Default.ViewKanban,
                             contentDescription = null,
                             modifier = Modifier.size(16.dp),
-                            tint = Color(0xFF818CF8)
+                            tint = IndigoPrimary
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(text = "Open Kanban", fontSize = 12.sp)

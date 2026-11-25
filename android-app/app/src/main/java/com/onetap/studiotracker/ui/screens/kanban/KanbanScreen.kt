@@ -1,7 +1,5 @@
 package com.onetap.studiotracker.ui.screens.kanban
 
-import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -24,17 +22,23 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowForward
-import androidx.compose.material.icons.filled.CloudDownload
-import androidx.compose.material.icons.filled.FolderShared
+import androidx.compose.material.icons.filled.CheckBox
+import androidx.compose.material.icons.filled.CheckBoxOutlineBlank
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -45,22 +49,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.onetap.studiotracker.data.models.PhotoStage
 import com.onetap.studiotracker.data.models.SafarTask
 import com.onetap.studiotracker.data.models.Stage
-import com.onetap.studiotracker.ui.components.PhotoStageChip
 import com.onetap.studiotracker.ui.components.StageChip
-import com.onetap.studiotracker.ui.theme.DarkBackground
-import com.onetap.studiotracker.ui.theme.DarkBorder
-import com.onetap.studiotracker.ui.theme.DarkSurface
-import com.onetap.studiotracker.ui.theme.DarkSurfaceElevated
-import com.onetap.studiotracker.ui.theme.EmeraldSuccess
+import com.onetap.studiotracker.ui.theme.EmeraldDark
 import com.onetap.studiotracker.ui.theme.IndigoPrimary
+import com.onetap.studiotracker.ui.theme.IndigoSoft
+import com.onetap.studiotracker.ui.theme.LightBackground
+import com.onetap.studiotracker.ui.theme.LightBorder
+import com.onetap.studiotracker.ui.theme.LightSurface
+import com.onetap.studiotracker.ui.theme.LightSurfaceSubtle
+import com.onetap.studiotracker.ui.theme.RoseError
 import com.onetap.studiotracker.ui.theme.TextMuted
 import com.onetap.studiotracker.ui.theme.TextPrimary
 import com.onetap.studiotracker.ui.theme.TextSecondary
@@ -70,350 +73,358 @@ fun KanbanScreen(
     viewModel: KanbanViewModel = viewModel(),
     modifier: Modifier = Modifier
 ) {
+    val campaigns by viewModel.campaigns.collectAsState()
     val activeCampaign by viewModel.activeCampaign.collectAsState()
-    val allTasks = activeCampaign?.tasks ?: emptyList()
 
-    var filterStage by remember { mutableStateOf<Stage?>(null) } // null = All stages
+    var showAllSafars by remember { mutableStateOf(false) }
+    var filterStage by remember { mutableStateOf<Stage?>(null) }
+    var searchQuery by remember { mutableStateOf("") }
+    var selectionMode by remember { mutableStateOf(false) }
+    var selectedIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var showAddDialog by remember { mutableStateOf(false) }
 
-    val filteredTasks = if (filterStage == null) {
-        allTasks
-    } else {
-        allTasks.filter { it.stage == filterStage }
+    val baseTasks = remember(campaigns, activeCampaign, showAllSafars) {
+        if (showAllSafars) {
+            campaigns.filter { !it.isArchived }.flatMap { it.tasks }
+        } else {
+            activeCampaign?.tasks ?: emptyList()
+        }
+    }
+
+    val filteredTasks = remember(baseTasks, filterStage, searchQuery) {
+        baseTasks.filter { t ->
+            val stageMatch = filterStage == null || t.stage == filterStage
+            val queryMatch = searchQuery.isBlank() ||
+                t.title.contains(searchQuery, ignoreCase = true) ||
+                t.campaignId.contains(searchQuery, ignoreCase = true) ||
+                t.effectiveVideoEditor.contains(searchQuery, ignoreCase = true)
+            stageMatch && queryMatch
+        }
     }
 
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(DarkBackground)
+            .background(LightBackground)
             .statusBarsPadding()
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(top = 12.dp)
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 84.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Header
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
-                Text(
-                    text = "Production Pipeline",
-                    color = TextPrimary,
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = activeCampaign?.name ?: "No Active Campaign",
-                    color = TextSecondary,
-                    fontSize = 13.sp
-                )
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // Stage Filter Bar (Horizontal Scroll)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                // "All" Chip
-                val isAllSelected = filterStage == null
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(if (isAllSelected) IndigoPrimary else DarkSurface)
-                        .border(1.dp, if (isAllSelected) IndigoPrimary else DarkBorder, RoundedCornerShape(10.dp))
-                        .clickable { filterStage = null }
-                        .padding(horizontal = 14.dp, vertical = 8.dp)
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "All (${allTasks.size})",
-                        color = if (isAllSelected) Color.White else TextSecondary,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-
-                // Stage Chips
-                Stage.entries.forEach { stage ->
-                    val isSelected = filterStage == stage
-                    val count = allTasks.count { it.stage == stage }
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(if (isSelected) stage.composeColor.copy(alpha = 0.25f) else DarkSurface)
-                            .border(
-                                1.dp,
-                                if (isSelected) stage.composeColor else DarkBorder,
-                                RoundedCornerShape(10.dp)
-                            )
-                            .clickable { filterStage = stage }
-                            .padding(horizontal = 12.dp, vertical = 8.dp)
-                    ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Production Pipeline", color = TextPrimary, fontSize = 22.sp, fontWeight = FontWeight.Bold)
                         Text(
-                            text = "${stage.title} ($count)",
-                            color = if (isSelected) stage.composeColor else TextSecondary,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold
+                            text = if (showAllSafars) "All active Safars (${baseTasks.size} dates)" else (activeCampaign?.name ?: "No active Safar"),
+                            color = TextSecondary,
+                            fontSize = 13.sp
                         )
                     }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Tasks List
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 80.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                if (filteredTasks.isEmpty()) {
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(200.dp),
-                            contentAlignment = Alignment.Center
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        OutlinedButton(
+                            onClick = {
+                                selectionMode = !selectionMode
+                                if (!selectionMode) selectedIds = emptySet()
+                            },
+                            shape = RoundedCornerShape(10.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, if (selectionMode) IndigoPrimary else LightBorder)
                         ) {
-                            Text(
-                                text = "No tasks in this pipeline stage",
-                                color = TextMuted,
-                                fontSize = 14.sp
-                            )
+                            Text(if (selectionMode) "Done" else "Bulk", fontSize = 12.sp, color = IndigoPrimary)
+                        }
+                        if (activeCampaign != null) {
+                            Button(
+                                onClick = { showAddDialog = true },
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = IndigoPrimary, contentColor = Color.White),
+                                contentPadding = PaddingValues(horizontal = 12.dp)
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Add", fontSize = 12.sp)
+                            }
                         }
                     }
-                } else {
-                    items(filteredTasks, key = { it.id }) { task ->
-                        KanbanTaskCard(
-                            task = task,
-                            onAdvance = { viewModel.advanceTaskStage(task) },
-                            onRegress = { viewModel.regressTaskStage(task) }
-                        )
+                }
+            }
+
+            // Scope toggle + Search
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        ScopeChip("Ongoing Safar", !showAllSafars) { showAllSafars = false }
+                        ScopeChip("All Active Safars", showAllSafars) { showAllSafars = true }
+                    }
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        placeholder = { Text("Search date folder, Safar, or editor…", fontSize = 13.sp, color = TextMuted) },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TextMuted) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                }
+            }
+
+            // Stage Filter Pills
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    StageFilterChip("All (${baseTasks.size})", filterStage == null, IndigoPrimary) { filterStage = null }
+                    Stage.entries.forEach { st ->
+                        val count = baseTasks.count { it.stage == st }
+                        StageFilterChip("${st.title} ($count)", filterStage == st, st.composeColor) {
+                            filterStage = if (filterStage == st) null else st
+                        }
                     }
                 }
             }
+
+            // Bulk Action Bar
+            if (selectionMode && selectedIds.isNotEmpty()) {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(IndigoSoft)
+                            .border(1.dp, IndigoPrimary.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
+                            .padding(12.dp)
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("${selectedIds.size} selected — Move all to:", color = IndigoPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Row(
+                                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Stage.entries.forEach { st ->
+                                    Button(
+                                        onClick = {
+                                            viewModel.bulkSetStage(selectedIds, st)
+                                            selectedIds = emptySet()
+                                            selectionMode = false
+                                        },
+                                        shape = RoundedCornerShape(8.dp),
+                                        colors = ButtonDefaults.buttonColors(containerColor = st.composeColor, contentColor = Color.White),
+                                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                                    ) {
+                                        Text(st.title, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            items(filteredTasks, key = { it.id }) { task ->
+                val isSelected = task.id in selectedIds
+                KanbanTaskCard(
+                    task = task,
+                    showSafarName = showAllSafars,
+                    selectionMode = selectionMode,
+                    isSelected = isSelected,
+                    onToggleSelect = {
+                        selectedIds = if (isSelected) selectedIds - task.id else selectedIds + task.id
+                    },
+                    onAdvance = { viewModel.advanceTaskStage(task) },
+                    onRegress = { viewModel.regressTaskStage(task) },
+                    onExclude = { viewModel.excludeTask(task) }
+                )
+            }
         }
+    }
+
+    if (showAddDialog && activeCampaign != null) {
+        var folderName by remember { mutableStateOf("") }
+        var notes by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { showAddDialog = false },
+            containerColor = LightSurface,
+            title = { Text("Add Date Task", color = TextPrimary, fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Safar: ${activeCampaign!!.name}", color = TextSecondary, fontSize = 12.sp)
+                    OutlinedTextField(
+                        value = folderName,
+                        onValueChange = { folderName = it },
+                        label = { Text("Date / Session Folder (e.g. 1448-03-14 _01M)") },
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = notes,
+                        onValueChange = { notes = it },
+                        label = { Text("Notes (optional)") }
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (folderName.isNotBlank()) {
+                            viewModel.addManualTask(activeCampaign!!.name, folderName, notes)
+                            showAddDialog = false
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = IndigoPrimary, contentColor = Color.White)
+                ) { Text("Add Task") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAddDialog = false }) { Text("Cancel") }
+            }
+        )
     }
 }
 
 @Composable
-fun KanbanTaskCard(
-    task: SafarTask,
-    onAdvance: () -> Unit,
-    onRegress: () -> Unit
-) {
-    val context = LocalContext.current
+private fun ScopeChip(label: String, selected: Boolean, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(10.dp))
+            .background(if (selected) IndigoPrimary else LightSurface)
+            .border(1.dp, if (selected) IndigoPrimary else LightBorder, RoundedCornerShape(10.dp))
+            .clickable { onClick() }
+            .padding(horizontal = 12.dp, vertical = 7.dp)
+    ) {
+        Text(label, color = if (selected) Color.White else TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+    }
+}
 
+@Composable
+private fun StageFilterChip(label: String, selected: Boolean, color: Color, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(if (selected) color else LightSurface)
+            .border(1.dp, if (selected) color else LightBorder, RoundedCornerShape(20.dp))
+            .clickable { onClick() }
+            .padding(horizontal = 12.dp, vertical = 7.dp)
+    ) {
+        Text(label, color = if (selected) Color.White else TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+@Composable
+private fun KanbanTaskCard(
+    task: SafarTask,
+    showSafarName: Boolean,
+    selectionMode: Boolean,
+    isSelected: Boolean,
+    onToggleSelect: () -> Unit,
+    onAdvance: () -> Unit,
+    onRegress: () -> Unit,
+    onExclude: () -> Unit
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
-            .background(DarkSurface)
-            .border(1.dp, DarkBorder, RoundedCornerShape(14.dp))
+            .background(LightSurface)
+            .border(1.dp, if (isSelected) IndigoPrimary else LightBorder, RoundedCornerShape(14.dp))
+            .clickable(enabled = selectionMode) { onToggleSelect() }
             .padding(14.dp)
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            // Header Row: Title & Stage Chip
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = task.title,
-                        color = TextPrimary,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "${task.hijriDate}  •  ${task.gregorianDate}",
-                        color = TextMuted,
-                        fontSize = 11.sp
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                    if (selectionMode) {
+                        Icon(
+                            imageVector = if (isSelected) Icons.Default.CheckBox else Icons.Default.CheckBoxOutlineBlank,
+                            contentDescription = null,
+                            tint = if (isSelected) IndigoPrimary else TextMuted,
+                            modifier = Modifier.padding(end = 8.dp).size(20.dp)
+                        )
+                    }
+                    Column {
+                        Text(task.title, color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                        if (showSafarName) {
+                            Text(task.campaignId, color = TextSecondary, fontSize = 11.sp)
+                        }
+                    }
                 }
-                StageChip(stage = task.stage)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    StageChip(stage = task.stage)
+                    IconButton(onClick = onExclude, modifier = Modifier.size(28.dp)) {
+                        Icon(Icons.Default.DeleteOutline, contentDescription = "Exclude", tint = TextMuted, modifier = Modifier.size(16.dp))
+                    }
+                }
             }
 
-            // Info Pills Row: Video Editor, Duration, Photos
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Person, contentDescription = null, tint = TextMuted, modifier = Modifier.size(14.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(task.effectiveVideoEditor, color = TextSecondary, fontSize = 12.sp)
+                }
+                if (task.dueDate.isNotBlank()) {
+                    Text(
+                        text = "Due ${task.dueDate}" + if (task.isOverdue) " (Overdue)" else "",
+                        color = if (task.isOverdue) RoseError else TextSecondary,
+                        fontSize = 11.sp,
+                        fontWeight = if (task.isOverdue) FontWeight.Bold else FontWeight.Normal
+                    )
+                }
+            }
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Editor Pill
-                if (task.videoEditor != null) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(DarkSurfaceElevated)
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.Person,
-                                contentDescription = null,
-                                tint = Color(0xFF818CF8),
-                                modifier = Modifier.size(12.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = task.videoEditor,
-                                color = TextSecondary,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                    }
-                }
-
-                // Duration Pill
-                if (task.durationMinutes > 0) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(DarkSurfaceElevated)
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.Timer,
-                                contentDescription = null,
-                                tint = TextMuted,
-                                modifier = Modifier.size(12.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = "${task.durationMinutes}m",
-                                color = TextSecondary,
-                                fontSize = 11.sp
-                            )
-                        }
-                    }
-                }
-
-                // Photo Status Pill
-                PhotoStageChip(photoStage = task.photoStage)
-            }
-
-            // Notes / details if available
-            if (!task.notes.isNullOrBlank()) {
-                Text(
-                    text = "📝 ${task.notes}",
-                    color = TextMuted,
-                    fontSize = 11.sp,
-                    lineHeight = 15.sp
-                )
-            }
-
-            // Stage Navigation Actions
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Back Button (disabled if in first stage)
-                if (task.stage != Stage.EDITING_PENDING) {
+                if (task.stage.prevStage != null) {
                     OutlinedButton(
                         onClick = onRegress,
                         modifier = Modifier.height(36.dp),
                         shape = RoundedCornerShape(8.dp),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, DarkBorder),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary),
-                        contentPadding = PaddingValues(horizontal = 10.dp)
+                        border = androidx.compose.foundation.BorderStroke(1.dp, LightBorder)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowBack,
-                            contentDescription = "Previous Stage",
-                            modifier = Modifier.size(14.dp)
-                        )
+                        Icon(Icons.Default.ArrowBack, contentDescription = null, modifier = Modifier.size(14.dp), tint = TextSecondary)
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = "Back", fontSize = 11.sp)
+                        Text(task.stage.prevStage!!.shortLabel, fontSize = 11.sp, color = TextSecondary)
+                    }
+                }
+                if (task.stage.nextStage != null) {
+                    Button(
+                        onClick = onAdvance,
+                        modifier = Modifier.weight(1f).height(36.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = task.stage.nextStage!!.composeColor, contentColor = Color.White)
+                    ) {
+                        Text("Move to ${task.stage.nextStage!!.title}", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Icon(Icons.Default.ArrowForward, contentDescription = null, modifier = Modifier.size(14.dp))
                     }
                 } else {
-                    Spacer(modifier = Modifier.width(1.dp))
-                }
-
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    // Google Drive Folder shortcut
-                    if (!task.driveFolderUrl.isNullOrBlank()) {
-                        OutlinedButton(
-                            onClick = {
-                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(task.driveFolderUrl))
-                                context.startActivity(intent)
-                            },
-                            modifier = Modifier.height(36.dp),
-                            shape = RoundedCornerShape(8.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, DarkBorder),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF38BDF8)),
-                            contentPadding = PaddingValues(horizontal = 8.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.FolderShared,
-                                contentDescription = "Drive",
-                                modifier = Modifier.size(14.dp)
-                            )
-                        }
-                    }
-
-                    // Forward / Advance Stage Button
-                    if (task.stage != Stage.ALJAMEA_DONE) {
-                        Button(
-                            onClick = onAdvance,
-                            modifier = Modifier.height(36.dp),
-                            shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = IndigoPrimary,
-                                contentColor = Color.White
-                            ),
-                            contentPadding = PaddingValues(horizontal = 12.dp)
-                        ) {
-                            val nextStageTitle = when (task.stage) {
-                                Stage.EDITING_PENDING -> "Start Editing"
-                                Stage.IN_PROGRESS -> "Ready for Upload"
-                                Stage.UPLOAD_PENDING -> "Mark Uploaded"
-                                Stage.UPLOADED -> "AlJamea Finalize"
-                                Stage.ALJAMEA_DONE -> "Done"
-                            }
-                            Text(text = nextStageTitle, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Icon(
-                                imageVector = Icons.Default.ArrowForward,
-                                contentDescription = null,
-                                modifier = Modifier.size(14.dp)
-                            )
-                        }
-                    } else {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(EmeraldSuccess.copy(alpha = 0.15f))
-                                .padding(horizontal = 10.dp, vertical = 6.dp)
-                        ) {
-                            Text(
-                                text = "✓ Fully Delivered",
-                                color = EmeraldSuccess,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(LightSurfaceSubtle)
+                            .padding(vertical = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("AlJamea Completed", color = EmeraldDark, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
         }
-    }
-}
-
-@androidx.compose.ui.tooling.preview.Preview(showBackground = true, backgroundColor = 0xFF0F172A)
-@Composable
-fun KanbanScreenPreview() {
-    com.onetap.studiotracker.ui.theme.OneTapStudioTheme {
-        KanbanScreen()
     }
 }

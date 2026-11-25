@@ -30,7 +30,7 @@ object UpdateManager {
     private const val RAW_VERSION_URL =
         "https://raw.githubusercontent.com/$GITHUB_REPO/main/android-app/version.json"
     private const val GITHUB_API_URL =
-        "https://api.github.com/repos/$GITHUB_REPO/releases/latest"
+        "https://api.github.com/repos/$GITHUB_REPO/releases?per_page=15"
 
     private val httpClient = OkHttpClient.Builder()
         .connectTimeout(12, TimeUnit.SECONDS)
@@ -78,21 +78,45 @@ object UpdateManager {
                     .build()
                 val apiResp = httpClient.newCall(apiReq).execute()
                 if (apiResp.isSuccessful) {
-                    val apiBody = apiResp.body?.string() ?: ""
-                    val apiJson = JSONObject(apiBody)
-                    val tagName = apiJson.optString("tag_name", "").removePrefix("v")
-                    if (tagName.isNotBlank()) {
-                        version = tagName
+                    val apiBody = apiResp.body?.string() ?: "[]"
+                    val releasesArr = org.json.JSONArray(apiBody)
+                    var matchedRel: JSONObject? = null
+                    for (rIdx in 0 until releasesArr.length()) {
+                        val rel = releasesArr.optJSONObject(rIdx) ?: continue
+                        if (rel.optBoolean("draft", false)) continue
+                        val tName = rel.optString("tag_name", "")
+                        val assets = rel.optJSONArray("assets")
+                        var hasApk = false
+                        if (assets != null) {
+                            for (i in 0 until assets.length()) {
+                                if (assets.optJSONObject(i)?.optString("name", "")?.endsWith(".apk", true) == true) {
+                                    hasApk = true
+                                    break
+                                }
+                            }
+                        }
+                        if (tName.contains("-Mobile", ignoreCase = true) || hasApk) {
+                            matchedRel = rel
+                            break
+                        }
                     }
-                    changelog = apiJson.optString("body", "Autonomous Release Build.")
-                    val assets = apiJson.optJSONArray("assets")
-                    if (assets != null && assets.length() > 0) {
-                        for (i in 0 until assets.length()) {
-                            val asset = assets.getJSONObject(i)
-                            val name = asset.optString("name", "")
-                            if (name.endsWith(".apk")) {
-                                downloadUrl = asset.optString("browser_download_url", "")
-                                break
+                    if (matchedRel != null) {
+                        val tagName = matchedRel.optString("tag_name", "")
+                            .removePrefix("v")
+                            .replace(Regex("-Mobile$", RegexOption.IGNORE_CASE), "")
+                        if (tagName.isNotBlank()) {
+                            version = tagName
+                        }
+                        changelog = matchedRel.optString("body", "Autonomous Release Build.")
+                        val assets = matchedRel.optJSONArray("assets")
+                        if (assets != null && assets.length() > 0) {
+                            for (i in 0 until assets.length()) {
+                                val asset = assets.getJSONObject(i)
+                                val name = asset.optString("name", "")
+                                if (name.endsWith(".apk", ignoreCase = true)) {
+                                    downloadUrl = asset.optString("browser_download_url", "")
+                                    break
+                                }
                             }
                         }
                     }

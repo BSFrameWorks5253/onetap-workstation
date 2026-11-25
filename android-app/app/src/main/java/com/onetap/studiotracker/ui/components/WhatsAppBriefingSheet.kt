@@ -39,6 +39,12 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -75,6 +81,8 @@ fun WhatsAppBriefingSheet(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var isSendingBot by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val briefingText = remember(campaign) {
@@ -263,7 +271,7 @@ fun WhatsAppBriefingSheet(
                             fontSize = 12.sp
                         )
                         Text(
-                            text = "📸 Drive: ${campaign.uploadedPhotosCount} Photos",
+                            text = "📸 Drive: ${campaign.deliveredPhotosCount}/${campaign.totalDates} Photos",
                             color = TextSecondary,
                             fontSize = 12.sp
                         )
@@ -377,6 +385,37 @@ fun WhatsAppBriefingSheet(
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(text = "Send via WhatsApp", fontSize = 13.sp, fontWeight = FontWeight.Bold)
                     }
+                }
+
+                // Direct 1-Tap WhatsApp Bot Dispatch
+                OutlinedButton(
+                    onClick = {
+                        if (isSendingBot) return@OutlinedButton
+                        scope.launch {
+                            isSendingBot = true
+                            val res = com.onetap.studiotracker.data.repository.SafarRepository
+                                .getInstance()
+                                .sendDirectWhatsAppBriefing(campaign)
+                            isSendingBot = false
+                            if (res.getOrDefault(false)) {
+                                Toast.makeText(context, "Sent via WhatsApp Bot!", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(context, "Bot dispatch failed — check GAS URL", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(44.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, IndigoPrimary),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = IndigoPrimary)
+                ) {
+                    Text(
+                        text = if (isSendingBot) "Sending via Bot…" else "Send Direct via WhatsApp Bot",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
 

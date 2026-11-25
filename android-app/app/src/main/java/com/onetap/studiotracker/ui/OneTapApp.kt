@@ -23,10 +23,11 @@ import com.onetap.studiotracker.ui.components.BottomNavBar
 import com.onetap.studiotracker.ui.navigation.Screen
 import com.onetap.studiotracker.ui.screens.analytics.StudioAnalyticsScreen
 import com.onetap.studiotracker.ui.screens.dashboard.DashboardScreen
+import com.onetap.studiotracker.ui.screens.editors.EditorsScreen
 import com.onetap.studiotracker.ui.screens.kanban.KanbanScreen
 import com.onetap.studiotracker.ui.screens.photos.PhotoTrackerScreen
-import com.onetap.studiotracker.ui.screens.radar.IngestRadarScreen
-import com.onetap.studiotracker.ui.theme.DarkBackground
+import com.onetap.studiotracker.ui.screens.settings.SettingsScreen
+import com.onetap.studiotracker.ui.theme.LightBackground
 import com.onetap.studiotracker.util.AppUpdateInfo
 import com.onetap.studiotracker.util.BatchNotificationManager
 import com.onetap.studiotracker.util.UpdateManager
@@ -43,12 +44,10 @@ fun OneTapApp() {
     val ongoingTasks = campaigns.firstOrNull { it.isOngoing }?.tasks ?: emptyList()
     val pendingCount = ongoingTasks.count { it.stage != Stage.UPLOADED && it.stage != Stage.ALJAMEA_DONE }
 
-    // Auto-update checker state
     var pendingUpdate by remember { mutableStateOf<AppUpdateInfo?>(null) }
 
     LaunchedEffect(Unit) {
         try {
-            // Initialize notification channel for lifetime-free render alerts
             BatchNotificationManager.createNotificationChannel(context)
         } catch (t: Throwable) {
             android.util.Log.e("OneTapApp", "Notification channel initialization caught", t)
@@ -68,23 +67,25 @@ fun OneTapApp() {
     }
 
     Scaffold(
-        containerColor = DarkBackground,
+        containerColor = LightBackground,
         bottomBar = {
-            BottomNavBar(
-                currentRoute = currentRoute,
-                onNavigate = { screen ->
-                    if (currentRoute != screen.route) {
-                        navController.navigate(screen.route) {
-                            popUpTo(navController.graph.startDestinationId) {
-                                saveState = true
+            if (currentRoute != Screen.Settings.route) {
+                BottomNavBar(
+                    currentRoute = currentRoute,
+                    onNavigate = { screen ->
+                        if (currentRoute != screen.route) {
+                            navController.navigate(screen.route) {
+                                popUpTo(navController.graph.startDestinationId) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
                             }
-                            launchSingleTop = true
-                            restoreState = true
                         }
-                    }
-                },
-                pendingTaskCount = pendingCount
-            )
+                    },
+                    pendingTaskCount = pendingCount
+                )
+            }
         }
     ) { innerPadding ->
         NavHost(
@@ -100,6 +101,11 @@ fun OneTapApp() {
                         navController.navigate(Screen.Kanban.route) {
                             launchSingleTop = true
                         }
+                    },
+                    onNavigateSettings = {
+                        navController.navigate(Screen.Settings.route) {
+                            launchSingleTop = true
+                        }
                     }
                 )
             }
@@ -109,19 +115,23 @@ fun OneTapApp() {
             composable(Screen.PhotoTracker.route) {
                 PhotoTrackerScreen()
             }
-            composable(Screen.Radar.route) {
-                IngestRadarScreen()
+            composable(Screen.Editors.route) {
+                EditorsScreen()
             }
             composable(Screen.Analytics.route) {
                 StudioAnalyticsScreen()
             }
+            composable(Screen.Settings.route) {
+                SettingsScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
         }
     }
 
-    // Auto-update dialog presentation
-    pendingUpdate?.let { updateInfo ->
+    pendingUpdate?.let { update ->
         AppUpdateDialog(
-            updateInfo = updateInfo,
+            updateInfo = update,
             onDismiss = { pendingUpdate = null }
         )
     }

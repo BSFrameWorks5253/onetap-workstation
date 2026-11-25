@@ -81,7 +81,7 @@ class AudioBriefingPlayer(context: Context) : TextToSpeech.OnInitListener {
             "Executive production update for ${campaign.name}. " +
                     "Overall completion is currently at ${percent} percent. " +
                     "${delivered} of ${total} scheduled video dates are delivered. ${pending} are in the pipeline. " +
-                    "${campaign.uploadedPhotosCount} photos have been synced to Google Drive. " +
+                    "${campaign.deliveredPhotosCount} of ${campaign.totalDates} photo batches have been synced to Google Drive. " +
                     "Keep up the great velocity!"
         }
     }

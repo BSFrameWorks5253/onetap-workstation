@@ -11,6 +11,8 @@ class OneTapApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         instance = this
+        com.onetap.studiotracker.data.repository.SafarRepository.init(this)
+        com.onetap.studiotracker.worker.SafarBackgroundWorker.schedule(this)
 
         val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->

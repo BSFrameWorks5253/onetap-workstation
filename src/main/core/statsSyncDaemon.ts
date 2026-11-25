@@ -102,7 +102,7 @@ export async function syncStatsToCloud(reason: string): Promise<boolean> {
       updatedAt: new Date().toISOString()
     }))
 
-    const cleanTasks = tasks.map((t) => ({
+    const cleanTasks = tasks.map((t: any) => ({
       id: `${t.safarName}_${t.dateFolder}`.replace(/[^\w-]/g, '_'),
       safarName: t.safarName,
       dateFolder: t.dateFolder,
@@ -113,6 +113,11 @@ export async function syncStatsToCloud(reason: string): Promise<boolean> {
       photoStage: t.photoStage || undefined,
       photoEditorName: t.photoEditorName || undefined,
       photoUploaded: Boolean(t.photoUploaded),
+      renderDuration: typeof t.renderDuration === 'number' ? t.renderDuration : undefined,
+      renderVideoCount: typeof t.renderVideoCount === 'number' ? t.renderVideoCount : undefined,
+      renderSizeBytes: typeof t.renderSizeBytes === 'number' ? t.renderSizeBytes : undefined,
+      prprojModifiedAt: typeof t.prprojModifiedAt === 'number' ? t.prprojModifiedAt : undefined,
+      renderedAt: typeof t.renderedAt === 'number' ? t.renderedAt : undefined,
       updatedAt: new Date().toISOString()
     }))
 
