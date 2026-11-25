@@ -1413,13 +1413,8 @@ class UniDeskStudio(ctk.CTk):
         }
 
     def _compute_android_version_code(self, version_str: str) -> int:
-        digits = re.sub(r'[^0-9]', '', version_str.strip())
-        if not digits:
-            return 2611013
-        try:
-            return int(digits[:9])
-        except ValueError:
-            return 2611013
+        # Monotonic epoch-minute code (> 26114602) so upgrades never fail with downgrade conflict
+        return max(int(time.time() // 60), 29927000)
 
     def _read_android_version(self) -> str:
         vjson = os.path.join('android-app', 'version.json')
@@ -1607,13 +1602,21 @@ class UniDeskStudio(ctk.CTk):
                 proc.wait()
                 if proc.returncode == 0:
                     sub = 'release' if task == 'assembleRelease' else 'debug'
-                    raw_apk = os.path.abspath(os.path.join('android-app', 'app', 'build', 'outputs', 'apk', sub, 'app-release-unsigned.apk' if sub == 'release' else 'app-debug.apk'))
+                    apk_dir = os.path.abspath(os.path.join('android-app', 'app', 'build', 'outputs', 'apk', sub))
+                    preferred = 'app-release.apk' if sub == 'release' else 'app-debug.apk'
+                    raw_apk = os.path.join(apk_dir, preferred)
+                    if not os.path.exists(raw_apk) and os.path.exists(apk_dir):
+                        apks = [f for f in os.listdir(apk_dir) if f.lower().endswith('.apk')]
+                        if apks:
+                            raw_apk = os.path.join(apk_dir, apks[0])
                     out_dir = os.path.abspath(os.path.join('android-app', 'release'))
                     os.makedirs(out_dir, exist_ok=True)
                     named_apk = os.path.join(out_dir, f'One Tap_V-{version}.apk')
                     if os.path.exists(raw_apk):
-                        shutil.copyfile(raw_apk, named_apk)
+                        shutil.copy2(raw_apk, named_apk)
                         self._android_log(f'📦 Wrote APK: {named_apk}')
+                    else:
+                        self._android_log(f'[Warn] Built APK not found in: {apk_dir}')
                     self._android_log(f'\n✅ APK BUILD SUCCEEDED for v{version}-Mobile!')
                     if self.android_auto_publish.get():
                         self._publish_android_apk_sync(version, named_apk)
@@ -1674,7 +1677,7 @@ class UniDeskStudio(ctk.CTk):
         named_apk = os.path.abspath(os.path.join('android-app', 'release', f'One Tap_V-{version}.apk'))
         if not os.path.exists(named_apk):
             sub = 'release' if self.android_variant_var.get() == 'assembleRelease' else 'debug'
-            apk_name = 'app-release-unsigned.apk' if sub == 'release' else 'app-debug.apk'
+            apk_name = 'app-release.apk' if sub == 'release' else 'app-debug.apk'
             raw_apk = os.path.abspath(os.path.join('android-app', 'app', 'build', 'outputs', 'apk', sub, apk_name))
             if not os.path.exists(raw_apk):
                 messagebox.showwarning('APK Not Found', f'Build the APK first:\n{raw_apk}')

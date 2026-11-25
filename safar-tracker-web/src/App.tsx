@@ -2162,13 +2162,18 @@ export default function App(): JSX.Element {
   }
 
   function shareDailyBriefingWhatsApp(forSafarName?: string, format: 'msg' | 'image' = 'msg') {
-    const target = forSafarName || effectiveOngoingSafar || (activeSafarGroups[0]?.safarName ?? '')
-    if (target && target !== 'ALL') {
+    let target = forSafarName && !['all', 'ALL', 'Active Safar', ''].includes(forSafarName.trim())
+      ? forSafarName.trim()
+      : ''
+
+    if (!target) {
+      target = effectiveOngoingSafar || activeSafarGroups[0]?.safarName || safarGroups[0]?.safarName || snapshot.safars[0]?.safarName || ''
+    }
+
+    if (target) {
       setBriefingModalState({ safarName: target, initialTab: format })
     } else {
-      const text = generateDailyBriefingText(forSafarName)
-      const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`
-      window.open(url, '_blank')
+      setBriefingModalState({ safarName: 'Studio Overview', initialTab: format })
     }
   }
 
@@ -2727,6 +2732,17 @@ export default function App(): JSX.Element {
           onShareWhatsApp={() => shareDailyBriefingWhatsApp(ongoingGroup?.safarName)}
           onNavigate={navigateTo}
         />
+        {briefingModalState && (
+          <WhatsAppBriefingModal
+            isOpen={Boolean(briefingModalState)}
+            onClose={() => setBriefingModalState(null)}
+            safarName={briefingModalState.safarName}
+            initialTab={briefingModalState.initialTab}
+            safarYear={ongoingGroup?.safarYear || '1448'}
+            tasks={snapshot.tasks}
+            publicOrigin={getPublicWebsiteOrigin()}
+          />
+        )}
         {notice && <div className="toast-note" role="status" aria-live="polite"><span>{notice}</span><button type="button" onClick={() => setNotice('')}>Dismiss</button></div>}
       </div>
     )
@@ -2755,7 +2771,7 @@ export default function App(): JSX.Element {
           onClose={() => setBriefingModalState(null)}
           safarName={briefingModalState.safarName}
           initialTab={briefingModalState.initialTab}
-          safarYear={activeSafarGroups.find(g => g.safarName === briefingModalState.safarName)?.safarYear || '1448'}
+          safarYear={safarGroups.find(g => g.safarName === briefingModalState.safarName)?.safarYear || activeSafarGroups.find(g => g.safarName === briefingModalState.safarName)?.safarYear || '1448'}
           tasks={snapshot.tasks}
           publicOrigin={getPublicWebsiteOrigin()}
         />

@@ -96,3 +96,9 @@ __pycache__/
 .live/
 live-edit/
 .hallmark/
+
+# Android build cache & signing keys
+.gradle/
+*.jks
+*.keystore
+android-app/.gradle/

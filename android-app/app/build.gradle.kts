@@ -8,8 +8,17 @@ android {
     namespace = "com.onetap.studiotracker"
     compileSdk = 34
 
-    val appVersionName = project.findProperty("versionName") as? String ?: "26.11.46.03"
-    val appVersionCode = (project.findProperty("versionCode") as? String)?.toIntOrNull() ?: 26114603
+    val appVersionName = project.findProperty("versionName") as? String ?: "26.11.01.3"
+    val appVersionCode = (project.findProperty("versionCode") as? String)?.toIntOrNull() ?: 29927000
+
+    signingConfigs {
+        create("onetap") {
+            storeFile = rootProject.file("onetap-release.jks")
+            storePassword = System.getenv("ONETAP_STORE_PASS") ?: "onetap5253"
+            keyAlias = System.getenv("ONETAP_KEY_ALIAS") ?: "onetap"
+            keyPassword = System.getenv("ONETAP_KEY_PASS") ?: "onetap5253"
+        }
+    }
 
     defaultConfig {
         applicationId = "com.onetap.studiotracker"
@@ -25,8 +34,12 @@ android {
     }
 
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("onetap")
+        }
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("onetap")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

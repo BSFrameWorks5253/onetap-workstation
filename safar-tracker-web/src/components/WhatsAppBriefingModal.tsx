@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X,
   MessageCircle,
@@ -37,17 +38,21 @@ function drawRoundRect(
   h: number,
   r: number
 ) {
-  if (typeof (ctx as any).roundRect === 'function') {
-    (ctx as any).roundRect(x, y, w, h, r);
-  } else {
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.arcTo(x + w, y, x + w, y + h, r);
-    ctx.arcTo(x + w, y + h, x, y + h, r);
-    ctx.arcTo(x, y + h, x, y, r);
-    ctx.arcTo(x, y, x + w, y, r);
-    ctx.closePath();
-  }
+  if (w <= 0 || h <= 0) return;
+  const safeR = Math.max(0, Math.min(r, w / 2, h / 2));
+  try {
+    if (typeof (ctx as any).roundRect === 'function') {
+      (ctx as any).roundRect(x, y, w, h, safeR);
+      return;
+    }
+  } catch {}
+  ctx.beginPath();
+  ctx.moveTo(x + safeR, y);
+  ctx.arcTo(x + w, y, x + w, y + h, safeR);
+  ctx.arcTo(x + w, y + h, x, y + h, safeR);
+  ctx.arcTo(x, y + h, x, y, safeR);
+  ctx.arcTo(x, y, x + w, y, safeR);
+  ctx.closePath();
 }
 
 export default function WhatsAppBriefingModal({
@@ -55,7 +60,7 @@ export default function WhatsAppBriefingModal({
   onClose,
   safarName,
   safarYear = '1447',
-  tasks,
+  tasks = [],
   initialTab = 'msg',
   onDirectShareWhatsApp,
   publicOrigin = 'https://safar-tracker-web.vercel.app'
@@ -69,8 +74,16 @@ export default function WhatsAppBriefingModal({
   const [imageBlob, setImageBlob] = useState<Blob | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  // Filter tasks for this safar
-  const safarTasks = tasks.filter(t => t.safarName === safarName);
+  // Filter tasks for this safar (with normalization and fallback)
+  const normTarget = (safarName || '').trim().toLowerCase();
+  const cleanTarget = normTarget.replace(/[-_\s]+/g, ' ').trim();
+  const matchedTasks = (tasks || []).filter(t => {
+    if (!t) return false;
+    const sName = (t.safarName || '').trim().toLowerCase();
+    const sClean = sName.replace(/[-_\s]+/g, ' ').trim();
+    return sName === normTarget || sClean === cleanTarget || (cleanTarget && (sClean.includes(cleanTarget) || cleanTarget.includes(sClean)));
+  });
+  const safarTasks = matchedTasks.length > 0 ? matchedTasks : (tasks || []);
   const total = safarTasks.length > 0 ? safarTasks.length : 1;
   const delivered = safarTasks.filter(
     t => t.stage === 'uploaded' || t.stage === 'jameya' || (t.stage as any) === 'upload' || (t.stage as any) === 'completed'
@@ -93,10 +106,10 @@ export default function WhatsAppBriefingModal({
   // Lists of dates
   const deliveredDates = safarTasks
     .filter(t => t.stage === 'uploaded' || t.stage === 'jameya' || (t.stage as any) === 'upload' || (t.stage as any) === 'completed')
-    .map(t => t.dateFolder);
+    .map(t => t.dateFolder || (t as any).folder || (t as any).name || 'Date');
   const pendingDates = safarTasks
     .filter(t => t.stage === 'editing_pending' || t.stage === 'editing' || t.stage === 'upload_pending' || (t.stage as any) === 'rendering')
-    .map(t => ({ folder: t.dateFolder, stage: t.stage }));
+    .map(t => ({ folder: t.dateFolder || (t as any).folder || (t as any).name || 'Date', stage: t.stage }));
 
   // Generate Professional WhatsApp Text Message
   const generateFormattedMessage = (): string => {
@@ -132,13 +145,14 @@ export default function WhatsAppBriefingModal({
 
     lines.push('📦 *SYNCHRONIZED DELIVERABLE MATRIX (BY DATE FOLDER):*');
     lines.push('_Photos are paired with video releases; each scheduled date folder holds both deliverables._');
-    safarTasks.forEach(t => {
+    safarTasks.forEach((t, idx) => {
       const isVidDone = t.stage === 'uploaded' || t.stage === 'jameya' || (t.stage as any) === 'upload' || (t.stage as any) === 'completed';
       const isPhotoDone = t.photoStage === 'uploaded' || t.photoUploaded;
       const vidTag = isVidDone ? '🎬 Video: Uploaded' : t.stage === 'upload_pending' ? '🎬 Video: Upload Pending' : t.stage === 'editing' ? '🎬 Video: In Progress' : '🎬 Video: Editing Pending';
       const photoTag = isPhotoDone ? '📷 Drive: Uploaded' : t.photoStage === 'given_to_murtaza' ? '📷 Drive: With Lead' : t.photoStage === 'edited' ? '📷 Drive: Grading' : '📷 Drive: Pending';
       const icon = (isVidDone && isPhotoDone) ? '✅' : isVidDone ? '🎬' : '⏳';
-      lines.push(`${icon} *${t.dateFolder}*`);
+      const rawFolder = t.dateFolder || (t as any).folder || (t as any).name || (t as any).folderName || `Date ${idx + 1}`;
+      lines.push(`${icon} *${rawFolder}*`);
       lines.push(`   └ [${vidTag}] · [${photoTag}]`);
     });
 
@@ -155,18 +169,22 @@ export default function WhatsAppBriefingModal({
   // Draw the Infographic Image on HTML5 Canvas (White Mode by default or Dark Mode)
   const renderInfographicImage = (theme: 'white' | 'dark' = imageTheme) => {
     setImageGenerating(true);
-    const canvas = document.createElement('canvas');
-    canvasRef.current = canvas;
+    try {
+      const canvas = document.createElement('canvas');
+      canvasRef.current = canvas;
 
-    const width = 1200;
-    // Calculate dynamic height based on dates list length (unified common column rows)
-    const datesCount = safarTasks.length;
-    const height = Math.max(920, 520 + datesCount * 44 + 70);
+      const width = 1200;
+      // Calculate dynamic height based on dates list length (unified common column rows)
+      const datesCount = safarTasks.length;
+      const height = Math.max(920, 520 + datesCount * 44 + 70);
 
-    canvas.width = width * 2; // 2x Retina scale
-    canvas.height = height * 2;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+      canvas.width = width * 2; // 2x Retina scale
+      canvas.height = height * 2;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        setImageGenerating(false);
+        return;
+      }
 
     ctx.scale(2, 2);
     const isLight = theme === 'white';
@@ -504,7 +522,8 @@ export default function WhatsAppBriefingModal({
       // Folder Name
       ctx.fillStyle = isDateAllDone ? (isLight ? '#065f46' : '#ffffff') : (isLight ? '#0f172a' : '#ffffff');
       ctx.font = 'bold 12.5px system-ui, -apple-system, sans-serif';
-      const folderName = task.dateFolder.length > 44 ? task.dateFolder.slice(0, 42) + '…' : task.dateFolder;
+      const rawFolder = task.dateFolder || (task as any).folder || (task as any).name || (task as any).folderName || `Date ${idx + 1}`;
+      const folderName = rawFolder.length > 44 ? rawFolder.slice(0, 42) + '…' : rawFolder;
       ctx.fillText(folderName, rX + 28, rY + rowH / 2 + 4);
 
       // Col 2: Video Status Pill (x = 450)
@@ -619,7 +638,11 @@ export default function WhatsAppBriefingModal({
       }
       setImageGenerating(false);
     }, 'image/png');
-  };
+  } catch (err) {
+    console.error('Failed to render Infographic image on canvas:', err);
+    setImageGenerating(false);
+  }
+};
 
   useEffect(() => {
     setGeneratedImageUrl(null);
@@ -703,7 +726,7 @@ export default function WhatsAppBriefingModal({
     if (onDirectShareWhatsApp) onDirectShareWhatsApp(messageText);
   };
 
-  return (
+  const modalContent = (
     <div
       role="dialog"
       aria-modal="true"
@@ -712,7 +735,7 @@ export default function WhatsAppBriefingModal({
       style={{
         position: 'fixed',
         inset: 0,
-        zIndex: 99999,
+        zIndex: 999999,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -1285,4 +1308,9 @@ export default function WhatsAppBriefingModal({
       </div>
     </div>
   );
+
+  if (typeof document !== 'undefined') {
+    return createPortal(modalContent, document.body);
+  }
+  return modalContent;
 }
