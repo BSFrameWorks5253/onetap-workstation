@@ -1211,7 +1211,7 @@ export default function App(): JSX.Element {
       const photoUploadedCount = tasks.filter(task => task.photoStage === 'uploaded' || task.photoUploaded).length
       const total = tasks.length > 0 ? tasks.length : (Number(summary.totalDays) || 0)
       const finishedDates = jameyaCount
-      const isArchived = Boolean(summary.isArchived || (total > 0 && finishedDates >= total))
+      const isArchived = Boolean(summary.isArchived)
       const completed = isArchived ? total : finishedDates
       const rawDelivered = uploadedCount + jameyaCount
       const isAllUploaded = total > 0 && rawDelivered >= total
@@ -1222,7 +1222,7 @@ export default function App(): JSX.Element {
       return {
         ...summary,
         isArchived,
-        isDone: Boolean(summary.isDone || isArchived || isAllUploaded),
+        isDone: Boolean(summary.isDone || isArchived || isAllUploaded || (total > 0 && finishedDates >= total)),
         tasks,
         total,
         completed,
@@ -3109,7 +3109,36 @@ export default function App(): JSX.Element {
                           <span>{ongoingGroup.total} Scheduled Dates</span>
                         </span>
                       </div>
-                      <h2 className="hero-campaign-title">{ongoingGroup.safarName}</h2>
+                      <div className="hero-campaign-title-row">
+                        <h2 className="hero-campaign-title">{ongoingGroup.safarName}</h2>
+                        {activeSafarGroups.length > 1 && (
+                          <div className="hero-safar-switcher">
+                            <label htmlFor="hero-safar-select" className="hero-safar-label">
+                              Switch Campaign:
+                            </label>
+                            <div className="hero-safar-select-wrapper">
+                              <select
+                                id="hero-safar-select"
+                                className="hero-safar-select"
+                                value={ongoingGroup.safarName}
+                                onChange={e => {
+                                  const name = e.target.value
+                                  handleSetOngoingSafar(name)
+                                  setSelectedSafar(name)
+                                }}
+                                aria-label="Switch active ongoing campaign"
+                              >
+                                {activeSafarGroups.map(g => (
+                                  <option key={g.safarName} value={g.safarName}>
+                                    {g.safarName} ({g.deliveredPercent}% delivered)
+                                  </option>
+                                ))}
+                              </select>
+                              <ChevronDown size={14} className="hero-safar-select-chevron" />
+                            </div>
+                          </div>
+                        )}
+                      </div>
                       <p className="hero-campaign-subtitle">
                         Direct pipeline tracking · Video deliverables & Google Drive photos
                       </p>
@@ -3601,7 +3630,10 @@ export default function App(): JSX.Element {
                     ) : (
                       <button
                         type="button"
-                        onClick={() => handleSetOngoingSafar(group.safarName)}
+                        onClick={() => {
+                          handleSetOngoingSafar(group.safarName)
+                          setSelectedSafar(group.safarName)
+                        }}
                         className="btn-set-ongoing"
                         title="Set this as the active ongoing safar for WhatsApp updates"
                       >

@@ -581,6 +581,64 @@ body::before {
   display: block !important;
 }
 
+/* Hero Campaign Title Row with Switcher */
+.hero-campaign-title-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 14px !important;
+  flex-wrap: wrap !important;
+  margin: 4px 0 !important;
+}
+
+.hero-safar-switcher {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.hero-safar-label {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  color: #64748b !important;
+}
+
+.hero-safar-select-wrapper {
+  position: relative !important;
+  display: inline-flex !important;
+  align-items: center !important;
+}
+
+.hero-safar-select {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  background: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 9px !important;
+  padding: 5px 30px 5px 12px !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: #0f172a !important;
+  cursor: pointer !important;
+  outline: none !important;
+  transition: all 0.15s ease !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04) !important;
+}
+
+.hero-safar-select:hover,
+.hero-safar-select:focus {
+  border-color: #6366f1 !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12) !important;
+}
+
+.hero-safar-select-chevron {
+  position: absolute !important;
+  right: 9px !important;
+  pointer-events: none !important;
+  color: #64748b !important;
+}
+
 /* Hero Executive Milestone Badge */
 .hero-executive-badge,
 .mobile-hero-percent-badge {
@@ -2540,17 +2598,40 @@ body {
   flex-wrap: wrap;
 }
 
+.kanban-safar-select-wrapper {
+  position: relative !important;
+  display: inline-flex !important;
+  align-items: center !important;
+}
+
 .kanban-safar-select {
-  font-size: 16px;
-  font-weight: 800;
-  color: var(--text-primary, #0f172a);
-  background: var(--surface-2, #f8fafc);
-  border: 1px solid var(--border, #e2e8f0);
-  border-radius: 10px;
-  padding: 6px 14px;
-  cursor: pointer;
-  outline: none;
-  max-width: 280px;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  font-size: 18px !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+  background: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 10px !important;
+  padding: 6px 34px 6px 14px !important;
+  cursor: pointer !important;
+  outline: none !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04) !important;
+  transition: all 0.15s ease !important;
+  max-width: 320px !important;
+}
+
+.kanban-safar-select:hover,
+.kanban-safar-select:focus {
+  border-color: #6366f1 !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12) !important;
+}
+
+.kanban-safar-select-caret {
+  position: absolute !important;
+  right: 12px !important;
+  pointer-events: none !important;
+  color: #64748b !important;
 }
 
 .kanban-banner-whatsapp-btn {
@@ -6734,6 +6815,41 @@ input[type="text"]:focus, input[type="search"]:focus, select:focus {
     font-size: 20px !important;
     line-height: 1.25 !important;
     word-break: break-word !important;
+  }
+
+  .hero-campaign-title-row {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+
+  .hero-safar-switcher {
+    width: 100% !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 4px !important;
+  }
+
+  .hero-safar-select-wrapper {
+    width: 100% !important;
+  }
+
+  .hero-safar-select {
+    width: 100% !important;
+    height: 38px !important;
+    font-size: 13px !important;
+  }
+
+  .kanban-safar-select-wrapper {
+    width: 100% !important;
+  }
+
+  .kanban-safar-select {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 40px !important;
+    font-size: 15px !important;
   }
 
   .hero-campaign-subtitle {

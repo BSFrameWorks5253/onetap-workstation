@@ -22,7 +22,8 @@ import {
   CheckCircle2,
   Clock,
   MessageCircle,
-  Image as ImageIcon
+  Image as ImageIcon,
+  ChevronDown
 } from 'lucide-react';
 import { sendWhatsAppAlert, DEFAULT_WHATSAPP_PHONE } from '../lib/googleAppsScript';
 import { AnimatedNumber, getPublicWebsiteOrigin, isCameraOrAssetFolder, isProperDateOrSessionFolder } from '../App';
@@ -451,9 +452,32 @@ export default function OngoingSafarKanban({
             Active Safar Pipeline
           </span>
           <div className="kanban-banner-selector-row">
-            <h2 className="kanban-banner-campaign-title" title={`Active Campaign: ${selectedSafar}`}>
-              {selectedSafar}
-            </h2>
+            {safars && safars.length > 1 ? (
+              <div className="kanban-safar-select-wrapper">
+                <label htmlFor="kanban-safar-select" className="visually-hidden">Switch Campaign</label>
+                <select
+                  id="kanban-safar-select"
+                  className="kanban-safar-select"
+                  value={selectedSafar}
+                  onChange={e => {
+                    const newSafar = e.target.value;
+                    if (onSelectSafar) onSelectSafar(newSafar);
+                  }}
+                  aria-label="Switch Campaign on Kanban Board"
+                >
+                  {safars.map(s => (
+                    <option key={s.safarName} value={s.safarName}>
+                      {s.safarName} {s.isDone ? '✓ (100% Done)' : ''}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown size={14} className="kanban-safar-select-caret" />
+              </div>
+            ) : (
+              <h2 className="kanban-banner-campaign-title" title={`Active Campaign: ${selectedSafar}`}>
+                {selectedSafar}
+              </h2>
+            )}
 
             <div className="kanban-banner-whatsapp-group">
               <button
