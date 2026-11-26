@@ -1,9 +1,15 @@
 package com.onetap.studiotracker.ui.screens.dashboard
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,523 +25,367 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.HourglassTop
 import androidx.compose.material.icons.filled.PendingActions
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Sync
-import androidx.compose.material.icons.filled.UploadFile
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import com.onetap.studiotracker.R
 import com.onetap.studiotracker.data.models.SafarCampaign
+import com.onetap.studiotracker.data.models.StudioStats
+import com.onetap.studiotracker.data.repository.SafarRepository
+import com.onetap.studiotracker.data.sync.SyncStatus
 import com.onetap.studiotracker.ui.components.ExecutiveHeroCard
-import com.onetap.studiotracker.ui.components.KpiCard
 import com.onetap.studiotracker.ui.components.MultiStageProgressBar
 import com.onetap.studiotracker.ui.components.StageChip
 import com.onetap.studiotracker.ui.components.WhatsAppBriefingSheet
-import com.onetap.studiotracker.ui.theme.ColorAlJameaDone
-import com.onetap.studiotracker.ui.theme.ColorEditingPending
-import com.onetap.studiotracker.ui.theme.ColorInProgress
-import com.onetap.studiotracker.ui.theme.ColorUploadPending
-import com.onetap.studiotracker.ui.theme.ColorUploaded
-import com.onetap.studiotracker.ui.theme.DarkBackground
-import com.onetap.studiotracker.ui.theme.DarkBorder
-import com.onetap.studiotracker.ui.theme.DarkSurface
-import com.onetap.studiotracker.ui.theme.DarkSurfaceElevated
+import com.onetap.studiotracker.ui.theme.AmberDark
+import com.onetap.studiotracker.ui.theme.AmberSoft
+import com.onetap.studiotracker.ui.theme.BlueDark
+import com.onetap.studiotracker.ui.theme.BlueSoft
+import com.onetap.studiotracker.ui.theme.CyanInfo
+import com.onetap.studiotracker.ui.theme.EmeraldDark
+import com.onetap.studiotracker.ui.theme.EmeraldSoft
 import com.onetap.studiotracker.ui.theme.EmeraldSuccess
 import com.onetap.studiotracker.ui.theme.IndigoPrimary
+import com.onetap.studiotracker.ui.theme.IndigoSoft
+import com.onetap.studiotracker.ui.theme.LightBackground
+import com.onetap.studiotracker.ui.theme.LightBorder
+import com.onetap.studiotracker.ui.theme.LightSurface
+import com.onetap.studiotracker.ui.theme.LightSurfaceSubtle
+import com.onetap.studiotracker.ui.theme.LiquidGlassCanvasBrush
+import com.onetap.studiotracker.ui.theme.liquidGlassCard
 import com.onetap.studiotracker.ui.theme.TextMuted
 import com.onetap.studiotracker.ui.theme.TextPrimary
 import com.onetap.studiotracker.ui.theme.TextSecondary
+import kotlinx.coroutines.launch
 
 @Composable
 fun DashboardScreen(
     onNavigateKanban: () -> Unit,
     onNavigateSettings: () -> Unit = {},
-    viewModel: DashboardViewModel = viewModel(),
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val campaigns by viewModel.campaigns.collectAsState()
-    val activeCampaign by viewModel.activeCampaign.collectAsState()
-    val stats by viewModel.stats.collectAsState()
-    val isBriefingOpen by viewModel.isBriefingSheetOpen.collectAsState()
-    val selectedCampaign by viewModel.selectedBriefingCampaign.collectAsState()
-    val briefingMode by viewModel.briefingMode.collectAsState()
-    val syncState by viewModel.syncState.collectAsState()
+    val scope = rememberCoroutineScope()
+    val repository = SafarRepository.getInstance()
+    val campaigns by repository.campaigns.collectAsState()
+    val syncState by repository.syncState.collectAsState()
+    val isInitialLoading by repository.isInitialLoading.collectAsState()
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(DarkBackground)
-            .statusBarsPadding()
-    ) {
+    val activeCampaign = remember(campaigns) {
+        campaigns.firstOrNull { it.isOngoing } ?: campaigns.firstOrNull { !it.isArchived } ?: campaigns.firstOrNull()
+    }
+    val stats = remember(campaigns) { StudioStats.calculate(campaigns, activeOnly = true) }
+    var briefingCampaign by remember { mutableStateOf<SafarCampaign?>(null) }
+    var expandedId by remember { mutableStateOf<String?>(null) }
+    var searchQuery by remember { mutableStateOf("") }
+    var showArchived by remember { mutableStateOf(false) }
+
+    val displayedSafars = remember(campaigns, showArchived, searchQuery) {
+        campaigns.filter { c ->
+            (c.isArchived == showArchived) &&
+                (searchQuery.isBlank() || c.name.contains(searchQuery, true) || c.tasks.any { it.title.contains(searchQuery, true) })
+        }
+    }
+
+    Box(modifier = modifier.fillMaxSize().statusBarsPadding()) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 80.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp)
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 96.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Top App Bar Header
             item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(IndigoPrimary),
+                            modifier = Modifier.size(40.dp).clip(RoundedCornerShape(11.dp)).background(LightSurface)
+                                .border(1.dp, LightBorder, RoundedCornerShape(11.dp)).padding(6.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = "1T",
-                                color = Color.White,
-                                fontWeight = FontWeight.Black,
-                                fontSize = 16.sp
-                            )
+                            Image(painter = painterResource(id = R.drawable.ic_launcher_logo), contentDescription = "One Tap", modifier = Modifier.fillMaxSize())
                         }
                         Spacer(modifier = Modifier.width(10.dp))
                         Column {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = "One Tap Studio",
-                                    color = TextPrimary,
-                                    fontSize = 17.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
+                                Text("One Tap Studio", color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(4.dp))
-                                        .background(DarkSurfaceElevated)
-                                        .padding(horizontal = 4.dp, vertical = 2.dp)
-                                ) {
-                                    Text(
-                                        text = "PRO",
-                                        color = IndigoPrimary,
-                                        fontSize = 9.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
+                                Box(modifier = Modifier.clip(RoundedCornerShape(5.dp)).background(IndigoSoft).padding(horizontal = 5.dp, vertical = 2.dp)) {
+                                    Text("LIVE", color = IndigoPrimary, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
-                            Text(
-                                text = "Media Production Workstation",
-                                color = TextMuted,
-                                fontSize = 11.sp
-                            )
+                            Text("Safar Production Tracker", color = TextMuted, fontSize = 11.sp)
                         }
                     }
 
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        val isSyncing = syncState.status == com.onetap.studiotracker.data.sync.SyncStatus.SYNCING
-                        val isRealtime = syncState.isRealtimeConnected || syncState.status == com.onetap.studiotracker.data.sync.SyncStatus.REALTIME_LIVE
-                        val isConnected = isRealtime || syncState.status == com.onetap.studiotracker.data.sync.SyncStatus.CONNECTED
-                        val pillColor = if (isConnected) EmeraldSuccess else if (isSyncing) Color(0xFF0284C7) else Color(0xFFD97706)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        val isSyncing = syncState.status == SyncStatus.SYNCING
+                        val isRt = syncState.isRealtimeConnected || syncState.status == SyncStatus.REALTIME_LIVE
+                        val isConn = isRt || syncState.status == SyncStatus.CONNECTED
+                        val pillColor = if (isConn) EmeraldDark else if (isSyncing) BlueDark else AmberDark
+
+                        Row(
+                            modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(LightSurface)
+                                .border(1.dp, LightBorder, RoundedCornerShape(20.dp))
+                                .clickable {
+                                    scope.launch {
+                                        repository.triggerCloudSync()
+                                        Toast.makeText(context, "Synced with Supabase", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                                .padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(modifier = Modifier.size(7.dp).clip(CircleShape).background(pillColor))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(if (isSyncing) "Syncing…" else if (isRt) "Live" else if (isConn) "${syncState.latencyMs}ms" else "Offline", color = pillColor, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Icon(Icons.Default.Refresh, contentDescription = "Refresh", tint = pillColor, modifier = Modifier.size(13.dp))
+                        }
 
                         Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(DarkSurface)
-                                .border(1.dp, DarkBorder, RoundedCornerShape(20.dp))
-                                .clickable { viewModel.triggerManualSync() }
-                                .padding(horizontal = 10.dp, vertical = 5.dp)
+                            modifier = Modifier.size(34.dp).clip(RoundedCornerShape(10.dp)).background(LightSurface)
+                                .border(1.dp, LightBorder, RoundedCornerShape(10.dp)).clickable { onNavigateSettings() },
+                            contentAlignment = Alignment.Center
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(7.dp)
-                                        .clip(CircleShape)
-                                        .background(pillColor)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
+                            Icon(Icons.Default.Settings, contentDescription = "Settings", tint = TextSecondary, modifier = Modifier.size(18.dp))
+                        }
+                    }
+                }
+            }
+
+            // Quick Safar Switcher Strip
+            if (campaigns.any { !it.isArchived }) {
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        campaigns.filter { !it.isArchived }.forEach { camp ->
+                            val isSel = camp.id == activeCampaign?.id
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(if (isSel) IndigoPrimary else LightSurface)
+                                    .border(1.dp, if (isSel) IndigoPrimary else LightBorder, RoundedCornerShape(12.dp))
+                                    .clickable { repository.setActiveCampaign(camp.id) }
+                                    .padding(horizontal = 12.dp, vertical = 7.dp)
+                            ) {
                                 Text(
-                                    text = if (isSyncing) "Syncing..." else if (isRealtime) "Live" else if (isConnected) "${syncState.latencyMs}ms" else "Offline",
-                                    color = pillColor,
+                                    text = "${camp.name} (${camp.overallPercentage}%)",
+                                    color = if (isSel) Color.White else TextSecondary,
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.SemiBold
                                 )
                             }
                         }
-
-                        Box(
-                            modifier = Modifier
-                                .size(34.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(DarkSurface)
-                                .border(1.dp, DarkBorder, RoundedCornerShape(10.dp))
-                                .clickable { onNavigateSettings() },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Settings,
-                                contentDescription = "Settings",
-                                tint = TextSecondary,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
                     }
                 }
             }
 
-            // Active Ongoing Safar Spotlight Card
-            item {
-                activeCampaign?.let { campaign ->
+            if (activeCampaign != null) {
+                item {
                     ExecutiveHeroCard(
-                        campaign = campaign,
-                        onOpenBriefing = { viewModel.openBriefing(campaign) },
-                        onCopyStatus = { viewModel.copyStatus(context, campaign) },
+                        campaign = activeCampaign,
+                        onOpenBriefing = { briefingCampaign = activeCampaign },
+                        onCopyStatus = {
+                            val text = repository.generateWhatsAppBriefingText(activeCampaign)
+                            (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
+                                .setPrimaryClip(ClipData.newPlainText("Safar Status", text))
+                            Toast.makeText(context, "Briefing copied!", Toast.LENGTH_SHORT).show()
+                        },
                         onNavigateKanban = onNavigateKanban
                     )
                 }
-            }
-
-            // KPI Overview Section Title
-            item {
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(
-                        text = "Production Command Center",
-                        color = TextPrimary,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "Global completion status across all campaigns",
-                        color = TextMuted,
-                        fontSize = 12.sp
-                    )
+            } else {
+                item {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(LightSurface)
+                            .border(1.dp, LightBorder, RoundedCornerShape(16.dp)).padding(24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(if (isInitialLoading) "Syncing Safar data from Supabase…" else "No active Safars found in Supabase.", color = TextSecondary, fontSize = 13.sp)
+                    }
                 }
             }
 
-            // KPI Grid (2 columns)
+            // Enhanced KPI Matrix with Icons
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        KpiCard(
-                            title = "Total Days",
-                            value = stats.totalScheduledDays.toString(),
-                            icon = Icons.Default.DateRange,
-                            tintColor = Color(0xFF94A3B8),
-                            modifier = Modifier.weight(1f)
-                        )
-                        KpiCard(
-                            title = "Safars 100% Done",
-                            value = stats.safars100PercentDone.toString(),
-                            icon = Icons.Default.EmojiEvents,
-                            tintColor = EmeraldSuccess,
-                            modifier = Modifier.weight(1f)
-                        )
+                    Text("Active Pipeline KPIs (${stats.totalScheduledDays} dates)", color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        KpiMini("PENDING", "${stats.editingPendingCount}", AmberDark, AmberSoft, Icons.Default.PendingActions, Modifier.weight(1f))
+                        KpiMini("EDITING", "${stats.inProgressCount}", BlueDark, BlueSoft, Icons.Default.Movie, Modifier.weight(1f))
                     }
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        KpiCard(
-                            title = "Editing Pending",
-                            value = stats.editingPendingCount.toString(),
-                            icon = Icons.Default.PendingActions,
-                            tintColor = ColorEditingPending,
-                            modifier = Modifier.weight(1f)
-                        )
-                        KpiCard(
-                            title = "In Progress",
-                            value = stats.inProgressCount.toString(),
-                            icon = Icons.Default.Sync,
-                            tintColor = ColorInProgress,
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        KpiCard(
-                            title = "Upload Pending",
-                            value = stats.uploadPendingCount.toString(),
-                            icon = Icons.Default.HourglassTop,
-                            tintColor = ColorUploadPending,
-                            modifier = Modifier.weight(1f)
-                        )
-                        KpiCard(
-                            title = "Delivered Videos",
-                            value = (stats.uploadedCount + stats.alJameaDoneCount).toString(),
-                            icon = Icons.Default.CheckCircle,
-                            tintColor = ColorUploaded,
-                            modifier = Modifier.weight(1f)
-                        )
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        KpiMini("UPLOAD", "${stats.uploadPendingCount}", CyanInfo, Color(0xFFECFEFF), Icons.Default.HourglassTop, Modifier.weight(1f))
+                        KpiMini("DELIVERED", "${stats.uploadedCount + stats.alJameaDoneCount}", EmeraldDark, EmeraldSoft, Icons.Default.CloudDone, Modifier.weight(1f))
                     }
                 }
             }
 
-            // Safars in Production Header
+            // Active / Archived Filter + Search
             item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            text = "Safars in Production",
-                            color = TextPrimary,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "${campaigns.size} total active campaigns",
-                            color = TextMuted,
-                            fontSize = 12.sp
-                        )
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Text(if (showArchived) "Archived Safars" else "Active Safars", color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            ToggleChip("Active (${campaigns.count { !it.isArchived }})", !showArchived) { showArchived = false }
+                            ToggleChip("Archived (${campaigns.count { it.isArchived }})", showArchived) { showArchived = true }
+                        }
                     }
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        placeholder = { Text("Search Safars or date folders…", fontSize = 13.sp, color = TextMuted) },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TextMuted) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    )
                 }
             }
 
-            // Campaigns List Cards
-            items(campaigns) { campaign ->
-                CampaignRowCard(
-                    campaign = campaign,
-                    isActive = campaign.id == activeCampaign?.id,
-                    onSelectActive = { viewModel.setActiveCampaign(campaign.id) },
-                    onOpenBriefing = { viewModel.openBriefing(campaign) },
-                    onCopyStatus = { viewModel.copyStatus(context, campaign) }
-                )
+            items(displayedSafars, key = { it.id }) { camp ->
+                val expanded = expandedId == camp.id
+                Box(
+                    modifier = Modifier.fillMaxWidth()
+                        .liquidGlassCard(
+                            cornerRadius = 16.dp,
+                            borderColor = if (camp.isOngoing) IndigoPrimary.copy(alpha = 0.45f) else LightBorder
+                        )
+                        .clickable { expandedId = if (expanded) null else camp.id }
+                        .padding(14.dp)
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(camp.name, color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                    if (camp.is100PercentDone) {
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Icon(Icons.Default.CheckCircle, contentDescription = "Done", tint = EmeraldSuccess, modifier = Modifier.size(15.dp))
+                                    }
+                                }
+                                Text("${camp.deliveredVideosCount}/${camp.totalDates} Videos (${camp.overallPercentage}%) • Photos ${camp.deliveredPhotosCount}/${camp.totalDates}", color = TextSecondary, fontSize = 11.sp)
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                if (!camp.isOngoing && !camp.isArchived) {
+                                    Text(
+                                        text = "Set Active",
+                                        color = IndigoPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.clickable { repository.setActiveCampaign(camp.id) }.padding(horizontal = 8.dp, vertical = 4.dp)
+                                    )
+                                }
+                                Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = null, tint = TextMuted)
+                            }
+                        }
+                        MultiStageProgressBar(campaign = camp, height = 6.dp)
+                        AnimatedVisibility(visible = expanded) {
+                            Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 4.dp)) {
+                                camp.tasks.forEach { task ->
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(LightSurfaceSubtle).padding(horizontal = 10.dp, vertical = 8.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(task.title, color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                            val renderBadge = if ((task.renderVideoCount ?: 0) > 0 || (task.renderSizeBytes ?: 0L) > 0L) {
+                                                val mins = ((task.renderDurationSeconds ?: 0.0) / 60.0).toInt()
+                                                val mb = ((task.renderSizeBytes ?: 0L) / (1024.0 * 1024.0)).toInt()
+                                                "🎬 ${task.renderVideoCount ?: 1} clip(s)" + (if (mins > 0) " • ${mins}m" else "") + (if (mb > 0) " • ${mb}MB" else "")
+                                            } else null
+                                            Text(
+                                                listOfNotNull(
+                                                    task.hijriDate.takeIf { it.isNotBlank() },
+                                                    task.dueDate.takeIf { it.isNotBlank() }?.let { "Due $it" },
+                                                    task.effectiveVideoEditor,
+                                                    renderBadge
+                                                ).joinToString(" • "),
+                                                color = TextMuted,
+                                                fontSize = 10.sp
+                                            )
+                                        }
+                                        StageChip(stage = task.stage)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
-        }
-
-        // WhatsApp Briefing Bottom Sheet
-        if (isBriefingOpen && selectedCampaign != null) {
-            WhatsAppBriefingSheet(
-                campaign = selectedCampaign!!,
-                mode = briefingMode,
-                onModeChange = { viewModel.setBriefingMode(it) },
-                onDismiss = { viewModel.closeBriefing() }
-            )
         }
     }
+
+    briefingCampaign?.let { WhatsAppBriefingSheet(campaign = it, onDismiss = { briefingCampaign = null }) }
 }
 
 @Composable
-fun CampaignRowCard(
-    campaign: SafarCampaign,
-    isActive: Boolean,
-    onSelectActive: () -> Unit,
-    onOpenBriefing: () -> Unit,
-    onCopyStatus: () -> Unit
-) {
-    var isExpanded by remember { mutableStateOf(false) }
-
+private fun ToggleChip(label: String, selected: Boolean, onClick: () -> Unit) {
     Box(
         modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(DarkSurface)
-            .border(
-                1.dp,
-                if (isActive) IndigoPrimary.copy(alpha = 0.5f) else DarkBorder,
-                RoundedCornerShape(14.dp)
-            )
-            .padding(14.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(if (selected) IndigoPrimary else LightSurface)
+            .border(1.dp, if (selected) IndigoPrimary else LightBorder, RoundedCornerShape(16.dp))
+            .clickable { onClick() }
+            .padding(horizontal = 10.dp, vertical = 5.dp)
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            // Header Row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = campaign.name,
-                            color = TextPrimary,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        if (isActive) {
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(4.dp))
-                                    .background(IndigoPrimary.copy(alpha = 0.2f))
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                            ) {
-                                Text(
-                                    text = "ONGOING",
-                                    color = Color(0xFF818CF8),
-                                    fontSize = 9.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-                    }
-                    Text(
-                        text = "📍 ${campaign.location} • ${campaign.totalDates} Days",
-                        color = TextMuted,
-                        fontSize = 11.sp
-                    )
-                }
-
-                Text(
-                    text = "${campaign.overallPercentage}%",
-                    color = if (campaign.is100PercentDone) EmeraldSuccess else TextPrimary,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            // Progress bar
-            MultiStageProgressBar(campaign = campaign, height = 6.dp)
-
-            // Bottom Actions & Toggle
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Button(
-                        onClick = onOpenBriefing,
-                        modifier = Modifier.height(34.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF25D366),
-                            contentColor = Color.White
-                        ),
-                        contentPadding = PaddingValues(horizontal = 10.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Chat,
-                            contentDescription = null,
-                            modifier = Modifier.size(13.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = "Briefing", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    }
-
-                    OutlinedButton(
-                        onClick = onCopyStatus,
-                        modifier = Modifier.height(34.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, DarkBorder),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary),
-                        contentPadding = PaddingValues(horizontal = 8.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.ContentCopy,
-                            contentDescription = null,
-                            modifier = Modifier.size(13.dp)
-                        )
-                    }
-                }
-
-                // Expand/Collapse Dates Preview Button
-                Row(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .clickable { isExpanded = !isExpanded }
-                        .padding(horizontal = 6.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = if (isExpanded) "Hide Dates" else "View Dates",
-                        color = Color(0xFF818CF8),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Icon(
-                        imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                        contentDescription = null,
-                        tint = Color(0xFF818CF8),
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-            }
-
-            // Expandable Dates Preview (Compact rows)
-            AnimatedVisibility(visible = isExpanded) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    campaign.tasks.forEach { task ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(DarkSurfaceElevated)
-                                .padding(horizontal = 10.dp, vertical = 8.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = task.title,
-                                    color = TextPrimary,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                                Text(
-                                    text = listOfNotNull(
-                                        task.hijriDate.takeIf { it.isNotBlank() },
-                                        task.dueDate.takeIf { it.isNotBlank() }?.let { "Due $it" },
-                                        task.effectiveVideoEditor
-                                    ).joinToString(" • "),
-                                    color = TextMuted,
-                                    fontSize = 10.sp
-                                )
-                            }
-                            StageChip(stage = task.stage)
-                        }
-                    }
-                }
-            }
-        }
+        Text(label, color = if (selected) Color.White else TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 
-@androidx.compose.ui.tooling.preview.Preview(showBackground = true, backgroundColor = 0xFF0F172A)
 @Composable
-fun DashboardScreenPreview() {
-    com.onetap.studiotracker.ui.theme.OneTapStudioTheme {
-        DashboardScreen(onNavigateKanban = {})
+private fun KpiMini(
+    label: String,
+    value: String,
+    color: Color,
+    softBg: Color,
+    icon: ImageVector,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier.liquidGlassCard(cornerRadius = 14.dp, borderColor = LightBorder).padding(12.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+            Column {
+                Text(label, color = TextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                Text(value, color = color, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
+            }
+            Box(
+                modifier = Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(softBg),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(18.dp))
+            }
+        }
     }
 }

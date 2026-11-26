@@ -458,6 +458,9 @@ class AnyShareRealtimeService {
           }
           this.syncWorkstationItems();
         })
+        .on('broadcast', { event: 'ping_workstation' }, () => {
+          this.sendHeartbeat();
+        })
         .on('broadcast', { event: 'safar_mark_done' }, async (res: any) => {
           const payload = res?.payload;
           console.log('[AnyShare Nexus] Inbound safar_mark_done received from website:', payload);
@@ -919,64 +922,242 @@ class AnyShareRealtimeService {
     }).catch(() => {});
   }
 
+  private scheduledRenderTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
   private async executeRenderJob(cmd: any) {
-    if (!this.channel || !cmd?.itemId) return;
+    if (!this.channel || !cmd) return;
+    const jobId = String(cmd.jobId || cmd.itemId || `remote_${Date.now()}`);
+    const action = String(cmd.action || 'start_batch');
 
-    // Stage 1: Preflight Verification (20%)
-    setTimeout(() => {
+    if (action === 'cancel_schedule') {
+      const timer = this.scheduledRenderTimers.get(jobId);
+      if (timer) {
+        clearTimeout(timer);
+        this.scheduledRenderTimers.delete(jobId);
+      }
+      this.channel.send({
+        type: 'broadcast',
+        event: 'render_telemetry',
+        payload: { jobId, percent: 0, stage: 'Scheduled render cancelled', status: 'cancelled' }
+      }).catch(() => {});
+      return;
+    }
+
+    const delayMinutes = Number(cmd.delayMinutes || 0);
+    if (delayMinutes > 0 && action === 'schedule_batch') {
+      const runAt = new Date(Date.now() + delayMinutes * 60_000).toISOString();
       this.channel.send({
         type: 'broadcast',
         event: 'render_telemetry',
         payload: {
-          itemId: cmd.itemId,
-          percent: 25,
-          stage: 'Preflight Cleared & 4K H.264 Encoder Primed',
-          fps: '59.94',
-          speed: '2.8x'
-        }
-      }).catch(() => {});
-    }, 600);
-
-    // Stage 2: GPU Encoding (65%)
-    setTimeout(() => {
-      this.channel.send({
-        type: 'broadcast',
-        event: 'render_telemetry',
-        payload: {
-          itemId: cmd.itemId,
-          percent: 68,
-          stage: 'GPU Hardware Encoding in Progress (CUDA Core Active)',
-          fps: '74.2',
-          speed: '3.2x'
-        }
-      }).catch(() => {});
-    }, 1800);
-
-    // Stage 3: Completed & Verified (100%)
-    setTimeout(() => {
-      this.channel.send({
-        type: 'broadcast',
-        event: 'render_telemetry',
-        payload: {
-          itemId: cmd.itemId,
-          percent: 100,
-          stage: 'Output Verified & Checksum Validated',
-          fps: '74.2',
-          speed: '3.2x'
+          jobId,
+          safarName: cmd.safarName || '',
+          dateFolders: cmd.dateFolders || [],
+          percent: 0,
+          status: 'scheduled',
+          scheduledFor: runAt,
+          stage: `Scheduled to start in ${delayMinutes} min(s)`
         }
       }).catch(() => {});
 
-      this.channel.send({
-        type: 'broadcast',
-        event: 'render_completed',
-        payload: {
-          itemId: cmd.itemId,
-          completedAt: new Date().toISOString(),
-          status: 'rendered',
-          outputFile: `Z:\\Rendered_Masters\\${cmd.externalKey || 'safar_final'}_4K.mp4`
+      const timer = setTimeout(() => {
+        this.scheduledRenderTimers.delete(jobId);
+        void this.executeRenderJob({ ...cmd, action: 'start_batch', delayMinutes: 0, jobId });
+      }, delayMinutes * 60_000);
+      this.scheduledRenderTimers.set(jobId, timer);
+      return;
+    }
+
+    // Resolve physical folder paths on desktop for the requested Safar & dateFolders
+    const safarName = String(cmd.safarName || '');
+    const requestedFolders: string[] = Array.isArray(cmd.dateFolders) ? cmd.dateFolders : [];
+    const batchSources: string[] = [];
+    let resolvedOutputFolder = '';
+
+    try {
+      if (typeof localStorage !== 'undefined') {
+        resolvedOutputFolder = (localStorage.getItem('ot_ta_output_folder') || '').trim();
+      }
+    } catch {}
+
+    try {
+      const trackerApi = (window as any).api?.taskTracker;
+      if (trackerApi?.scan && safarName && requestedFolders.length > 0) {
+        const scanRes = await trackerApi.scan({ force: false });
+        const tasks: any[] = Array.isArray(scanRes?.tasks) ? scanRes.tasks : [];
+        const wanted = new Set(requestedFolders.map((f: string) => f.trim().toLowerCase()));
+        for (const t of tasks) {
+          if (String(t.safarName || '').trim().toLowerCase() === safarName.trim().toLowerCase()) {
+            const df = String(t.dateFolder || '').trim().toLowerCase();
+            if (wanted.has(df)) {
+              const folderPath = t.workingPath || t.finalPath || t.uploadPath;
+              if (folderPath) batchSources.push(folderPath);
+              if (!resolvedOutputFolder && (t.finalPath || t.uploadPath)) {
+                resolvedOutputFolder = String(t.finalPath || t.uploadPath).trim();
+              }
+            }
+          }
         }
-      }).catch(() => {});
-    }, 3200);
+      }
+    } catch (e) {
+      console.warn('[AnyShare Nexus] Failed resolving batchSources:', e);
+    }
+
+    if (!resolvedOutputFolder && batchSources.length > 0) {
+      const sep = batchSources[0].includes('\\') ? '\\' : '/';
+      resolvedOutputFolder = `${batchSources[0].replace(/[\\/]+$/, '')}${sep}Rendered`;
+    }
+
+    this.channel.send({
+      type: 'broadcast',
+      event: 'render_telemetry',
+      payload: {
+        jobId,
+        itemId: cmd.itemId || jobId,
+        safarName,
+        dateFolders: requestedFolders,
+        percent: 5,
+        status: 'running',
+        stage: batchSources.length > 0
+          ? `Starting Title Adder batch for ${batchSources.length} folder(s)…`
+          : `Queued remote render (${requestedFolders.length} folder(s))`
+      }
+    }).catch(() => {});
+
+    try {
+      const titleAdder = (window as any).api?.titleAdder;
+      const ipcRenderer = (window as any).electron?.ipcRenderer;
+      let lastProgressAt = 0;
+      let doneResult: { success?: boolean; error?: string; done?: number; total?: number } | null = null;
+
+      const logHandler = (_evt: any, logData: any) => {
+        if (!logData || logData.jobId !== jobId) return;
+        const lvl = String(logData.level || 'info');
+        if (lvl === 'warn' || lvl === 'error') {
+          this.channel?.send({
+            type: 'broadcast',
+            event: 'render_log',
+            payload: { jobId, level: lvl, message: String(logData.message || '') }
+          }).catch(() => {});
+        }
+      };
+      const progressHandler = (_evt: any, progData: any) => {
+        if (!progData || progData.jobId !== jobId) return;
+        const now = Date.now();
+        if (now - lastProgressAt < 750) return;
+        lastProgressAt = now;
+        this.channel?.send({
+          type: 'broadcast',
+          event: 'render_telemetry',
+          payload: {
+            jobId,
+            itemId: cmd.itemId || jobId,
+            safarName,
+            dateFolders: requestedFolders,
+            percent: Math.max(5, Math.min(99, Math.round(Number(progData.percent || 0)))),
+            status: 'running',
+            stage: String(progData.status || 'Rendering on Desktop…')
+          }
+        }).catch(() => {});
+      };
+      const doneHandler = (_evt: any, data: any) => {
+        if (!data || data.jobId !== jobId) return;
+        doneResult = data;
+      };
+
+      if (ipcRenderer?.on) {
+        ipcRenderer.on('titleAdder:log', logHandler);
+        ipcRenderer.on('titleAdder:progress', progressHandler);
+        ipcRenderer.on('titleAdder:done', doneHandler);
+      }
+      if (titleAdder?.start && batchSources.length > 0) {
+        try {
+          let savedDuration = 5;
+          try {
+            if (typeof localStorage !== 'undefined') {
+              const d = Number(localStorage.getItem('ot_ta_duration') || '5');
+              if (Number.isFinite(d) && d > 0) savedDuration = d;
+            }
+          } catch {}
+          await titleAdder.start({
+            mode: 'batch',
+            batchSources,
+            outputFolder: resolvedOutputFolder,
+            duration: savedDuration,
+            jobId,
+            addToStats: true,
+            muteOriginal: Boolean(cmd.muteOriginal),
+            addWatermark: cmd.addWatermark !== false
+          });
+        } finally {
+          if (ipcRenderer?.removeListener) {
+            ipcRenderer.removeListener('titleAdder:log', logHandler);
+            ipcRenderer.removeListener('titleAdder:progress', progressHandler);
+            ipcRenderer.removeListener('titleAdder:done', doneHandler);
+          }
+        }
+
+        if (doneResult && (doneResult as any).success === false) {
+          this.channel.send({
+            type: 'broadcast',
+            event: 'render_telemetry',
+            payload: {
+              jobId,
+              itemId: cmd.itemId || jobId,
+              safarName,
+              dateFolders: requestedFolders,
+              percent: 0,
+              status: 'error',
+              stage: String((doneResult as any).error || 'Title Adder render failed')
+            }
+          }).catch(() => {});
+          return;
+        }
+
+        this.channel.send({
+          type: 'broadcast',
+          event: 'render_telemetry',
+          payload: {
+            jobId,
+            itemId: cmd.itemId || jobId,
+            safarName,
+            dateFolders: requestedFolders,
+            percent: 100,
+            status: 'completed',
+            stage: `Completed ${batchSources.length} folder(s)`
+          }
+        }).catch(() => {});
+        this.channel.send({
+          type: 'broadcast',
+          event: 'render_completed',
+          payload: {
+            jobId,
+            itemId: cmd.itemId || jobId,
+            safarName,
+            dateFolders: requestedFolders,
+            completedAt: new Date().toISOString(),
+            status: 'rendered'
+          }
+        }).catch(() => {});
+        return;
+      }
+    } catch (err) {
+      console.warn('[AnyShare Nexus] titleAdder.start error:', err);
+    }
+
+    this.channel.send({
+      type: 'broadcast',
+      event: 'render_telemetry',
+      payload: {
+        jobId,
+        itemId: cmd.itemId || jobId,
+        safarName,
+        dateFolders: requestedFolders,
+        percent: 0,
+        status: 'error',
+        stage: batchSources.length === 0 ? 'No matching local folders found on Desktop PC' : 'Desktop Title Adder unavailable'
+      }
+    }).catch(() => {});
   }
 
   public destroy() {

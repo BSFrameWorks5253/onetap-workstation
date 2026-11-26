@@ -16,7 +16,6 @@ class SupabaseSyncClient(
     private val baseUrl: String = DEFAULT_URL,
     private val apiKey: String = DEFAULT_KEY
 ) {
-
     private val json = Json {
         ignoreUnknownKeys = true
         isLenient = true
@@ -39,16 +38,13 @@ class SupabaseSyncClient(
                 .header("Accept", "application/json")
                 .get()
                 .build()
-
             val response = httpClient.newCall(request).execute()
             if (!response.isSuccessful) {
-                return@withContext Result.failure(Exception("Supabase HTTP Error: ${response.code} ${response.message}"))
+                return@withContext Result.failure(Exception("Supabase HTTP ${response.code}"))
             }
-
             val body = response.body?.string() ?: return@withContext Result.success(null)
             val rows = json.decodeFromString<List<RemoteSnapshotRow>>(body)
-            val snapshot = rows.firstOrNull()?.snapshot
-            Result.success(snapshot)
+            Result.success(rows.firstOrNull()?.snapshot)
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -57,13 +53,8 @@ class SupabaseSyncClient(
     suspend fun pushSnapshot(payload: RemoteSnapshotPayload): Result<Boolean> = withContext(Dispatchers.IO) {
         try {
             val url = "$baseUrl/rest/v1/safar_tracker_snapshots"
-            val row = RemoteSnapshotRow(
-                id = "primary",
-                snapshot = payload,
-                updated_at = payload.updatedAt
-            )
+            val row = RemoteSnapshotRow(id = "primary", snapshot = payload, updated_at = payload.updatedAt)
             val jsonBody = json.encodeToString(row)
-
             val request = Request.Builder()
                 .url(url)
                 .header("apikey", apiKey)
@@ -72,41 +63,9 @@ class SupabaseSyncClient(
                 .header("Prefer", "resolution=merge-duplicates")
                 .post(jsonBody.toRequestBody("application/json".toMediaType()))
                 .build()
-
             val response = httpClient.newCall(request).execute()
-            if (response.isSuccessful) {
-                Result.success(true)
-            } else {
-                Result.failure(Exception("Upsert failed: ${response.code} ${response.message}"))
-            }
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
-    suspend fun broadcastEvent(topic: String, event: String, payload: JSONObject): Result<Boolean> = withContext(Dispatchers.IO) {
-        try {
-            val url = "$baseUrl/realtime/v1/api/broadcast"
-            val envelope = JSONObject().apply {
-                put("messages", JSONArray().apply {
-                    put(JSONObject().apply {
-                        put("topic", topic)
-                        put("event", event)
-                        put("payload", payload)
-                    })
-                })
-            }
-
-            val request = Request.Builder()
-                .url(url)
-                .header("apikey", apiKey)
-                .header("Authorization", "Bearer $apiKey")
-                .header("Content-Type", "application/json")
-                .post(envelope.toString().toRequestBody("application/json".toMediaType()))
-                .build()
-
-            val response = httpClient.newCall(request).execute()
-            Result.success(response.isSuccessful)
+            if (response.isSuccessful) Result.success(true)
+            else Result.failure(Exception("Upsert failed: ${response.code}"))
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -116,14 +75,35 @@ class SupabaseSyncClient(
         title: String,
         message: String,
         type: String = "mobile_status_update"
-    ): Result<Boolean> {
-        val payload = JSONObject().apply {
-            put("title", title)
-            put("message", message)
-            put("type", type)
-            put("timestamp", System.currentTimeMillis().toString())
+    ): Result<Boolean> = withContext(Dispatchers.IO) {
+        try {
+            val payload = JSONObject().apply {
+                put("title", title)
+                put("message", message)
+                put("type", type)
+                put("timestamp", System.currentTimeMillis().toString())
+            }
+            val envelope = JSONObject().apply {
+                put("messages", JSONArray().apply {
+                    put(JSONObject().apply {
+                        put("topic", "realtime:anyshare_realtime_nexus")
+                        put("event", "website_user_notification")
+                        put("payload", payload)
+                    })
+                })
+            }
+            val request = Request.Builder()
+                .url("$baseUrl/realtime/v1/api/broadcast")
+                .header("apikey", apiKey)
+                .header("Authorization", "Bearer $apiKey")
+                .header("Content-Type", "application/json")
+                .post(envelope.toString().toRequestBody("application/json".toMediaType()))
+                .build()
+            val response = httpClient.newCall(request).execute()
+            Result.success(response.isSuccessful)
+        } catch (e: Exception) {
+            Result.failure(e)
         }
-        return broadcastEvent("realtime:anyshare_realtime_nexus", "website_user_notification", payload)
     }
 
     companion object {

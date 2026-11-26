@@ -14,73 +14,47 @@ import com.onetap.studiotracker.util.BatchNotificationManager
 import java.time.LocalDate
 import java.util.concurrent.TimeUnit
 
-class SafarBackgroundWorker(
-    appContext: Context,
-    params: WorkerParameters
-) : CoroutineWorker(appContext, params) {
-
+class SafarBackgroundWorker(appContext: Context, params: WorkerParameters) : CoroutineWorker(appContext, params) {
     override suspend fun doWork(): Result {
         val prefs = applicationContext.getSharedPreferences("one_tap_bg_worker", Context.MODE_PRIVATE)
-        val syncClient = SupabaseSyncClient()
-        val res = syncClient.fetchLatestSnapshot()
+        val res = SupabaseSyncClient().fetchLatestSnapshot()
         if (res.isFailure) return Result.retry()
-
         val payload = res.getOrNull() ?: return Result.success()
-        val deletedSafars = payload.deletedSafars.map { it.lowercase() }.toSet()
-        val archivedSafars = payload.safars.filter { it.isArchived }.map { it.safarName.lowercase() }.toSet()
+
+        val deleted = payload.deletedSafars.map { it.lowercase() }.toSet()
+        val archived = payload.safars.filter { it.isArchived }.map { it.safarName.lowercase() }.toSet()
         val today = try { LocalDate.now().toString() } catch (_: Throwable) { "" }
-
-        var overdueCount = 0
-        var idleQaCount = 0
         val now = System.currentTimeMillis()
-        val idleThresholdMs = 48L * 60L * 60L * 1000L
+        var overdue = 0
+        var idleQa = 0
 
-        payload.tasks.forEach { task ->
-            val sLower = task.safarName.lowercase()
-            if (sLower in deletedSafars || sLower in archivedSafars) return@forEach
-
-            val stage = Stage.fromId(task.stage ?: task.status)
-            if (!stage.isDelivered && !task.dueDate.isNullOrBlank() && today.isNotEmpty() && task.dueDate < today) {
-                overdueCount++
-            }
-            if (stage == Stage.IN_PROGRESS && task.prprojModifiedAt != null && (now - task.prprojModifiedAt) >= idleThresholdMs) {
-                idleQaCount++
-            }
+        payload.tasks.forEach { t ->
+            val s = t.safarName.lowercase()
+            if (s in deleted || s in archived) return@forEach
+            val stage = Stage.fromId(t.stage ?: t.status)
+            if (!stage.isDelivered && !t.dueDate.isNullOrBlank() && today.isNotEmpty() && t.dueDate < today) overdue++
+            if (stage == Stage.IN_PROGRESS && t.prprojModifiedAt != null && (now - t.prprojModifiedAt) >= 48L * 3600_000L) idleQa++
         }
 
-        val lastAlertAt = prefs.getLong("last_alert_at", 0L)
-        val cooldownMs = 6L * 60L * 60L * 1000L // 6 hours
-        if ((overdueCount > 0 || idleQaCount > 0) && (now - lastAlertAt) >= cooldownMs) {
-            val parts = mutableListOf<String>()
-            if (overdueCount > 0) parts.add("$overdueCount overdue date(s)")
-            if (idleQaCount > 0) parts.add("$idleQaCount project(s) idle 48h+ for QA")
-            BatchNotificationManager.showSimpleNotification(
-                context = applicationContext,
-                title = "One Tap Production Alert",
-                message = parts.joinToString(" • ")
-            )
+        val lastAlert = prefs.getLong("last_alert_at", 0L)
+        if ((overdue > 0 || idleQa > 0) && (now - lastAlert) >= 6L * 3600_000L) {
+            val msg = listOfNotNull(
+                if (overdue > 0) "$overdue overdue date(s)" else null,
+                if (idleQa > 0) "$idleQa project(s) idle 48h+ for QA" else null
+            ).joinToString(" • ")
+            BatchNotificationManager.showSimpleNotification(applicationContext, "One Tap Production Alert", msg)
             prefs.edit().putLong("last_alert_at", now).apply()
         }
-
         return Result.success()
     }
 
     companion object {
-        private const val WORK_NAME = "one_tap_safar_bg_monitor"
-
         fun schedule(context: Context) {
             try {
-                val constraints = Constraints.Builder()
-                    .setRequiredNetworkType(NetworkType.CONNECTED)
+                val req = PeriodicWorkRequestBuilder<SafarBackgroundWorker>(30, TimeUnit.MINUTES)
+                    .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
                     .build()
-                val request = PeriodicWorkRequestBuilder<SafarBackgroundWorker>(30, TimeUnit.MINUTES)
-                    .setConstraints(constraints)
-                    .build()
-                WorkManager.getInstance(context).enqueueUniquePeriodicWork(
-                    WORK_NAME,
-                    ExistingPeriodicWorkPolicy.KEEP,
-                    request
-                )
+                WorkManager.getInstance(context).enqueueUniquePeriodicWork("one_tap_bg_monitor", ExistingPeriodicWorkPolicy.KEEP, req)
             } catch (_: Throwable) {}
         }
     }

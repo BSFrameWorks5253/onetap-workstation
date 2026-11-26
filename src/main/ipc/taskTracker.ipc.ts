@@ -473,6 +473,29 @@ export function recordRenderFinished(params: {
       }]
     }))
     broadcastChange()
+    // Broadcast batch render notification & sync real render stats to Supabase
+    try {
+      const { broadcastBatchRenderComplete } = require('../core/batchRenderNotifier')
+      const { syncStatsToCloud } = require('../core/statsSyncDaemon')
+      const durMins = Math.max(1, Math.round((params.duration || 0) / 60))
+      const sizeMb = Math.round((params.fileSizeBytes || 0) / (1024 * 1024))
+      void broadcastBatchRenderComplete({
+        batchId: `render_${Date.now()}`,
+        totalVideos: 1,
+        totalDurationMinutes: durMins,
+        safarName: params.safarName,
+        renderedAt: new Date().toISOString(),
+        events: [{
+          dateFolder: params.dateFolder,
+          safarName: params.safarName,
+          durationMinutes: durMins,
+          editorName: 'One Tap Workstation',
+          fileSizeMb: sizeMb,
+          status: 'rendered'
+        }]
+      })
+      void syncStatsToCloud('render_finished')
+    } catch {}
     return true
   } catch (err) {
     console.warn('[taskTracker] recordRenderFinished error:', err)

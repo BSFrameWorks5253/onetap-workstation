@@ -30,95 +30,53 @@ data class AuditLogEntry(
 
 class LocalStore(context: Context) {
     private val prefs = context.applicationContext.getSharedPreferences("one_tap_safar_store", Context.MODE_PRIVATE)
-    private val json = Json {
-        ignoreUnknownKeys = true
-        isLenient = true
-        encodeDefaults = true
-    }
+    private val json = Json { ignoreUnknownKeys = true; isLenient = true; encodeDefaults = true }
 
     fun saveSnapshot(payload: RemoteSnapshotPayload) {
-        try {
-            prefs.edit().putString(KEY_SNAPSHOT, json.encodeToString(payload)).apply()
-        } catch (_: Throwable) {}
+        try { prefs.edit().putString(KEY_SNAPSHOT, json.encodeToString(payload)).apply() } catch (_: Throwable) {}
     }
 
-    fun loadSnapshot(): RemoteSnapshotPayload? {
-        return try {
-            val raw = prefs.getString(KEY_SNAPSHOT, null) ?: return null
-            json.decodeFromString<RemoteSnapshotPayload>(raw)
-        } catch (_: Throwable) {
-            null
-        }
-    }
+    fun loadSnapshot(): RemoteSnapshotPayload? = try {
+        prefs.getString(KEY_SNAPSHOT, null)?.let { json.decodeFromString<RemoteSnapshotPayload>(it) }
+    } catch (_: Throwable) { null }
 
-    fun setPendingPush(pending: Boolean) {
-        prefs.edit().putBoolean(KEY_PENDING_PUSH, pending).apply()
-    }
-
+    fun setPendingPush(pending: Boolean) = prefs.edit().putBoolean(KEY_PENDING_PUSH, pending).apply()
     fun hasPendingPush(): Boolean = prefs.getBoolean(KEY_PENDING_PUSH, false)
 
-    fun saveStageEnteredAt(taskKey: String, timestamp: Long) {
-        prefs.edit().putLong("stage_entered_$taskKey", timestamp).apply()
-    }
-
-    fun getStageEnteredAt(taskKey: String): Long? {
-        val v = prefs.getLong("stage_entered_$taskKey", -1L)
-        return if (v > 0L) v else null
-    }
+    fun saveStageEnteredAt(taskKey: String, timestamp: Long) = prefs.edit().putLong("stage_entered_$taskKey", timestamp).apply()
+    fun getStageEnteredAt(taskKey: String): Long? = prefs.getLong("stage_entered_$taskKey", -1L).takeIf { it > 0L }
 
     fun appendAuditLog(entry: AuditLogEntry) {
         val current = getAuditLogs().toMutableList()
         current.add(0, entry)
-        val trimmed = current.take(150)
-        try {
-            prefs.edit().putString(KEY_AUDIT_LOGS, json.encodeToString(trimmed)).apply()
-        } catch (_: Throwable) {}
+        try { prefs.edit().putString(KEY_AUDIT_LOGS, json.encodeToString(current.take(150))).apply() } catch (_: Throwable) {}
     }
 
-    fun getAuditLogs(): List<AuditLogEntry> {
-        return try {
-            val raw = prefs.getString(KEY_AUDIT_LOGS, null) ?: return emptyList()
-            json.decodeFromString<List<AuditLogEntry>>(raw)
-        } catch (_: Throwable) {
-            emptyList()
-        }
-    }
+    fun getAuditLogs(): List<AuditLogEntry> = try {
+        prefs.getString(KEY_AUDIT_LOGS, null)?.let { json.decodeFromString<List<AuditLogEntry>>(it) } ?: emptyList()
+    } catch (_: Throwable) { emptyList() }
 
     fun saveAuthUser(user: AuthUser?) {
         try {
-            if (user == null) {
-                prefs.edit().remove(KEY_AUTH_USER).apply()
-            } else {
-                prefs.edit().putString(KEY_AUTH_USER, json.encodeToString(user)).apply()
-            }
+            if (user == null) prefs.edit().remove(KEY_AUTH_USER).apply()
+            else prefs.edit().putString(KEY_AUTH_USER, json.encodeToString(user)).apply()
         } catch (_: Throwable) {}
     }
 
-    fun loadAuthUser(): AuthUser? {
-        return try {
-            val raw = prefs.getString(KEY_AUTH_USER, null) ?: return null
-            json.decodeFromString<AuthUser>(raw)
-        } catch (_: Throwable) {
-            null
-        }
-    }
+    fun loadAuthUser(): AuthUser? = try {
+        prefs.getString(KEY_AUTH_USER, null)?.let { json.decodeFromString<AuthUser>(it) }
+    } catch (_: Throwable) { null }
 
-    fun getGsUrl(): String =
-        prefs.getString(KEY_GS_URL, null)?.takeIf { it.isNotBlank() } ?: DEFAULT_GS_URL
-
+    fun getGsUrl(): String = prefs.getString(KEY_GS_URL, null)?.takeIf { it.isNotBlank() } ?: DEFAULT_GS_URL
     fun setGsUrl(url: String) {
         val clean = url.trim()
-        if (clean.isEmpty()) prefs.edit().remove(KEY_GS_URL).apply()
-        else prefs.edit().putString(KEY_GS_URL, clean).apply()
+        if (clean.isEmpty()) prefs.edit().remove(KEY_GS_URL).apply() else prefs.edit().putString(KEY_GS_URL, clean).apply()
     }
 
-    fun getWhatsAppPhone(): String =
-        prefs.getString(KEY_WHATSAPP_PHONE, null)?.takeIf { it.isNotBlank() } ?: DEFAULT_WHATSAPP_PHONE
-
+    fun getWhatsAppPhone(): String = prefs.getString(KEY_WHATSAPP_PHONE, null)?.takeIf { it.isNotBlank() } ?: DEFAULT_WHATSAPP_PHONE
     fun setWhatsAppPhone(phone: String) {
         val clean = phone.trim()
-        if (clean.isEmpty()) prefs.edit().remove(KEY_WHATSAPP_PHONE).apply()
-        else prefs.edit().putString(KEY_WHATSAPP_PHONE, clean).apply()
+        if (clean.isEmpty()) prefs.edit().remove(KEY_WHATSAPP_PHONE).apply() else prefs.edit().putString(KEY_WHATSAPP_PHONE, clean).apply()
     }
 
     companion object {

@@ -8,8 +8,7 @@ data class EditorWorkload(
     val pending: Int,
     val overdue: Int
 ) {
-    val completionRate: Int
-        get() = if (total > 0) ((done.toFloat() / total) * 100).toInt() else 0
+    val completionRate: Int get() = if (total > 0) ((done.toFloat() / total) * 100).toInt() else 0
 }
 
 data class StudioStats(
@@ -25,8 +24,6 @@ data class StudioStats(
     val alJameaDoneCount: Int = 0,
     val safars100PercentDone: Int = 0,
     val totalPhotosUploaded: Int = 0,
-    val totalPhotosWithMurtaza: Int = 0,
-    val totalPhotosEdited: Int = 0,
     val overdueTasksCount: Int = 0,
     val idleQaAlertsCount: Int = 0,
     val totalRenderVideos: Int = 0,
@@ -37,59 +34,54 @@ data class StudioStats(
     val editorWorkloads: List<EditorWorkload> = emptyList()
 ) {
     companion object {
-        fun calculate(campaigns: List<SafarCampaign>): StudioStats {
-            val activeCampaigns = campaigns.filter { !it.isArchived }
-            val allTasks = campaigns.flatMap { it.tasks }
-            val ongoing = activeCampaigns.firstOrNull { it.isOngoing }
-                ?: activeCampaigns.firstOrNull { !it.is100PercentDone }
-                ?: activeCampaigns.firstOrNull()
+        fun calculate(campaigns: List<SafarCampaign>, activeOnly: Boolean = false): StudioStats {
+            val active = campaigns.filter { !it.isArchived }
+            val scopedCampaigns = if (activeOnly) active else campaigns
+            val scopedTasks = scopedCampaigns.flatMap { it.tasks }
+            val ongoing = active.firstOrNull { it.isOngoing }
+                ?: active.firstOrNull { !it.is100PercentDone }
+                ?: active.firstOrNull()
                 ?: campaigns.firstOrNull()
 
-            val delivered = allTasks.count { it.isVideoDelivered }
-            val total = allTasks.size
-            val deliveryPercent = if (total > 0) ((delivered.toFloat() / total) * 100).toInt() else 0
-            val photosUploaded = allTasks.count { it.isPhotosDelivered }
-            val photoPercent = if (total > 0) ((photosUploaded.toFloat() / total) * 100).toInt() else 0
+            val delivered = scopedTasks.count { it.isVideoDelivered }
+            val total = scopedTasks.size
+            val deliveryPct = if (total > 0) ((delivered.toFloat() / total) * 100).toInt() else 0
+            val photosUploaded = scopedTasks.count { it.isPhotosDelivered }
+            val photoPct = if (total > 0) ((photosUploaded.toFloat() / total) * 100).toInt() else 0
 
             val editorMap = linkedMapOf<String, MutableList<SafarTask>>()
-            allTasks.forEach { task ->
-                val editor = task.effectiveVideoEditor
-                editorMap.getOrPut(editor) { mutableListOf() }.add(task)
-            }
-
-            val workloads = editorMap.map { (name, tasks) ->
+            scopedTasks.forEach { t -> editorMap.getOrPut(t.effectiveVideoEditor) { mutableListOf() }.add(t) }
+            val workloads = editorMap.map { (name, list) ->
                 EditorWorkload(
                     name = name,
-                    total = tasks.size,
-                    done = tasks.count { it.isVideoDelivered },
-                    inProgress = tasks.count { it.stage == Stage.IN_PROGRESS || it.stage == Stage.UPLOAD_PENDING },
-                    pending = tasks.count { it.stage == Stage.EDITING_PENDING },
-                    overdue = tasks.count { it.isOverdue }
+                    total = list.size,
+                    done = list.count { it.isVideoDelivered },
+                    inProgress = list.count { it.stage == Stage.IN_PROGRESS || it.stage == Stage.UPLOAD_PENDING },
+                    pending = list.count { it.stage == Stage.EDITING_PENDING },
+                    overdue = list.count { it.isOverdue }
                 )
             }.sortedByDescending { it.total }
 
             return StudioStats(
                 totalSafars = campaigns.size,
-                activeSafars = activeCampaigns.size,
+                activeSafars = active.size,
                 archivedSafars = campaigns.count { it.isArchived },
                 ongoingSafarName = ongoing?.name ?: "No Active Safar",
                 totalScheduledDays = total,
-                editingPendingCount = allTasks.count { it.stage == Stage.EDITING_PENDING },
-                inProgressCount = allTasks.count { it.stage == Stage.IN_PROGRESS },
-                uploadPendingCount = allTasks.count { it.stage == Stage.UPLOAD_PENDING },
-                uploadedCount = allTasks.count { it.stage == Stage.UPLOADED },
-                alJameaDoneCount = allTasks.count { it.stage == Stage.ALJAMEA_DONE },
-                safars100PercentDone = campaigns.count { it.is100PercentDone },
+                editingPendingCount = scopedTasks.count { it.stage == Stage.EDITING_PENDING },
+                inProgressCount = scopedTasks.count { it.stage == Stage.IN_PROGRESS },
+                uploadPendingCount = scopedTasks.count { it.stage == Stage.UPLOAD_PENDING },
+                uploadedCount = scopedTasks.count { it.stage == Stage.UPLOADED },
+                alJameaDoneCount = scopedTasks.count { it.stage == Stage.ALJAMEA_DONE },
+                safars100PercentDone = scopedCampaigns.count { it.is100PercentDone },
                 totalPhotosUploaded = photosUploaded,
-                totalPhotosWithMurtaza = allTasks.count { !it.photoUploaded && it.photoStage == PhotoStage.GIVEN_TO_MURTAZA },
-                totalPhotosEdited = allTasks.count { !it.photoUploaded && it.photoStage == PhotoStage.EDITED },
-                overdueTasksCount = allTasks.count { it.isOverdue },
-                idleQaAlertsCount = allTasks.count { it.isIdleQaAlert },
-                totalRenderVideos = allTasks.sumOf { it.renderVideoCount ?: 0 },
-                totalRenderDurationSeconds = allTasks.sumOf { it.renderDurationSeconds ?: 0.0 },
-                totalRenderSizeBytes = allTasks.sumOf { it.renderSizeBytes ?: 0L },
-                overallDeliveryPercentage = deliveryPercent,
-                photoDeliveryPercentage = photoPercent,
+                overdueTasksCount = scopedTasks.count { it.isOverdue },
+                idleQaAlertsCount = scopedTasks.count { it.isIdleQaAlert },
+                totalRenderVideos = scopedTasks.sumOf { it.renderVideoCount ?: 0 },
+                totalRenderDurationSeconds = scopedTasks.sumOf { it.renderDurationSeconds ?: 0.0 },
+                totalRenderSizeBytes = scopedTasks.sumOf { it.renderSizeBytes ?: 0L },
+                overallDeliveryPercentage = deliveryPct,
+                photoDeliveryPercentage = photoPct,
                 editorWorkloads = workloads
             )
         }

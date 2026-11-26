@@ -1,62 +1,43 @@
 package com.onetap.studiotracker
 
 import android.app.Application
-import android.content.Context
 import android.content.Intent
 import android.os.Process
 import android.util.Log
+import com.onetap.studiotracker.data.repository.SafarRepository
+import com.onetap.studiotracker.worker.SafarBackgroundWorker
+import kotlin.system.exitProcess
 
 class OneTapApplication : Application() {
-
     override fun onCreate() {
         super.onCreate()
-        instance = this
-        com.onetap.studiotracker.data.repository.SafarRepository.init(this)
-        com.onetap.studiotracker.worker.SafarBackgroundWorker.schedule(this)
 
         val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
-            Log.e("OneTapStudio", "FATAL CRASH INTERCEPTED on thread [${thread.name}]", throwable)
-            val errorMsg = throwable.localizedMessage ?: throwable.message ?: throwable.javaClass.simpleName
-            val stackTrace = Log.getStackTraceString(throwable)
-
-            lastCrashThrowable = throwable
-            lastCrashMessage = errorMsg
-            lastCrashStackTrace = stackTrace
-
+            Log.e("OneTapApp", "Uncaught exception on ${thread.name}", throwable)
             try {
-                val prefs = getSharedPreferences("one_tap_diagnostics", Context.MODE_PRIVATE)
-                prefs.edit()
-                    .putString("last_crash_msg", errorMsg)
-                    .putString("last_crash_trace", stackTrace)
-                    .putLong("last_crash_timestamp", System.currentTimeMillis())
-                    .apply()
-            } catch (t: Throwable) {
-                Log.e("OneTapStudio", "Failed saving crash prefs", t)
-            }
-
-            try {
-                val crashIntent = Intent(this, CrashActivity::class.java).apply {
-                    putExtra("error_message", errorMsg)
-                    putExtra("stack_trace", stackTrace)
+                val intent = Intent(this, CrashActivity::class.java).apply {
+                    putExtra("error_message", throwable.localizedMessage ?: throwable.javaClass.simpleName)
+                    putExtra("stack_trace", Log.getStackTraceString(throwable))
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
                 }
-                startActivity(crashIntent)
+                startActivity(intent)
                 Process.killProcess(Process.myPid())
-                System.exit(10)
-            } catch (t: Throwable) {
-                Log.e("OneTapStudio", "Failed starting CrashActivity", t)
+                exitProcess(10)
+            } catch (_: Throwable) {
                 defaultHandler?.uncaughtException(thread, throwable)
             }
         }
-    }
 
-    companion object {
-        lateinit var instance: OneTapApplication
-            private set
-
-        var lastCrashThrowable: Throwable? = null
-        var lastCrashMessage: String? = null
-        var lastCrashStackTrace: String? = null
+        try {
+            SafarRepository.init(this)
+        } catch (t: Throwable) {
+            Log.e("OneTapApp", "SafarRepository init error", t)
+        }
+        try {
+            SafarBackgroundWorker.schedule(this)
+        } catch (t: Throwable) {
+            Log.e("OneTapApp", "WorkManager schedule error", t)
+        }
     }
 }

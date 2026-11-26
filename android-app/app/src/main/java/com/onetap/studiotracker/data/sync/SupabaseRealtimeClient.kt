@@ -29,27 +29,33 @@ sealed class RealtimeEvent {
     data class SnapshotReceived(val payload: RemoteSnapshotPayload) : RealtimeEvent()
     data class SafarStatusChanged(val safarName: String, val isArchived: Boolean, val isDone: Boolean) : RealtimeEvent()
     data class NotificationReceived(val title: String, val message: String, val type: String) : RealtimeEvent()
+    data class BatchRenderCompleted(
+        val title: String,
+        val safarName: String,
+        val totalVideos: Int,
+        val totalDurationMinutes: Int,
+        val dateFolders: List<String>,
+        val message: String
+    ) : RealtimeEvent()
+    data class RenderTelemetry(
+        val jobId: String,
+        val safarName: String,
+        val percent: Int,
+        val stage: String,
+        val status: String,
+        val scheduledFor: String = ""
+    ) : RealtimeEvent()
+    data class RenderLog(val jobId: String, val level: String, val message: String) : RealtimeEvent()
+    data class WorkstationHeartbeat(val label: String, val timestampMs: Long) : RealtimeEvent()
     data object RescanRequested : RealtimeEvent()
 }
 
-/**
- * Phoenix-protocol WebSocket client for Supabase Realtime.
- * Mirrors safar-tracker-web's 3 realtime channels:
- * - realtime:safar_tracker_db_changes (postgres_changes on safar_tracker_snapshots)
- * - realtime:one_tap_safar_tracker (broadcast snapshot / request_snapshot)
- * - realtime:anyshare_realtime_nexus (broadcast notifications & status events)
- */
 class SupabaseRealtimeClient(
     private val baseUrl: String = SupabaseSyncClient.DEFAULT_URL,
     private val apiKey: String = SupabaseSyncClient.DEFAULT_KEY
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val json = Json {
-        ignoreUnknownKeys = true
-        isLenient = true
-        encodeDefaults = true
-    }
-
+    private val json = Json { ignoreUnknownKeys = true; isLenient = true; encodeDefaults = true }
     private val okHttpClient = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(0, TimeUnit.MILLISECONDS)
@@ -75,63 +81,37 @@ class SupabaseRealtimeClient(
         openSocket()
     }
 
-    fun disconnect() {
-        isStarted = false
-        heartbeatJob?.cancel()
-        reconnectJob?.cancel()
-        webSocket?.close(1000, "Client disconnected")
-        webSocket = null
-        _isConnected.value = false
-    }
-
     private fun openSocket() {
-        val wsBase = baseUrl
-            .replace("https://", "wss://")
-            .replace("http://", "ws://")
-            .trimEnd('/')
+        val wsBase = baseUrl.replace("https://", "wss://").replace("http://", "ws://").trimEnd('/')
         val wsUrl = "$wsBase/realtime/v1/websocket?apikey=$apiKey&vsn=1.0.0"
-
-        val request = Request.Builder()
-            .url(wsUrl)
-            .build()
+        val request = Request.Builder().url(wsUrl).build()
 
         webSocket?.cancel()
         webSocket = okHttpClient.newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
-                Log.d("SupabaseRealtime", "WebSocket connected")
                 reconnectAttempt = 0
                 _isConnected.value = true
                 joinChannels(webSocket)
                 startHeartbeat(webSocket)
             }
-
-            override fun onMessage(webSocket: WebSocket, text: String) {
-                handleIncomingMessage(text)
-            }
-
+            override fun onMessage(webSocket: WebSocket, text: String) = handleIncomingMessage(text)
             override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
-                _isConnected.value = false
-                heartbeatJob?.cancel()
+                _isConnected.value = false; heartbeatJob?.cancel()
             }
-
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
-                _isConnected.value = false
-                heartbeatJob?.cancel()
+                _isConnected.value = false; heartbeatJob?.cancel()
                 if (isStarted) scheduleReconnect()
             }
-
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-                Log.w("SupabaseRealtime", "WebSocket failure: ${t.message}")
-                _isConnected.value = false
-                heartbeatJob?.cancel()
+                Log.w("SupabaseRealtime", "WS failure: ${t.message}")
+                _isConnected.value = false; heartbeatJob?.cancel()
                 if (isStarted) scheduleReconnect()
             }
         })
     }
 
     private fun joinChannels(ws: WebSocket) {
-        // 1. Postgres changes channel
-        val dbJoin = JSONObject().apply {
+        ws.send(JSONObject().apply {
             put("topic", "realtime:safar_tracker_db_changes")
             put("event", "phx_join")
             put("ref", refCounter.getAndIncrement().toString())
@@ -139,45 +119,21 @@ class SupabaseRealtimeClient(
                 put("config", JSONObject().apply {
                     put("postgres_changes", JSONArray().apply {
                         put(JSONObject().apply {
-                            put("event", "*")
-                            put("schema", "public")
-                            put("table", "safar_tracker_snapshots")
+                            put("event", "*"); put("schema", "public"); put("table", "safar_tracker_snapshots")
                         })
                     })
                 })
             })
-        }
-        ws.send(dbJoin.toString())
+        }.toString())
 
-        // 2. Tracker snapshot broadcast channel
-        val trackerJoin = JSONObject().apply {
-            put("topic", "realtime:one_tap_safar_tracker")
-            put("event", "phx_join")
-            put("ref", refCounter.getAndIncrement().toString())
-            put("payload", JSONObject().apply {
-                put("config", JSONObject().apply {
-                    put("broadcast", JSONObject().apply {
-                        put("self", false)
-                    })
+        listOf("realtime:one_tap_safar_tracker", "realtime:anyshare_realtime_nexus").forEach { topic ->
+            ws.send(JSONObject().apply {
+                put("topic", topic); put("event", "phx_join"); put("ref", refCounter.getAndIncrement().toString())
+                put("payload", JSONObject().apply {
+                    put("config", JSONObject().apply { put("broadcast", JSONObject().apply { put("self", false) }) })
                 })
-            })
+            }.toString())
         }
-        ws.send(trackerJoin.toString())
-
-        // 3. Nexus notifications & safar status channel
-        val nexusJoin = JSONObject().apply {
-            put("topic", "realtime:anyshare_realtime_nexus")
-            put("event", "phx_join")
-            put("ref", refCounter.getAndIncrement().toString())
-            put("payload", JSONObject().apply {
-                put("config", JSONObject().apply {
-                    put("broadcast", JSONObject().apply {
-                        put("self", false)
-                    })
-                })
-            })
-        }
-        ws.send(nexusJoin.toString())
     }
 
     private fun startHeartbeat(ws: WebSocket) {
@@ -185,13 +141,10 @@ class SupabaseRealtimeClient(
         heartbeatJob = scope.launch {
             while (isActive && _isConnected.value) {
                 delay(25_000)
-                val hb = JSONObject().apply {
-                    put("topic", "phoenix")
-                    put("event", "heartbeat")
-                    put("payload", JSONObject())
+                ws.send(JSONObject().apply {
+                    put("topic", "phoenix"); put("event", "heartbeat"); put("payload", JSONObject())
                     put("ref", refCounter.getAndIncrement().toString())
-                }
-                ws.send(hb.toString())
+                }.toString())
             }
         }
     }
@@ -200,34 +153,23 @@ class SupabaseRealtimeClient(
         reconnectJob?.cancel()
         reconnectJob = scope.launch {
             reconnectAttempt++
-            val backoffMs = (2000L * reconnectAttempt).coerceAtMost(30_000L)
-            delay(backoffMs)
-            if (isStarted && !_isConnected.value) {
-                openSocket()
-            }
+            delay((2000L * reconnectAttempt).coerceAtMost(30_000L))
+            if (isStarted && !_isConnected.value) openSocket()
         }
     }
 
     fun sendBroadcast(topic: String, event: String, payloadJson: JSONObject) {
-        val ws = webSocket ?: return
-        val frame = JSONObject().apply {
-            put("topic", topic)
-            put("event", "broadcast")
-            put("ref", refCounter.getAndIncrement().toString())
+        webSocket?.send(JSONObject().apply {
+            put("topic", topic); put("event", "broadcast"); put("ref", refCounter.getAndIncrement().toString())
             put("payload", JSONObject().apply {
-                put("type", "broadcast")
-                put("event", event)
-                put("payload", payloadJson)
+                put("type", "broadcast"); put("event", event); put("payload", payloadJson)
             })
-        }
-        ws.send(frame.toString())
+        }.toString())
     }
 
     fun requestSnapshotFromPeers() {
-        val payload = JSONObject().apply {
-            put("requestedAt", System.currentTimeMillis().toString())
-        }
-        sendBroadcast("realtime:one_tap_safar_tracker", "request_snapshot", payload)
+        sendBroadcast("realtime:one_tap_safar_tracker", "request_snapshot",
+            JSONObject().apply { put("requestedAt", System.currentTimeMillis().toString()) })
     }
 
     private fun handleIncomingMessage(text: String) {
@@ -236,25 +178,19 @@ class SupabaseRealtimeClient(
             val topic = root.optString("topic")
             val event = root.optString("event")
             val payload = root.optJSONObject("payload") ?: return
-
             when {
                 event == "postgres_changes" -> {
-                    val data = payload.optJSONObject("data")
-                    val record = data?.optJSONObject("record")
-                    val snapshotObj = record?.optJSONObject("snapshot")
+                    val snapshotObj = payload.optJSONObject("data")?.optJSONObject("record")?.optJSONObject("snapshot")
                     if (snapshotObj != null) {
-                        val parsed = json.decodeFromString<RemoteSnapshotPayload>(snapshotObj.toString())
-                        _events.tryEmit(RealtimeEvent.SnapshotReceived(parsed))
+                        _events.tryEmit(RealtimeEvent.SnapshotReceived(json.decodeFromString(snapshotObj.toString())))
                     }
                 }
                 event == "broadcast" && topic == "realtime:one_tap_safar_tracker" -> {
                     val innerEvent = payload.optString("event")
                     val innerPayload = payload.optJSONObject("payload")
                     if (innerEvent == "snapshot") {
-                        val snapshotObj = innerPayload?.optJSONObject("snapshot")
-                        if (snapshotObj != null) {
-                            val parsed = json.decodeFromString<RemoteSnapshotPayload>(snapshotObj.toString())
-                            _events.tryEmit(RealtimeEvent.SnapshotReceived(parsed))
+                        innerPayload?.optJSONObject("snapshot")?.let {
+                            _events.tryEmit(RealtimeEvent.SnapshotReceived(json.decodeFromString(it.toString())))
                         }
                     } else if (innerEvent == "reset_and_rescan") {
                         _events.tryEmit(RealtimeEvent.RescanRequested)
@@ -263,32 +199,67 @@ class SupabaseRealtimeClient(
                 event == "broadcast" && topic == "realtime:anyshare_realtime_nexus" -> {
                     val innerEvent = payload.optString("event")
                     val innerPayload = payload.optJSONObject("payload") ?: JSONObject()
-                    when (innerEvent) {
-                        "website_user_notification" -> {
-                            val title = innerPayload.optString("title", "Studio Update")
-                            val msg = innerPayload.optString("message", "")
-                            val type = innerPayload.optString("type", "update")
-                            if (msg.isNotBlank()) {
-                                _events.tryEmit(RealtimeEvent.NotificationReceived(title, msg, type))
+                    if (innerEvent == "website_user_notification") {
+                        val msg = innerPayload.optString("message", "")
+                        if (msg.isNotBlank()) {
+                            _events.tryEmit(RealtimeEvent.NotificationReceived(
+                                innerPayload.optString("title", "Studio Update"), msg, innerPayload.optString("type", "update")
+                            ))
+                        }
+                    } else if (innerEvent == "batch_render_summary") {
+                        val safar = innerPayload.optString("safarName", "")
+                        val title = innerPayload.optString("title", "🎬 Batch Render Complete")
+                        val totalVideos = innerPayload.optInt("totalVideos", 1)
+                        val totalMins = innerPayload.optInt("totalDurationMinutes", 0)
+                        val eventsArr = innerPayload.optJSONArray("events")
+                        val folders = mutableListOf<String>()
+                        if (eventsArr != null) {
+                            for (i in 0 until eventsArr.length()) {
+                                val df = eventsArr.optJSONObject(i)?.optString("dateFolder", "").orEmpty()
+                                if (df.isNotBlank()) folders.add(df)
                             }
                         }
-                        "safar_status_changed" -> {
-                            val safarName = innerPayload.optString("safarName", "")
-                            if (safarName.isNotBlank()) {
-                                _events.tryEmit(
-                                    RealtimeEvent.SafarStatusChanged(
-                                        safarName = safarName,
-                                        isArchived = innerPayload.optBoolean("isArchived", false),
-                                        isDone = innerPayload.optBoolean("isDone", false)
-                                    )
-                                )
-                            }
+                        val fallbackMsg = innerPayload.optString("message", "")
+                        val formattedMsg = if (folders.isNotEmpty()) {
+                            "${safar.ifBlank { "Safar" }} • Dates: ${folders.joinToString(", ")}" +
+                                if (totalMins > 0) " (${totalMins}m)" else ""
+                        } else fallbackMsg
+                        if (formattedMsg.isNotBlank()) {
+                            _events.tryEmit(RealtimeEvent.BatchRenderCompleted(title, safar, totalVideos, totalMins, folders, formattedMsg))
+                        }
+                    } else if (innerEvent == "render_telemetry") {
+                        _events.tryEmit(RealtimeEvent.RenderTelemetry(
+                            jobId = innerPayload.optString("jobId", innerPayload.optString("itemId", "")),
+                            safarName = innerPayload.optString("safarName", ""),
+                            percent = innerPayload.optInt("percent", 0),
+                            stage = innerPayload.optString("stage", ""),
+                            status = innerPayload.optString("status", "running"),
+                            scheduledFor = innerPayload.optString("scheduledFor", "")
+                        ))
+                    } else if (innerEvent == "render_log") {
+                        val msg = innerPayload.optString("message", "")
+                        if (msg.isNotBlank()) {
+                            _events.tryEmit(RealtimeEvent.RenderLog(
+                                jobId = innerPayload.optString("jobId", ""),
+                                level = innerPayload.optString("level", "warn"),
+                                message = msg
+                            ))
+                        }
+                    } else if (innerEvent == "workstation_heartbeat") {
+                        _events.tryEmit(RealtimeEvent.WorkstationHeartbeat(
+                            label = innerPayload.optString("label", "Studio PC"),
+                            timestampMs = System.currentTimeMillis()
+                        ))
+                    } else if (innerEvent == "safar_status_changed") {
+                        val name = innerPayload.optString("safarName", "")
+                        if (name.isNotBlank()) {
+                            _events.tryEmit(RealtimeEvent.SafarStatusChanged(
+                                name, innerPayload.optBoolean("isArchived", false), innerPayload.optBoolean("isDone", false)
+                            ))
                         }
                     }
                 }
             }
-        } catch (t: Throwable) {
-            Log.w("SupabaseRealtime", "Failed parsing message: ${t.message}")
-        }
+        } catch (_: Throwable) {}
     }
 }

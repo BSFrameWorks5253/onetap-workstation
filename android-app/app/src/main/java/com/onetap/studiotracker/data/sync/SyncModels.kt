@@ -66,12 +66,7 @@ data class RemoteTaskItem(
 )
 
 enum class SyncStatus {
-    IDLE,
-    SYNCING,
-    CONNECTED,
-    REALTIME_LIVE,
-    OFFLINE,
-    ERROR
+    IDLE, SYNCING, CONNECTED, REALTIME_LIVE, OFFLINE, ERROR
 }
 
 data class SyncState(

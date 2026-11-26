@@ -23,10 +23,7 @@ data class DrivePhotoFolderInfo(
 
 data class DrivePhotoSyncResult(
     val success: Boolean,
-    val folders: Map<String, DrivePhotoFolderInfo> = emptyMap(),
-    val uploadedCount: Int = 0,
-    val downloadedCount: Int = 0,
-    val total: Int = 0
+    val folders: Map<String, DrivePhotoFolderInfo> = emptyMap()
 )
 
 class GoogleAppsScriptSyncClient(
@@ -42,9 +39,7 @@ class GoogleAppsScriptSyncClient(
     private fun postAction(action: String, payload: JSONObject): JSONObject? {
         val url = urlProvider()
         if (!url.startsWith("https://script.google.com")) return null
-        val bodyJson = JSONObject(payload.toString()).apply {
-            put("action", action)
-        }
+        val bodyJson = JSONObject(payload.toString()).apply { put("action", action) }
         val request = Request.Builder()
             .url(url)
             .post(bodyJson.toString().toRequestBody("text/plain;charset=utf-8".toMediaType()))
@@ -58,12 +53,9 @@ class GoogleAppsScriptSyncClient(
     suspend fun getPhotoFolders(safarName: String, expectedDates: List<String>): Result<DrivePhotoSyncResult> =
         withContext(Dispatchers.IO) {
             try {
-                val payload = JSONObject().apply {
-                    put("safarName", safarName)
-                    put("expectedDates", JSONArray(expectedDates))
-                }
-                val resp = postAction("getPhotoFolders", payload)
-                    ?: return@withContext Result.failure(Exception("GAS endpoint unreachable"))
+                val resp = postAction("getPhotoFolders", JSONObject().apply {
+                    put("safarName", safarName); put("expectedDates", JSONArray(expectedDates))
+                }) ?: return@withContext Result.failure(Exception("GAS endpoint unreachable"))
                 val foldersArr = resp.optJSONArray("folders") ?: JSONArray()
                 val map = linkedMapOf<String, DrivePhotoFolderInfo>()
                 for (i in 0 until foldersArr.length()) {
@@ -80,114 +72,56 @@ class GoogleAppsScriptSyncClient(
                         )
                     }
                 }
-                val statsObj = resp.optJSONObject("stats")
-                Result.success(
-                    DrivePhotoSyncResult(
-                        success = resp.optBoolean("success", true),
-                        folders = map,
-                        uploadedCount = statsObj?.optInt("uploadedCount", map.values.count { it.isUploaded })
-                            ?: map.values.count { it.isUploaded },
-                        downloadedCount = statsObj?.optInt("downloadedCount", map.values.count { it.isDownloaded })
-                            ?: map.values.count { it.isDownloaded },
-                        total = statsObj?.optInt("total", map.size) ?: map.size
-                    )
-                )
+                Result.success(DrivePhotoSyncResult(resp.optBoolean("success", true), map))
             } catch (e: Exception) {
                 Result.failure(e)
             }
         }
 
-    suspend fun markFolderUploaded(
-        safarName: String,
-        dateFolder: String,
-        markedBy: String = "One Tap Android",
-        phone: String = LocalStore.DEFAULT_WHATSAPP_PHONE
-    ): Result<Boolean> = withContext(Dispatchers.IO) {
-        try {
-            val payload = JSONObject().apply {
-                put("safarName", safarName)
-                put("dateFolder", dateFolder)
-                put("markedBy", markedBy)
-                put("phone", phone)
-            }
-            val resp = postAction("markUploaded", payload)
-            Result.success(resp?.optBoolean("success", true) == true)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
-    suspend fun markFolderDownloaded(safarName: String, dateFolder: String): Result<Boolean> =
+    suspend fun markFolderUploaded(safarName: String, dateFolder: String, markedBy: String, phone: String): Result<Boolean> =
         withContext(Dispatchers.IO) {
             try {
-                val payload = JSONObject().apply {
-                    put("safarName", safarName)
-                    put("dateFolder", dateFolder)
-                }
-                val resp = postAction("markDownloaded", payload)
+                val resp = postAction("markUploaded", JSONObject().apply {
+                    put("safarName", safarName); put("dateFolder", dateFolder); put("markedBy", markedBy); put("phone", phone)
+                })
                 Result.success(resp?.optBoolean("success", true) == true)
-            } catch (e: Exception) {
-                Result.failure(e)
-            }
+            } catch (e: Exception) { Result.failure(e) }
         }
 
     suspend fun sendWhatsAppAlert(phone: String, message: String): Result<Boolean> =
         withContext(Dispatchers.IO) {
             try {
-                val payload = JSONObject().apply {
-                    put("phone", phone)
-                    put("message", message)
-                }
-                val resp = postAction("sendWhatsApp", payload)
+                val resp = postAction("sendWhatsApp", JSONObject().apply { put("phone", phone); put("message", message) })
                 Result.success(resp?.optBoolean("success", false) == true)
-            } catch (e: Exception) {
-                Result.failure(e)
-            }
+            } catch (e: Exception) { Result.failure(e) }
         }
 
     suspend fun requestOtp(email: String): Result<String> = withContext(Dispatchers.IO) {
         try {
-            val payload = JSONObject().apply { put("email", email.trim()) }
-            val resp = postAction("sendOtp", payload)
+            val resp = postAction("sendOtp", JSONObject().apply { put("email", email.trim()) })
                 ?: return@withContext Result.failure(Exception("Unable to reach auth server"))
-            if (resp.optBoolean("success", false)) {
-                Result.success(resp.optString("message", "Verification code sent to $email"))
-            } else {
-                Result.failure(Exception(resp.optString("error", "Failed to send verification code")))
-            }
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+            if (resp.optBoolean("success", false)) Result.success(resp.optString("message", "Code sent to $email"))
+            else Result.failure(Exception(resp.optString("error", "Failed to send code")))
+        } catch (e: Exception) { Result.failure(e) }
     }
 
     suspend fun verifyOtp(email: String, otp: String): Result<AuthUser> = withContext(Dispatchers.IO) {
         try {
-            val payload = JSONObject().apply {
-                put("email", email.trim())
-                put("otp", otp.trim())
-            }
-            val resp = postAction("verifyOtp", payload)
+            val resp = postAction("verifyOtp", JSONObject().apply { put("email", email.trim()); put("otp", otp.trim()) })
                 ?: return@withContext Result.failure(Exception("Unable to reach auth server"))
             if (resp.optBoolean("success", false)) {
                 val userObj = resp.optJSONObject("user")
                 val cleanEmail = userObj?.optString("email", email.trim()) ?: email.trim()
-                val name = userObj?.optString("name", cleanEmail.substringBefore("@")) ?: cleanEmail.substringBefore("@")
-                val username = userObj?.optString("username", cleanEmail.substringBefore("@")) ?: cleanEmail.substringBefore("@")
-                val role = userObj?.optString("role", "member") ?: "member"
-                Result.success(
-                    AuthUser(
-                        email = cleanEmail,
-                        name = name,
-                        username = username,
-                        role = role,
-                        token = resp.optString("token").takeIf { it.isNotBlank() }
-                    )
-                )
+                Result.success(AuthUser(
+                    email = cleanEmail,
+                    name = userObj?.optString("name", cleanEmail.substringBefore("@")) ?: cleanEmail.substringBefore("@"),
+                    username = userObj?.optString("username", cleanEmail.substringBefore("@")) ?: cleanEmail.substringBefore("@"),
+                    role = userObj?.optString("role", "member") ?: "member",
+                    token = resp.optString("token").takeIf { it.isNotBlank() }
+                ))
             } else {
                 Result.failure(Exception(resp.optString("error", "Invalid verification code")))
             }
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+        } catch (e: Exception) { Result.failure(e) }
     }
 }

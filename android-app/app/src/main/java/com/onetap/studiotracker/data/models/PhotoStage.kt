@@ -10,48 +10,20 @@ enum class PhotoStage(
     val composeColor: Color,
     val order: Int
 ) {
-    EDITED(
-        id = "edited",
-        title = "Edited",
-        subtitle = "Exported & Graded",
-        hexColor = "#8B5CF6",
-        composeColor = Color(0xFF8B5CF6),
-        order = 0
-    ),
-    GIVEN_TO_MURTAZA(
-        id = "given_to_murtaza",
-        title = "With Murtaza",
-        subtitle = "Handed to Video Lead",
-        hexColor = "#2563EB",
-        composeColor = Color(0xFF2563EB),
-        order = 1
-    ),
-    UPLOADED(
-        id = "uploaded",
-        title = "Uploaded",
-        subtitle = "Cloud Synced",
-        hexColor = "#059669",
-        composeColor = Color(0xFF059669),
-        order = 2
-    );
+    EDITED("edited", "Edited", "Exported & Graded", "#8B5CF6", Color(0xFF8B5CF6), 0),
+    GIVEN_TO_MURTAZA("given_to_murtaza", "With Murtaza", "Handed to Video Lead", "#2563EB", Color(0xFF2563EB), 1),
+    UPLOADED("uploaded", "Uploaded", "Cloud Synced", "#059669", Color(0xFF059669), 2);
 
-    val isComplete: Boolean
-        get() = this == UPLOADED
-
-    val nextStage: PhotoStage?
-        get() = entries.getOrNull(order + 1)
-
-    val prevStage: PhotoStage?
-        get() = if (order > 0) entries.getOrNull(order - 1) else null
+    val isComplete: Boolean get() = this == UPLOADED
+    val nextStage: PhotoStage? get() = entries.getOrNull(order + 1)
+    val prevStage: PhotoStage? get() = if (order > 0) entries.getOrNull(order - 1) else null
 
     companion object {
         fun fromId(raw: String?, photoUploaded: Boolean = false): PhotoStage {
             if (photoUploaded) return UPLOADED
-            val s = raw?.lowercase()?.trim() ?: ""
-            return when (s) {
+            return when (raw?.lowercase()?.trim()) {
                 "uploaded", "drive_uploaded" -> UPLOADED
                 "given_to_murtaza", "color_graded" -> GIVEN_TO_MURTAZA
-                "edited", "raw_sorted", "pending", "" -> EDITED
                 else -> EDITED
             }
         }
