@@ -23,6 +23,7 @@ import com.onetap.studiotracker.data.models.Stage
 import com.onetap.studiotracker.data.repository.SafarRepository
 import com.onetap.studiotracker.ui.components.AppUpdateDialog
 import com.onetap.studiotracker.ui.components.BottomNavBar
+import com.onetap.studiotracker.ui.components.NewSafarReceivedDateDialog
 import com.onetap.studiotracker.ui.components.StartupScreen
 import com.onetap.studiotracker.ui.navigation.Screen
 import com.onetap.studiotracker.ui.screens.analytics.StudioAnalyticsScreen
@@ -52,6 +53,7 @@ fun OneTapApp() {
 
     val ongoingTasks = campaigns.firstOrNull { it.isOngoing }?.tasks ?: emptyList()
     val pendingCount = ongoingTasks.count { it.stage != Stage.UPLOADED && it.stage != Stage.ALJAMEA_DONE }
+    val pendingNewSafar by repository.pendingNewSafarPrompt.collectAsState()
 
     var pendingUpdate by remember { mutableStateOf<AppUpdateInfo?>(null) }
     var minSplashElapsed by remember { mutableStateOf(false) }
@@ -123,4 +125,11 @@ fun OneTapApp() {
     }
 
     pendingUpdate?.let { AppUpdateDialog(updateInfo = it, onDismiss = { pendingUpdate = null }) }
+    pendingNewSafar?.let { safarName ->
+        NewSafarReceivedDateDialog(
+            safarName = safarName,
+            onSave = { dateStr -> repository.setSafarReceivedDate(safarName, dateStr) },
+            onDismiss = { repository.dismissNewSafarPrompt(safarName) }
+        )
+    }
 }

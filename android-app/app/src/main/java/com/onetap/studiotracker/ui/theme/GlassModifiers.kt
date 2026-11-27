@@ -42,9 +42,9 @@ import kotlinx.coroutines.launch
 
 val LiquidGlassCanvasBrush = Brush.verticalGradient(
     colors = listOf(
-        Color(0xFFF6F9FF),
-        Color(0xFFEEF4FF),
-        Color(0xFFECFDF7)
+        Color(0xFFF8FAFC),
+        Color(0xFFF4F6FA),
+        Color(0xFFF1F5F9)
     )
 )
 
@@ -110,7 +110,7 @@ fun LiquidAuroraBackground(
             val c0 = Offset((x0.value + drift) * w, (y0.value - drift * 0.5f) * h)
             drawCircle(
                 brush = Brush.radialGradient(
-                    colors = listOf(Color(0xFF93C5FD).copy(alpha = 0.28f), Color.Transparent),
+                    colors = listOf(Color(0xFFC7D2FE).copy(alpha = 0.16f), Color.Transparent),
                     center = c0,
                     radius = rLarge
                 ),

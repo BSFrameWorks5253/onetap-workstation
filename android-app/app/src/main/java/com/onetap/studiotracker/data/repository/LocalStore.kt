@@ -79,6 +79,15 @@ class LocalStore(context: Context) {
         if (clean.isEmpty()) prefs.edit().remove(KEY_WHATSAPP_PHONE).apply() else prefs.edit().putString(KEY_WHATSAPP_PHONE, clean).apply()
     }
 
+    fun getKnownSafarNames(): Set<String> = prefs.getStringSet(KEY_KNOWN_SAFARS, null)?.toSet() ?: emptySet()
+    fun saveKnownSafarNames(names: Set<String>) {
+        prefs.edit().putStringSet(KEY_KNOWN_SAFARS, names.toSet()).apply()
+    }
+    fun hasSeededKnownSafars(): Boolean = prefs.getBoolean(KEY_KNOWN_SAFARS_SEEDED, false)
+    fun markKnownSafarsSeeded() {
+        prefs.edit().putBoolean(KEY_KNOWN_SAFARS_SEEDED, true).apply()
+    }
+
     companion object {
         private const val KEY_SNAPSHOT = "cached_snapshot_v2"
         private const val KEY_PENDING_PUSH = "has_pending_push"
@@ -86,6 +95,8 @@ class LocalStore(context: Context) {
         private const val KEY_AUTH_USER = "auth_user_v1"
         private const val KEY_GS_URL = "gs_webapp_url"
         private const val KEY_WHATSAPP_PHONE = "whatsapp_phone"
+        private const val KEY_KNOWN_SAFARS = "known_safar_names_v1"
+        private const val KEY_KNOWN_SAFARS_SEEDED = "known_safars_seeded_v1"
         const val DEFAULT_GS_URL = "https://script.google.com/macros/s/AKfycbzz5U5zKAD6ccRzZu_oDqVZetmMV09hEUTBQW__aFtC56zNI2ZCC7rB4-08Tq_AygWBUg/exec"
         const val DEFAULT_WHATSAPP_PHONE = "8369811201"
     }

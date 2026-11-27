@@ -23,6 +23,7 @@ data class SafarTask(
     val renderSizeBytes: Long? = null,
     val prprojModifiedAt: Long? = null,
     val renderedAt: Long? = null,
+    val stageTimestamps: Map<String, Long> = emptyMap(),
     val updatedAt: Long = System.currentTimeMillis(),
     val updatedAtIso: String = ""
 ) {
@@ -30,6 +31,7 @@ data class SafarTask(
     val isPhotosDelivered: Boolean get() = photoUploaded || photoStage.isComplete
     val effectiveVideoEditor: String get() = videoEditor?.trim()?.takeIf { it.isNotEmpty() } ?: "Murtaza"
     val effectivePhotoEditor: String get() = photoEditorName?.trim()?.takeIf { it.isNotEmpty() } ?: "Muffadal Peti"
+    val displayTitle: String get() = formatSessionTitle(title)
 
     val isOverdue: Boolean
         get() {
@@ -47,4 +49,21 @@ data class SafarTask(
             val mod = prprojModifiedAt ?: return false
             return (System.currentTimeMillis() - mod) >= 48L * 60L * 60L * 1000L
         }
+
+    companion object {
+        private val SESSION_01_REGEX = Regex("""^(.*?\S)\s*_01$""")
+        private val SESSION_02_REGEX = Regex("""^(.*?\S)\s*_02$""")
+
+        fun formatSessionTitle(raw: String): String {
+            val trimmed = raw.trim()
+            if (trimmed.isEmpty()) return "Untitled Date"
+            SESSION_01_REGEX.matchEntire(trimmed)?.let { m ->
+                return "${m.groupValues[1]} _01M"
+            }
+            SESSION_02_REGEX.matchEntire(trimmed)?.let { m ->
+                return "${m.groupValues[1]} _02E"
+            }
+            return trimmed
+        }
+    }
 }

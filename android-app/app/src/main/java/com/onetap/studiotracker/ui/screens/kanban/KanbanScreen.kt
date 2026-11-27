@@ -79,6 +79,7 @@ import androidx.compose.ui.unit.sp
 import com.onetap.studiotracker.data.models.SafarTask
 import com.onetap.studiotracker.data.models.Stage
 import com.onetap.studiotracker.data.repository.SafarRepository
+import com.onetap.studiotracker.ui.components.PhaseCompletionTimelineCard
 import com.onetap.studiotracker.ui.components.StageChip
 import com.onetap.studiotracker.ui.theme.EmeraldDark
 import com.onetap.studiotracker.ui.theme.IndigoPrimary
@@ -460,7 +461,7 @@ private fun KanbanCard(
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
                         if (selectionMode) Icon(if (isSelected) Icons.Default.CheckBox else Icons.Default.CheckBoxOutlineBlank, contentDescription = null, tint = if (isSelected) IndigoPrimary else TextMuted, modifier = Modifier.padding(end = 8.dp).size(20.dp))
                         Column {
-                            Text(task.title, color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                            Text(task.displayTitle, color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                             if (showSafarName) Text(task.campaignId, color = TextSecondary, fontSize = 11.sp)
                         }
                     }
@@ -555,7 +556,7 @@ private fun TaskExecutiveActionSheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(task.title, color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text(task.displayTitle, color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                     Text("${task.campaignId} • ${task.stage.title}", color = TextSecondary, fontSize = 12.sp)
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -573,13 +574,16 @@ private fun TaskExecutiveActionSheet(
                 }
             }
 
-            // Action 1: 🚀 Send WhatsApp Update for this Date
+            // Phase Completion Timestamps (More Details)
+            PhaseCompletionTimelineCard(task = task)
+
+            // Action 1: Send WhatsApp Update for this Date
             Button(
                 onClick = {
                     val text = buildString {
                         append("🎬 *ONE TAP STUDIO · DATE UPDATE*\n━━━━━━━━━━━━━━━━━━━━\n")
                         append("📍 *Safar:* ${task.campaignId}\n")
-                        append("📁 *Date:* ${task.title}${if (task.hijriDate.isNotBlank()) " (${task.hijriDate})" else ""}\n")
+                        append("📁 *Date:* ${task.displayTitle}${if (task.hijriDate.isNotBlank()) " (${task.hijriDate})" else ""}\n")
                         append("📌 *Pipeline:* ${task.stage.title}\n")
                         append("🎬 *Video Editor:* ${task.effectiveVideoEditor} (${if (task.isVideoDelivered) "✓ Uploaded" else "In Progress"})\n")
                         append("📷 *Photo Editor:* ${task.effectivePhotoEditor} (${if (task.isPhotosDelivered) "✓ Uploaded" else "Pending"})\n")
@@ -588,7 +592,7 @@ private fun TaskExecutiveActionSheet(
                     }
                     val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                     cm.setPrimaryClip(ClipData.newPlainText("Safar Date Update", text))
-                    Toast.makeText(context, "✓ Briefing for ${task.title} copied!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Briefing for ${task.displayTitle} copied!", Toast.LENGTH_SHORT).show()
                     try {
                         val waIntent = Intent(Intent.ACTION_VIEW).apply {
                             data = Uri.parse("https://api.whatsapp.com/send?text=${Uri.encode(text)}")
@@ -604,7 +608,7 @@ private fun TaskExecutiveActionSheet(
             ) {
                 Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("🚀 Send WhatsApp Update for this Date", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                Text("Send WhatsApp Update for this Date", fontSize = 13.sp, fontWeight = FontWeight.Bold)
             }
 
             // Action 2: ☁️ Open Google Drive Folder
@@ -626,7 +630,7 @@ private fun TaskExecutiveActionSheet(
             ) {
                 Icon(Icons.Default.CloudQueue, contentDescription = null, modifier = Modifier.size(16.dp), tint = IndigoPrimary)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("☁️ Open Google Drive Folder", fontSize = 13.sp, color = IndigoPrimary, fontWeight = FontWeight.SemiBold)
+                Text("Open Google Drive Folder", fontSize = 13.sp, color = IndigoPrimary, fontWeight = FontWeight.SemiBold)
             }
 
             // Action 3: 👤 Reassign Editor

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Rounded studio badge with crisp 'Ot' monogram for status bar notifications -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M5,2h14c1.66,0 3,1.34 3,3v14c0,1.66 -1.34,3 -3,3H5c-1.66,0 -3,-1.34 -3,-3V5c0,-1.66 1.34,-3 3,-3zM8.8,7.5C6.35,7.5 4.5,9.42 4.5,12s1.85,4.5 4.3,4.5s4.3,-1.92 4.3,-4.5S11.25,7.5 8.8,7.5zM8.8,14.65c-1.35,0 -2.28,-1.1 -2.28,-2.65s0.93,-2.65 2.28,-2.65s2.28,1.1 2.28,2.65S10.15,14.65 8.8,14.65zM17.2,7.8h-1.85v2.05h-1.15v1.6h1.15v3.05c0,1.32 0.78,2.0 2.1,2.0c0.52,0 0.95,-0.08 1.25,-0.2v-1.5c-0.22,0.06 -0.45,0.1 -0.7,0.1c-0.55,0 -0.8,-0.28 -0.8,-0.85v-2.6h1.45v-1.6H17.2V7.8z" />
+</vector>

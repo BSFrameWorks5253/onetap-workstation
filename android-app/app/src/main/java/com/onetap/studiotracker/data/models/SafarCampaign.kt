@@ -11,6 +11,7 @@ data class SafarCampaign(
     val isOngoing: Boolean = false,
     val isArchived: Boolean = false,
     val isDone: Boolean = false,
+    val receivedDate: String = "",
     val updatedAtIso: String = "",
     val archivePriorStages: Map<String, String> = emptyMap(),
     val tasks: List<SafarTask> = emptyList()

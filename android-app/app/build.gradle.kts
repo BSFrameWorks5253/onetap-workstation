@@ -11,9 +11,11 @@ android {
     val appVersionName = project.findProperty("versionName") as? String ?: "26.11.01.3"
     val appVersionCode = (project.findProperty("versionCode") as? String)?.toIntOrNull() ?: 29927000
 
+    val releaseKeystore = rootProject.file("onetap-release.jks")
+
     signingConfigs {
         create("onetap") {
-            storeFile = rootProject.file("onetap-release.jks")
+            storeFile = releaseKeystore
             storePassword = System.getenv("ONETAP_STORE_PASS") ?: "onetap5253"
             keyAlias = System.getenv("ONETAP_KEY_ALIAS") ?: "onetap"
             keyPassword = System.getenv("ONETAP_KEY_PASS") ?: "onetap5253"
@@ -35,11 +37,11 @@ android {
 
     buildTypes {
         debug {
-            signingConfig = signingConfigs.getByName("onetap")
+            signingConfig = if (releaseKeystore.exists()) signingConfigs.getByName("onetap") else signingConfigs.getByName("debug")
         }
         release {
             isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("onetap")
+            signingConfig = if (releaseKeystore.exists()) signingConfigs.getByName("onetap") else signingConfigs.getByName("debug")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

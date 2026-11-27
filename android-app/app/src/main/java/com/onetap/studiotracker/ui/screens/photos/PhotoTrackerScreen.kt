@@ -180,7 +180,7 @@ fun PhotoTrackerScreen(modifier: Modifier = Modifier) {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(task.title, color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                                Text(task.displayTitle, color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                                 Text("Photo Lead: ${task.effectivePhotoEditor} • Video: ${task.stage.title}", color = TextSecondary, fontSize = 11.sp)
                             }
                             PhotoStageChip(photoStage = eff)

@@ -974,24 +974,73 @@ class AnyShareRealtimeService {
     const batchSources: string[] = [];
     let resolvedOutputFolder = '';
 
+    const normalizeDateKey = (val: string): string =>
+      val.trim().toLowerCase().replace(/\s+/g, ' ');
+    const normalizeDateLoose = (val: string): string =>
+      val.trim().toLowerCase().replace(/[\s_]+/g, '').replace(/(0[12])[me]$/i, '$1');
+
     try {
       if (typeof localStorage !== 'undefined') {
         resolvedOutputFolder = (localStorage.getItem('ot_ta_output_folder') || '').trim();
+      }
+      if (!resolvedOutputFolder) {
+        const settingsApi = (window as any).api?.settings;
+        if (settingsApi?.get) {
+          const savedOut = await settingsApi.get('last_output_adder', '');
+          if (typeof savedOut === 'string' && savedOut.trim()) {
+            resolvedOutputFolder = savedOut.trim();
+          }
+        }
       }
     } catch {}
 
     try {
       const trackerApi = (window as any).api?.taskTracker;
+      const settingsApi = (window as any).api?.settings;
       if (trackerApi?.scan && safarName && requestedFolders.length > 0) {
-        const scanRes = await trackerApi.scan({ force: false });
+        let workspaces: any[] = [];
+        try {
+          if (settingsApi?.getAll) {
+            const all = await settingsApi.getAll();
+            if (Array.isArray(all?.task_tracker_drives) && all.task_tracker_drives.length > 0) {
+              workspaces = all.task_tracker_drives;
+            }
+          }
+          if (workspaces.length === 0 && typeof localStorage !== 'undefined') {
+            const rawDrives = localStorage.getItem('ot_tracker_drives');
+            if (rawDrives) workspaces = JSON.parse(rawDrives);
+          }
+        } catch {}
+
+        const scanInput: any = { force: false };
+        if (Array.isArray(workspaces) && workspaces.length > 0) {
+          scanInput.workspaces = workspaces;
+        } else if (typeof localStorage !== 'undefined') {
+          const wp = localStorage.getItem('ot_tracker_working_path') || '';
+          const up = localStorage.getItem('ot_tracker_upload_path') || '';
+          const dp = localStorage.getItem('ot_tracker_delete_path') || '';
+          if (wp) {
+            scanInput.workingPath = wp;
+            if (up) scanInput.toUploadPath = up;
+            if (dp) scanInput.toDeletePath = dp;
+          }
+        }
+
+        const scanRes = await trackerApi.scan(scanInput);
         const tasks: any[] = Array.isArray(scanRes?.tasks) ? scanRes.tasks : [];
-        const wanted = new Set(requestedFolders.map((f: string) => f.trim().toLowerCase()));
+        const wantedExact = new Set(requestedFolders.map(normalizeDateKey));
+        const wantedLoose = new Set(requestedFolders.map(normalizeDateLoose));
+        const targetSafar = safarName.trim().toLowerCase();
+
         for (const t of tasks) {
-          if (String(t.safarName || '').trim().toLowerCase() === safarName.trim().toLowerCase()) {
-            const df = String(t.dateFolder || '').trim().toLowerCase();
-            if (wanted.has(df)) {
+          if (String(t.safarName || '').trim().toLowerCase() === targetSafar) {
+            const rawDf = String(t.dateFolder || '');
+            const isMatch = wantedExact.has(normalizeDateKey(rawDf)) || wantedLoose.has(normalizeDateLoose(rawDf));
+            if (isMatch) {
               const folderPath = t.workingPath || t.finalPath || t.uploadPath;
-              if (folderPath) batchSources.push(folderPath);
+              if (folderPath && !batchSources.includes(folderPath)) {
+                batchSources.push(folderPath);
+              }
               if (!resolvedOutputFolder && (t.finalPath || t.uploadPath)) {
                 resolvedOutputFolder = String(t.finalPath || t.uploadPath).trim();
               }
@@ -1001,6 +1050,18 @@ class AnyShareRealtimeService {
       }
     } catch (e) {
       console.warn('[AnyShare Nexus] Failed resolving batchSources:', e);
+    }
+
+    const titleAdder = (window as any).api?.titleAdder;
+    if (!resolvedOutputFolder && batchSources.length > 0 && titleAdder?.resolveSafarFinalPath) {
+      try {
+        const finalRes = await titleAdder.resolveSafarFinalPath(batchSources[0]);
+        if (finalRes?.targetPath) {
+          resolvedOutputFolder = String(finalRes.targetPath).trim();
+        } else if (finalRes?.finalFolder) {
+          resolvedOutputFolder = String(finalRes.finalFolder).trim();
+        }
+      } catch {}
     }
 
     if (!resolvedOutputFolder && batchSources.length > 0) {
@@ -1025,12 +1086,11 @@ class AnyShareRealtimeService {
     }).catch(() => {});
 
     try {
-      const titleAdder = (window as any).api?.titleAdder;
-      const ipcRenderer = (window as any).electron?.ipcRenderer;
       let lastProgressAt = 0;
       let doneResult: { success?: boolean; error?: string; done?: number; total?: number } | null = null;
+      const unsubs: Array<(() => void) | undefined> = [];
 
-      const logHandler = (_evt: any, logData: any) => {
+      const logHandler = (logData: any) => {
         if (!logData || logData.jobId !== jobId) return;
         const lvl = String(logData.level || 'info');
         if (lvl === 'warn' || lvl === 'error') {
@@ -1041,7 +1101,7 @@ class AnyShareRealtimeService {
           }).catch(() => {});
         }
       };
-      const progressHandler = (_evt: any, progData: any) => {
+      const progressHandler = (progData: any) => {
         if (!progData || progData.jobId !== jobId) return;
         const now = Date.now();
         if (now - lastProgressAt < 750) return;
@@ -1060,27 +1120,37 @@ class AnyShareRealtimeService {
           }
         }).catch(() => {});
       };
-      const doneHandler = (_evt: any, data: any) => {
+      const doneHandler = (data: any) => {
         if (!data || data.jobId !== jobId) return;
         doneResult = data;
       };
 
-      if (ipcRenderer?.on) {
-        ipcRenderer.on('titleAdder:log', logHandler);
-        ipcRenderer.on('titleAdder:progress', progressHandler);
-        ipcRenderer.on('titleAdder:done', doneHandler);
-      }
+      if (titleAdder?.onLog) unsubs.push(titleAdder.onLog(logHandler));
+      if (titleAdder?.onProgress) unsubs.push(titleAdder.onProgress(progressHandler));
+      if (titleAdder?.onDone) unsubs.push(titleAdder.onDone(doneHandler));
+
       if (titleAdder?.start && batchSources.length > 0) {
+        if (this.onTelemetryCallback) {
+          this.onTelemetryCallback(`Starting batch render for ${safarName} (${batchSources.length} folder${batchSources.length > 1 ? 's' : ''})…`);
+        }
         try {
           let savedDuration = 5;
           try {
             if (typeof localStorage !== 'undefined') {
-              const d = Number(localStorage.getItem('ot_ta_duration') || '5');
+              const d = Number(localStorage.getItem('ot_ta_duration') || '0');
               if (Number.isFinite(d) && d > 0) savedDuration = d;
+            }
+            if (savedDuration === 5) {
+              const settingsApi = (window as any).api?.settings;
+              if (settingsApi?.get) {
+                const sd = Number(await settingsApi.get('title_duration', 5));
+                if (Number.isFinite(sd) && sd > 0) savedDuration = sd;
+              }
             }
           } catch {}
           await titleAdder.start({
             mode: 'batch',
+            batchSource: batchSources[0],
             batchSources,
             outputFolder: resolvedOutputFolder,
             duration: savedDuration,
@@ -1090,14 +1160,14 @@ class AnyShareRealtimeService {
             addWatermark: cmd.addWatermark !== false
           });
         } finally {
-          if (ipcRenderer?.removeListener) {
-            ipcRenderer.removeListener('titleAdder:log', logHandler);
-            ipcRenderer.removeListener('titleAdder:progress', progressHandler);
-            ipcRenderer.removeListener('titleAdder:done', doneHandler);
-          }
+          unsubs.forEach(u => { try { u?.(); } catch {} });
         }
 
         if (doneResult && (doneResult as any).success === false) {
+          const errMsg = String((doneResult as any).error || 'Title Adder render failed');
+          if (this.onTelemetryCallback) {
+            this.onTelemetryCallback(`Remote render failed: ${errMsg}`);
+          }
           this.channel.send({
             type: 'broadcast',
             event: 'render_telemetry',
@@ -1108,12 +1178,13 @@ class AnyShareRealtimeService {
               dateFolders: requestedFolders,
               percent: 0,
               status: 'error',
-              stage: String((doneResult as any).error || 'Title Adder render failed')
+              stage: errMsg
             }
           }).catch(() => {});
           return;
         }
 
+        const totalVideos = Number((doneResult as any)?.done || (doneResult as any)?.total || batchSources.length);
         this.channel.send({
           type: 'broadcast',
           event: 'render_telemetry',
@@ -1135,16 +1206,48 @@ class AnyShareRealtimeService {
             itemId: cmd.itemId || jobId,
             safarName,
             dateFolders: requestedFolders,
+            totalVideos,
             completedAt: new Date().toISOString(),
             status: 'rendered'
           }
         }).catch(() => {});
+        this.channel.send({
+          type: 'broadcast',
+          event: 'batch_render_summary',
+          payload: {
+            batchId: jobId,
+            title: `Batch Render Complete (${totalVideos} video${totalVideos === 1 ? '' : 's'})`,
+            message: `${safarName} • Dates: ${requestedFolders.join(', ')}`,
+            totalVideos,
+            totalDurationMinutes: 0,
+            safarName,
+            events: requestedFolders.map((df) => ({
+              dateFolder: df,
+              safarName,
+              durationMinutes: 0,
+              editorName: 'Desktop',
+              status: 'rendered'
+            })),
+            timestamp: new Date().toISOString()
+          }
+        }).catch(() => {});
+        if (this.onTelemetryCallback) {
+          this.onTelemetryCallback(`Remote render completed for ${safarName} (${requestedFolders.join(', ')})`);
+        }
         return;
+      } else {
+        unsubs.forEach(u => { try { u?.(); } catch {} });
       }
     } catch (err) {
       console.warn('[AnyShare Nexus] titleAdder.start error:', err);
     }
 
+    const failReason = batchSources.length === 0
+      ? `No matching local folders found on Desktop PC for ${safarName} (${requestedFolders.join(', ')})`
+      : 'Desktop Title Adder unavailable';
+    if (this.onTelemetryCallback) {
+      this.onTelemetryCallback(failReason);
+    }
     this.channel.send({
       type: 'broadcast',
       event: 'render_telemetry',
@@ -1155,7 +1258,7 @@ class AnyShareRealtimeService {
         dateFolders: requestedFolders,
         percent: 0,
         status: 'error',
-        stage: batchSources.length === 0 ? 'No matching local folders found on Desktop PC' : 'Desktop Title Adder unavailable'
+        stage: failReason
       }
     }).catch(() => {});
   }
