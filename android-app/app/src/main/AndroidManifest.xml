@@ -48,6 +48,7 @@
             android:label="One Tap Safar Tracker">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.onetap.studiotracker.ACTION_DISPATCH_BRIEFING" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"

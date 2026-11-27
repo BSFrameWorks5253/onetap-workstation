@@ -2,7 +2,7 @@
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:initialLayout="@layout/widget_safar_status"
     android:minWidth="250dp"
-    android:minHeight="110dp"
+    android:minHeight="85dp"
     android:resizeMode="horizontal|vertical"
     android:targetCellWidth="4"
     android:targetCellHeight="2"

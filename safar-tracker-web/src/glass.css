@@ -1795,6 +1795,7 @@ td { color: var(--text-primary); font-size: .8125rem; }
     box-sizing: border-box !important;
   }
 }
+
 @media (prefers-reduced-motion: reduce) {
   .dashboard-progress span, .safar-group-toggle > svg { transition: none; }
 }
@@ -7856,6 +7857,99 @@ input[type="text"]:focus, input[type="search"]:focus, select:focus {
     box-sizing: border-box !important;
   }
 }
+
+/* ─────────────────────────────────────────────────────────────
+   MOBILE TOUCH ERGONOMICS: SWIPE CUES & EXECUTIVE ACTION SHEET
+   ───────────────────────────────────────────────────────────── */
+.task-card-swipe-wrapper {
+  position: relative !important;
+  overflow: hidden !important;
+  border-radius: 18px !important;
+  touch-action: pan-y !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
+.task-swipe-cue {
+  position: absolute !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.01em !important;
+  color: #ffffff !important;
+  z-index: 1 !important;
+  pointer-events: none !important;
+  transition: opacity 0.15s ease !important;
+}
+
+.task-swipe-cue-left {
+  left: 0 !important;
+  width: 130px !important;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+  padding-left: 16px !important;
+  gap: 6px !important;
+}
+
+.task-swipe-cue-right {
+  right: 0 !important;
+  width: 130px !important;
+  background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%) !important;
+  justify-content: flex-end !important;
+  padding-right: 16px !important;
+  gap: 6px !important;
+}
+
+.executive-action-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  background: rgba(15, 23, 42, 0.5) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  z-index: 999999 !important;
+  display: flex !important;
+  align-items: flex-end !important;
+  justify-content: center !important;
+  animation: executiveOverlayFadeIn 0.2s ease-out !important;
+}
+
+.executive-action-sheet {
+  width: 100% !important;
+  max-width: 540px !important;
+  background: var(--surface, #ffffff) !important;
+  border-radius: 26px 26px 0 0 !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.4) !important;
+  padding: 18px 20px calc(24px + env(safe-area-inset-bottom, 0px)) 20px !important;
+  box-shadow: 0 -12px 48px rgba(0, 0, 0, 0.18) !important;
+  animation: executiveSheetSlideUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  max-height: 88vh !important;
+  overflow-y: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 14px !important;
+  box-sizing: border-box !important;
+}
+
+.executive-sheet-handle {
+  width: 42px !important;
+  height: 5px !important;
+  border-radius: 9999px !important;
+  background: rgba(148, 163, 184, 0.4) !important;
+  margin: 0 auto 4px auto !important;
+}
+
+@keyframes executiveOverlayFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes executiveSheetSlideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
 
 
 

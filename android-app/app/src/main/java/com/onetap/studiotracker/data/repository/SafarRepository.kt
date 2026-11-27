@@ -484,6 +484,32 @@ class SafarRepository private constructor(private val appContext: Context?) {
         pushLocalStateToCloud()
     }
 
+    fun updateTaskPhotoEditor(taskId: String, editorName: String) {
+        val clean = editorName.trim()
+        _campaigns.value = _campaigns.value.map { c ->
+            c.copy(tasks = c.tasks.map { t ->
+                if (t.id == taskId) {
+                    recordAudit(c.name, t.title, "Photo Editor Assigned", t.effectivePhotoEditor, clean.ifBlank { "Muffadal Peti" })
+                    t.copy(photoEditorName = clean.ifBlank { null }, updatedAt = System.currentTimeMillis())
+                } else t
+            })
+        }
+        pushLocalStateToCloud()
+    }
+
+    fun updateTaskNotes(taskId: String, notes: String) {
+        val clean = notes.trim()
+        _campaigns.value = _campaigns.value.map { c ->
+            c.copy(tasks = c.tasks.map { t ->
+                if (t.id == taskId) {
+                    recordAudit(c.name, t.title, "Notes Updated", t.notes ?: "", clean)
+                    t.copy(notes = clean.ifBlank { null }, updatedAt = System.currentTimeMillis())
+                } else t
+            })
+        }
+        pushLocalStateToCloud()
+    }
+
     fun updateTaskDueDate(taskId: String, dueDate: String) {
         _campaigns.value = _campaigns.value.map { c ->
             c.copy(tasks = c.tasks.map { t ->

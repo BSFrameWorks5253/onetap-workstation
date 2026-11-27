@@ -1,4 +1,5 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Kanban,
   RotateCw,
@@ -23,10 +24,31 @@ import {
   Clock,
   MessageCircle,
   Image as ImageIcon,
-  ChevronDown
+  ChevronDown,
+  Send,
+  MoreVertical,
+  ShieldAlert,
+  Zap,
+  X,
+  UserCheck,
+  Share2
 } from 'lucide-react';
 import { sendWhatsAppAlert, DEFAULT_WHATSAPP_PHONE } from '../lib/googleAppsScript';
 import { AnimatedNumber, getPublicWebsiteOrigin, isCameraOrAssetFolder, isProperDateOrSessionFolder } from '../App';
+
+export function triggerHaptic(type: 'tick' | 'double-pulse' | 'heavy' = 'tick') {
+  if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+    try {
+      if (type === 'tick') {
+        navigator.vibrate(15);
+      } else if (type === 'double-pulse') {
+        navigator.vibrate([25, 60, 40]);
+      } else if (type === 'heavy') {
+        navigator.vibrate(35);
+      }
+    } catch (_) {}
+  }
+}
 
 const JUNK_SAFAR_REGEX = /^(?:in[\s_-]?process|pending|to[\s_-]?delete|intel|intelvga|amd|nvidia|system|temp|program|windows|\$rec|delivery|renders?|output|exports?|dptf|mei)$/i;
 
@@ -124,6 +146,937 @@ const COLUMNS: ColumnConfig[] = [
   }
 ];
 
+interface KanbanTaskCardProps {
+  task: SafarTaskItem;
+  col: ColumnConfig;
+  colIdx: number;
+  isBatchMode: boolean;
+  isSelected: boolean;
+  onToggleSelect: () => void;
+  onMoveStage: (task: SafarTaskItem, nextStage: KanbanStage) => void;
+  onMarkDayAllCompleted: (dayLabelOrFolderName: string) => void;
+  onRemoveTask: (task: SafarTaskItem) => void;
+  onOpenActionSheet: (task: SafarTaskItem, mode?: 'executive' | 'quick') => void;
+}
+
+function KanbanTaskCard({
+  task,
+  col,
+  colIdx,
+  isBatchMode,
+  isSelected,
+  onToggleSelect,
+  onMoveStage,
+  onMarkDayAllCompleted,
+  onRemoveTask,
+  onOpenActionSheet
+}: KanbanTaskCardProps) {
+  const isMissing = task.isMissing === true || task.isPresent === false || task.is_present === false;
+  const isUrgent = (task.notes || task.comment || '').includes('[URGENT]');
+  
+  // Touch gesture & long-press tracking
+  const [swipeOffset, setSwipeOffset] = useState<number>(0);
+  const [isSwiping, setIsSwiping] = useState<boolean>(false);
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+  const longPressTimer = useRef<any>(null);
+
+  const startLongPress = () => {
+    if (longPressTimer.current) clearTimeout(longPressTimer.current);
+    longPressTimer.current = setTimeout(() => {
+      triggerHaptic('heavy');
+      onOpenActionSheet(task, 'executive');
+      touchStartX.current = null;
+      touchStartY.current = null;
+    }, 450);
+  };
+
+  const cancelLongPress = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    touchStartX.current = t.clientX;
+    touchStartY.current = t.clientY;
+    setIsSwiping(false);
+    startLongPress();
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+    const t = e.touches[0];
+    const dx = t.clientX - touchStartX.current;
+    const dy = t.clientY - touchStartY.current;
+
+    if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
+      cancelLongPress();
+    }
+
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 12) {
+      setIsSwiping(true);
+      const clamped = Math.max(-110, Math.min(110, dx));
+      setSwipeOffset(clamped);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    cancelLongPress();
+    if (swipeOffset > 60) {
+      // Swipe Right: Instantly advance date's pipeline state
+      if (colIdx < COLUMNS.length - 1 && !isMissing) {
+        triggerHaptic('tick');
+        onMoveStage(task, COLUMNS[colIdx + 1].id);
+      }
+    } else if (swipeOffset < -60) {
+      // Swipe Left: Quick-actions sheet
+      triggerHaptic('tick');
+      onOpenActionSheet(task, 'quick');
+    }
+    setIsSwiping(false);
+    setSwipeOffset(0);
+    touchStartX.current = null;
+    touchStartY.current = null;
+  };
+
+  return (
+    <div className="task-card-swipe-wrapper">
+      {/* Swipe Right Background Cue (Advance) */}
+      <div
+        className="task-swipe-cue task-swipe-cue-left"
+        style={{
+          opacity: swipeOffset > 20 ? Math.min(1, (swipeOffset - 20) / 40) : 0
+        }}
+      >
+        <ArrowRight size={16} />
+        <span>Advance</span>
+      </div>
+
+      {/* Swipe Left Background Cue (Quick Actions) */}
+      <div
+        className="task-swipe-cue task-swipe-cue-right"
+        style={{
+          opacity: swipeOffset < -20 ? Math.min(1, (-swipeOffset - 20) / 40) : 0
+        }}
+      >
+        <span>Actions</span>
+        <Sparkles size={16} />
+      </div>
+
+      {/* Card Content */}
+      <div
+        className="safar-task-card"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchEnd}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          onOpenActionSheet(task, 'executive');
+        }}
+        style={{
+          padding: '14px 16px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '10px',
+          border: isUrgent ? '1.5px solid #ef4444' : isMissing ? '1px dashed #cbd5e1' : undefined,
+          transform: swipeOffset !== 0 ? `translateX(${swipeOffset}px)` : undefined,
+          transition: isSwiping ? 'none' : 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+          position: 'relative',
+          zIndex: 2,
+          background: isUrgent ? 'rgba(254, 242, 242, 0.7)' : undefined
+        }}
+      >
+        {/* Card Header: Folder Title, Checkbox, 1-Tap Done, Action Trigger & Exclude */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', flex: 1, minWidth: 0 }}>
+            {isBatchMode && (
+              <input
+                type="checkbox"
+                aria-label={`Select ${task.dateFolder}`}
+                className="card-select-checkbox"
+                checked={isSelected}
+                onChange={onToggleSelect}
+                style={{ marginTop: '2px' }}
+              />
+            )}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <span
+                style={{
+                  fontFamily: 'var(--font-display-serif, "Lora", serif)',
+                  fontSize: '15px',
+                  fontWeight: 600,
+                  letterSpacing: '-0.015em',
+                  color: 'var(--color-ink, #0a0a0a)',
+                  display: 'block',
+                  wordBreak: 'break-word',
+                  overflowWrap: 'break-word'
+                }}
+              >
+                {task.dateFolder}
+              </span>
+              {task.hijriDate && (
+                <span style={{ fontSize: '11px', color: '#737373', fontFamily: 'var(--font-ui-sans, "Inter", sans-serif)' }}>
+                  {task.hijriDate}
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            {col.id !== 'jameya' && (
+              <button
+                type="button"
+                className="day-batch-pill"
+                title="Mark all items for this day as AlJamea Done in 1 tap"
+                onClick={() => onMarkDayAllCompleted(task.dateFolder)}
+              >
+                ⚡ Done
+              </button>
+            )}
+
+            {/* Quick Actions Sheet trigger */}
+            <button
+              type="button"
+              title="Open date actions sheet (or long-press card)"
+              onClick={() => onOpenActionSheet(task, 'executive')}
+              style={{
+                background: 'rgba(0,0,0,0.03)',
+                border: '1px solid rgba(0,0,0,0.06)',
+                color: '#64748b',
+                cursor: 'pointer',
+                padding: '3px 5px',
+                borderRadius: '6px',
+                display: 'flex',
+                alignItems: 'center'
+              }}
+            >
+              <MoreVertical size={13} />
+            </button>
+
+            {/* Exclude / Remove Button */}
+            <button
+              type="button"
+              title="Exclude this date from Safar task manager"
+              onClick={() => {
+                if (window.confirm(`Exclude "${task.dateFolder}" from tracking across all views?`)) {
+                  onRemoveTask(task);
+                }
+              }}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: '#94a3b8',
+                cursor: 'pointer',
+                padding: '2px 4px',
+                borderRadius: '4px'
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#ef4444' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#94a3b8' }}
+            >
+              <Trash2 size={13} />
+            </button>
+          </div>
+        </div>
+
+        {/* Deliverable Cross-Status Badge */}
+        {(() => {
+          const isPhotoUp = task.photoStage === 'uploaded' || Boolean(task.photoUploaded) || (task.stage === 'uploaded' || task.stage === 'jameya' || (task.stage as any) === 'upload' || (task.stage as any) === 'completed');
+          const isVideoUp = task.stage === 'uploaded' || task.stage === 'jameya' || (task.stage as any) === 'upload' || (task.stage as any) === 'completed';
+          return (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginTop: '2px' }}>
+              {isPhotoUp && isVideoUp ? (
+                <span className="media-sync-badge both-uploaded" title="Both Photo & Video Uploaded">
+                  <CheckCircle2 size={12} />
+                  <span>✓ Both Uploaded</span>
+                </span>
+              ) : isPhotoUp && !isVideoUp ? (
+                <span className="media-sync-badge photo-only" title="Photo Uploaded · Video Pending">
+                  <Camera size={12} />
+                  <span>Photo Up · Video Pending</span>
+                </span>
+              ) : !isPhotoUp && isVideoUp ? (
+                <span className="media-sync-badge video-only" title="Video Uploaded · Photo Pending">
+                  <Film size={12} />
+                  <span>Video Up · Photo Pending</span>
+                </span>
+              ) : (
+                <span className="media-sync-badge both-pending" title="Both Photo & Video Pending Upload">
+                  <Clock size={12} />
+                  <span>Pending Upload</span>
+                </span>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* Urgent Alert Banner */}
+        {isUrgent && (
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '5px',
+              background: '#fef2f2',
+              border: '1px solid #fecaca',
+              color: '#b91c1c',
+              fontSize: '11px',
+              fontWeight: 700,
+              padding: '3px 8px',
+              borderRadius: '6px',
+              width: 'fit-content'
+            }}
+          >
+            <ShieldAlert size={12} />
+            <span>URGENT · Audio Sync Issue</span>
+          </div>
+        )}
+
+        {/* Missing badge constraint */}
+        {isMissing && (
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              background: '#fee2e2',
+              color: '#b91c1c',
+              fontSize: '10.5px',
+              fontWeight: 600,
+              padding: '2px 6px',
+              borderRadius: '5px',
+              width: 'fit-content'
+            }}
+          >
+            <AlertTriangle size={11} />
+            <span>Not on local disk</span>
+          </div>
+        )}
+
+        {/* Editor & Metadata */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10.5px', color: '#64748b', flexWrap: 'wrap' }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', background: 'rgba(0,0,0,0.04)', padding: '2px 6px', borderRadius: '4px' }}>
+            🎬 <strong style={{ color: '#0f172a' }}>{task.editorName?.trim() || DEFAULT_EDITOR}</strong>
+          </span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', background: 'rgba(79, 70, 229, 0.07)', color: '#4338ca', padding: '2px 6px', borderRadius: '4px' }}>
+            📷 <strong style={{ color: '#4f46e5' }}>{task.photoEditorName?.trim() || DEFAULT_PHOTO_EDITOR}</strong>
+          </span>
+        </div>
+
+        {/* Comment / Notes Badge */}
+        {(task.notes || task.comment) && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '5px',
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: '6px',
+              padding: '4px 8px',
+              fontSize: '11px',
+              color: '#334155',
+              lineHeight: 1.35
+            }}
+            title="Task Comment / Notes"
+          >
+            <span style={{ fontSize: '11px', flexShrink: 0 }}>💬</span>
+            <span style={{ wordBreak: 'break-word', fontWeight: 500 }}>{task.notes || task.comment}</span>
+          </div>
+        )}
+
+        {/* Action buttons to change stage */}
+        {!isMissing && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '6px',
+              paddingTop: '6px',
+              borderTop: '1px solid rgba(0,0,0,0.05)',
+              marginTop: '2px'
+            }}
+          >
+            {colIdx > 0 ? (
+              <button
+                type="button"
+                className="kanban-stage-prev-btn"
+                onClick={() => onMoveStage(task, COLUMNS[colIdx - 1].id)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '3px',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  color: '#64748b',
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '4px 6px'
+                }}
+              >
+                <ArrowLeft size={11} /> Prev
+              </button>
+            ) : <div />}
+
+            {colIdx < COLUMNS.length - 1 ? (
+              <button
+                type="button"
+                className="kanban-stage-advance-btn"
+                onClick={() => onMoveStage(task, COLUMNS[colIdx + 1].id)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  color: COLUMNS[colIdx + 1].badgeColor,
+                  background: 'rgba(0,0,0,0.03)',
+                  border: '1px solid rgba(0,0,0,0.06)',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  padding: '5px 10px'
+                }}
+              >
+                <span>Next: {COLUMNS[colIdx + 1].title}</span>
+                <ArrowRight size={11} />
+              </button>
+            ) : (
+              <span style={{ fontSize: '11px', color: '#047857', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '3px' }}>
+                <CheckCircle size={12} /> AlJamea Done
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+interface ExecutiveActionSheetModalProps {
+  task: SafarTaskItem;
+  mode: 'executive' | 'quick';
+  onClose: () => void;
+  onUpdateTask: (task: SafarTaskItem, changes: Partial<SafarTaskItem>) => void;
+  onMoveStage: (task: SafarTaskItem, nextStage: KanbanStage) => void;
+  onOpenBriefingModal?: (safarName: string, initialTab?: 'msg' | 'image') => void;
+  showToast: (msg: string) => void;
+}
+
+function ExecutiveActionSheetModal({
+  task,
+  mode,
+  onClose,
+  onUpdateTask,
+  onMoveStage,
+  onOpenBriefingModal,
+  showToast
+}: ExecutiveActionSheetModalProps) {
+  const currentStageObj = COLUMNS.find(c => c.id === task.stage) || COLUMNS[0];
+  const isUrgent = (task.notes || task.comment || '').includes('[URGENT]');
+  const [activeTab, setActiveTab] = useState<'actions' | 'reassign' | 'notes'>('actions');
+  const [editorInput, setEditorInput] = useState(task.editorName || DEFAULT_EDITOR);
+  const [photoEditorInput, setPhotoEditorInput] = useState(task.photoEditorName || DEFAULT_PHOTO_EDITOR);
+  const [notesInput, setNotesInput] = useState(task.notes || task.comment || '');
+
+  const handleSendWhatsAppUpdate = () => {
+    triggerHaptic('tick');
+    const isPhotoUp = task.photoStage === 'uploaded' || Boolean(task.photoUploaded) || (task.stage === 'uploaded' || task.stage === 'jameya');
+    const isVideoUp = task.stage === 'uploaded' || task.stage === 'jameya';
+    const text = `🎬 *ONE TAP STUDIO · DATE UPDATE*\n━━━━━━━━━━━━━━━━━━━━\n📍 *Safar:* ${task.safarName}\n📁 *Date:* ${task.dateFolder}${task.hijriDate ? ` (${task.hijriDate})` : ''}\n📌 *Pipeline:* ${currentStageObj.title}\n🎬 *Video Editor:* ${task.editorName || DEFAULT_EDITOR} (${isVideoUp ? '✓ Uploaded' : 'In Progress'})\n📷 *Photo Status:* ${isPhotoUp ? '✓ Uploaded' : 'Pending'} (${task.photoEditorName || DEFAULT_PHOTO_EDITOR})${task.notes || task.comment ? `\n💬 *Notes:* ${task.notes || task.comment}` : ''}\n━━━━━━━━━━━━━━━━━━━━\n🔗 ${window.location.origin}`;
+    
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text);
+    }
+    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
+    showToast(`✓ Briefing for ${task.dateFolder} dispatched to WhatsApp!`);
+    onClose();
+  };
+
+  const handleCopyDateBriefing = () => {
+    triggerHaptic('tick');
+    const isPhotoUp = task.photoStage === 'uploaded' || Boolean(task.photoUploaded) || (task.stage === 'uploaded' || task.stage === 'jameya');
+    const isVideoUp = task.stage === 'uploaded' || task.stage === 'jameya';
+    const text = `🎬 *ONE TAP STUDIO · DATE UPDATE*\n━━━━━━━━━━━━━━━━━━━━\n📍 *Safar:* ${task.safarName}\n📁 *Date:* ${task.dateFolder}${task.hijriDate ? ` (${task.hijriDate})` : ''}\n📌 *Pipeline:* ${currentStageObj.title}\n🎬 *Video Editor:* ${task.editorName || DEFAULT_EDITOR} (${isVideoUp ? '✓ Uploaded' : 'In Progress'})\n📷 *Photo Status:* ${isPhotoUp ? '✓ Uploaded' : 'Pending'} (${task.photoEditorName || DEFAULT_PHOTO_EDITOR})${task.notes || task.comment ? `\n💬 *Notes:* ${task.notes || task.comment}` : ''}\n━━━━━━━━━━━━━━━━━━━━\n🔗 ${window.location.origin}`;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text);
+      showToast(`✓ Copied date briefing text to clipboard!`);
+    }
+  };
+
+  const handleToggleUrgent = () => {
+    triggerHaptic('heavy');
+    const raw = task.notes || task.comment || '';
+    let updated = '';
+    if (isUrgent) {
+      updated = raw.replace(/\[URGENT\]\s*(?:Audio Sync Issue)?\s*·?\s*/gi, '').trim();
+      showToast(`Removed urgent flag from ${task.dateFolder}`);
+    } else {
+      updated = raw ? `[URGENT] Audio Sync Issue · ${raw}` : '[URGENT] Audio Sync Issue';
+      showToast(`⚠️ Flagged ${task.dateFolder} as URGENT / Audio Sync Issue!`);
+    }
+    onUpdateTask(task, { notes: updated, comment: updated });
+    onClose();
+  };
+
+  const handleSaveEditor = (videoEd: string, photoEd: string) => {
+    triggerHaptic('tick');
+    onUpdateTask(task, { editorName: videoEd, photoEditorName: photoEd });
+    showToast(`✓ Reassigned editors for ${task.dateFolder}`);
+  };
+
+  const handleSaveNotes = () => {
+    triggerHaptic('tick');
+    onUpdateTask(task, { notes: notesInput, comment: notesInput });
+    showToast(`✓ Updated notes for ${task.dateFolder}`);
+    onClose();
+  };
+
+  const handleTogglePhotoSync = () => {
+    triggerHaptic('tick');
+    const currentUp = task.photoStage === 'uploaded' || Boolean(task.photoUploaded);
+    const newStage: PhotoStage = currentUp ? 'edited' : 'uploaded';
+    onUpdateTask(task, { photoStage: newStage, photoUploaded: !currentUp });
+    showToast(`✓ Photos marked as ${!currentUp ? 'Uploaded' : 'Pending'}`);
+  };
+
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div className="executive-action-overlay" onClick={onClose} role="dialog" aria-modal="true">
+      <div className="executive-action-sheet" onClick={e => e.stopPropagation()}>
+        <div className="executive-sheet-handle" />
+
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 700, color: 'var(--text-primary, #0f172a)' }}>
+                {task.dateFolder}
+              </h3>
+              <span
+                style={{
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  padding: '2px 8px',
+                  borderRadius: '12px',
+                  background: currentStageObj.badgeColor,
+                  color: '#ffffff'
+                }}
+              >
+                {currentStageObj.title}
+              </span>
+            </div>
+            <p style={{ margin: '3px 0 0 0', fontSize: '12px', color: '#64748b' }}>
+              {task.safarName} {task.hijriDate ? `· ${task.hijriDate}` : ''}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            style={{
+              background: 'rgba(0,0,0,0.05)',
+              border: 'none',
+              borderRadius: '50%',
+              width: '28px',
+              height: '28px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              color: '#64748b'
+            }}
+          >
+            <X size={15} />
+          </button>
+        </div>
+
+        {/* Tab switcher */}
+        <div
+          style={{
+            display: 'flex',
+            background: 'rgba(0,0,0,0.04)',
+            borderRadius: '10px',
+            padding: '3px',
+            gap: '4px'
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setActiveTab('actions')}
+            style={{
+              flex: 1,
+              padding: '6px 10px',
+              borderRadius: '7px',
+              fontSize: '12px',
+              fontWeight: 700,
+              background: activeTab === 'actions' ? '#ffffff' : 'transparent',
+              border: 'none',
+              boxShadow: activeTab === 'actions' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+              color: activeTab === 'actions' ? '#0f172a' : '#64748b',
+              cursor: 'pointer'
+            }}
+          >
+            ⚡ Quick Actions
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('reassign')}
+            style={{
+              flex: 1,
+              padding: '6px 10px',
+              borderRadius: '7px',
+              fontSize: '12px',
+              fontWeight: 700,
+              background: activeTab === 'reassign' ? '#ffffff' : 'transparent',
+              border: 'none',
+              boxShadow: activeTab === 'reassign' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+              color: activeTab === 'reassign' ? '#0f172a' : '#64748b',
+              cursor: 'pointer'
+            }}
+          >
+            👤 Editors
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('notes')}
+            style={{
+              flex: 1,
+              padding: '6px 10px',
+              borderRadius: '7px',
+              fontSize: '12px',
+              fontWeight: 700,
+              background: activeTab === 'notes' ? '#ffffff' : 'transparent',
+              border: 'none',
+              boxShadow: activeTab === 'notes' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+              color: activeTab === 'notes' ? '#0f172a' : '#64748b',
+              cursor: 'pointer'
+            }}
+          >
+            💬 Notes
+          </button>
+        </div>
+
+        {/* Tab 1: Actions */}
+        {activeTab === 'actions' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {/* WhatsApp Update */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '8px' }}>
+              <button
+                type="button"
+                onClick={handleSendWhatsAppUpdate}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '12px 14px',
+                  borderRadius: '12px',
+                  background: '#25D366',
+                  color: '#ffffff',
+                  border: 'none',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 8px rgba(37, 211, 102, 0.3)'
+                }}
+              >
+                <Send size={15} />
+                <span>🚀 Send WhatsApp Update for this Date</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleCopyDateBriefing}
+                title="Copy date briefing text"
+                style={{
+                  padding: '12px 14px',
+                  borderRadius: '12px',
+                  background: 'rgba(0,0,0,0.05)',
+                  border: '1px solid rgba(0,0,0,0.08)',
+                  color: '#0f172a',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <Share2 size={15} />
+              </button>
+            </div>
+
+            {/* Open Google Drive */}
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic('tick');
+                window.open('https://drive.google.com', '_blank');
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '12px 14px',
+                borderRadius: '12px',
+                background: 'rgba(59, 130, 246, 0.08)',
+                color: '#2563eb',
+                border: '1px solid rgba(59, 130, 246, 0.2)',
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+            >
+              <FolderOpen size={15} />
+              <span>☁️ Open Google Drive Folder</span>
+            </button>
+
+            {/* Toggle Photo Sync */}
+            <button
+              type="button"
+              onClick={handleTogglePhotoSync}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '12px 14px',
+                borderRadius: '12px',
+                background: 'rgba(79, 70, 229, 0.06)',
+                color: '#4f46e5',
+                border: '1px solid rgba(79, 70, 229, 0.18)',
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Camera size={15} />
+                <span>Toggle Photo Sync</span>
+              </div>
+              <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '8px', background: task.photoStage === 'uploaded' || task.photoUploaded ? '#10b981' : '#f59e0b', color: '#fff' }}>
+                {task.photoStage === 'uploaded' || task.photoUploaded ? '✓ Uploaded' : 'Pending'}
+              </span>
+            </button>
+
+            {/* Flag as Urgent / Audio Sync Issue */}
+            <button
+              type="button"
+              onClick={handleToggleUrgent}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '12px 14px',
+                borderRadius: '12px',
+                background: isUrgent ? '#fee2e2' : 'rgba(239, 68, 68, 0.07)',
+                color: '#b91c1c',
+                border: isUrgent ? '1.5px solid #ef4444' : '1px solid rgba(239, 68, 68, 0.2)',
+                fontSize: '13px',
+                fontWeight: 700,
+                cursor: 'pointer'
+              }}
+            >
+              <ShieldAlert size={15} />
+              <span>{isUrgent ? '✓ Remove Urgent Flag' : '⚠️ Flag as Urgent / Audio Sync Issue'}</span>
+            </button>
+
+            {/* Pipeline Stage Jump */}
+            <div style={{ marginTop: '6px' }}>
+              <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#64748b', display: 'block', marginBottom: '6px' }}>
+                Jump Pipeline Stage:
+              </span>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(95px, 1fr))', gap: '6px' }}>
+                {COLUMNS.map(c => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => {
+                      onMoveStage(task, c.id);
+                      onClose();
+                    }}
+                    style={{
+                      padding: '8px 6px',
+                      borderRadius: '8px',
+                      fontSize: '11px',
+                      fontWeight: task.stage === c.id ? 800 : 600,
+                      background: task.stage === c.id ? c.badgeColor : 'rgba(0,0,0,0.03)',
+                      color: task.stage === c.id ? '#ffffff' : '#334155',
+                      border: `1px solid ${task.stage === c.id ? c.badgeColor : 'rgba(0,0,0,0.06)'}`,
+                      cursor: 'pointer',
+                      textAlign: 'center',
+                      lineHeight: 1.2
+                    }}
+                  >
+                    {c.title}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tab 2: Reassign Editors */}
+        {activeTab === 'reassign' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div>
+              <label style={{ fontSize: '12px', fontWeight: 700, color: '#0f172a', display: 'block', marginBottom: '6px' }}>
+                🎬 Video Editor
+              </label>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                {['Murtaza', 'Mustafa', 'Burhanuddin', 'Zainab'].map(name => (
+                  <button
+                    key={name}
+                    type="button"
+                    onClick={() => {
+                      setEditorInput(name);
+                      handleSaveEditor(name, photoEditorInput);
+                    }}
+                    style={{
+                      padding: '5px 10px',
+                      borderRadius: '8px',
+                      fontSize: '11.5px',
+                      fontWeight: editorInput === name ? 700 : 500,
+                      background: editorInput === name ? '#4f46e5' : 'rgba(0,0,0,0.04)',
+                      color: editorInput === name ? '#ffffff' : '#334155',
+                      border: 'none',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {name}
+                  </button>
+                ))}
+              </div>
+              <input
+                type="text"
+                value={editorInput}
+                onChange={e => setEditorInput(e.target.value)}
+                onBlur={() => handleSaveEditor(editorInput, photoEditorInput)}
+                placeholder="Or custom editor name..."
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  borderRadius: '8px',
+                  border: '1px solid #cbd5e1',
+                  fontSize: '13px',
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ fontSize: '12px', fontWeight: 700, color: '#0f172a', display: 'block', marginBottom: '6px' }}>
+                📷 Photo Editor
+              </label>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                {['Muffadal Peti', 'Ali', 'Taha', 'Taher'].map(name => (
+                  <button
+                    key={name}
+                    type="button"
+                    onClick={() => {
+                      setPhotoEditorInput(name);
+                      handleSaveEditor(editorInput, name);
+                    }}
+                    style={{
+                      padding: '5px 10px',
+                      borderRadius: '8px',
+                      fontSize: '11.5px',
+                      fontWeight: photoEditorInput === name ? 700 : 500,
+                      background: photoEditorInput === name ? '#4f46e5' : 'rgba(0,0,0,0.04)',
+                      color: photoEditorInput === name ? '#ffffff' : '#334155',
+                      border: 'none',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {name}
+                  </button>
+                ))}
+              </div>
+              <input
+                type="text"
+                value={photoEditorInput}
+                onChange={e => setPhotoEditorInput(e.target.value)}
+                onBlur={() => handleSaveEditor(editorInput, photoEditorInput)}
+                placeholder="Or custom photo editor name..."
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  borderRadius: '8px',
+                  border: '1px solid #cbd5e1',
+                  fontSize: '13px',
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Tab 3: Notes & Comments */}
+        {activeTab === 'notes' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <label style={{ fontSize: '12px', fontWeight: 700, color: '#0f172a' }}>
+              Task Comment / Progress Notes
+            </label>
+            <textarea
+              rows={4}
+              value={notesInput}
+              onChange={e => setNotesInput(e.target.value)}
+              placeholder="e.g. Audio sync issue on angle 2, waiting for drive re-upload..."
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                borderRadius: '10px',
+                border: '1px solid #cbd5e1',
+                fontSize: '13px',
+                fontFamily: 'inherit',
+                boxSizing: 'border-box',
+                resize: 'vertical'
+              }}
+            />
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+              <button
+                type="button"
+                onClick={onClose}
+                style={{
+                  padding: '8px 14px',
+                  borderRadius: '8px',
+                  border: '1px solid #cbd5e1',
+                  background: 'transparent',
+                  color: '#64748b',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveNotes}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: '#4f46e5',
+                  color: '#ffffff',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                Save Notes
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 export default function OngoingSafarKanban({
   tasks,
   safars,
@@ -195,6 +1148,8 @@ export default function OngoingSafarKanban({
   const [filterChip, setFilterChip] = useState<'all' | 'my_pending' | 'ready_deliver' | 'needs_photo_review'>('all');
   const [isBatchMode, setIsBatchMode] = useState<boolean>(false);
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
+  const [actionSheetTask, setActionSheetTask] = useState<SafarTaskItem | null>(null);
+  const [actionSheetMode, setActionSheetMode] = useState<'executive' | 'quick'>('executive');
   const kanbanGridRef = useRef<HTMLDivElement>(null);
 
   const handleGridScroll = () => {
@@ -845,244 +1800,24 @@ export default function OngoingSafarKanban({
                     <span>No dates in this stage</span>
                   </div>
                 ) : (
-                  list.map(task => {
-                    const isMissing = task.isMissing === true || task.isPresent === false || task.is_present === false;
-                    return (
-                      <div
-                        key={task.id}
-                        className="safar-task-card"
-                        style={{
-                          padding: '14px 16px',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '10px',
-                          border: isMissing ? '1px dashed #cbd5e1' : undefined
-                        }}
-                      >
-                        {/* Card Header: Folder Title, Checkbox, 1-Tap Done & Remove */}
-                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
-                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', flex: 1, minWidth: 0 }}>
-                            {isBatchMode && (
-                              <input
-                                type="checkbox"
-                                aria-label={`Select ${task.dateFolder}`}
-                                className="card-select-checkbox"
-                                checked={selectedTaskIds.has(task.id)}
-                                onChange={() => toggleSelectTask(task.id)}
-                                style={{ marginTop: '2px' }}
-                              />
-                            )}
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <span
-                                style={{
-                                  fontFamily: 'var(--font-display-serif, "Lora", serif)',
-                                  fontSize: '15px',
-                                  fontWeight: 600,
-                                  letterSpacing: '-0.015em',
-                                  color: 'var(--color-ink, #0a0a0a)',
-                                  display: 'block',
-                                  wordBreak: 'break-word',
-                                  overflowWrap: 'break-word'
-                                }}
-                              >
-                                {task.dateFolder}
-                              </span>
-                              {task.hijriDate && (
-                                <span style={{ fontSize: '11px', color: '#737373', fontFamily: 'var(--font-ui-sans, "Inter", sans-serif)' }}>
-                                  {task.hijriDate}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            {col.id !== 'jameya' && (
-                              <button
-                                type="button"
-                                className="day-batch-pill"
-                                title={`Mark all items for this day as AlJamea Done in 1 tap`}
-                                onClick={() => handleMarkDayAllCompleted(task.dateFolder)}
-                              >
-                                ⚡ Done
-                              </button>
-                            )}
-
-                          {/* Exclude / Remove Button */}
-                          <button
-                            type="button"
-                            title="Exclude this date from Safar task manager"
-                            onClick={() => {
-                              if (window.confirm(`Exclude "${task.dateFolder}" from tracking across all views?`)) {
-                                onRemoveTask(task);
-                              }
-                            }}
-                            style={{
-                              background: 'transparent',
-                              border: 'none',
-                              color: '#94a3b8',
-                              cursor: 'pointer',
-                              padding: '2px 4px',
-                              borderRadius: '4px'
-                            }}
-                            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#ef4444' }}
-                            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#94a3b8' }}
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
-                      </div>
-
-                        {/* Deliverable Cross-Status Badge */}
-                        {(() => {
-                          const isPhotoUp = task.photoStage === 'uploaded' || Boolean(task.photoUploaded) || (task.stage === 'uploaded' || task.stage === 'jameya' || (task.stage as any) === 'upload' || (task.stage as any) === 'completed');
-                          const isVideoUp = task.stage === 'uploaded' || task.stage === 'jameya' || (task.stage as any) === 'upload' || (task.stage as any) === 'completed';
-                          return (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginTop: '2px' }}>
-                              {isPhotoUp && isVideoUp ? (
-                                <span className="media-sync-badge both-uploaded" title="Both Photo & Video Uploaded">
-                                  <CheckCircle2 size={12} />
-                                  <span>✓ Both Uploaded</span>
-                                </span>
-                              ) : isPhotoUp && !isVideoUp ? (
-                                <span className="media-sync-badge photo-only" title="Photo Uploaded · Video Pending">
-                                  <Camera size={12} />
-                                  <span>Photo Up · Video Pending</span>
-                                </span>
-                              ) : !isPhotoUp && isVideoUp ? (
-                                <span className="media-sync-badge video-only" title="Video Uploaded · Photo Pending">
-                                  <Film size={12} />
-                                  <span>Video Up · Photo Pending</span>
-                                </span>
-                              ) : (
-                                <span className="media-sync-badge both-pending" title="Both Photo & Video Pending Upload">
-                                  <Clock size={12} />
-                                  <span>Pending Upload</span>
-                                </span>
-                              )}
-                            </div>
-                          );
-                        })()}
-
-                        {/* Missing badge constraint */}
-                        {isMissing && (
-                          <div
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              background: '#fee2e2',
-                              color: '#b91c1c',
-                              fontSize: '10.5px',
-                              fontWeight: 600,
-                              padding: '2px 6px',
-                              borderRadius: '5px',
-                              width: 'fit-content'
-                            }}
-                          >
-                            <AlertTriangle size={11} />
-                            <span>Not on local disk</span>
-                          </div>
-                        )}
-
-                        {/* Editor & Metadata */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10.5px', color: '#64748b', flexWrap: 'wrap' }}>
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', background: 'rgba(0,0,0,0.04)', padding: '2px 6px', borderRadius: '4px' }}>
-                            🎬 <strong style={{ color: '#0f172a' }}>{task.editorName?.trim() || DEFAULT_EDITOR}</strong>
-                          </span>
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', background: 'rgba(79, 70, 229, 0.07)', color: '#4338ca', padding: '2px 6px', borderRadius: '4px' }}>
-                            📷 <strong style={{ color: '#4f46e5' }}>{task.photoEditorName?.trim() || DEFAULT_PHOTO_EDITOR}</strong>
-                          </span>
-                        </div>
-
-                        {/* Comment / Notes Badge */}
-                        {(task.notes || task.comment) && (
-                          <div
-                            style={{
-                              display: 'flex',
-                              alignItems: 'flex-start',
-                              gap: '5px',
-                              background: '#f8fafc',
-                              border: '1px solid #e2e8f0',
-                              borderRadius: '6px',
-                              padding: '4px 8px',
-                              fontSize: '11px',
-                              color: '#334155',
-                              lineHeight: 1.35
-                            }}
-                            title="Task Comment / Notes"
-                          >
-                            <span style={{ fontSize: '11px', flexShrink: 0 }}>💬</span>
-                            <span style={{ wordBreak: 'break-word', fontWeight: 500 }}>{task.notes || task.comment}</span>
-                          </div>
-                        )}
-
-                        {/* Action buttons to change stage */}
-                        {!isMissing && (
-                          <div
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                              gap: '6px',
-                              paddingTop: '6px',
-                              borderTop: '1px solid rgba(0,0,0,0.05)',
-                              marginTop: '2px'
-                            }}
-                          >
-                            {colIdx > 0 ? (
-                              <button
-                                type="button"
-                                className="kanban-stage-prev-btn"
-                                onClick={() => handleMoveStage(task, COLUMNS[colIdx - 1].id)}
-                                style={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '3px',
-                                  fontSize: '11px',
-                                  fontWeight: 600,
-                                  color: '#64748b',
-                                  background: 'transparent',
-                                  border: 'none',
-                                  cursor: 'pointer',
-                                  padding: '4px 6px'
-                                }}
-                              >
-                                <ArrowLeft size={11} /> Prev
-                              </button>
-                            ) : <div />}
-
-                            {colIdx < COLUMNS.length - 1 ? (
-                              <button
-                                type="button"
-                                className="kanban-stage-advance-btn"
-                                onClick={() => handleMoveStage(task, COLUMNS[colIdx + 1].id)}
-                                style={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '4px',
-                                  fontSize: '11px',
-                                  fontWeight: 700,
-                                  color: COLUMNS[colIdx + 1].badgeColor,
-                                  background: 'rgba(0,0,0,0.03)',
-                                  border: '1px solid rgba(0,0,0,0.06)',
-                                  borderRadius: '6px',
-                                  cursor: 'pointer',
-                                  padding: '5px 10px'
-                                }}
-                              >
-                                <span>Next: {COLUMNS[colIdx + 1].title}</span>
-                                <ArrowRight size={11} />
-                              </button>
-                            ) : (
-                              <span style={{ fontSize: '11px', color: '#047857', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '3px' }}>
-                                <CheckCircle size={12} /> AlJamea Done
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })
+                  list.map(task => (
+                    <KanbanTaskCard
+                      key={task.id}
+                      task={task}
+                      col={col}
+                      colIdx={colIdx}
+                      isBatchMode={isBatchMode}
+                      isSelected={selectedTaskIds.has(task.id)}
+                      onToggleSelect={() => toggleSelectTask(task.id)}
+                      onMoveStage={handleMoveStage}
+                      onMarkDayAllCompleted={handleMarkDayAllCompleted}
+                      onRemoveTask={onRemoveTask}
+                      onOpenActionSheet={(t, mode) => {
+                        setActionSheetTask(t);
+                        setActionSheetMode(mode || 'executive');
+                      }}
+                    />
+                  ))
                 )}
               </div>
             </div>
@@ -1117,6 +1852,19 @@ export default function OngoingSafarKanban({
             </button>
           </div>
         </aside>
+      )}
+
+      {/* Executive Action Bottom Sheet */}
+      {actionSheetTask && (
+        <ExecutiveActionSheetModal
+          task={actionSheetTask}
+          mode={actionSheetMode}
+          onClose={() => setActionSheetTask(null)}
+          onUpdateTask={onUpdateTask}
+          onMoveStage={handleMoveStage}
+          onOpenBriefingModal={onOpenBriefingModal}
+          showToast={showToast}
+        />
       )}
     </div>
   );
