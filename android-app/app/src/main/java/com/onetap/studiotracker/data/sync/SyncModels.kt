@@ -34,6 +34,7 @@ data class RemoteSafarGroup(
     val isDone: Boolean = false,
     val archivePriorStages: Map<String, String> = emptyMap(),
     val city: String? = null,
+    val receivedDate: String? = null,
     val updatedAt: String? = null
 )
 
@@ -62,7 +63,8 @@ data class RemoteTaskItem(
     val renderVideoCount: Int? = null,
     val renderSizeBytes: Long? = null,
     val prprojModifiedAt: Long? = null,
-    val renderedAt: Long? = null
+    val renderedAt: Long? = null,
+    val stageTimestamps: Map<String, Long> = emptyMap()
 )
 
 enum class SyncStatus {

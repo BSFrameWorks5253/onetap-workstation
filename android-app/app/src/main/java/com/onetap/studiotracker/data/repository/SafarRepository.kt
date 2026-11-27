@@ -30,7 +30,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.json.JSONObject
@@ -103,6 +105,10 @@ class SafarRepository private constructor(private val appContext: Context?) {
     private val _renderLogs = MutableStateFlow<List<String>>(emptyList())
     val renderLogs: StateFlow<List<String>> = _renderLogs.asStateFlow()
 
+    private val pendingNewSafarQueue = ArrayDeque<String>()
+    private val _pendingNewSafarPrompt = MutableStateFlow<String?>(null)
+    val pendingNewSafarPrompt: StateFlow<String?> = _pendingNewSafarPrompt.asStateFlow()
+
     init {
         if (latestRawSnapshot.tasks.isNotEmpty() || latestRawSnapshot.safars.isNotEmpty()) {
             applyCloudSnapshot(latestRawSnapshot, persistCache = false)
@@ -134,13 +140,17 @@ class SafarRepository private constructor(private val appContext: Context?) {
             realtimeClient.events.collect { event ->
                 when (event) {
                     is RealtimeEvent.SnapshotReceived -> {
-                        applyCloudSnapshot(event.payload, persistCache = true)
-                        _isInitialLoading.value = false
-                        _syncState.value = _syncState.value.copy(
-                            status = SyncStatus.REALTIME_LIVE,
-                            lastSyncedAt = System.currentTimeMillis(),
-                            syncNotice = "Live update received"
-                        )
+                        if (localStore?.hasPendingPush() == true) {
+                            pushLocalStateToCloud()
+                        } else {
+                            applyCloudSnapshot(event.payload, persistCache = true)
+                            _isInitialLoading.value = false
+                            _syncState.value = _syncState.value.copy(
+                                status = SyncStatus.REALTIME_LIVE,
+                                lastSyncedAt = System.currentTimeMillis(),
+                                syncNotice = "Live update received"
+                            )
+                        }
                     }
                     is RealtimeEvent.SafarStatusChanged -> {
                         _campaigns.value = _campaigns.value.map { c ->
@@ -168,6 +178,7 @@ class SafarRepository private constructor(private val appContext: Context?) {
                         triggerCloudSync(silent = true)
                     }
                     is RealtimeEvent.RenderTelemetry -> {
+                        val prevStatus = _remoteRenderState.value.status
                         _remoteRenderState.value = _remoteRenderState.value.copy(
                             jobId = event.jobId.ifBlank { _remoteRenderState.value.jobId },
                             safarName = event.safarName.ifBlank { _remoteRenderState.value.safarName },
@@ -176,9 +187,14 @@ class SafarRepository private constructor(private val appContext: Context?) {
                             status = event.status,
                             scheduledFor = event.scheduledFor
                         )
+                        if (event.status == "completed" && prevStatus != "completed") {
+                            val title = "Render Complete"
+                            val msg = event.stage.ifBlank { "${event.safarName.ifBlank { "Batch" }} finished rendering on Desktop" }
+                            appContext?.let { BatchNotificationManager.showSimpleNotification(it, title, msg) }
+                        }
                     }
                     is RealtimeEvent.RenderLog -> {
-                        val prefix = if (event.level == "error") "❌" else "⚠️"
+                        val prefix = if (event.level == "error") "[ERROR]" else "[WARN]"
                         _renderLogs.value = (listOf("$prefix ${event.message}") + _renderLogs.value).take(25)
                         if (event.level == "error") {
                             appContext?.let { BatchNotificationManager.showSimpleNotification(it, "Render Error", event.message) }
@@ -198,11 +214,14 @@ class SafarRepository private constructor(private val appContext: Context?) {
         }
 
         repositoryScope.launch {
+            if (localStore?.hasPendingPush() == true) {
+                pushSnapshotToCloudSync(latestRawSnapshot)
+            }
             triggerCloudSync()
             while (isActive) {
                 delay(30_000)
                 if (_syncState.value.isAutoSyncEnabled) {
-                    if (localStore?.hasPendingPush() == true) pushLocalStateToCloud()
+                    if (localStore?.hasPendingPush() == true) pushSnapshotToCloudSync(latestRawSnapshot)
                     else triggerCloudSync(silent = true)
                 }
             }
@@ -210,6 +229,9 @@ class SafarRepository private constructor(private val appContext: Context?) {
     }
 
     suspend fun triggerCloudSync(silent: Boolean = false): Boolean {
+        if (localStore?.hasPendingPush() == true) {
+            pushSnapshotToCloudSync(latestRawSnapshot)
+        }
         if (!silent) _syncState.value = _syncState.value.copy(status = SyncStatus.SYNCING)
         val startTime = System.currentTimeMillis()
         val result = supabaseClient.fetchLatestSnapshot()
@@ -320,6 +342,7 @@ class SafarRepository private constructor(private val appContext: Context?) {
                         renderSizeBytes = item.renderSizeBytes,
                         prprojModifiedAt = item.prprojModifiedAt,
                         renderedAt = item.renderedAt,
+                        stageTimestamps = mergeStageTimestamps(item.stageTimestamps, ov),
                         updatedAtIso = item.updatedAt.orEmpty()
                     )
                 }.sortedBy { it.title }
@@ -336,6 +359,7 @@ class SafarRepository private constructor(private val appContext: Context?) {
                         isOngoing = (safarName == payload.activeSafar),
                         isArchived = isArchived,
                         isDone = isDone,
+                        receivedDate = safarGroup?.receivedDate.orEmpty(),
                         updatedAtIso = safarGroup?.updatedAt.orEmpty(),
                         archivePriorStages = safarGroup?.archivePriorStages ?: emptyMap(),
                         tasks = mappedTasks
@@ -354,6 +378,7 @@ class SafarRepository private constructor(private val appContext: Context?) {
             if (_activeCampaignId.value == null || finalCampaigns.none { it.id == _activeCampaignId.value }) {
                 _activeCampaignId.value = resolvedOngoing?.id
             }
+            detectNewlyAddedSafars(finalCampaigns)
             appContext?.let { SafarWidgetUpdater.updateAllWidgets(it, resolvedOngoing, finalCampaigns) }
         } catch (t: Throwable) {
             Log.e("SafarRepository", "Error applying snapshot", t)
@@ -368,56 +393,165 @@ class SafarRepository private constructor(private val appContext: Context?) {
         } catch (_: Throwable) { null }
     }
 
+    private fun mergeStageTimestamps(base: Map<String, Long>, elem: JsonElement?): Map<String, Long> {
+        val out = base.toMutableMap()
+        if (elem != null && elem !is JsonPrimitive) {
+            try {
+                val tsObj = elem.jsonObject["stageTimestamps"]?.jsonObject
+                tsObj?.forEach { (k, v) ->
+                    v.jsonPrimitive.content.toLongOrNull()?.let { out[k] = it }
+                }
+            } catch (_: Throwable) {}
+        }
+        return out
+    }
+
+    private fun detectNewlyAddedSafars(list: List<SafarCampaign>) {
+        val store = localStore ?: return
+        val activeNames = list.filter { !it.isArchived }.map { it.name }.toSet()
+        if (!store.hasSeededKnownSafars()) {
+            if (activeNames.isNotEmpty()) {
+                store.saveKnownSafarNames(activeNames)
+                store.markKnownSafarsSeeded()
+            }
+            return
+        }
+        val known = store.getKnownSafarNames()
+        val newOnes = list.filter { !it.isArchived && it.name !in known && it.receivedDate.isBlank() }
+        if (newOnes.isNotEmpty()) {
+            newOnes.forEach { camp ->
+                if (camp.name !in pendingNewSafarQueue && _pendingNewSafarPrompt.value != camp.name) {
+                    pendingNewSafarQueue.addLast(camp.name)
+                }
+            }
+            if (_pendingNewSafarPrompt.value == null && pendingNewSafarQueue.isNotEmpty()) {
+                _pendingNewSafarPrompt.value = pendingNewSafarQueue.removeFirst()
+            }
+        }
+    }
+
+    fun setSafarReceivedDate(safarName: String, receivedDate: String) {
+        val cleanDate = receivedDate.trim()
+        if (safarName.isBlank()) return
+        _campaigns.value = _campaigns.value.map { c ->
+            if (c.name == safarName) c.copy(receivedDate = cleanDate) else c
+        }
+        localStore?.let { store ->
+            store.saveKnownSafarNames(store.getKnownSafarNames() + safarName)
+        }
+        if (cleanDate.isNotBlank()) {
+            recordAudit(safarName, "Safar Folder", "Received Date Set", "", cleanDate)
+        }
+        advanceNewSafarPromptQueue(safarName)
+        pushLocalStateToCloud()
+    }
+
+    fun dismissNewSafarPrompt(safarName: String) {
+        localStore?.let { store ->
+            store.saveKnownSafarNames(store.getKnownSafarNames() + safarName)
+        }
+        advanceNewSafarPromptQueue(safarName)
+    }
+
+    private fun advanceNewSafarPromptQueue(handledSafar: String) {
+        if (_pendingNewSafarPrompt.value == handledSafar) {
+            _pendingNewSafarPrompt.value = if (pendingNewSafarQueue.isNotEmpty()) pendingNewSafarQueue.removeFirst() else null
+        }
+    }
+
     private fun currentIsoTimestamp(): String =
         SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.ROOT).apply {
             timeZone = TimeZone.getTimeZone("UTC")
         }.format(Date())
 
-    private fun pushLocalStateToCloud() {
-        repositoryScope.launch {
-            val currentCampaigns = _campaigns.value
-            val active = currentCampaigns.firstOrNull { it.isOngoing }?.name
-            val isoDate = currentIsoTimestamp()
+    private fun buildCurrentSnapshotPayload(): RemoteSnapshotPayload {
+        val currentCampaigns = _campaigns.value
+        val active = currentCampaigns.firstOrNull { it.isOngoing }?.name
+        val isoDate = currentIsoTimestamp()
 
-            val remoteSafars = currentCampaigns.map { c ->
-                RemoteSafarGroup(
-                    safarName = c.name, safarYear = JsonPrimitive(c.safarYear), totalDays = c.totalDates,
-                    completedDays = c.deliveredVideosCount, isSafarDone = c.is100PercentDone,
-                    isArchived = c.isArchived, isDone = c.isDone, archivePriorStages = c.archivePriorStages,
-                    city = c.location.ifBlank { null }, updatedAt = isoDate
+        val remoteSafars = currentCampaigns.map { c ->
+            RemoteSafarGroup(
+                safarName = c.name, safarYear = JsonPrimitive(c.safarYear), totalDays = c.totalDates,
+                completedDays = c.deliveredVideosCount, isSafarDone = c.is100PercentDone,
+                isArchived = c.isArchived, isDone = c.isDone, archivePriorStages = c.archivePriorStages,
+                city = c.location.ifBlank { null }, receivedDate = c.receivedDate.ifBlank { null }, updatedAt = isoDate
+            )
+        }
+        val updatedOverrides = latestRawSnapshot.stageOverrides.toMutableMap()
+        val remoteTasks = currentCampaigns.flatMap { c ->
+            c.tasks.map { t ->
+                val overrideKey = "${c.name}::${t.title}"
+                val existingObj = try {
+                    (updatedOverrides[overrideKey] as? JsonObject)?.toMutableMap() ?: mutableMapOf()
+                } catch (_: Throwable) { mutableMapOf() }
+                existingObj["stage"] = JsonPrimitive(t.stage.id)
+                existingObj["status"] = JsonPrimitive(t.stage.id)
+                existingObj["editorName"] = JsonPrimitive(t.effectiveVideoEditor)
+                existingObj["photoStage"] = JsonPrimitive(t.photoStage.id)
+                existingObj["photoEditorName"] = JsonPrimitive(t.effectivePhotoEditor)
+                if (t.dueDate.isNotBlank()) existingObj["dueDate"] = JsonPrimitive(t.dueDate)
+                if (t.stageTimestamps.isNotEmpty()) {
+                    existingObj["stageTimestamps"] = buildJsonObject {
+                        t.stageTimestamps.forEach { (k, v) -> put(k, JsonPrimitive(v)) }
+                    }
+                }
+                updatedOverrides[overrideKey] = JsonObject(existingObj)
+
+                RemoteTaskItem(
+                    id = t.id, safarName = c.name, dateFolder = t.title,
+                    hijriDate = t.hijriDate.ifBlank { null }, stage = t.stage.id, status = t.stage.id,
+                    dueDate = t.dueDate.ifBlank { null }, editorName = t.effectiveVideoEditor,
+                    videoEditor = t.effectiveVideoEditor, photoStage = t.photoStage.id,
+                    photoEditorName = t.effectivePhotoEditor, photoUploaded = t.isPhotosDelivered,
+                    updatedAt = isoDate, isPresent = t.isPresent, isMissing = t.isMissing,
+                    notes = t.notes, driveFolderUrl = t.driveFolderUrl,
+                    renderDuration = t.renderDurationSeconds, renderVideoCount = t.renderVideoCount,
+                    renderSizeBytes = t.renderSizeBytes, prprojModifiedAt = t.prprojModifiedAt,
+                    renderedAt = t.renderedAt, stageTimestamps = t.stageTimestamps
                 )
             }
-            val remoteTasks = currentCampaigns.flatMap { c ->
-                c.tasks.map { t ->
-                    RemoteTaskItem(
-                        id = t.id, safarName = c.name, dateFolder = t.title,
-                        hijriDate = t.hijriDate.ifBlank { null }, stage = t.stage.id, status = t.stage.id,
-                        dueDate = t.dueDate.ifBlank { null }, editorName = t.effectiveVideoEditor,
-                        videoEditor = t.effectiveVideoEditor, photoStage = t.photoStage.id,
-                        photoEditorName = t.effectivePhotoEditor, photoUploaded = t.isPhotosDelivered,
-                        updatedAt = isoDate, isPresent = t.isPresent, isMissing = t.isMissing,
-                        notes = t.notes, driveFolderUrl = t.driveFolderUrl,
-                        renderDuration = t.renderDurationSeconds, renderVideoCount = t.renderVideoCount,
-                        renderSizeBytes = t.renderSizeBytes, prprojModifiedAt = t.prprojModifiedAt, renderedAt = t.renderedAt
-                    )
-                }
-            }
+        }
 
-            val payload = latestRawSnapshot.copy(
-                safars = remoteSafars, tasks = remoteTasks, activeSafar = active,
-                updatedAt = isoDate, source = "android_app"
+        return latestRawSnapshot.copy(
+            safars = remoteSafars,
+            tasks = remoteTasks,
+            stageOverrides = updatedOverrides,
+            activeSafar = active,
+            updatedAt = isoDate,
+            source = "android_app"
+        )
+    }
+
+    private suspend fun pushSnapshotToCloudSync(payload: RemoteSnapshotPayload): Boolean {
+        return if (supabaseClient.pushSnapshot(payload).isSuccess) {
+            localStore?.setPendingPush(false)
+            realtimeClient.sendBroadcast(
+                "realtime:one_tap_safar_tracker",
+                "request_snapshot",
+                JSONObject().apply { put("updatedAt", payload.updatedAt ?: currentIsoTimestamp()) }
             )
-            latestRawSnapshot = payload
-            localStore?.saveSnapshot(payload)
+            _syncState.value = _syncState.value.copy(
+                lastSyncedAt = System.currentTimeMillis(),
+                pendingMutationsCount = 0
+            )
+            true
+        } else {
+            localStore?.setPendingPush(true)
+            _syncState.value = _syncState.value.copy(
+                pendingMutationsCount = _syncState.value.pendingMutationsCount + 1,
+                syncNotice = "Saved offline — will sync when online"
+            )
+            false
+        }
+    }
 
-            if (supabaseClient.pushSnapshot(payload).isSuccess) {
-                localStore?.setPendingPush(false)
-                realtimeClient.sendBroadcast("realtime:one_tap_safar_tracker", "request_snapshot", JSONObject().apply { put("updatedAt", isoDate) })
-                _syncState.value = _syncState.value.copy(lastSyncedAt = System.currentTimeMillis(), pendingMutationsCount = 0)
-            } else {
-                localStore?.setPendingPush(true)
-                _syncState.value = _syncState.value.copy(pendingMutationsCount = _syncState.value.pendingMutationsCount + 1, syncNotice = "Saved offline — will sync when online")
-            }
+    private fun pushLocalStateToCloud() {
+        val payload = buildCurrentSnapshotPayload()
+        latestRawSnapshot = payload
+        localStore?.saveSnapshot(payload)
+        localStore?.setPendingPush(true)
+        repositoryScope.launch {
+            pushSnapshotToCloudSync(payload)
         }
     }
 
@@ -447,11 +581,13 @@ class SafarRepository private constructor(private val appContext: Context?) {
         var changed: SafarTask? = null
         var prev: Stage? = null
         var campName = ""
+        val now = System.currentTimeMillis()
         _campaigns.value = _campaigns.value.map { c ->
             c.copy(tasks = c.tasks.map { t ->
                 if (t.id == taskId) {
                     prev = t.stage; campName = c.name
-                    t.copy(stage = newStage, updatedAt = System.currentTimeMillis()).also { changed = it }
+                    val updatedTs = t.stageTimestamps + (newStage.id to now)
+                    t.copy(stage = newStage, stageTimestamps = updatedTs, updatedAt = now).also { changed = it }
                 } else t
             })
         }
@@ -463,19 +599,21 @@ class SafarRepository private constructor(private val appContext: Context?) {
             appContext?.let { SafarWidgetUpdater.updateAllWidgets(it, activeCampaign, _campaigns.value) }
             pushLocalStateToCloud()
             repositoryScope.launch {
-                supabaseClient.broadcastNotification("${t.title} Updated", "${t.title} moved to ${newStage.title}")
+                supabaseClient.broadcastNotification("${t.displayTitle} Updated", "${t.displayTitle} moved to ${newStage.title}")
             }
         }
     }
 
     fun bulkUpdateTaskStage(taskIds: Set<String>, newStage: Stage) {
         if (taskIds.isEmpty()) return
+        val now = System.currentTimeMillis()
         _campaigns.value = _campaigns.value.map { c ->
             c.copy(tasks = c.tasks.map { t ->
                 if (t.id in taskIds) {
-                    localStore?.saveStageEnteredAt("${c.name}::${t.title}", System.currentTimeMillis())
+                    localStore?.saveStageEnteredAt("${c.name}::${t.title}", now)
                     recordAudit(c.name, t.title, "Bulk Stage Update", t.stage.title, newStage.title)
-                    t.copy(stage = newStage, updatedAt = System.currentTimeMillis())
+                    val updatedTs = t.stageTimestamps + (newStage.id to now)
+                    t.copy(stage = newStage, stageTimestamps = updatedTs, updatedAt = now)
                 } else t
             })
         }
@@ -690,7 +828,7 @@ class SafarRepository private constructor(private val appContext: Context?) {
                 Stage.EDITING_PENDING -> "📝"
             }
             val pBadge = if (t.isPhotosDelivered) "📸✓" else "📸(${t.photoStage.title})"
-            append("${i + 1}. $icon *${t.title}* [${t.stage.title}] — $pBadge\n")
+            append("${i + 1}. $icon *${t.displayTitle}* [${t.stage.title}] — $pBadge\n")
         }
         append("\n━━━━━━━━━━━━━━━━━━━━\n⚡ *One Tap Studio Tracker* • _Real-time Cloud Sync_")
     }

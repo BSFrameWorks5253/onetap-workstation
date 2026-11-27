@@ -29,7 +29,7 @@ import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CheckBox
 import androidx.compose.material.icons.filled.CheckBoxOutlineBlank
-import androidx.compose.material.icons.filled.DesktopWindows
+import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.MovieCreation
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Schedule
@@ -58,6 +58,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.onetap.studiotracker.data.repository.SafarRepository
 import com.onetap.studiotracker.ui.components.StageChip
+import com.onetap.studiotracker.ui.components.StudioDropdownSelector
 import com.onetap.studiotracker.ui.theme.AmberDark
 import com.onetap.studiotracker.ui.theme.EmeraldDark
 import com.onetap.studiotracker.ui.theme.EmeraldSoft
@@ -78,10 +79,7 @@ import java.util.Calendar
 import java.util.Locale
 
 @Composable
-fun RenderBatchScreen(
-    onOpenLaptopRemote: () -> Unit = {},
-    modifier: Modifier = Modifier
-) {
+fun RenderBatchScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val repo = SafarRepository.getInstance()
     val campaigns by repo.campaigns.collectAsState()
@@ -118,36 +116,21 @@ fun RenderBatchScreen(
                         Text("Remote Batch Render", color = TextPrimary, fontSize = 22.sp, fontWeight = FontWeight.Bold)
                         Text("Select folders & trigger or schedule Desktop render", color = TextSecondary, fontSize = 13.sp)
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Row(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(IndigoPrimary.copy(alpha = 0.12f))
-                                .border(1.dp, IndigoPrimary.copy(alpha = 0.35f), RoundedCornerShape(14.dp))
-                                .liquidBouncyClick(pressScale = 0.93f) { onOpenLaptopRemote() }
-                                .padding(horizontal = 10.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(Icons.Default.DesktopWindows, contentDescription = null, tint = IndigoPrimary, modifier = Modifier.size(13.dp))
-                            Spacer(modifier = Modifier.width(5.dp))
-                            Text("Remote", color = IndigoPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        }
-                        Row(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(if (isPcOnline) EmeraldSoft else LightSurface)
-                                .border(1.dp, if (isPcOnline) EmeraldSuccess.copy(alpha = 0.4f) else LightBorder, RoundedCornerShape(14.dp))
-                                .liquidBouncyClick(pressScale = 0.93f) {
-                                    repo.pingDesktopWorkstation()
-                                    Toast.makeText(context, "Pinging Studio PC…", Toast.LENGTH_SHORT).show()
-                                }
-                                .padding(horizontal = 10.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(modifier = Modifier.size(7.dp).clip(CircleShape).background(if (isPcOnline) EmeraldSuccess else AmberDark))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(if (isPcOnline) "PC Online" else "PC Offline", color = if (isPcOnline) EmeraldDark else AmberDark, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        }
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(if (isPcOnline) EmeraldSoft else LightSurface)
+                            .border(1.dp, if (isPcOnline) EmeraldSuccess.copy(alpha = 0.4f) else LightBorder, RoundedCornerShape(14.dp))
+                            .liquidBouncyClick(pressScale = 0.93f) {
+                                repo.pingDesktopWorkstation()
+                                Toast.makeText(context, "Pinging Studio PC…", Toast.LENGTH_SHORT).show()
+                            }
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(modifier = Modifier.size(7.dp).clip(CircleShape).background(if (isPcOnline) EmeraldSuccess else AmberDark))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(if (isPcOnline) "PC Online" else "PC Offline", color = if (isPcOnline) EmeraldDark else AmberDark, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -211,68 +194,61 @@ fun RenderBatchScreen(
                 }
             }
 
-            if (campaigns.any { !it.isArchived }) {
+            val activeRenderSafars = campaigns.filter { !it.isArchived }
+            if (activeRenderSafars.isNotEmpty()) {
                 item {
-                    Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        campaigns.filter { !it.isArchived }.forEach { camp ->
-                            val sel = camp.id == displayCampaign?.id
-                            Box(
-                                modifier = Modifier.clip(RoundedCornerShape(10.dp))
-                                    .background(if (sel) IndigoPrimary else LightSurface)
-                                    .border(1.dp, if (sel) IndigoPrimary else LightBorder, RoundedCornerShape(10.dp))
-                                    .clickable { selectedSafarId = camp.id }
-                                    .padding(horizontal = 12.dp, vertical = 7.dp)
-                            ) {
-                                Text(camp.name, color = if (sel) Color.White else TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                            }
-                        }
-                    }
+                    StudioDropdownSelector(
+                        label = "TARGET SAFAR",
+                        selectedText = displayCampaign?.name ?: "Select Safar",
+                        items = activeRenderSafars,
+                        selectedItem = displayCampaign,
+                        itemLabel = { it.name },
+                        itemSubLabel = { "${it.deliveredVideosCount}/${it.totalDates} Videos (${it.overallPercentage}%)" },
+                        leadingIcon = Icons.Default.FolderOpen,
+                        onSelect = { camp -> selectedSafarId = camp.id }
+                    )
                 }
             }
 
             item {
+                val scheduleOptions = listOf(0 to "Start Now", 15 to "In 15m", 30 to "In 30m", 60 to "In 1 hr", -1 to "Pick Custom Time…")
+                val currentScheduleOption = if (customClockLabel != null) {
+                    scheduleOptions.last()
+                } else {
+                    scheduleOptions.firstOrNull { it.first == delayMinutes } ?: scheduleOptions.first()
+                }
+                val currentScheduleLabel = customClockLabel ?: currentScheduleOption.second
+
                 Box(modifier = Modifier.fillMaxWidth().liquidGlassCard(16.dp).padding(14.dp)) {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text("Schedule & Render Options", color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                        Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            listOf(0 to "Start Now", 15 to "In 15m", 30 to "In 30m", 60 to "In 1 hr").forEach { (mins, label) ->
-                                val sel = delayMinutes == mins && customClockLabel == null
-                                Box(
-                                    modifier = Modifier.clip(RoundedCornerShape(10.dp))
-                                        .background(if (sel) IndigoPrimary else LightSurfaceSubtle)
-                                        .border(1.dp, if (sel) IndigoPrimary else LightBorder, RoundedCornerShape(10.dp))
-                                        .clickable { delayMinutes = mins; customClockLabel = null }
-                                        .padding(horizontal = 12.dp, vertical = 7.dp)
-                                ) {
-                                    Text(label, color = if (sel) Color.White else TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        StudioDropdownSelector(
+                            label = "RENDER SCHEDULE",
+                            selectedText = currentScheduleLabel,
+                            items = scheduleOptions,
+                            selectedItem = currentScheduleOption,
+                            itemLabel = { it.second },
+                            leadingIcon = Icons.Default.Schedule,
+                            onSelect = { (mins, _) ->
+                                if (mins == -1) {
+                                    val cal = Calendar.getInstance()
+                                    TimePickerDialog(context, { _, hour, minute ->
+                                        val target = Calendar.getInstance().apply {
+                                            set(Calendar.HOUR_OF_DAY, hour)
+                                            set(Calendar.MINUTE, minute)
+                                            set(Calendar.SECOND, 0)
+                                            if (timeInMillis <= System.currentTimeMillis()) add(Calendar.DAY_OF_YEAR, 1)
+                                        }
+                                        val diffMins = ((target.timeInMillis - System.currentTimeMillis()) / 60_000L).toInt().coerceAtLeast(1)
+                                        delayMinutes = diffMins
+                                        customClockLabel = String.format(Locale.getDefault(), "At %02d:%02d", hour, minute)
+                                    }, cal.get(Calendar.HOUR_OF_DAY), cal.get(Calendar.MINUTE), false).show()
+                                } else {
+                                    delayMinutes = mins
+                                    customClockLabel = null
                                 }
                             }
-                            Row(
-                                modifier = Modifier.clip(RoundedCornerShape(10.dp))
-                                    .background(if (customClockLabel != null) IndigoPrimary else LightSurfaceSubtle)
-                                    .border(1.dp, if (customClockLabel != null) IndigoPrimary else LightBorder, RoundedCornerShape(10.dp))
-                                    .clickable {
-                                        val cal = Calendar.getInstance()
-                                        TimePickerDialog(context, { _, hour, minute ->
-                                            val target = Calendar.getInstance().apply {
-                                                set(Calendar.HOUR_OF_DAY, hour)
-                                                set(Calendar.MINUTE, minute)
-                                                set(Calendar.SECOND, 0)
-                                                if (timeInMillis <= System.currentTimeMillis()) add(Calendar.DAY_OF_YEAR, 1)
-                                            }
-                                            val diffMins = ((target.timeInMillis - System.currentTimeMillis()) / 60_000L).toInt().coerceAtLeast(1)
-                                            delayMinutes = diffMins
-                                            customClockLabel = String.format(Locale.getDefault(), "At %02d:%02d", hour, minute)
-                                        }, cal.get(Calendar.HOUR_OF_DAY), cal.get(Calendar.MINUTE), false).show()
-                                    }
-                                    .padding(horizontal = 12.dp, vertical = 7.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(Icons.Default.AccessTime, contentDescription = null, tint = if (customClockLabel != null) Color.White else IndigoPrimary, modifier = Modifier.size(13.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(customClockLabel ?: "Pick Time", color = if (customClockLabel != null) Color.White else IndigoPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                            }
-                        }
+                        )
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Text("Add One Tap Watermark", color = TextPrimary, fontSize = 13.sp)
                             Switch(checked = addWatermark, onCheckedChange = { addWatermark = it })
@@ -332,7 +308,7 @@ fun RenderBatchScreen(
                         Icon(if (isSel) Icons.Default.CheckBox else Icons.Default.CheckBoxOutlineBlank, contentDescription = null, tint = if (isSel) IndigoPrimary else TextMuted, modifier = Modifier.size(20.dp))
                         Spacer(modifier = Modifier.width(10.dp))
                         Column {
-                            Text(task.title, color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                            Text(task.displayTitle, color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                             Text("Editor: ${task.effectiveVideoEditor}", color = TextSecondary, fontSize = 11.sp)
                         }
                     }

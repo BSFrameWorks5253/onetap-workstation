@@ -2,14 +2,16 @@ package com.onetap.studiotracker.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val LightBackground = Color(0xFFF8FAFC)
+val LightBackground = Color(0xFFF5F7FA)
 val LightSurface = Color(0xFFFFFFFF)
 val LightSurfaceSubtle = Color(0xFFF1F5F9)
 val LightBorder = Color(0xFFE2E8F0)
 val LightBorderStrong = Color(0xFFCBD5E1)
 
-val IndigoPrimary = Color(0xFF4F46E5)
+val IndigoPrimary = Color(0xFF4338CA)
 val IndigoSoft = Color(0xFFEEF2FF)
+val BrandCrimson = Color(0xFFDC2626)
+val BrandCrimsonSoft = Color(0xFFFEF2F2)
 
 val EmeraldSuccess = Color(0xFF10B981)
 val EmeraldDark = Color(0xFF059669)

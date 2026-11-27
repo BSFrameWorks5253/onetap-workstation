@@ -214,7 +214,7 @@ class SupabaseRealtimeClient(
                         }
                     } else if (innerEvent == "batch_render_summary") {
                         val safar = innerPayload.optString("safarName", "")
-                        val title = innerPayload.optString("title", "🎬 Batch Render Complete")
+                        val title = innerPayload.optString("title", "Batch Render Complete")
                         val totalVideos = innerPayload.optInt("totalVideos", 1)
                         val totalMins = innerPayload.optInt("totalDurationMinutes", 0)
                         val eventsArr = innerPayload.optJSONArray("events")
@@ -233,6 +233,23 @@ class SupabaseRealtimeClient(
                         if (formattedMsg.isNotBlank()) {
                             _events.tryEmit(RealtimeEvent.BatchRenderCompleted(title, safar, totalVideos, totalMins, folders, formattedMsg))
                         }
+                    } else if (innerEvent == "render_completed") {
+                        val safar = innerPayload.optString("safarName", "")
+                        val totalVideos = innerPayload.optInt("totalVideos", 1)
+                        val dfArr = innerPayload.optJSONArray("dateFolders")
+                        val folders = mutableListOf<String>()
+                        if (dfArr != null) {
+                            for (i in 0 until dfArr.length()) {
+                                val df = dfArr.optString(i, "")
+                                if (df.isNotBlank()) folders.add(df)
+                            }
+                        }
+                        val msg = if (folders.isNotEmpty()) {
+                            "${safar.ifBlank { "Safar" }} • Dates: ${folders.joinToString(", ")}"
+                        } else {
+                            "${safar.ifBlank { "Desktop" }} render complete ($totalVideos video${if (totalVideos == 1) "" else "s"})"
+                        }
+                        _events.tryEmit(RealtimeEvent.BatchRenderCompleted("Render Complete", safar, totalVideos, 0, folders, msg))
                     } else if (innerEvent == "render_telemetry") {
                         _events.tryEmit(RealtimeEvent.RenderTelemetry(
                             jobId = innerPayload.optString("jobId", innerPayload.optString("itemId", "")),

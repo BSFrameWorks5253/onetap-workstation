@@ -2537,6 +2537,29 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
       task: cancelled ? 'Cancelled' : 'All videos rendered successfully!'
     })
     send('titleAdder:done', { jobId: params.jobId, success: !cancelled, done, total: videos.length, outputFolder: finalOutputDir, batchOutputs })
+    if (!cancelled && done > 0) {
+      try {
+        const { broadcastBatchRenderComplete } = require('../core/batchRenderNotifier')
+        const folderNames = batchSources.map(src => path.basename(src)).filter(Boolean)
+        const safarLabel = batchSources[0] ? path.basename(path.dirname(batchSources[0])) : 'Safar Batch'
+        void broadcastBatchRenderComplete({
+          batchId: params.jobId || `batch_${Date.now()}`,
+          totalVideos: done,
+          totalDurationMinutes: 0,
+          safarName: safarLabel,
+          events: (folderNames.length > 0 ? folderNames : ['Batch']).map(df => ({
+            dateFolder: df,
+            safarName: safarLabel,
+            durationMinutes: 0,
+            editorName: 'Desktop',
+            status: 'rendered'
+          })),
+          renderedAt: new Date().toISOString()
+        })
+      } catch (notifErr) {
+        console.warn('[titleAdder:start] broadcastBatchRenderComplete error:', notifErr)
+      }
+    }
     } catch (err: any) {
       console.error('[titleAdder:start] Fatal unhandled error:', err)
       send('titleAdder:log', {

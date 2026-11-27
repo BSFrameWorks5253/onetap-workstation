@@ -42,9 +42,9 @@ import kotlinx.coroutines.launch
 
 val LiquidGlassCanvasBrush = Brush.verticalGradient(
     colors = listOf(
-        Color(0xFFF6F9FF),
-        Color(0xFFEEF4FF),
-        Color(0xFFECFDF7)
+        Color(0xFFF8FAFC),
+        Color(0xFFF4F6FA),
+        Color(0xFFF1F5F9)
     )
 )
 
@@ -110,7 +110,7 @@ fun LiquidAuroraBackground(
             val c0 = Offset((x0.value + drift) * w, (y0.value - drift * 0.5f) * h)
             drawCircle(
                 brush = Brush.radialGradient(
-                    colors = listOf(Color(0xFF60A5FA).copy(alpha = 0.44f), Color.Transparent),
+                    colors = listOf(Color(0xFFC7D2FE).copy(alpha = 0.16f), Color.Transparent),
                     center = c0,
                     radius = rLarge
                 ),
@@ -121,7 +121,7 @@ fun LiquidAuroraBackground(
             val c1 = Offset((x1.value - drift) * w, (y1.value + drift * 0.6f) * h)
             drawCircle(
                 brush = Brush.radialGradient(
-                    colors = listOf(Color(0xFFA78BFA).copy(alpha = 0.38f), Color.Transparent),
+                    colors = listOf(Color(0xFFC4B5FD).copy(alpha = 0.25f), Color.Transparent),
                     center = c1,
                     radius = rMed
                 ),
@@ -132,7 +132,7 @@ fun LiquidAuroraBackground(
             val c2 = Offset((x2.value + drift * 0.8f) * w, (y2.value + drift) * h)
             drawCircle(
                 brush = Brush.radialGradient(
-                    colors = listOf(Color(0xFF34D399).copy(alpha = 0.36f), Color.Transparent),
+                    colors = listOf(Color(0xFF6EE7B7).copy(alpha = 0.24f), Color.Transparent),
                     center = c2,
                     radius = rLarge
                 ),
@@ -143,7 +143,7 @@ fun LiquidAuroraBackground(
             val c3 = Offset((x3.value - drift * 0.7f) * w, (y3.value - drift) * h)
             drawCircle(
                 brush = Brush.radialGradient(
-                    colors = listOf(Color(0xFFF472B6).copy(alpha = 0.32f), Color.Transparent),
+                    colors = listOf(Color(0xFFFBCFE8).copy(alpha = 0.22f), Color.Transparent),
                     center = c3,
                     radius = rMed
                 ),
@@ -163,21 +163,21 @@ fun Modifier.liquidGlassCard(
     cornerRadius: Dp = 18.dp,
     borderColor: Color = Color(0xFFDCE5F2),
     borderWidth: Dp = 1.dp,
-    alpha: Float = 0.60f
+    alpha: Float = 0.78f
 ): Modifier {
     val shape = RoundedCornerShape(cornerRadius)
     return this
         .shadow(
-            elevation = 10.dp,
+            elevation = 8.dp,
             shape = shape,
-            ambientColor = Color(0x180F172A),
-            spotColor = Color(0x1E4F46E5)
+            ambientColor = Color(0x160F172A),
+            spotColor = Color(0x1A4F46E5)
         )
         .clip(shape)
         .background(
             Brush.verticalGradient(
                 colors = listOf(
-                    Color.White.copy(alpha = (alpha + 0.16f).coerceAtMost(0.84f)),
+                    Color.White.copy(alpha = (alpha + 0.12f).coerceAtMost(0.95f)),
                     Color(0xFFF8FAFC).copy(alpha = alpha)
                 )
             )
@@ -186,8 +186,8 @@ fun Modifier.liquidGlassCard(
             width = borderWidth,
             brush = Brush.linearGradient(
                 colors = listOf(
-                    Color.White.copy(alpha = 0.98f),
-                    borderColor.copy(alpha = 0.55f)
+                    Color.White.copy(alpha = 0.96f),
+                    borderColor.copy(alpha = 0.72f)
                 )
             ),
             shape = shape

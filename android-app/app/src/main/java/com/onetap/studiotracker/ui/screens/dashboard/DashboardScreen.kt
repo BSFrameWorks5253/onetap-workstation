@@ -33,13 +33,17 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.HourglassTop
 import androidx.compose.material.icons.filled.PendingActions
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -54,6 +58,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -61,13 +66,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.onetap.studiotracker.R
 import com.onetap.studiotracker.data.models.SafarCampaign
+import com.onetap.studiotracker.data.models.SafarTask
 import com.onetap.studiotracker.data.models.StudioStats
 import com.onetap.studiotracker.data.repository.SafarRepository
 import com.onetap.studiotracker.data.sync.SyncStatus
 import com.onetap.studiotracker.ui.components.ExecutiveHeroCard
 import com.onetap.studiotracker.ui.components.MultiStageProgressBar
-import com.onetap.studiotracker.ui.components.StageChip
+import com.onetap.studiotracker.ui.components.NewSafarReceivedDateDialog
+import com.onetap.studiotracker.ui.components.PhaseCompletionTimelineCard
+import com.onetap.studiotracker.ui.components.StageDropdownChip
+import com.onetap.studiotracker.ui.components.StudioDropdownSelector
 import com.onetap.studiotracker.ui.components.WhatsAppBriefingSheet
+import com.onetap.studiotracker.ui.screens.kanban.triggerTactileFeedback
 import com.onetap.studiotracker.ui.theme.AmberDark
 import com.onetap.studiotracker.ui.theme.AmberSoft
 import com.onetap.studiotracker.ui.theme.BlueDark
@@ -107,6 +117,8 @@ fun DashboardScreen(
     }
     val stats = remember(campaigns) { StudioStats.calculate(campaigns, activeOnly = true) }
     var briefingCampaign by remember { mutableStateOf<SafarCampaign?>(null) }
+    var selectedTaskForDetails by remember { mutableStateOf<Pair<SafarCampaign, SafarTask>?>(null) }
+    var editingReceivedDateSafar by remember { mutableStateOf<String?>(null) }
     var expandedId by remember { mutableStateOf<String?>(null) }
     var searchQuery by remember { mutableStateOf("") }
     var showArchived by remember { mutableStateOf(false) }
@@ -128,11 +140,16 @@ fun DashboardScreen(
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
-                            modifier = Modifier.size(40.dp).clip(RoundedCornerShape(11.dp)).background(LightSurface)
-                                .border(1.dp, LightBorder, RoundedCornerShape(11.dp)).padding(6.dp),
+                            modifier = Modifier.size(42.dp).clip(RoundedCornerShape(12.dp)).background(LightSurface)
+                                .border(1.dp, LightBorder, RoundedCornerShape(12.dp)).padding(3.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            Image(painter = painterResource(id = R.drawable.ic_launcher_logo), contentDescription = "One Tap", modifier = Modifier.fillMaxSize())
+                            Image(
+                                painter = painterResource(id = R.drawable.ic_launcher_logo),
+                                contentDescription = "One Tap",
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(9.dp))
+                            )
                         }
                         Spacer(modifier = Modifier.width(10.dp))
                         Column {
@@ -183,32 +200,20 @@ fun DashboardScreen(
                 }
             }
 
-            // Quick Safar Switcher Strip
-            if (campaigns.any { !it.isArchived }) {
+            // Active Safar Dropdown Selector
+            val activeSafarOptions = campaigns.filter { !it.isArchived }
+            if (activeSafarOptions.isNotEmpty()) {
                 item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        campaigns.filter { !it.isArchived }.forEach { camp ->
-                            val isSel = camp.id == activeCampaign?.id
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(if (isSel) IndigoPrimary else LightSurface)
-                                    .border(1.dp, if (isSel) IndigoPrimary else LightBorder, RoundedCornerShape(12.dp))
-                                    .clickable { repository.setActiveCampaign(camp.id) }
-                                    .padding(horizontal = 12.dp, vertical = 7.dp)
-                            ) {
-                                Text(
-                                    text = "${camp.name} (${camp.overallPercentage}%)",
-                                    color = if (isSel) Color.White else TextSecondary,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
-                        }
-                    }
+                    StudioDropdownSelector(
+                        label = "ACTIVE SAFAR",
+                        selectedText = activeCampaign?.let { "${it.name} (${it.overallPercentage}%)" } ?: "Select Safar",
+                        items = activeSafarOptions,
+                        selectedItem = activeCampaign,
+                        itemLabel = { "${it.name} (${it.overallPercentage}%)" },
+                        itemSubLabel = { "${it.deliveredVideosCount}/${it.totalDates} Videos • Photos ${it.deliveredPhotosCount}/${it.totalDates}" },
+                        leadingIcon = Icons.Default.FolderOpen,
+                        onSelect = { camp -> repository.setActiveCampaign(camp.id) }
+                    )
                 }
             }
 
@@ -296,7 +301,15 @@ fun DashboardScreen(
                                         Icon(Icons.Default.CheckCircle, contentDescription = "Done", tint = EmeraldSuccess, modifier = Modifier.size(15.dp))
                                     }
                                 }
-                                Text("${camp.deliveredVideosCount}/${camp.totalDates} Videos (${camp.overallPercentage}%) • Photos ${camp.deliveredPhotosCount}/${camp.totalDates}", color = TextSecondary, fontSize = 11.sp)
+                                Text(
+                                    listOfNotNull(
+                                        "${camp.deliveredVideosCount}/${camp.totalDates} Videos (${camp.overallPercentage}%)",
+                                        "Photos ${camp.deliveredPhotosCount}/${camp.totalDates}",
+                                        camp.receivedDate.takeIf { it.isNotBlank() }?.let { "Rcvd $it" }
+                                    ).joinToString(" • "),
+                                    color = TextSecondary,
+                                    fontSize = 11.sp
+                                )
                             }
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 if (!camp.isOngoing && !camp.isArchived) {
@@ -314,15 +327,17 @@ fun DashboardScreen(
                             Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 4.dp)) {
                                 camp.tasks.forEach { task ->
                                     Row(
-                                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(LightSurfaceSubtle).padding(horizontal = 10.dp, vertical = 8.dp),
+                                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(LightSurfaceSubtle)
+                                            .clickable { selectedTaskForDetails = camp to task }
+                                            .padding(horizontal = 10.dp, vertical = 8.dp),
                                         horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Column(modifier = Modifier.weight(1f)) {
-                                            Text(task.title, color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                            Text(task.displayTitle, color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                                             val renderBadge = if ((task.renderVideoCount ?: 0) > 0 || (task.renderSizeBytes ?: 0L) > 0L) {
                                                 val mins = ((task.renderDurationSeconds ?: 0.0) / 60.0).toInt()
                                                 val mb = ((task.renderSizeBytes ?: 0L) / (1024.0 * 1024.0)).toInt()
-                                                "🎬 ${task.renderVideoCount ?: 1} clip(s)" + (if (mins > 0) " • ${mins}m" else "") + (if (mb > 0) " • ${mb}MB" else "")
+                                                "${task.renderVideoCount ?: 1} clip(s)" + (if (mins > 0) " • ${mins}m" else "") + (if (mb > 0) " • ${mb}MB" else "")
                                             } else null
                                             Text(
                                                 listOfNotNull(
@@ -335,7 +350,14 @@ fun DashboardScreen(
                                                 fontSize = 10.sp
                                             )
                                         }
-                                        StageChip(stage = task.stage)
+                                        StageDropdownChip(
+                                            currentStage = task.stage,
+                                            onStageSelected = { newStage ->
+                                                triggerTactileFeedback(context, newStage.isDelivered)
+                                                repository.updateTaskStage(task.id, newStage)
+                                                Toast.makeText(context, "${task.displayTitle} → ${newStage.title}", Toast.LENGTH_SHORT).show()
+                                            }
+                                        )
                                     }
                                 }
                             }
@@ -347,6 +369,109 @@ fun DashboardScreen(
     }
 
     briefingCampaign?.let { WhatsAppBriefingSheet(campaign = it, onDismiss = { briefingCampaign = null }) }
+
+    selectedTaskForDetails?.let { (camp, task) ->
+        DateFolderMoreDetailsSheet(
+            campaign = camp,
+            task = task,
+            onDismiss = { selectedTaskForDetails = null },
+            onEditReceivedDate = {
+                selectedTaskForDetails = null
+                editingReceivedDateSafar = camp.name
+            },
+            onStageSelected = { newStage ->
+                triggerTactileFeedback(context, newStage.isDelivered)
+                repository.updateTaskStage(task.id, newStage)
+                selectedTaskForDetails = camp to task.copy(
+                    stage = newStage,
+                    stageTimestamps = task.stageTimestamps + (newStage.id to System.currentTimeMillis())
+                )
+            }
+        )
+    }
+
+    editingReceivedDateSafar?.let { safarName ->
+        NewSafarReceivedDateDialog(
+            safarName = safarName,
+            onSave = { dateStr ->
+                repository.setSafarReceivedDate(safarName, dateStr)
+                editingReceivedDateSafar = null
+            },
+            onDismiss = { editingReceivedDateSafar = null }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DateFolderMoreDetailsSheet(
+    campaign: SafarCampaign,
+    task: SafarTask,
+    onDismiss: () -> Unit,
+    onEditReceivedDate: () -> Unit,
+    onStageSelected: (com.onetap.studiotracker.data.models.Stage) -> Unit
+) {
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = LightSurface) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(task.displayTitle, color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text(campaign.name, color = TextSecondary, fontSize = 12.sp)
+                }
+                StageDropdownChip(currentStage = task.stage, onStageSelected = onStageSelected)
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(LightSurfaceSubtle)
+                    .border(1.dp, LightBorder, RoundedCornerShape(10.dp))
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text("SAFAR RECEIVED DATE", color = TextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        campaign.receivedDate.ifBlank { "Not set" },
+                        color = TextPrimary,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+                OutlinedButton(onClick = onEditReceivedDate, shape = RoundedCornerShape(8.dp)) {
+                    Text(if (campaign.receivedDate.isBlank()) "Set Date" else "Edit", fontSize = 12.sp, color = IndigoPrimary)
+                }
+            }
+
+            PhaseCompletionTimelineCard(task = task, safarReceivedDate = campaign.receivedDate)
+
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                if (task.hijriDate.isNotBlank()) {
+                    Text("Hijri Date: ${task.hijriDate}", color = TextSecondary, fontSize = 12.sp)
+                }
+                if (task.dueDate.isNotBlank()) {
+                    Text("Due Date: ${task.dueDate}", color = TextSecondary, fontSize = 12.sp)
+                }
+                Text("Video Editor: ${task.effectiveVideoEditor} • Photo Editor: ${task.effectivePhotoEditor}", color = TextSecondary, fontSize = 12.sp)
+                if (!task.notes.isNullOrBlank()) {
+                    Text("Notes: ${task.notes}", color = TextPrimary, fontSize = 12.sp)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+        }
+    }
 }
 
 @Composable
