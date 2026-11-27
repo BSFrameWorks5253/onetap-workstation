@@ -563,7 +563,10 @@ function AppInner(): JSX.Element {
         // 4. Deferred non-blocking background migration for legacy stats
         setTimeout(async () => {
           try {
-            if (!allSettings.render_stats) return
+            const allSettings = (api.settings && typeof api.settings.getAll === 'function')
+              ? await api.settings.getAll()
+              : {}
+            if (!allSettings?.render_stats) return
             let loadedRecords: any[] = typeof allSettings.render_stats === 'string'
               ? JSON.parse(allSettings.render_stats)
               : allSettings.render_stats as any[]

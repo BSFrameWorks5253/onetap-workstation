@@ -251,18 +251,28 @@ function resolveVideoFolderAndFiles(rootPath: string): { dir: string; files: Arr
  * @param name File basename (without extension)
  * @returns Full file path if found, or null
  */
+function resolveActualCasePath(folder: string, fileName: string): string {
+  try {
+    const targetLower = fileName.toLowerCase()
+    const entries = fs.readdirSync(folder)
+    const match = entries.find(e => e.toLowerCase() === targetLower)
+    if (match) return path.join(folder, match)
+  } catch {}
+  return path.join(folder, fileName)
+}
+
 function findFile(folder: string, name: string): string | null {
   if (!folder || !name || !fs.existsSync(folder)) return null
   const targetLower = name.toLowerCase().trim()
 
-  // 1. Direct O(1) existence checks with exact candidates
+  // 1. Direct O(1) existence checks with exact candidates, resolving actual on-disk casing
   for (const ext of [...AUDIO_EXTS, ...IMG_EXTS]) {
     const direct1 = path.join(folder, name + ext)
-    if (fs.existsSync(direct1)) return direct1
+    if (fs.existsSync(direct1)) return resolveActualCasePath(folder, path.basename(direct1))
     const direct2 = path.join(folder, name.toLowerCase() + ext)
-    if (fs.existsSync(direct2)) return direct2
+    if (fs.existsSync(direct2)) return resolveActualCasePath(folder, path.basename(direct2))
     const direct3 = path.join(folder, name.toUpperCase() + ext)
-    if (fs.existsSync(direct3)) return direct3
+    if (fs.existsSync(direct3)) return resolveActualCasePath(folder, path.basename(direct3))
   }
 
   // 2. Flat, non-recursive directory scan of immediate folder entries
@@ -483,9 +493,9 @@ function findTitleImageForVideo(
       const vidDir = path.dirname(videoPath)
       for (const ext of IMG_EXTS) {
         const cand1 = path.join(vidDir, `${vidStem}_V${ext}`)
-        if (fs.existsSync(cand1)) return cand1
+        if (fs.existsSync(cand1)) return resolveActualCasePath(vidDir, path.basename(cand1))
         const cand2 = path.join(vidDir, `${vidStem}${ext}`)
-        if (fs.existsSync(cand2)) return cand2
+        if (fs.existsSync(cand2)) return resolveActualCasePath(vidDir, path.basename(cand2))
       }
     } catch {}
   }

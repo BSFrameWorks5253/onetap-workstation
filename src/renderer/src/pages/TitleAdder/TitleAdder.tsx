@@ -237,8 +237,12 @@ function CustomImageSelect({ value, options, defaultPath, defaultName, onChange,
   const searchInputRef = useRef<HTMLInputElement>(null)
 
   const allOpts = useMemo(() => {
-    const list = [...(options || [])]
-    if (defaultPath && !list.some(a => a.path === defaultPath)) {
+    const list = (options || []).map(a =>
+      defaultPath && a.path.toLowerCase() === defaultPath.toLowerCase()
+        ? { ...a, name: `${a.name} (Default)` }
+        : a
+    )
+    if (defaultPath && !list.some(a => a.path.toLowerCase() === defaultPath.toLowerCase())) {
       list.unshift({ path: defaultPath, name: `${defaultName || 'Auto Match'} (Default)` })
     }
     return list
@@ -251,7 +255,7 @@ function CustomImageSelect({ value, options, defaultPath, defaultName, onChange,
   }, [allOpts, searchTerm])
 
   const isCustomized = Boolean(value && defaultPath && value.toLowerCase() !== defaultPath.toLowerCase())
-  const currentObj = allOpts.find(o => o.path === value)
+  const currentObj = allOpts.find(o => o.path.toLowerCase() === (value || '').toLowerCase())
   const filenameOnly = value ? value.split(/[\\/]/).pop() || value : ''
   const currentLabel = currentObj ? currentObj.name : (filenameOnly || 'Select Image...')
 
@@ -1406,9 +1410,22 @@ export default function TitleAdder(): JSX.Element {
     return null
   }
 
+  const isNikaahVideoItem = (item: { videoName?: string; prefix?: string; isNikah?: boolean }) => {
+    if (!item) return false
+    if (/\bNAMAZ\b/i.test(item.videoName || '')) return false
+    if (item.isNikah) return true
+    if ((item.prefix || '').toUpperCase() === 'N') return true
+    return extractNikaahNumber(item.videoName || '') !== null
+  }
+
+  const gpNikaahVideos = useMemo(
+    () => audioPreviewAssignments.filter(isNikaahVideoItem),
+    [audioPreviewAssignments]
+  )
+
   const applyGpRanges = () => {
     const nextSelections: Record<string, string> = { ...userGroupPhotoSelections }
-    audioPreviewAssignments.forEach((item, idx) => {
+    gpNikaahVideos.forEach((item, idx) => {
       const cerNum = extractNikaahNumber(item.videoName) ?? (idx + 1)
       const stem = getCanonicalStem(item.videoName)
       for (const gp of availableGroupPhotos) {
@@ -2182,12 +2199,12 @@ export default function TitleAdder(): JSX.Element {
         if (res.availableGroupPhotos) {
           setAvailableGroupPhotos(res.availableGroupPhotos)
           if (res.availableGroupPhotos.length > 0) {
-            const totalItems = res.assignments.length
-            const step = Math.ceil(totalItems / res.availableGroupPhotos.length)
+            const totalItems = res.assignments.filter(isNikaahVideoItem).length
+            const step = Math.max(1, Math.ceil(totalItems / res.availableGroupPhotos.length))
             const initialRanges: Record<number, { from: string; to: string }> = {}
             res.availableGroupPhotos.forEach((gp: any, gi: number) => {
-              const from = gi * step + 1
-              const to = Math.min((gi + 1) * step, totalItems)
+              const from = totalItems > 0 ? gi * step + 1 : 1
+              const to = totalItems > 0 ? Math.min((gi + 1) * step, totalItems) : 1
               initialRanges[gp.gpNum] = { from: String(from), to: String(to) }
             })
             setGpRangeInputs(initialRanges)
@@ -3005,12 +3022,12 @@ export default function TitleAdder(): JSX.Element {
       if (res.availableGroupPhotos) {
         setAvailableGroupPhotos(res.availableGroupPhotos)
         if (res.availableGroupPhotos.length > 0) {
-          const totalItems = res.assignments.length
-          const step = Math.ceil(totalItems / res.availableGroupPhotos.length)
+          const totalItems = res.assignments.filter(isNikaahVideoItem).length
+          const step = Math.max(1, Math.ceil(totalItems / res.availableGroupPhotos.length))
           const initialRanges: Record<number, { from: string; to: string }> = {}
           res.availableGroupPhotos.forEach((gp: any, gi: number) => {
-            const from = gi * step + 1
-            const to = Math.min((gi + 1) * step, totalItems)
+            const from = totalItems > 0 ? gi * step + 1 : 1
+            const to = totalItems > 0 ? Math.min((gi + 1) * step, totalItems) : 1
             initialRanges[gp.gpNum] = { from: String(from), to: String(to) }
           })
           setGpRangeInputs(initialRanges)
@@ -5550,10 +5567,10 @@ export default function TitleAdder(): JSX.Element {
                     Group Photos:
                   </span>
                   <strong>
-                    {audioPreviewAssignments.filter(item => {
+                    {gpNikaahVideos.filter(item => {
                       const sel = userGroupPhotoSelections[item.videoPath] || userGroupPhotoSelections[item.videoName]
                       return Boolean(sel)
-                    }).length} / {audioPreviewAssignments.length}
+                    }).length} / {gpNikaahVideos.length}
                   </strong>
                 </div>
               )}
@@ -6486,9 +6503,9 @@ export default function TitleAdder(): JSX.Element {
               <div className="ta-audio-summary-badge">
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect width="15" height="14" x="1" y="5" rx="2"/></svg>
-                  Ceremony Videos:
+                  Nikaah Videos:
                 </span>
-                <strong>{audioPreviewAssignments.length}</strong>
+                <strong>{gpNikaahVideos.length}</strong>
               </div>
               <div className="ta-audio-summary-badge">
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
@@ -6502,10 +6519,10 @@ export default function TitleAdder(): JSX.Element {
                   📸 Outros Assigned:
                 </span>
                 <strong style={{ color: 'var(--accent)' }}>
-                  {audioPreviewAssignments.filter(item => {
+                  {gpNikaahVideos.filter(item => {
                     const sel = userGroupPhotoSelections[item.videoPath] || userGroupPhotoSelections[item.videoName]
                     return Boolean(sel)
-                  }).length} / {audioPreviewAssignments.length} Videos
+                  }).length} / {gpNikaahVideos.length} Videos
                 </strong>
               </div>
               <div className="ta-audio-summary-badge">
@@ -6588,7 +6605,7 @@ export default function TitleAdder(): JSX.Element {
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
                 {availableGroupPhotos.map(gp => {
                   const range = gpRangeInputs[gp.gpNum] || { from: '1', to: '1' }
-                  const assignedCount = audioPreviewAssignments.filter(item => {
+                  const assignedCount = gpNikaahVideos.filter(item => {
                     const sel = userGroupPhotoSelections[item.videoPath] || userGroupPhotoSelections[item.videoName]
                     return sel === gp.fullPath
                   }).length
@@ -6704,7 +6721,13 @@ export default function TitleAdder(): JSX.Element {
                   </tr>
                 </thead>
                 <tbody>
-                  {audioPreviewAssignments
+                  {gpNikaahVideos.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)', fontSize: '13px' }}>
+                        No Nikaah (N) videos found in this batch.
+                      </td>
+                    </tr>
+                  ) : gpNikaahVideos
                     .filter(item => {
                       if (!gpSearchFilter.trim()) return true
                       const q = gpSearchFilter.toLowerCase()
