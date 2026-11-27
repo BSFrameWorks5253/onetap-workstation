@@ -28,8 +28,15 @@ let isSyncInProgress = false
 function getSupabaseClient(): SupabaseClient | null {
   if (supabase) return supabase
   try {
+    // Provide a no-op WebSocket transport so @supabase/supabase-js doesn't throw on Node <22
+    // when only REST (.from().upsert()) is used and Realtime WebSockets are unused.
+    class NoopWebSocket {
+      close(): void {}
+      send(): void {}
+    }
     supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      auth: { persistSession: false }
+      auth: { persistSession: false },
+      realtime: { transport: NoopWebSocket as any }
     })
     return supabase
   } catch (err) {

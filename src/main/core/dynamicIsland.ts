@@ -177,6 +177,7 @@ function createIslandWindow(): BrowserWindow {
 
   islandWindow.setAlwaysOnTop(true, 'screen-saver')
   islandWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
+  islandWindow.setIgnoreMouseEvents(true, { forward: true })
 
   islandWindow.webContents.on('did-finish-load', () => {
     if (islandWindow && !islandWindow.isDestroyed()) {
@@ -305,6 +306,16 @@ function registerIslandIPC(): void {
   ipcMain.handle('island:setSize', (_e, width: number, height: number) => {
     if (!islandWindow || islandWindow.isDestroyed()) return
     islandWindow.setSize(Math.round(width), Math.round(height))
+  })
+
+  // Toggle click-through for transparent areas around the Dynamic Island
+  ipcMain.handle('island:setIgnoreMouseEvents', (_e, ignore: boolean) => {
+    if (!islandWindow || islandWindow.isDestroyed()) return
+    if (ignore) {
+      islandWindow.setIgnoreMouseEvents(true, { forward: true })
+    } else {
+      islandWindow.setIgnoreMouseEvents(false)
+    }
   })
 
   // Set Window Position (PIP dragging)

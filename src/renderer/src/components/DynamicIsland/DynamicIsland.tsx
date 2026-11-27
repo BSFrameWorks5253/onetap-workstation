@@ -59,6 +59,50 @@ export function DynamicIsland({ floating = false }: { floating?: boolean }): JSX
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const dissolveTimerRef = useRef<NodeJS.Timeout | null>(null)
   const closeTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const ignoringMouseRef = useRef<boolean>(true)
+
+  const setIgnoreMouse = (ignore: boolean) => {
+    if (floating || ignoringMouseRef.current === ignore) return
+    ignoringMouseRef.current = ignore
+    const api = (window as any).api?.island
+    api?.setIgnoreMouseEvents?.(ignore)
+  }
+
+  useEffect(() => {
+    if (floating) return
+    if (isDismissed || isDissolving) {
+      setIgnoreMouse(true)
+      return
+    }
+    if (isCancelConfirmOpen) {
+      setIgnoreMouse(false)
+    }
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isCancelConfirmOpen) {
+        setIgnoreMouse(false)
+        return
+      }
+      const target = e.target as HTMLElement | null
+      const isInteractive = Boolean(
+        target?.closest?.('.dynamic-island-pill, .dynamic-island-card, .pill-hover-preview-card, .island-modal-backdrop, .island-modal-content')
+      )
+      setIgnoreMouse(!isInteractive)
+    }
+
+    const handleDocLeave = () => {
+      if (!isCancelConfirmOpen) {
+        setIgnoreMouse(true)
+      }
+    }
+
+    window.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseleave', handleDocLeave)
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseleave', handleDocLeave)
+    }
+  }, [floating, isCancelConfirmOpen, isDismissed, isDissolving])
 
   useEffect(() => {
     setThumbFailed(false)

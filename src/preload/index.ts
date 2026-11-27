@@ -635,6 +635,7 @@ contextBridge.exposeInMainWorld('api', {
   // ── Dynamic Island & Mini Rendering Monitor ─────────────────────────────
   island: {
     setSize: (width: number, height: number) => ipcRenderer.invoke('island:setSize', width, height),
+    setIgnoreMouseEvents: (ignore: boolean) => ipcRenderer.invoke('island:setIgnoreMouseEvents', ignore),
     savePosition: (x: number, y: number) => ipcRenderer.invoke('island:savePosition', x, y),
     action: (action: string, payload?: any) => ipcRenderer.invoke('island:action', action, payload),
     close: () => ipcRenderer.invoke('island:close'),
