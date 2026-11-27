@@ -59,7 +59,7 @@ fun OneTapApp() {
 
     LaunchedEffect(Unit) {
         BatchNotificationManager.createNotificationChannel(context)
-        delay(950)
+        delay(1600)
         minSplashElapsed = true
     }
 

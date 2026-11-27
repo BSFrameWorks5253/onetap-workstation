@@ -23,6 +23,6 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
 
     companion object {
         val items: List<Screen>
-            get() = listOf(Dashboard, Kanban, PhotoTracker, Render, Analytics)
+            get() = listOf(Dashboard, Kanban, PhotoTracker, Render, Remote, Analytics)
     }
 }

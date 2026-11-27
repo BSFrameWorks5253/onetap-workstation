@@ -104,8 +104,8 @@ fun BottomNavBar(currentRoute: String, onNavigate: (Screen) -> Unit, pendingTask
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
-                            Color.White.copy(alpha = 0.88f),
-                            Color(0xFFF8FAFC).copy(alpha = 0.76f)
+                            Color.White.copy(alpha = 0.76f),
+                            Color(0xFFF8FAFC).copy(alpha = 0.58f)
                         )
                     )
                 )
@@ -214,7 +214,7 @@ fun BottomNavBar(currentRoute: String, onNavigate: (Screen) -> Unit, pendingTask
                             Text(
                                 screen.title,
                                 color = if (selected) IndigoPrimary else TextMuted,
-                                fontSize = 10.sp,
+                                fontSize = 9.5.sp,
                                 fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
                                 maxLines = 1
                             )
