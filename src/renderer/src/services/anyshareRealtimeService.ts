@@ -904,8 +904,14 @@ class AnyShareRealtimeService {
     }, 15000); // Pulse heartbeat every 15s
   }
 
-  public sendHeartbeat() {
+  public async sendHeartbeat() {
     if (!this.channel || !this.isConnected) return;
+
+    let remoteInfo: { port?: number; token?: string; lanIps?: string[] } = {};
+    try {
+      const rc = (window as any).api?.remoteControl;
+      if (rc?.getInfo) remoteInfo = (await rc.getInfo()) || {};
+    } catch {}
 
     this.channel.send({
       type: 'broadcast',
@@ -916,6 +922,9 @@ class AnyShareRealtimeService {
         gpu: 'NVIDIA RTX 4090 (24GB VRAM)',
         storageFreeGB: 482.4,
         bridgePort: 5253,
+        remotePort: remoteInfo.port || 45253,
+        remoteToken: remoteInfo.token || '',
+        lanIps: Array.isArray(remoteInfo.lanIps) ? remoteInfo.lanIps : [],
         status: 'online',
         timestamp: new Date().toISOString()
       }
@@ -983,20 +992,28 @@ class AnyShareRealtimeService {
     try {
       const trackerApi = (window as any).api?.taskTracker;
       if (trackerApi?.scan && safarName && requestedFolders.length > 0) {
-        const scanRes = await trackerApi.scan({ force: false });
-        const tasks: any[] = Array.isArray(scanRes?.tasks) ? scanRes.tasks : [];
-        const wanted = new Set(requestedFolders.map((f: string) => f.trim().toLowerCase()));
-        for (const t of tasks) {
-          if (String(t.safarName || '').trim().toLowerCase() === safarName.trim().toLowerCase()) {
-            const df = String(t.dateFolder || '').trim().toLowerCase();
-            if (wanted.has(df)) {
-              const folderPath = t.workingPath || t.finalPath || t.uploadPath;
-              if (folderPath) batchSources.push(folderPath);
-              if (!resolvedOutputFolder && (t.finalPath || t.uploadPath)) {
-                resolvedOutputFolder = String(t.finalPath || t.uploadPath).trim();
+        const matchTasks = (tasks: any[]) => {
+          const wanted = new Set(requestedFolders.map((f: string) => f.trim().toLowerCase()));
+          for (const t of tasks) {
+            if (String(t.safarName || '').trim().toLowerCase() === safarName.trim().toLowerCase()) {
+              const df = String(t.dateFolder || '').trim().toLowerCase();
+              if (wanted.has(df)) {
+                const folderPath = t.workingPath || t.finalPath || t.uploadPath;
+                if (folderPath && !batchSources.includes(folderPath)) batchSources.push(folderPath);
+                if (!resolvedOutputFolder && (t.finalPath || t.uploadPath)) {
+                  resolvedOutputFolder = String(t.finalPath || t.uploadPath).trim();
+                }
               }
             }
           }
+        };
+
+        const scanRes = await trackerApi.scan({ force: false });
+        matchTasks(Array.isArray(scanRes?.tasks) ? scanRes.tasks : []);
+
+        if (batchSources.length === 0) {
+          const forcedRes = await trackerApi.scan({ force: true });
+          matchTasks(Array.isArray(forcedRes?.tasks) ? forcedRes.tasks : []);
         }
       }
     } catch (e) {

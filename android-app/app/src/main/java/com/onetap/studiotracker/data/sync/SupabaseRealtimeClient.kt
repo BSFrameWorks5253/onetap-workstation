@@ -46,7 +46,13 @@ sealed class RealtimeEvent {
         val scheduledFor: String = ""
     ) : RealtimeEvent()
     data class RenderLog(val jobId: String, val level: String, val message: String) : RealtimeEvent()
-    data class WorkstationHeartbeat(val label: String, val timestampMs: Long) : RealtimeEvent()
+    data class WorkstationHeartbeat(
+        val label: String,
+        val timestampMs: Long,
+        val lanIps: List<String> = emptyList(),
+        val remotePort: Int = 45253,
+        val remoteToken: String = ""
+    ) : RealtimeEvent()
     data object RescanRequested : RealtimeEvent()
 }
 
@@ -246,9 +252,16 @@ class SupabaseRealtimeClient(
                             ))
                         }
                     } else if (innerEvent == "workstation_heartbeat") {
+                        val ipsArr = innerPayload.optJSONArray("lanIps")
+                        val ips = if (ipsArr != null) {
+                            (0 until ipsArr.length()).mapNotNull { ipsArr.optString(it).takeIf { s -> s.isNotBlank() } }
+                        } else emptyList()
                         _events.tryEmit(RealtimeEvent.WorkstationHeartbeat(
                             label = innerPayload.optString("label", "Studio PC"),
-                            timestampMs = System.currentTimeMillis()
+                            timestampMs = System.currentTimeMillis(),
+                            lanIps = ips,
+                            remotePort = innerPayload.optInt("remotePort", 45253),
+                            remoteToken = innerPayload.optString("remoteToken", "")
                         ))
                     } else if (innerEvent == "safar_status_changed") {
                         val name = innerPayload.optString("safarName", "")

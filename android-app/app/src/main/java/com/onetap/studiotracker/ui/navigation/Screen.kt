@@ -3,6 +3,7 @@ package com.onetap.studiotracker.ui.navigation
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.DesktopWindows
 import androidx.compose.material.icons.filled.MovieCreation
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.PhotoLibrary
@@ -17,6 +18,7 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
     data object Render : Screen("render", "Render", Icons.Default.MovieCreation)
     data object Editors : Screen("editors", "Editors", Icons.Default.People)
     data object Analytics : Screen("analytics", "Stats", Icons.Default.BarChart)
+    data object Remote : Screen("remote", "Laptop", Icons.Default.DesktopWindows)
     data object Settings : Screen("settings", "Settings", Icons.Default.Settings)
 
     companion object {

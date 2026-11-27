@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CheckBox
 import androidx.compose.material.icons.filled.CheckBoxOutlineBlank
+import androidx.compose.material.icons.filled.DesktopWindows
 import androidx.compose.material.icons.filled.MovieCreation
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Schedule
@@ -77,7 +78,10 @@ import java.util.Calendar
 import java.util.Locale
 
 @Composable
-fun RenderBatchScreen(modifier: Modifier = Modifier) {
+fun RenderBatchScreen(
+    onOpenLaptopRemote: () -> Unit = {},
+    modifier: Modifier = Modifier
+) {
     val context = LocalContext.current
     val repo = SafarRepository.getInstance()
     val campaigns by repo.campaigns.collectAsState()
@@ -114,21 +118,36 @@ fun RenderBatchScreen(modifier: Modifier = Modifier) {
                         Text("Remote Batch Render", color = TextPrimary, fontSize = 22.sp, fontWeight = FontWeight.Bold)
                         Text("Select folders & trigger or schedule Desktop render", color = TextSecondary, fontSize = 13.sp)
                     }
-                    Row(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(if (isPcOnline) EmeraldSoft else LightSurface)
-                            .border(1.dp, if (isPcOnline) EmeraldSuccess.copy(alpha = 0.4f) else LightBorder, RoundedCornerShape(14.dp))
-                            .liquidBouncyClick(pressScale = 0.93f) {
-                                repo.pingDesktopWorkstation()
-                                Toast.makeText(context, "Pinging Studio PC…", Toast.LENGTH_SHORT).show()
-                            }
-                            .padding(horizontal = 10.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(modifier = Modifier.size(7.dp).clip(CircleShape).background(if (isPcOnline) EmeraldSuccess else AmberDark))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(if (isPcOnline) "PC Online" else "PC Offline", color = if (isPcOnline) EmeraldDark else AmberDark, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(IndigoPrimary.copy(alpha = 0.12f))
+                                .border(1.dp, IndigoPrimary.copy(alpha = 0.35f), RoundedCornerShape(14.dp))
+                                .liquidBouncyClick(pressScale = 0.93f) { onOpenLaptopRemote() }
+                                .padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.DesktopWindows, contentDescription = null, tint = IndigoPrimary, modifier = Modifier.size(13.dp))
+                            Spacer(modifier = Modifier.width(5.dp))
+                            Text("Remote", color = IndigoPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(if (isPcOnline) EmeraldSoft else LightSurface)
+                                .border(1.dp, if (isPcOnline) EmeraldSuccess.copy(alpha = 0.4f) else LightBorder, RoundedCornerShape(14.dp))
+                                .liquidBouncyClick(pressScale = 0.93f) {
+                                    repo.pingDesktopWorkstation()
+                                    Toast.makeText(context, "Pinging Studio PC…", Toast.LENGTH_SHORT).show()
+                                }
+                                .padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(modifier = Modifier.size(7.dp).clip(CircleShape).background(if (isPcOnline) EmeraldSuccess else AmberDark))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(if (isPcOnline) "PC Online" else "PC Offline", color = if (isPcOnline) EmeraldDark else AmberDark, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }

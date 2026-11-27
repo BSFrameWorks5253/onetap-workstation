@@ -91,6 +91,15 @@ class SafarRepository private constructor(private val appContext: Context?) {
     private val _lastDesktopHeartbeatAt = MutableStateFlow(0L)
     val lastDesktopHeartbeatAt: StateFlow<Long> = _lastDesktopHeartbeatAt.asStateFlow()
 
+    private val _desktopLanIps = MutableStateFlow<List<String>>(emptyList())
+    val desktopLanIps: StateFlow<List<String>> = _desktopLanIps.asStateFlow()
+
+    private val _desktopRemotePort = MutableStateFlow(45253)
+    val desktopRemotePort: StateFlow<Int> = _desktopRemotePort.asStateFlow()
+
+    private val _desktopRemoteToken = MutableStateFlow("")
+    val desktopRemoteToken: StateFlow<String> = _desktopRemoteToken.asStateFlow()
+
     private val _renderLogs = MutableStateFlow<List<String>>(emptyList())
     val renderLogs: StateFlow<List<String>> = _renderLogs.asStateFlow()
 
@@ -177,6 +186,9 @@ class SafarRepository private constructor(private val appContext: Context?) {
                     }
                     is RealtimeEvent.WorkstationHeartbeat -> {
                         _lastDesktopHeartbeatAt.value = event.timestampMs
+                        if (event.lanIps.isNotEmpty()) _desktopLanIps.value = event.lanIps
+                        if (event.remotePort > 0) _desktopRemotePort.value = event.remotePort
+                        if (event.remoteToken.isNotBlank()) _desktopRemoteToken.value = event.remoteToken
                     }
                     is RealtimeEvent.RescanRequested -> {
                         triggerCloudSync()
@@ -478,32 +490,6 @@ class SafarRepository private constructor(private val appContext: Context?) {
                 if (t.id == taskId) {
                     recordAudit(c.name, t.title, "Editor Assigned", t.effectiveVideoEditor, clean.ifBlank { "Murtaza" })
                     t.copy(videoEditor = clean.ifBlank { null }, updatedAt = System.currentTimeMillis())
-                } else t
-            })
-        }
-        pushLocalStateToCloud()
-    }
-
-    fun updateTaskPhotoEditor(taskId: String, editorName: String) {
-        val clean = editorName.trim()
-        _campaigns.value = _campaigns.value.map { c ->
-            c.copy(tasks = c.tasks.map { t ->
-                if (t.id == taskId) {
-                    recordAudit(c.name, t.title, "Photo Editor Assigned", t.effectivePhotoEditor, clean.ifBlank { "Muffadal Peti" })
-                    t.copy(photoEditorName = clean.ifBlank { null }, updatedAt = System.currentTimeMillis())
-                } else t
-            })
-        }
-        pushLocalStateToCloud()
-    }
-
-    fun updateTaskNotes(taskId: String, notes: String) {
-        val clean = notes.trim()
-        _campaigns.value = _campaigns.value.map { c ->
-            c.copy(tasks = c.tasks.map { t ->
-                if (t.id == taskId) {
-                    recordAudit(c.name, t.title, "Notes Updated", t.notes ?: "", clean)
-                    t.copy(notes = clean.ifBlank { null }, updatedAt = System.currentTimeMillis())
                 } else t
             })
         }

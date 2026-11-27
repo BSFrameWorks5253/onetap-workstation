@@ -71,6 +71,7 @@ import { startDriveWatcherDaemon, stopDriveWatcherDaemon } from './core/driveWat
 import { registerTitleAutomodeIPC } from './ipc/titleAutomode.ipc'
 import { registerAnyShareIPC } from './ipc/anyshare.ipc'
 import { initAnyShareBridge } from './core/anyshareBridge'
+import { initRemoteControlServer, stopRemoteControlServer } from './core/remoteControlServer'
 import { initDynamicIsland } from './core/dynamicIsland'
 import { openViewerWindow } from './core/viewerWindowManager'
 import { initStatsSyncDaemon, flushStatsOnQuit } from './core/statsSyncDaemon'
@@ -1151,6 +1152,7 @@ app.whenReady().then(() => {
   registerUserProfileIPC()
   registerTitleAutomodeIPC()
   registerAnyShareIPC()
+  initRemoteControlServer()
 
   // ── Universal Child App Loader & Splash Screen Synchronization ──
   const APP_ID = 'one-tap'
@@ -1769,6 +1771,7 @@ app.on('before-quit', async () => {
 })
 
 app.on('will-quit', () => {
+  stopRemoteControlServer()
   stopDriveWatcherDaemon()
   globalShortcut.unregisterAll()
 })

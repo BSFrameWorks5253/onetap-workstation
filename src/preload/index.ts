@@ -222,6 +222,11 @@ contextBridge.exposeInMainWorld('api', {
     }
   },
 
+  // Remote Control LAN Server
+  remoteControl: {
+    getInfo: () => ipcRenderer.invoke('remoteControl:getInfo')
+  },
+
   // System
   system: {
     minimizeWindow:    () => ipcRenderer.invoke('system:minimizeWindow'),

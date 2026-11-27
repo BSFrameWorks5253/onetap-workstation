@@ -30,6 +30,7 @@ import com.onetap.studiotracker.ui.screens.dashboard.DashboardScreen
 import com.onetap.studiotracker.ui.screens.editors.EditorsScreen
 import com.onetap.studiotracker.ui.screens.kanban.KanbanScreen
 import com.onetap.studiotracker.ui.screens.photos.PhotoTrackerScreen
+import com.onetap.studiotracker.ui.screens.remote.LaptopRemoteScreen
 import com.onetap.studiotracker.ui.screens.render.RenderBatchScreen
 import com.onetap.studiotracker.ui.screens.settings.SettingsScreen
 import com.onetap.studiotracker.ui.theme.LiquidAuroraBackground
@@ -82,7 +83,7 @@ fun OneTapApp() {
                 Scaffold(
                     containerColor = Color.Transparent,
                     bottomBar = {
-                        if (currentRoute != Screen.Settings.route) {
+                        if (currentRoute != Screen.Settings.route && currentRoute != Screen.Remote.route) {
                             BottomNavBar(
                                 currentRoute = currentRoute,
                                 onNavigate = { screen ->
@@ -112,9 +113,14 @@ fun OneTapApp() {
                         }
                         composable(Screen.Kanban.route) { KanbanScreen() }
                         composable(Screen.PhotoTracker.route) { PhotoTrackerScreen() }
-                        composable(Screen.Render.route) { RenderBatchScreen() }
+                        composable(Screen.Render.route) {
+                            RenderBatchScreen(
+                                onOpenLaptopRemote = { navController.navigate(Screen.Remote.route) { launchSingleTop = true } }
+                            )
+                        }
                         composable(Screen.Editors.route) { EditorsScreen() }
                         composable(Screen.Analytics.route) { StudioAnalyticsScreen() }
+                        composable(Screen.Remote.route) { LaptopRemoteScreen(onBack = { navController.popBackStack() }) }
                         composable(Screen.Settings.route) { SettingsScreen(onBack = { navController.popBackStack() }) }
                     }
                 }
