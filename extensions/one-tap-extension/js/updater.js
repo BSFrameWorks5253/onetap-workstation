@@ -82,7 +82,7 @@
             try {
                 var https = require('https');
                 var manifestPath = "extensions/one-tap-extension/version.json";
-                var rawUrl = "https://raw.githubusercontent.com/" + this.repoOwner + "/" + this.repoName + "/main/" + manifestPath;
+                var rawUrl = "https://raw.githubusercontent.com/" + this.repoOwner + "/" + this.repoName + "/main/" + manifestPath + "?t=" + Date.now();
 
                 https.get(rawUrl, { headers: { 'User-Agent': 'OneTap-CEP-Updater' } }, function (res) {
                     if (res.statusCode !== 200) {
@@ -123,33 +123,21 @@
             }
         },
 
-        // Prompt user that update is ready to download
+        // Auto-download and install immediately when a new version is published
         promptUpdateAvailable: function (remote) {
             var self = this;
-            var msg = "v" + remote.version + " is available! (" + (remote.releaseNotes || "Performance & UI updates") + ")";
-            
+            var msg = "Auto-updating to v" + remote.version + "... (" + (remote.releaseNotes || "Performance & UI updates") + ")";
+
             if (window.showToast) {
-                window.showToast("⚡ Extension Update Ready", msg, "warning");
+                window.showToast("⚡ Extension Update Found", msg, "info");
             }
 
             var badge = document.getElementById("versionBadge");
             if (badge) {
-                badge.innerHTML = "v" + this.currentVersion + " <span style='color:var(--warning);font-weight:800;'>⚡ v" + remote.version + " Available</span>";
+                badge.innerHTML = "v" + this.currentVersion + " <span style='color:var(--warning);font-weight:800;'>⚡ Updating to v" + remote.version + "...</span>";
             }
 
-            if (window.showCustomAlert) {
-                window.showCustomAlert(
-                    "⚡ New Version v" + remote.version + " Ready",
-                    "A new update for One Tap Parent Extension is available!\n\n" +
-                    "Version: v" + remote.version + "\n" +
-                    "Notes: " + (remote.releaseNotes || "General bug fixes & enhancements") + "\n\n" +
-                    "Would you like to auto-download and update now?",
-                    "info",
-                    function () {
-                        self.downloadAndInstallUpdate(remote);
-                    }
-                );
-            }
+            self.downloadAndInstallUpdate(remote);
         },
 
         // Download ZIP payload and extract directly into CEP extension directory
@@ -219,21 +207,13 @@
                             }, null, 2), 'utf8');
                         } catch (e) { }
 
-                        // Show success alert & prompt to reload panel
-                        if (window.showCustomAlert) {
-                            window.showCustomAlert(
-                                "🎉 Extension Updated!",
-                                "One Tap Parent Extension has been updated to v" + remote.version + "!\n\nClick 'Reload' below to refresh the extension and run the new version.",
-                                "success",
-                                function () {
-                                    window.location.reload();
-                                }
-                            );
+                        if (window.showToast) {
+                            window.showToast("✓ Update Installed", "Extension upgraded to v" + remote.version + "! Reloading panel...", "success");
                         }
 
-                        if (window.showToast) {
-                            window.showToast("✓ Update Installed", "Extension upgraded to v" + remote.version + "! Click to reload panel.", "success");
-                        }
+                        setTimeout(function () {
+                            window.location.reload();
+                        }, 1200);
                     });
                 });
             } catch (err) {
