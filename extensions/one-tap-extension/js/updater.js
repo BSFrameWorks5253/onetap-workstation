@@ -44,6 +44,7 @@
                         if (data.version) this.currentVersion = data.version;
                         if (data.repoOwner) this.repoOwner = data.repoOwner;
                         if (data.repoName) this.repoName = data.repoName;
+                        this.releaseNotes = data.releaseNotes || "";
                     }
                 }
             } catch (e) {
@@ -54,6 +55,7 @@
             var badge = document.getElementById("versionBadge");
             if (badge) {
                 badge.innerText = "v" + this.currentVersion;
+                badge.title = "v" + this.currentVersion + (this.releaseNotes ? " — " + this.releaseNotes : "") + " (Click to check updates)";
             }
         },
 

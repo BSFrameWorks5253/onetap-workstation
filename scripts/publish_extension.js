@@ -147,7 +147,7 @@ async function main() {
 
   log(`Publishing extension v${nextVersion}...`)
 
-  // 1. Update version.json in one-tap-extension & sync to one-tap-parent-extension
+  // 1. Update version.json, index.html badge, and CSXS/manifest.xml in one-tap-extension & sync to one-tap-parent-extension
   const updatedMeta = {
     version: nextVersion,
     repoOwner: GITHUB_OWNER,
@@ -158,8 +158,29 @@ async function main() {
     updatedAt: new Date().toISOString()
   }
   fs.writeFileSync(verPath, JSON.stringify(updatedMeta, null, 2) + '\n', 'utf-8')
+
+  const indexHtmlPath = path.join(EXT_DIR, 'index.html')
+  if (fs.existsSync(indexHtmlPath)) {
+    const html = fs.readFileSync(indexHtmlPath, 'utf-8')
+    const updatedHtml = html.replace(
+      /(<span[^>]*id=["']versionBadge["'][^>]*>)v?[^<]*(<\/span>)/i,
+      `$1v${nextVersion}$2`
+    )
+    fs.writeFileSync(indexHtmlPath, updatedHtml, 'utf-8')
+  }
+
+  const manifestPath = path.join(EXT_DIR, 'CSXS', 'manifest.xml')
+  if (fs.existsSync(manifestPath)) {
+    const xml = fs.readFileSync(manifestPath, 'utf-8')
+    const updatedXml = xml.replace(
+      /ExtensionBundleVersion="[^"]*"/i,
+      `ExtensionBundleVersion="${nextVersion}"`
+    )
+    fs.writeFileSync(manifestPath, updatedXml, 'utf-8')
+  }
+
   syncDir(EXT_DIR, PARENT_EXT_DIR)
-  logSuccess('Synced extensions/one-tap-extension -> extensions/one-tap-parent-extension')
+  logSuccess(`Updated version to v${nextVersion} and synced extensions/one-tap-extension -> extensions/one-tap-parent-extension`)
 
   // 2. Zip extensions/one-tap-extension/* into release/one-tap-extension.zip
   fs.mkdirSync(RELEASE_DIR, { recursive: true })
