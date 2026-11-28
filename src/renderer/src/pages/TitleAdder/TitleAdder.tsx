@@ -94,6 +94,63 @@ export function isGroupPhotoVideo(filenameOrPath: any): boolean {
   return false
 }
 
+export const SESSION_THEMES = [
+  {
+    name: 'Blue',
+    color: '#3b82f6',
+    border: 'rgba(59, 130, 246, 0.45)',
+    bg: 'linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(37, 99, 235, 0.04) 100%)',
+    badgeBg: 'rgba(59, 130, 246, 0.18)',
+    tagText: '#3b82f6',
+    leftBar: '#3b82f6',
+    softRowBg: 'rgba(59, 130, 246, 0.03)'
+  },
+  {
+    name: 'Purple',
+    color: '#a855f7',
+    border: 'rgba(168, 85, 247, 0.45)',
+    bg: 'linear-gradient(135deg, rgba(168, 85, 247, 0.12) 0%, rgba(147, 51, 234, 0.04) 100%)',
+    badgeBg: 'rgba(168, 85, 247, 0.18)',
+    tagText: '#a855f7',
+    leftBar: '#a855f7',
+    softRowBg: 'rgba(168, 85, 247, 0.03)'
+  },
+  {
+    name: 'Amber',
+    color: '#f59e0b',
+    border: 'rgba(245, 158, 11, 0.45)',
+    bg: 'linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(217, 119, 6, 0.04) 100%)',
+    badgeBg: 'rgba(245, 158, 11, 0.18)',
+    tagText: '#f59e0b',
+    leftBar: '#f59e0b',
+    softRowBg: 'rgba(245, 158, 11, 0.03)'
+  },
+  {
+    name: 'Emerald',
+    color: '#10b981',
+    border: 'rgba(16, 185, 129, 0.45)',
+    bg: 'linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(5, 150, 105, 0.04) 100%)',
+    badgeBg: 'rgba(16, 185, 129, 0.18)',
+    tagText: '#10b981',
+    leftBar: '#10b981',
+    softRowBg: 'rgba(16, 185, 129, 0.03)'
+  },
+  {
+    name: 'Rose',
+    color: '#f43f5e',
+    border: 'rgba(244, 63, 94, 0.45)',
+    bg: 'linear-gradient(135deg, rgba(244, 63, 94, 0.12) 0%, rgba(225, 29, 72, 0.04) 100%)',
+    badgeBg: 'rgba(244, 63, 94, 0.18)',
+    tagText: '#f43f5e',
+    leftBar: '#f43f5e',
+    softRowBg: 'rgba(244, 63, 94, 0.03)'
+  }
+]
+
+export function getSessionTheme(idx: number) {
+  return SESSION_THEMES[Math.abs(idx) % SESSION_THEMES.length]
+}
+
 function CustomAudioSelect({ value, options, defaultPath, defaultName, onChange }: CustomAudioSelectProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
@@ -1328,6 +1385,9 @@ export default function TitleAdder(): JSX.Element {
     defaultTitleImageName: string
     isNikah: boolean
     isSpecialWaazId: boolean
+    sessionIndex?: number
+    sessionFolder?: string
+    sessionName?: string
   }>>([])
   const [availableAudioOptions, setAvailableAudioOptions] = useState<Array<{ name: string; path: string }>>([])
   const [availableTitleImageOptions, setAvailableTitleImageOptions] = useState<Array<{ name: string; path: string }>>([])
@@ -1390,9 +1450,34 @@ export default function TitleAdder(): JSX.Element {
     fileName: string
     fullPath: string
     duration: number
+    sessionIndex?: number
+    sessionFolder?: string
+    sessionName?: string
   }>>([])
   const [userGroupPhotoSelections, setUserGroupPhotoSelections] = useState<Record<string, string>>({})
-  const [gpRangeInputs, setGpRangeInputs] = useState<Record<number, { from: string; to: string }>>({})
+  const [gpRangeInputs, setGpRangeInputs] = useState<Record<string, { from: string; to: string }>>({})
+
+  // Distinct session detection across batch items
+  const distinctSessions = useMemo(() => {
+    const map = new Map<number, { sessionIndex: number; sessionFolder: string; sessionName: string; count: number }>()
+    audioPreviewAssignments.forEach(item => {
+      const sIdx = item.sessionIndex ?? 0
+      if (!map.has(sIdx)) {
+        const fallbackSrc = batchSources[sIdx] || ''
+        const cleanSrc = fallbackSrc.replace(/[\\/]DVD[\\/]?$/i, '')
+        map.set(sIdx, {
+          sessionIndex: sIdx,
+          sessionFolder: item.sessionFolder || fallbackSrc,
+          sessionName: item.sessionName || (cleanSrc ? (cleanSrc.split(/[\\/]/).pop() || `Session #${sIdx + 1}`) : `Session #${sIdx + 1}`),
+          count: 0
+        })
+      }
+      map.get(sIdx)!.count++
+    })
+    return Array.from(map.values()).sort((a, b) => a.sessionIndex - b.sessionIndex)
+  }, [audioPreviewAssignments, batchSources])
+
+  const hasMultipleSessions = distinctSessions.length > 1 || batchSources.length > 1
 
   function extractNikaahNumber(fileNameOrPath: string): number | null {
     if (!fileNameOrPath) return null
@@ -1423,13 +1508,21 @@ export default function TitleAdder(): JSX.Element {
     [audioPreviewAssignments]
   )
 
-  const applyGpRanges = () => {
+  const applyGpRanges = (targetSessionIndex?: number) => {
     const nextSelections: Record<string, string> = { ...userGroupPhotoSelections }
     gpNikaahVideos.forEach((item, idx) => {
+      const itemSessionIdx = item.sessionIndex ?? 0
+      if (targetSessionIndex !== undefined && itemSessionIdx !== targetSessionIndex) {
+        return
+      }
       const cerNum = extractNikaahNumber(item.videoName) ?? (idx + 1)
       const stem = getCanonicalStem(item.videoName)
-      for (const gp of availableGroupPhotos) {
-        const range = gpRangeInputs[gp.gpNum]
+
+      // Strictly consider GPs from this item's session!
+      const sessionGps = availableGroupPhotos.filter(g => (g.sessionIndex ?? 0) === itemSessionIdx)
+      for (const gp of sessionGps) {
+        const key = `${gp.sessionIndex ?? 0}_${gp.gpNum}`
+        const range = gpRangeInputs[key] || gpRangeInputs[String(gp.gpNum)]
         if (range) {
           const from = parseInt(range.from, 10)
           const to = parseInt(range.to, 10)
@@ -1445,8 +1538,20 @@ export default function TitleAdder(): JSX.Element {
     setUserGroupPhotoSelections(nextSelections)
   }
 
-  const clearGpAssignments = () => {
-    setUserGroupPhotoSelections({})
+  const clearGpAssignments = (targetSessionIndex?: number) => {
+    if (targetSessionIndex === undefined) {
+      setUserGroupPhotoSelections({})
+      return
+    }
+    const nextSelections: Record<string, string> = { ...userGroupPhotoSelections }
+    gpNikaahVideos.forEach(item => {
+      if ((item.sessionIndex ?? 0) === targetSessionIndex) {
+        delete nextSelections[item.videoPath]
+        delete nextSelections[item.videoName]
+        delete nextSelections[getCanonicalStem(item.videoName)]
+      }
+    })
+    setUserGroupPhotoSelections(nextSelections)
   }
 
   const [audioSearchFilter, setAudioSearchFilter] = useState('')
@@ -2199,14 +2304,31 @@ export default function TitleAdder(): JSX.Element {
         if (res.availableGroupPhotos) {
           setAvailableGroupPhotos(res.availableGroupPhotos)
           if (res.availableGroupPhotos.length > 0) {
-            const totalItems = res.assignments.filter(isNikaahVideoItem).length
-            const step = Math.max(1, Math.ceil(totalItems / res.availableGroupPhotos.length))
-            const initialRanges: Record<number, { from: string; to: string }> = {}
-            res.availableGroupPhotos.forEach((gp: any, gi: number) => {
-              const from = totalItems > 0 ? gi * step + 1 : 1
-              const to = totalItems > 0 ? Math.min((gi + 1) * step, totalItems) : 1
-              initialRanges[gp.gpNum] = { from: String(from), to: String(to) }
+            const initialRanges: Record<string, { from: string; to: string }> = {}
+            const sessionMap = new Map<number, { nikaahs: any[]; gps: any[] }>()
+            res.availableGroupPhotos.forEach((gp: any) => {
+              const sIdx = gp.sessionIndex ?? 0
+              if (!sessionMap.has(sIdx)) sessionMap.set(sIdx, { nikaahs: [], gps: [] })
+              sessionMap.get(sIdx)!.gps.push(gp)
             })
+            res.assignments.filter(isNikaahVideoItem).forEach((item: any) => {
+              const sIdx = item.sessionIndex ?? 0
+              if (!sessionMap.has(sIdx)) sessionMap.set(sIdx, { nikaahs: [], gps: [] })
+              sessionMap.get(sIdx)!.nikaahs.push(item)
+            })
+            for (const [sIdx, group] of sessionMap.entries()) {
+              const totalItems = group.nikaahs.length
+              const sGps = group.gps
+              if (sGps.length === 0) continue
+              const step = Math.max(1, Math.ceil(totalItems / sGps.length))
+              sGps.forEach((gp: any, gi: number) => {
+                const from = totalItems > 0 ? gi * step + 1 : 1
+                const to = totalItems > 0 ? Math.min((gi + 1) * step, totalItems) : 1
+                const key = `${gp.sessionIndex ?? sIdx}_${gp.gpNum}`
+                initialRanges[key] = { from: String(from), to: String(to) }
+                initialRanges[String(gp.gpNum)] = { from: String(from), to: String(to) }
+              })
+            }
             setGpRangeInputs(initialRanges)
           }
         }
@@ -3022,14 +3144,31 @@ export default function TitleAdder(): JSX.Element {
       if (res.availableGroupPhotos) {
         setAvailableGroupPhotos(res.availableGroupPhotos)
         if (res.availableGroupPhotos.length > 0) {
-          const totalItems = res.assignments.filter(isNikaahVideoItem).length
-          const step = Math.max(1, Math.ceil(totalItems / res.availableGroupPhotos.length))
-          const initialRanges: Record<number, { from: string; to: string }> = {}
-          res.availableGroupPhotos.forEach((gp: any, gi: number) => {
-            const from = totalItems > 0 ? gi * step + 1 : 1
-            const to = totalItems > 0 ? Math.min((gi + 1) * step, totalItems) : 1
-            initialRanges[gp.gpNum] = { from: String(from), to: String(to) }
+          const initialRanges: Record<string, { from: string; to: string }> = {}
+          const sessionMap = new Map<number, { nikaahs: any[]; gps: any[] }>()
+          res.availableGroupPhotos.forEach((gp: any) => {
+            const sIdx = gp.sessionIndex ?? 0
+            if (!sessionMap.has(sIdx)) sessionMap.set(sIdx, { nikaahs: [], gps: [] })
+            sessionMap.get(sIdx)!.gps.push(gp)
           })
+          res.assignments.filter(isNikaahVideoItem).forEach((item: any) => {
+            const sIdx = item.sessionIndex ?? 0
+            if (!sessionMap.has(sIdx)) sessionMap.set(sIdx, { nikaahs: [], gps: [] })
+            sessionMap.get(sIdx)!.nikaahs.push(item)
+          })
+          for (const [sIdx, group] of sessionMap.entries()) {
+            const totalItems = group.nikaahs.length
+            const sGps = group.gps
+            if (sGps.length === 0) continue
+            const step = Math.max(1, Math.ceil(totalItems / sGps.length))
+            sGps.forEach((gp: any, gi: number) => {
+              const from = totalItems > 0 ? gi * step + 1 : 1
+              const to = totalItems > 0 ? Math.min((gi + 1) * step, totalItems) : 1
+              const key = `${gp.sessionIndex ?? sIdx}_${gp.gpNum}`
+              initialRanges[key] = { from: String(from), to: String(to) }
+              initialRanges[String(gp.gpNum)] = { from: String(from), to: String(to) }
+            })
+          }
           setGpRangeInputs(initialRanges)
         }
       }
@@ -5989,8 +6128,8 @@ export default function TitleAdder(): JSX.Element {
                   </tr>
                 </thead>
                 <tbody>
-                  {audioPreviewAssignments
-                    .filter(item => {
+                  {(() => {
+                    const filteredAssignments = audioPreviewAssignments.filter(item => {
                       if (!audioSearchFilter.trim()) return true
                       const q = audioSearchFilter.toLowerCase()
                       const selImg = userTitleImageSelections[item.videoPath] || item.defaultTitleImagePath || ''
@@ -6002,7 +6141,15 @@ export default function TitleAdder(): JSX.Element {
                         selAud.toLowerCase().includes(q)
                       )
                     })
-                    .map((item, idx) => {
+
+                    return filteredAssignments.map((item, idx) => {
+                      const currentSessionIdx = item.sessionIndex ?? 0
+                      const prevItem = idx > 0 ? filteredAssignments[idx - 1] : null
+                      const prevSessionIdx = prevItem ? (prevItem.sessionIndex ?? 0) : -1
+                      const isNewSession = hasMultipleSessions && (idx === 0 || currentSessionIdx !== prevSessionIdx)
+                      const sTheme = getSessionTheme(currentSessionIdx)
+                      const sessionTotalClips = filteredAssignments.filter(x => (x.sessionIndex ?? 0) === currentSessionIdx).length
+
                       const selectedAudio = userAudioSelections[item.videoPath] ?? item.defaultAudioPath
                       const selectedImage = userTitleImageSelections[item.videoPath] ?? item.defaultTitleImagePath
                       const isSpecial = isItemSpecialWaazId(item, selectedImage)
@@ -6024,11 +6171,84 @@ export default function TitleAdder(): JSX.Element {
                         ?? thumbnailMode
 
                       return (
-                        <tr
-                          key={item.videoPath || idx}
-                          id={`ta-preflight-row-${(item.videoPath || item.videoName).replace(/[^a-zA-Z0-9]/g, '_')}`}
-                        >
-                          <td style={{ opacity: 0.6, fontSize: '12px', fontWeight: 600 }}>{idx + 1}</td>
+                        <React.Fragment key={item.videoPath || idx}>
+                          {hasMultipleSessions && idx > 0 && currentSessionIdx !== prevSessionIdx && (
+                            <tr key={`session-divider-${currentSessionIdx}`} className="ta-session-divider-row">
+                              <td colSpan={8}>
+                                <div className="ta-session-end-divider">
+                                  <span>End of Session #{prevSessionIdx + 1} ({prevItem?.sessionName || `Session #${prevSessionIdx + 1}`})</span>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                          {isNewSession && (
+                            <tr key={`session-header-${currentSessionIdx}`} className="ta-session-header-row">
+                              <td colSpan={8}>
+                                <div
+                                  className="ta-session-header-banner"
+                                  style={{
+                                    borderLeft: `4px solid ${sTheme.color}`,
+                                    borderTop: `1px solid ${sTheme.border}`,
+                                    borderRight: `1px solid ${sTheme.border}`,
+                                    borderBottom: `1px solid ${sTheme.border}`,
+                                    background: sTheme.bg
+                                  }}
+                                >
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                                    <span
+                                      className="ta-session-header-pill"
+                                      style={{
+                                        background: sTheme.badgeBg,
+                                        borderColor: sTheme.border,
+                                        color: sTheme.tagText
+                                      }}
+                                    >
+                                      📂 Session #{currentSessionIdx + 1}
+                                    </span>
+                                    <span style={{ fontWeight: 800, fontSize: '13px', color: sTheme.tagText }}>
+                                      {item.sessionName || (batchSources[currentSessionIdx] ? (batchSources[currentSessionIdx].split(/[\\/]/).pop() || `Session #${currentSessionIdx + 1}`) : `Session #${currentSessionIdx + 1}`)}
+                                    </span>
+                                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                                      ({sessionTotalClips} video{sessionTotalClips !== 1 ? 's' : ''})
+                                    </span>
+                                  </div>
+
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span className="ta-session-path-pill" title={item.sessionFolder || batchSources[currentSessionIdx] || ''}>
+                                      📁 {item.sessionFolder || batchSources[currentSessionIdx] || ''}
+                                    </span>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                          <tr
+                            key={item.videoPath || idx}
+                            id={`ta-preflight-row-${(item.videoPath || item.videoName).replace(/[^a-zA-Z0-9]/g, '_')}`}
+                            className={`ta-session-row-item ${hasMultipleSessions ? `session-item-${currentSessionIdx}` : ''}`}
+                            style={hasMultipleSessions ? {
+                              borderLeft: `4px solid ${sTheme.color}`,
+                              background: sTheme.softRowBg
+                            } : undefined}
+                          >
+                            <td style={{ opacity: 0.85, fontSize: '12px', fontWeight: 600, textAlign: 'center' }}>
+                              {hasMultipleSessions ? (
+                                <span
+                                  style={{
+                                    display: 'inline-flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    gap: '1px'
+                                  }}
+                                  title={`Session #${currentSessionIdx + 1}: ${item.sessionName || ''}`}
+                                >
+                                  <span style={{ color: sTheme.color, fontWeight: 800 }}>{idx + 1}</span>
+                                  <span style={{ fontSize: '9px', fontWeight: 700, opacity: 0.7, color: sTheme.color }}>S{currentSessionIdx + 1}</span>
+                                </span>
+                              ) : (
+                                idx + 1
+                              )}
+                            </td>
                           <td style={{ fontWeight: 600 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                               {/* Video 1-3s Opening Frame (Matches Windows Explorer Thumbnail) */}
@@ -6367,9 +6587,11 @@ export default function TitleAdder(): JSX.Element {
                             />
                           </td>
                         </tr>
-                      )
-                    })}
-                </tbody>
+                      </React.Fragment>
+                    )
+                  })
+                })()}
+              </tbody>
               </table>
             </div>
 
@@ -6551,10 +6773,10 @@ export default function TitleAdder(): JSX.Element {
                   <span style={{ fontSize: '18px' }}>📸</span>
                   <div>
                     <span style={{ fontSize: '13.5px', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.2px' }}>
-                      Batch Range Assignment
+                      Batch Range Assignment {hasMultipleSessions ? '(Organized by Session Folder)' : ''}
                     </span>
                     <span style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)' }}>
-                      Set ceremony / Nikaah video number ranges for each Group Photo clip
+                      Set ceremony / Nikaah video number ranges for each Group Photo clip strictly within its own folder
                     </span>
                   </div>
                 </div>
@@ -6578,7 +6800,7 @@ export default function TitleAdder(): JSX.Element {
                       boxShadow: '0 2px 8px color-mix(in srgb, var(--accent) 35%, transparent)'
                     }}
                   >
-                    ⚡ Apply Ranges
+                    ⚡ Apply All Ranges
                   </button>
                   <button
                     type="button"
@@ -6602,100 +6824,292 @@ export default function TitleAdder(): JSX.Element {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
-                {availableGroupPhotos.map(gp => {
-                  const range = gpRangeInputs[gp.gpNum] || { from: '1', to: '1' }
-                  const assignedCount = gpNikaahVideos.filter(item => {
-                    const sel = userGroupPhotoSelections[item.videoPath] || userGroupPhotoSelections[item.videoName]
-                    return sel === gp.fullPath
-                  }).length
+              {hasMultipleSessions ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {distinctSessions.map(sess => {
+                    const sTheme = getSessionTheme(sess.sessionIndex)
+                    const sessionGps = availableGroupPhotos.filter(g => (g.sessionIndex ?? 0) === sess.sessionIndex)
+                    const sessionNikaahs = gpNikaahVideos.filter(v => (v.sessionIndex ?? 0) === sess.sessionIndex)
 
-                  return (
-                    <div
-                      key={gp.fullPath}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        padding: '8px 14px',
-                        borderRadius: '10px',
-                        background: 'var(--surface)',
-                        border: '1px solid var(--border)',
-                        fontSize: '12.5px',
-                        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
-                      }}
-                    >
-                      <span style={{ fontWeight: 800, color: 'var(--accent)' }}>
-                        {gp.fileName}
-                      </span>
-                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                        ({gp.duration.toFixed(1)}s)
-                      </span>
-                      <span style={{ color: 'var(--text-secondary)', marginLeft: '4px', fontSize: '12px' }}>Videos:</span>
-                      <input
-                        type="number"
-                        min="1"
-                        value={range.from}
-                        onChange={(e) => {
-                          const val = e.target.value
-                          setGpRangeInputs(prev => ({
-                            ...prev,
-                            [gp.gpNum]: { ...(prev[gp.gpNum] || { from: '1', to: '1' }), from: val }
-                          }))
-                        }}
+                    return (
+                      <div
+                        key={sess.sessionIndex}
                         style={{
-                          width: '50px',
-                          height: '28px',
-                          borderRadius: '6px',
-                          border: '1px solid var(--border)',
-                          background: 'var(--surface-2)',
-                          color: 'var(--text-primary)',
-                          textAlign: 'center',
-                          fontSize: '12.5px',
-                          fontWeight: 700
-                        }}
-                      />
-                      <span style={{ color: 'var(--text-muted)' }}>to</span>
-                      <input
-                        type="number"
-                        min="1"
-                        value={range.to}
-                        onChange={(e) => {
-                          const val = e.target.value
-                          setGpRangeInputs(prev => ({
-                            ...prev,
-                            [gp.gpNum]: { ...(prev[gp.gpNum] || { from: '1', to: '1' }), to: val }
-                          }))
-                        }}
-                        style={{
-                          width: '50px',
-                          height: '28px',
-                          borderRadius: '6px',
-                          border: '1px solid var(--border)',
-                          background: 'var(--surface-2)',
-                          color: 'var(--text-primary)',
-                          textAlign: 'center',
-                          fontSize: '12.5px',
-                          fontWeight: 700
-                        }}
-                      />
-                      <span
-                        style={{
-                          fontSize: '11px',
-                          padding: '2px 8px',
-                          borderRadius: '6px',
-                          background: assignedCount > 0 ? 'color-mix(in srgb, #10b981 15%, transparent)' : 'var(--surface-2)',
-                          color: assignedCount > 0 ? '#10b981' : 'var(--text-muted)',
-                          fontWeight: 750,
-                          marginLeft: '4px'
+                          borderRadius: '10px',
+                          border: `1px solid ${sTheme.border}`,
+                          background: sTheme.bg,
+                          padding: '10px 14px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '8px'
                         }}
                       >
-                        {assignedCount} assigned
-                      </span>
-                    </div>
-                  )
-                })}
-              </div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span
+                              className="ta-session-header-pill"
+                              style={{
+                                background: sTheme.badgeBg,
+                                borderColor: sTheme.border,
+                                color: sTheme.tagText
+                              }}
+                            >
+                              📂 Session #{sess.sessionIndex + 1}
+                            </span>
+                            <span style={{ fontWeight: 800, fontSize: '12.5px', color: sTheme.tagText }}>
+                              {sess.sessionName}
+                            </span>
+                            <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                              ({sessionNikaahs.length} Nikaah video{sessionNikaahs.length !== 1 ? 's' : ''}, {sessionGps.length} GP file{sessionGps.length !== 1 ? 's' : ''})
+                            </span>
+                          </div>
+
+                          {sessionGps.length > 0 && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  applyGpRanges(sess.sessionIndex)
+                                  showToast({ title: `Session #${sess.sessionIndex + 1} Ranges Applied`, message: `Assigned GP files for ${sess.sessionName}.`, type: 'info' })
+                                }}
+                                style={{
+                                  background: sTheme.color,
+                                  color: '#ffffff',
+                                  border: 'none',
+                                  borderRadius: '6px',
+                                  padding: '4px 10px',
+                                  fontSize: '11px',
+                                  fontWeight: 750,
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                Apply Session #{sess.sessionIndex + 1}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  clearGpAssignments(sess.sessionIndex)
+                                  showToast({ title: `Session #${sess.sessionIndex + 1} Cleared`, message: `Cleared GP assignments for ${sess.sessionName}.`, type: 'info' })
+                                }}
+                                style={{
+                                  background: 'transparent',
+                                  border: '1px solid var(--border)',
+                                  borderRadius: '6px',
+                                  color: 'var(--text-secondary)',
+                                  padding: '4px 8px',
+                                  fontSize: '10.5px',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                Clear
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        {sessionGps.length === 0 ? (
+                          <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', fontStyle: 'italic', padding: '2px 0' }}>
+                            ℹ️ No Group Photo files detected in Session #{sess.sessionIndex + 1} folder.
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
+                            {sessionGps.map(gp => {
+                              const key = `${gp.sessionIndex ?? 0}_${gp.gpNum}`
+                              const range = gpRangeInputs[key] || gpRangeInputs[String(gp.gpNum)] || { from: '1', to: '1' }
+                              const assignedCount = sessionNikaahs.filter(item => {
+                                const sel = userGroupPhotoSelections[item.videoPath] || userGroupPhotoSelections[item.videoName]
+                                return sel === gp.fullPath
+                              }).length
+
+                              return (
+                                <div
+                                  key={gp.fullPath}
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    padding: '7px 12px',
+                                    borderRadius: '8px',
+                                    background: 'var(--surface)',
+                                    border: '1px solid var(--border)',
+                                    fontSize: '12px',
+                                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
+                                  }}
+                                >
+                                  <span style={{ fontWeight: 800, color: sTheme.color }}>
+                                    {gp.fileName}
+                                  </span>
+                                  <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                                    ({gp.duration.toFixed(1)}s)
+                                  </span>
+                                  <span style={{ color: 'var(--text-secondary)', marginLeft: '4px', fontSize: '11.5px' }}>Videos:</span>
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    value={range.from}
+                                    onChange={(e) => {
+                                      const val = e.target.value
+                                      setGpRangeInputs(prev => ({
+                                        ...prev,
+                                        [key]: { ...(prev[key] || { from: '1', to: '1' }), from: val },
+                                        [String(gp.gpNum)]: { ...(prev[String(gp.gpNum)] || { from: '1', to: '1' }), from: val }
+                                      }))
+                                    }}
+                                    style={{
+                                      width: '46px',
+                                      height: '26px',
+                                      borderRadius: '6px',
+                                      border: '1px solid var(--border)',
+                                      background: 'var(--surface-2)',
+                                      color: 'var(--text-primary)',
+                                      textAlign: 'center',
+                                      fontSize: '12px',
+                                      fontWeight: 700
+                                    }}
+                                  />
+                                  <span style={{ color: 'var(--text-muted)' }}>to</span>
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    value={range.to}
+                                    onChange={(e) => {
+                                      const val = e.target.value
+                                      setGpRangeInputs(prev => ({
+                                        ...prev,
+                                        [key]: { ...(prev[key] || { from: '1', to: '1' }), to: val },
+                                        [String(gp.gpNum)]: { ...(prev[String(gp.gpNum)] || { from: '1', to: '1' }), to: val }
+                                      }))
+                                    }}
+                                    style={{
+                                      width: '46px',
+                                      height: '26px',
+                                      borderRadius: '6px',
+                                      border: '1px solid var(--border)',
+                                      background: 'var(--surface-2)',
+                                      color: 'var(--text-primary)',
+                                      textAlign: 'center',
+                                      fontSize: '12px',
+                                      fontWeight: 700
+                                    }}
+                                  />
+                                  <span
+                                    style={{
+                                      fontSize: '10.5px',
+                                      padding: '2px 7px',
+                                      borderRadius: '5px',
+                                      background: assignedCount > 0 ? 'color-mix(in srgb, #10b981 15%, transparent)' : 'var(--surface-2)',
+                                      color: assignedCount > 0 ? '#10b981' : 'var(--text-muted)',
+                                      fontWeight: 750,
+                                      marginLeft: '2px'
+                                    }}
+                                  >
+                                    {assignedCount} assigned
+                                  </span>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
+                  {availableGroupPhotos.map(gp => {
+                    const range = gpRangeInputs[String(gp.gpNum)] || { from: '1', to: '1' }
+                    const assignedCount = gpNikaahVideos.filter(item => {
+                      const sel = userGroupPhotoSelections[item.videoPath] || userGroupPhotoSelections[item.videoName]
+                      return sel === gp.fullPath
+                    }).length
+
+                    return (
+                      <div
+                        key={gp.fullPath}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          padding: '8px 14px',
+                          borderRadius: '10px',
+                          background: 'var(--surface)',
+                          border: '1px solid var(--border)',
+                          fontSize: '12.5px',
+                          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
+                        }}
+                      >
+                        <span style={{ fontWeight: 800, color: 'var(--accent)' }}>
+                          {gp.fileName}
+                        </span>
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                          ({gp.duration.toFixed(1)}s)
+                        </span>
+                        <span style={{ color: 'var(--text-secondary)', marginLeft: '4px', fontSize: '12px' }}>Videos:</span>
+                        <input
+                          type="number"
+                          min="1"
+                          value={range.from}
+                          onChange={(e) => {
+                            const val = e.target.value
+                            setGpRangeInputs(prev => ({
+                              ...prev,
+                              [String(gp.gpNum)]: { ...(prev[String(gp.gpNum)] || { from: '1', to: '1' }), from: val }
+                            }))
+                          }}
+                          style={{
+                            width: '50px',
+                            height: '28px',
+                            borderRadius: '6px',
+                            border: '1px solid var(--border)',
+                            background: 'var(--surface-2)',
+                            color: 'var(--text-primary)',
+                            textAlign: 'center',
+                            fontSize: '12.5px',
+                            fontWeight: 700
+                          }}
+                        />
+                        <span style={{ color: 'var(--text-muted)' }}>to</span>
+                        <input
+                          type="number"
+                          min="1"
+                          value={range.to}
+                          onChange={(e) => {
+                            const val = e.target.value
+                            setGpRangeInputs(prev => ({
+                              ...prev,
+                              [String(gp.gpNum)]: { ...(prev[String(gp.gpNum)] || { from: '1', to: '1' }), to: val }
+                            }))
+                          }}
+                          style={{
+                            width: '50px',
+                            height: '28px',
+                            borderRadius: '6px',
+                            border: '1px solid var(--border)',
+                            background: 'var(--surface-2)',
+                            color: 'var(--text-primary)',
+                            textAlign: 'center',
+                            fontSize: '12.5px',
+                            fontWeight: 700
+                          }}
+                        />
+                        <span
+                          style={{
+                            fontSize: '11px',
+                            padding: '2px 8px',
+                            borderRadius: '6px',
+                            background: assignedCount > 0 ? 'color-mix(in srgb, #10b981 15%, transparent)' : 'var(--surface-2)',
+                            color: assignedCount > 0 ? '#10b981' : 'var(--text-muted)',
+                            fontWeight: 750,
+                            marginLeft: '4px'
+                          }}
+                        >
+                          {assignedCount} assigned
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Search Filter */}
@@ -6721,14 +7135,8 @@ export default function TitleAdder(): JSX.Element {
                   </tr>
                 </thead>
                 <tbody>
-                  {gpNikaahVideos.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)', fontSize: '13px' }}>
-                        No Nikaah (N) videos found in this batch.
-                      </td>
-                    </tr>
-                  ) : gpNikaahVideos
-                    .filter(item => {
+                  {(() => {
+                    const filteredGps = gpNikaahVideos.filter(item => {
                       if (!gpSearchFilter.trim()) return true
                       const q = gpSearchFilter.toLowerCase()
                       const cer = extractNikaahNumber(item.videoName)
@@ -6738,7 +7146,25 @@ export default function TitleAdder(): JSX.Element {
                         (cer !== null && String(cer).includes(q))
                       )
                     })
-                    .map((item, idx) => {
+
+                    if (filteredGps.length === 0) {
+                      return (
+                        <tr>
+                          <td colSpan={6} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)', fontSize: '13px' }}>
+                            No Nikaah (N) videos found in this batch.
+                          </td>
+                        </tr>
+                      )
+                    }
+
+                    return filteredGps.map((item, idx) => {
+                      const currentSessionIdx = item.sessionIndex ?? 0
+                      const prevItem = idx > 0 ? filteredGps[idx - 1] : null
+                      const prevSessionIdx = prevItem ? (prevItem.sessionIndex ?? 0) : -1
+                      const isNewSession = hasMultipleSessions && (idx === 0 || currentSessionIdx !== prevSessionIdx)
+                      const sTheme = getSessionTheme(currentSessionIdx)
+                      const sessionTotalNikaahs = filteredGps.filter(x => (x.sessionIndex ?? 0) === currentSessionIdx).length
+
                       const stem = getCanonicalStem(item.videoName)
                       const currentGp = userGroupPhotoSelections[item.videoPath]
                         ?? userGroupPhotoSelections[item.videoName]
@@ -6748,110 +7174,193 @@ export default function TitleAdder(): JSX.Element {
                       const pTheme = getPrefixColorTheme(item.prefix)
                       const assignedGpItem = availableGroupPhotos.find(g => g.fullPath === currentGp)
 
-                      return (
-                        <tr
-                          key={item.videoPath || idx}
-                          style={currentGp ? { background: 'color-mix(in srgb, var(--accent) 3%, transparent)' } : undefined}
-                        >
-                          <td style={{ opacity: 0.6, fontSize: '12px', fontWeight: 600, textAlign: 'center' }}>{idx + 1}</td>
-                          <td style={{ textAlign: 'center' }}>
-                            {cerNum !== null ? (
-                              <span
-                                style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  padding: '2px 8px',
-                                  borderRadius: '6px',
-                                  fontSize: '11px',
-                                  fontWeight: 800,
-                                  background: 'color-mix(in srgb, var(--accent) 15%, transparent)',
-                                  color: 'var(--accent)',
-                                  border: '1px solid color-mix(in srgb, var(--accent) 30%, transparent)'
-                                }}
-                              >
-                                {cerNum}N
-                              </span>
-                            ) : (
-                              <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>#{idx + 1}</span>
-                            )}
-                          </td>
-                          <td style={{ fontWeight: 600 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <span>🎬</span>
-                              <span title={item.videoName}>{item.videoName}</span>
-                            </div>
-                          </td>
-                          <td style={{ textAlign: 'center' }}>
-                            <span
-                              className="ta-prefix-chip"
-                              style={item.prefix ? {
-                                color: (pTheme as any).text || pTheme.accent,
-                                borderColor: pTheme.accent,
-                                background: pTheme.soft,
-                                fontWeight: 800
-                              } : undefined}
-                            >
-                              {item.prefix || '—'}
-                            </span>
-                          </td>
-                          <td style={{ textAlign: 'center' }}>
-                            <select
-                              className="st-select"
-                              style={{
-                                width: '100%',
-                                maxWidth: '240px',
-                                height: '34px',
-                                fontSize: '12px',
-                                padding: '4px 8px',
-                                fontWeight: currentGp ? 700 : 500,
-                                borderColor: currentGp ? 'var(--accent)' : undefined
-                              }}
-                              value={currentGp}
-                              onChange={(e) => {
-                                const val = e.target.value
-                                setUserGroupPhotoSelections(prev => ({
-                                  ...prev,
-                                  [item.videoPath]: val,
-                                  [item.videoName]: val,
-                                  [stem]: val
-                                }))
-                              }}
-                            >
-                              <option value="">None (No GP Outro)</option>
-                              {availableGroupPhotos.map(gp => (
-                                <option key={gp.fullPath} value={gp.fullPath}>
-                                  📸 {gp.fileName} ({gp.duration.toFixed(1)}s)
-                                </option>
-                              ))}
-                            </select>
-                          </td>
-                          <td style={{ textAlign: 'center' }}>
-                            {currentGp ? (
-                              <span
-                                style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '4px',
-                                  padding: '3px 8px',
-                                  borderRadius: '6px',
-                                  fontSize: '11px',
-                                  fontWeight: 750,
-                                  background: 'rgba(16, 185, 129, 0.15)',
-                                  color: '#10b981',
-                                  border: '1px solid rgba(16, 185, 129, 0.3)'
-                                }}
-                              >
-                                ⚡ Direct Cut ({assignedGpItem?.duration ? assignedGpItem.duration.toFixed(1) + 's' : 'GP'})
-                              </span>
-                            ) : (
-                              <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                                — No Outro
-                              </span>
-                            )}
-                          </td>
-                        </tr>
+                      // Strictly session-filtered GP options!
+                      const sessionGps = availableGroupPhotos.filter(
+                        g => !hasMultipleSessions || (g.sessionIndex ?? 0) === currentSessionIdx
                       )
-                    })}
+
+                      return (
+                        <React.Fragment key={item.videoPath || idx}>
+                          {hasMultipleSessions && idx > 0 && currentSessionIdx !== prevSessionIdx && (
+                            <tr key={`gp-session-divider-${currentSessionIdx}`} className="ta-session-divider-row">
+                              <td colSpan={6}>
+                                <div className="ta-session-end-divider">
+                                  <span>End of Session #{prevSessionIdx + 1} ({prevItem?.sessionName || `Session #${prevSessionIdx + 1}`})</span>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                          {isNewSession && (
+                            <tr key={`gp-session-header-${currentSessionIdx}`} className="ta-session-header-row">
+                              <td colSpan={6}>
+                                <div
+                                  className="ta-session-header-banner"
+                                  style={{
+                                    borderLeft: `4px solid ${sTheme.color}`,
+                                    borderTop: `1px solid ${sTheme.border}`,
+                                    borderRight: `1px solid ${sTheme.border}`,
+                                    borderBottom: `1px solid ${sTheme.border}`,
+                                    background: sTheme.bg
+                                  }}
+                                >
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                                    <span
+                                      className="ta-session-header-pill"
+                                      style={{
+                                        background: sTheme.badgeBg,
+                                        borderColor: sTheme.border,
+                                        color: sTheme.tagText
+                                      }}
+                                    >
+                                      📂 Session #{currentSessionIdx + 1}
+                                    </span>
+                                    <span style={{ fontWeight: 800, fontSize: '13px', color: sTheme.tagText }}>
+                                      {item.sessionName || (batchSources[currentSessionIdx] ? (batchSources[currentSessionIdx].split(/[\\/]/).pop() || `Session #${currentSessionIdx + 1}`) : `Session #${currentSessionIdx + 1}`)}
+                                    </span>
+                                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                                      ({sessionTotalNikaahs} ceremony video{sessionTotalNikaahs !== 1 ? 's' : ''})
+                                    </span>
+                                  </div>
+
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span className="ta-session-path-pill" title={item.sessionFolder || batchSources[currentSessionIdx] || ''}>
+                                      📁 {item.sessionFolder || batchSources[currentSessionIdx] || ''}
+                                    </span>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                          <tr
+                            key={item.videoPath || idx}
+                            className={`ta-session-row-item ${hasMultipleSessions ? `session-item-${currentSessionIdx}` : ''}`}
+                            style={{
+                              ...(currentGp ? { background: 'color-mix(in srgb, var(--accent) 3%, transparent)' } : {}),
+                              ...(hasMultipleSessions ? { borderLeft: `4px solid ${sTheme.color}` } : {})
+                            }}
+                          >
+                            <td style={{ opacity: 0.85, fontSize: '12px', fontWeight: 600, textAlign: 'center' }}>
+                              {hasMultipleSessions ? (
+                                <span
+                                  style={{
+                                    display: 'inline-flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    gap: '1px'
+                                  }}
+                                  title={`Session #${currentSessionIdx + 1}: ${item.sessionName || ''}`}
+                                >
+                                  <span style={{ color: sTheme.color, fontWeight: 800 }}>{idx + 1}</span>
+                                  <span style={{ fontSize: '9px', fontWeight: 700, opacity: 0.7, color: sTheme.color }}>S{currentSessionIdx + 1}</span>
+                                </span>
+                              ) : (
+                                idx + 1
+                              )}
+                            </td>
+                            <td style={{ textAlign: 'center' }}>
+                              {cerNum !== null ? (
+                                <span
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    padding: '2px 8px',
+                                    borderRadius: '6px',
+                                    fontSize: '11px',
+                                    fontWeight: 800,
+                                    background: 'color-mix(in srgb, var(--accent) 15%, transparent)',
+                                    color: 'var(--accent)',
+                                    border: '1px solid color-mix(in srgb, var(--accent) 30%, transparent)'
+                                  }}
+                                >
+                                  {cerNum}N
+                                </span>
+                              ) : (
+                                <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>#{idx + 1}</span>
+                              )}
+                            </td>
+                            <td style={{ fontWeight: 600 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span>🎬</span>
+                                <span title={item.videoName}>{item.videoName}</span>
+                              </div>
+                            </td>
+                            <td style={{ textAlign: 'center' }}>
+                              <span
+                                className="ta-prefix-chip"
+                                style={item.prefix ? {
+                                  color: (pTheme as any).text || pTheme.accent,
+                                  borderColor: pTheme.accent,
+                                  background: pTheme.soft,
+                                  fontWeight: 800
+                                } : undefined}
+                              >
+                                {item.prefix || '—'}
+                              </span>
+                            </td>
+                            <td style={{ textAlign: 'center' }}>
+                              <select
+                                className="st-select"
+                                style={{
+                                  width: '100%',
+                                  maxWidth: '240px',
+                                  height: '34px',
+                                  fontSize: '12px',
+                                  padding: '4px 8px',
+                                  fontWeight: currentGp ? 700 : 500,
+                                  borderColor: currentGp ? 'var(--accent)' : undefined
+                                }}
+                                value={currentGp}
+                                onChange={(e) => {
+                                  const val = e.target.value
+                                  setUserGroupPhotoSelections(prev => ({
+                                    ...prev,
+                                    [item.videoPath]: val,
+                                    [item.videoName]: val,
+                                    [stem]: val
+                                  }))
+                                }}
+                              >
+                                <option value="">None (No GP Outro)</option>
+                                {sessionGps.length === 0 ? (
+                                  <option value="" disabled>No GP in Session #{currentSessionIdx + 1}</option>
+                                ) : (
+                                  sessionGps.map(gp => (
+                                    <option key={gp.fullPath} value={gp.fullPath}>
+                                      📸 {gp.fileName} ({gp.duration.toFixed(1)}s)
+                                    </option>
+                                  ))
+                                )}
+                              </select>
+                            </td>
+                            <td style={{ textAlign: 'center' }}>
+                              {currentGp ? (
+                                <span
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    padding: '3px 8px',
+                                    borderRadius: '6px',
+                                    fontSize: '11px',
+                                    fontWeight: 750,
+                                    background: 'rgba(16, 185, 129, 0.15)',
+                                    color: '#10b981',
+                                    border: '1px solid rgba(16, 185, 129, 0.3)'
+                                  }}
+                                >
+                                  ⚡ Direct Cut ({assignedGpItem?.duration ? assignedGpItem.duration.toFixed(1) + 's' : 'GP'})
+                                </span>
+                              ) : (
+                                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                                  — No Outro
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        </React.Fragment>
+                      )
+                    })
+                  })()}
                 </tbody>
               </table>
             </div>

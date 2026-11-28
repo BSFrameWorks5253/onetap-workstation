@@ -25,6 +25,9 @@ export interface GroupPhotoItem {
   fileName: string
   fullPath: string
   duration: number
+  sessionIndex?: number
+  sessionFolder?: string
+  sessionName?: string
 }
 
 export interface GroupPhotoAssignmentRule {
@@ -234,7 +237,7 @@ export async function scanGroupPhotosInFolder(folderPath: string): Promise<Group
  * e.g. 2 GPs with 10 Nikaahs -> GP1: 1-5, GP2: 6-10
  */
 export function buildDefaultGroupPhotoAssignments(
-  videoList: string[],
+  videoList: Array<string | { videoPath: string; sessionIndex?: number; sessionFolder?: string }>,
   availableGps: GroupPhotoItem[]
 ): Record<string, string> {
   const assignments: Record<string, string> = {}
@@ -242,8 +245,75 @@ export function buildDefaultGroupPhotoAssignments(
     return assignments
   }
 
+  // Check if session-aware information is present
+  const hasSessions = availableGps.some(g => g.sessionIndex !== undefined) ||
+    videoList.some(v => typeof v === 'object' && v.sessionIndex !== undefined)
+
+  if (hasSessions) {
+    // Collect all distinct session keys/indices
+    const sessionMap = new Map<number | string, {
+      videos: Array<{ videoPath: string; cerNum: number }>
+      gps: GroupPhotoItem[]
+    }>()
+
+    // 1. Group availableGps by session
+    for (const gp of availableGps) {
+      const sKey = gp.sessionIndex !== undefined ? gp.sessionIndex : (gp.sessionFolder || 0)
+      if (!sessionMap.has(sKey)) {
+        sessionMap.set(sKey, { videos: [], gps: [] })
+      }
+      sessionMap.get(sKey)!.gps.push(gp)
+    }
+
+    // 2. Group Nikaah videos by session
+    for (const v of videoList) {
+      const vp = typeof v === 'string' ? v : v.videoPath
+      if (!vp || isGroupPhotoVideoFile(vp)) continue
+      const cer = extractNikaahNumberFromFileName(vp)
+      if (cer === null) continue
+
+      const sKey = (typeof v === 'object' && v.sessionIndex !== undefined)
+        ? v.sessionIndex
+        : (typeof v === 'object' && v.sessionFolder ? v.sessionFolder : 0)
+
+      if (!sessionMap.has(sKey)) {
+        sessionMap.set(sKey, { videos: [], gps: [] })
+      }
+      sessionMap.get(sKey)!.videos.push({ videoPath: vp, cerNum: cer })
+    }
+
+    // 3. For each session, strictly assign that session's GPs to its own Nikaahs
+    for (const [, group] of sessionMap.entries()) {
+      const { videos: sessionVideos, gps: sessionGps } = group
+      if (sessionVideos.length === 0 || sessionGps.length === 0) continue
+
+      sessionVideos.sort((a, b) => a.cerNum - b.cerNum)
+      sessionGps.sort((a, b) => a.gpNum - b.gpNum)
+
+      const total = sessionVideos.length
+      const gpCount = sessionGps.length
+      const step = Math.ceil(total / gpCount)
+
+      for (let gi = 0; gi < gpCount; gi++) {
+        const gpItem = sessionGps[gi]
+        const startIndex = gi * step
+        const endIndex = Math.min((gi + 1) * step, total)
+        for (let j = startIndex; j < endIndex; j++) {
+          const item = sessionVideos[j]
+          assignments[item.videoPath] = gpItem.fullPath
+          const base = path.basename(item.videoPath)
+          assignments[base] = gpItem.fullPath
+        }
+      }
+    }
+
+    return assignments
+  }
+
   // Filter out any GP videos from the ceremony list
-  const ceremonyVideos = videoList.filter(v => !isGroupPhotoVideoFile(v))
+  const ceremonyVideos = videoList
+    .map(v => (typeof v === 'string' ? v : v.videoPath))
+    .filter(v => v && !isGroupPhotoVideoFile(v))
   if (ceremonyVideos.length === 0) return assignments
 
   // Identify videos that are specifically Nikaah ceremonies

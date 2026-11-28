@@ -1496,6 +1496,41 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
 
     const special1Path = getSpecial1AudioPath(titlesFolder)
     let normalIdx = 0
+
+    const resolveSessionForPath = (filePath: string, sources: string[]) => {
+      if (!sources || sources.length === 0) {
+        const parent = path.dirname(filePath)
+        const clean = parent.replace(/[\\/]DVD[\\/]?$/i, '')
+        return {
+          sessionIndex: 0,
+          sessionFolder: parent,
+          sessionName: path.basename(clean) || 'Session 1'
+        }
+      }
+      const normFp = path.resolve(filePath).toLowerCase()
+      let bestIdx = 0
+      let bestLen = -1
+      sources.forEach((src, idx) => {
+        if (!src) return
+        const normSrc = path.resolve(src).toLowerCase()
+        const normParent = path.dirname(normSrc).toLowerCase()
+        if (normFp.startsWith(normSrc) && normSrc.length > bestLen) {
+          bestIdx = idx
+          bestLen = normSrc.length
+        } else if (normFp.startsWith(normParent) && normParent.length > bestLen) {
+          bestIdx = idx
+          bestLen = normParent.length
+        }
+      })
+      const matched = sources[bestIdx] || ''
+      const clean = matched.replace(/[\\/]DVD[\\/]?$/i, '')
+      return {
+        sessionIndex: bestIdx,
+        sessionFolder: matched,
+        sessionName: path.basename(clean) || path.basename(matched) || `Session #${bestIdx + 1}`
+      }
+    }
+
     const assignments: Array<{
       videoPath: string
       videoName: string
@@ -1506,6 +1541,9 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
       defaultTitleImageName: string
       isNikah: boolean
       isSpecialWaazId: boolean
+      sessionIndex: number
+      sessionFolder: string
+      sessionName: string
     }> = []
 
     for (const videoPath of videos) {
@@ -1528,6 +1566,7 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
       }
 
       const assignedName = assignedPath ? path.basename(assignedPath) : 'None'
+      const sInfo = resolveSessionForPath(videoPath, batchSources)
 
       assignments.push({
         videoPath,
@@ -1538,7 +1577,10 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
         defaultTitleImagePath: defaultImg || '',
         defaultTitleImageName: defaultImg ? path.basename(defaultImg) : 'No title image',
         isNikah,
-        isSpecialWaazId: isWaazId
+        isSpecialWaazId: isWaazId,
+        sessionIndex: sInfo.sessionIndex,
+        sessionFolder: sInfo.sessionFolder,
+        sessionName: sInfo.sessionName
       })
     }
 
@@ -1584,7 +1626,13 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
           const norm = path.resolve(gp.fullPath).toLowerCase()
           if (!seenGpPaths.has(norm)) {
             seenGpPaths.add(norm)
-            availableGroupPhotos.push(gp)
+            const sInfo = resolveSessionForPath(gp.fullPath, batchSources)
+            availableGroupPhotos.push({
+              ...gp,
+              sessionIndex: sInfo.sessionIndex,
+              sessionFolder: sInfo.sessionFolder,
+              sessionName: sInfo.sessionName
+            })
           }
         }
       } catch {}
@@ -1600,21 +1648,30 @@ export function registerTitleAdderIPC(getWin: WinGetter): void {
             const gpNum = extractGpNumber(vf)
             let dur = 15.0
             try { dur = await probeVideoDuration(vf) } catch { dur = 15.0 }
+            const sInfo = resolveSessionForPath(vf, batchSources)
             availableGroupPhotos.push({
               gpNum,
               fileName: path.basename(vf),
               fullPath: vf,
-              duration: dur
+              duration: dur,
+              sessionIndex: sInfo.sessionIndex,
+              sessionFolder: sInfo.sessionFolder,
+              sessionName: sInfo.sessionName
             })
           }
         }
       }
     }
 
-    availableGroupPhotos.sort((a, b) => a.gpNum - b.gpNum)
+    availableGroupPhotos.sort((a, b) => {
+      const sA = a.sessionIndex ?? 0
+      const sB = b.sessionIndex ?? 0
+      if (sA !== sB) return sA - sB
+      return a.gpNum - b.gpNum
+    })
 
     const suggestedGroupPhotoAssignments = buildDefaultGroupPhotoAssignments(
-      assignments.map(a => a.videoPath),
+      assignments,
       availableGroupPhotos
     )
 
